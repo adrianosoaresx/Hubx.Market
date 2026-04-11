@@ -1,0 +1,17 @@
+version: "3.9"
+services:
+  web:
+    image: ecommerce-saas-web:local
+    command: python backend/manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/workspace
+    ports:
+      - "8000:8000"
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ecommerce_saas
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+  redis:
+    image: redis:7-alpine

@@ -1,0 +1,262 @@
+
+# Context Map — Hubx Market
+
+Este documento descreve o **mapa de contexto (Context Map)** do Hubx Market.
+
+O objetivo é organizar o domínio do sistema em **blocos bem definidos**, permitindo:
+
+- melhor compreensão arquitetural
+- modularização clara
+- evolução segura do sistema
+- colaboração eficiente entre desenvolvedores e agentes de IA
+
+---
+
+# Visão geral
+
+Hubx Market é uma plataforma **SaaS de e-commerce multi-tenant**.
+
+Cada loja opera isoladamente dentro do sistema.
+
+Exemplo:
+
+lojax.hubx.market  
+minhaloja.hubx.market  
+
+Cada tenant possui:
+
+- catálogo próprio
+- clientes próprios
+- pedidos próprios
+- pagamentos próprios
+- configurações próprias
+
+---
+
+# Macro Domínios
+
+O sistema é dividido em **3 grandes domínios**.
+
+```
+Platform
+Commerce
+Engagement
+```
+
+---
+
+# Platform Domain
+
+Responsável pela **infraestrutura do SaaS**.
+
+Inclui:
+
+- gerenciamento de tenants
+- controle de usuários da plataforma
+- assinaturas do SaaS
+- billing da plataforma
+- observabilidade
+- controle administrativo
+
+## Submódulos
+
+```
+tenants
+accounts
+subscriptions
+platform-admin
+audit
+api-keys
+```
+
+## Responsabilidades
+
+- criar novas lojas
+- gerenciar owners
+- controlar planos SaaS
+- auditoria do sistema
+- integração administrativa
+
+---
+
+# Commerce Domain
+
+Responsável pelo **motor de e-commerce**.
+
+Este é o núcleo do sistema.
+
+## Submódulos
+
+```
+catalog
+customers
+cart
+checkout
+orders
+payments
+shipping
+coupons
+```
+
+## Responsabilidades
+
+### Catalog
+- produtos
+- variantes
+- categorias
+- marcas
+- imagens
+- tags
+
+### Customers
+- clientes da loja
+- endereços
+- histórico de compras
+
+### Cart
+- carrinho de compras
+- itens do carrinho
+- cálculo de subtotal
+
+### Checkout
+- seleção de frete
+- cálculo final
+- criação de pedido
+
+### Orders
+- lifecycle do pedido
+- histórico
+- status
+
+### Payments
+- integração com gateway
+- transações
+- webhooks
+
+### Shipping
+- cálculo de frete
+- rastreamento
+- integração com transportadoras
+
+### Coupons
+- cupons de desconto
+- regras promocionais
+
+---
+
+# Engagement Domain
+
+Responsável pela **interação e retenção de clientes**.
+
+## Submódulos
+
+```
+reviews
+newsletter
+notifications
+pages
+marketing
+```
+
+## Responsabilidades
+
+### Reviews
+- avaliações de produtos
+
+### Newsletter
+- inscrição em newsletter
+
+### Notifications
+- notificações do sistema
+- emails
+
+### Pages
+- páginas institucionais
+
+### Marketing
+- campanhas
+- promoções
+
+---
+
+# Fluxo principal de venda
+
+Fluxo principal do sistema:
+
+```
+Catalog
+   ↓
+Product Page
+   ↓
+Cart
+   ↓
+Checkout
+   ↓
+Payment
+   ↓
+Order Created
+   ↓
+Shipping
+   ↓
+Delivery
+```
+
+---
+
+# Dependências entre domínios
+
+```
+Platform
+   ├─ Tenants
+   └─ Accounts
+
+Commerce
+   ├─ Catalog
+   ├─ Customers
+   ├─ Cart
+   ├─ Checkout
+   ├─ Orders
+   ├─ Payments
+   └─ Shipping
+
+Engagement
+   ├─ Reviews
+   ├─ Newsletter
+   └─ Notifications
+```
+
+---
+
+# Regras importantes de domínio
+
+Multi-tenant:
+
+- todo dado deve respeitar `tenant_id`
+- isolamento entre lojas é obrigatório
+
+Catálogo:
+
+- preço pertence a `ProductVariant`
+- estoque pertence a `ProductVariant`
+
+Pedidos:
+
+- `OrderItem` guarda snapshot de preço
+- estoque baixa apenas após pagamento
+
+Pagamentos:
+
+- PIX depende de webhook
+- eventos de pagamento devem ser idempotentes
+
+---
+
+# Objetivo do Context Map
+
+Este documento permite:
+
+- entender rapidamente a arquitetura do domínio
+- orientar decisões arquiteturais
+- ajudar agentes de IA a localizar responsabilidades
+- manter separação clara entre domínios
+
