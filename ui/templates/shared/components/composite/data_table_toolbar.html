@@ -1,0 +1,49 @@
+<section class="ds-surface p-4">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div class="space-y-2">
+            {% if title %}
+                <div class="flex items-center gap-3">
+                    <h3 class="text-lg font-semibold text-[var(--color-text-primary)]">{{ title }}</h3>
+                    {% if count %}
+                        {% include "shared/components/data_display/badge.html" with label=count variant="neutral" %}
+                    {% endif %}
+                </div>
+            {% endif %}
+            {% if description %}
+                <p class="text-sm text-[var(--color-text-secondary)]">{{ description }}</p>
+            {% endif %}
+        </div>
+
+        {% if actions %}
+            <div class="flex flex-wrap items-center gap-3">
+                {{ actions }}
+            </div>
+        {% endif %}
+    </div>
+
+    {% if search_name or filters %}
+        <div class="mt-4 flex flex-col gap-4 md:flex-row md:items-end">
+            {% if search_name %}
+                <div class="min-w-0 flex-1">
+                    {% include "shared/components/forms/input.html" with name=search_name value=search_value placeholder=search_placeholder|default:"Buscar..." label=search_label|default:"Buscar" %}
+                </div>
+            {% endif %}
+            {% if filters %}
+                <div class="flex flex-wrap gap-3">
+                    {{ filters }}
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    {% if selection_count %}
+        <div class="mt-4 flex items-center justify-between gap-4 rounded-xl bg-slate-50 px-4 py-3 text-sm">
+            <p class="text-[var(--color-text-primary)]">{{ selection_count }} item(ns) selecionado(s)</p>
+            {% if bulk_actions %}
+                <div class="flex flex-wrap gap-2">
+                    {{ bulk_actions }}
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+</section>

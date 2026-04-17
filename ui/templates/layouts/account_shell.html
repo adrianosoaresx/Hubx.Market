@@ -1,0 +1,36 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}{% block page_title %}Hubx Market Account{% endblock %}{% endblock %}
+{% block ui_context %}account{% endblock %}
+
+{% block body %}
+<div class="min-h-screen bg-[var(--color-surface-page)]">
+    <header class="border-b border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
+        <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
+            <a href="/" class="text-lg font-semibold text-[var(--color-text-primary)]">Hubx Market</a>
+            {% include "shared/partials/navbar.html" %}
+        </div>
+    </header>
+
+    <main class="mx-auto max-w-7xl px-6 py-8">
+        <div class="grid gap-6 lg:grid-cols-[15rem_minmax(0,1fr)]">
+            <aside class="ds-surface h-fit p-4">
+                {% block account_sidebar %}
+                    <nav class="space-y-2 text-sm">
+                        <a href="#" class="block rounded-lg px-3 py-2 text-[var(--color-text-primary)] hover:bg-slate-50">Visão geral</a>
+                        <a href="#" class="block rounded-lg px-3 py-2 text-[var(--color-text-secondary)] hover:bg-slate-50 hover:text-[var(--color-text-primary)]">Pedidos</a>
+                        <a href="#" class="block rounded-lg px-3 py-2 text-[var(--color-text-secondary)] hover:bg-slate-50 hover:text-[var(--color-text-primary)]">Endereços</a>
+                        <a href="#" class="block rounded-lg px-3 py-2 text-[var(--color-text-secondary)] hover:bg-slate-50 hover:text-[var(--color-text-primary)]">Perfil</a>
+                    </nav>
+                {% endblock %}
+            </aside>
+
+            <section class="min-w-0">
+                {% block content %}{% endblock %}
+            </section>
+        </div>
+    </main>
+
+    {% include "shared/partials/footer.html" %}
+</div>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% if methods %}
+<div class="space-y-3">
+    {% for method in methods %}
+        <label class="flex items-start gap-3 rounded-xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-4 {% if method.disabled %}opacity-60{% else %}cursor-pointer{% endif %}">
+            <input
+                type="radio"
+                name="{{ name|default:'payment_method' }}"
+                value="{{ method.value }}"
+                class="mt-1 h-4 w-4 border-[var(--color-border-strong)] text-[var(--color-action-primary-bg)] focus:ring-[var(--focus-ring)]"
+                {% if method.checked or method.value == selected %}checked{% endif %}
+                {% if method.disabled %}disabled{% endif %}
+            >
+            <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2">
+                    <p class="text-sm font-medium text-[var(--color-text-primary)]">{{ method.label }}</p>
+                    {% if method.badge %}
+                        {% include "shared/components/data_display/badge.html" with label=method.badge size="xs" variant=method.badge_variant|default:"neutral" %}
+                    {% endif %}
+                </div>
+                {% if method.description %}
+                    <p class="mt-1 text-sm text-[var(--color-text-secondary)]">{{ method.description }}</p>
+                {% endif %}
+                {% if method.meta %}
+                    <p class="mt-1 text-xs text-[var(--color-text-secondary)]">{{ method.meta }}</p>
+                {% endif %}
+            </div>
+        </label>
+    {% endfor %}
+</div>
+{% endif %}

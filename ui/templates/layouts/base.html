@@ -1,1 +1,22 @@
-{# Placeholder: ui/templates/layouts/base.html #}
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Hubx Market{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/app.css' %}">
+    <script defer src="{% static 'js/htmx.min.js' %}"></script>
+    <script defer src="{% static 'js/alpine.min.js' %}"></script>
+    <script defer src="{% static 'js/app.js' %}"></script>
+    {% block head %}{% endblock %}
+</head>
+<body
+    class="min-h-screen bg-[var(--color-surface-page)] text-[var(--color-text-primary)] {% block body_class %}{% endblock %}"
+    data-ui-context="{% block ui_context %}admin{% endblock %}"
+    data-tenant="{% block tenant_theme %}default{% endblock %}"
+>
+    {% include "shared/partials/flash_messages.html" %}
+    {% block body %}{% endblock %}
+</body>
+</html>

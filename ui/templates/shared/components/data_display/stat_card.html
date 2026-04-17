@@ -1,0 +1,32 @@
+{% with trend=trend|default:"neutral" %}
+<section class="ds-surface p-6">
+    {% if title or subtitle %}
+        <header class="mb-4 space-y-1">
+            {% if title %}<h3 class="text-sm font-medium text-[var(--color-text-secondary)]">{{ title }}</h3>{% endif %}
+            {% if subtitle %}<p class="text-sm text-[var(--color-text-secondary)]">{{ subtitle }}</p>{% endif %}
+        </header>
+    {% endif %}
+
+    <div class="flex items-start justify-between gap-4">
+        <div class="space-y-2">
+            <p class="text-3xl font-semibold text-[var(--color-text-primary)]">{{ value|default:"0" }}</p>
+            {% if delta %}
+                <div class="flex items-center gap-2 text-sm {% if trend == 'positive' %}text-emerald-600{% elif trend == 'negative' %}text-rose-600{% else %}text-[var(--color-text-secondary)]{% endif %}">
+                    {% if trend == 'positive' %}
+                        <span aria-hidden="true">↑</span>
+                    {% elif trend == 'negative' %}
+                        <span aria-hidden="true">↓</span>
+                    {% endif %}
+                    <span>{{ delta }}</span>
+                </div>
+            {% endif %}
+        </div>
+
+        {% if icon %}
+            <div class="rounded-xl bg-slate-100 p-3 text-[var(--color-text-secondary)]" aria-hidden="true">
+                {{ icon }}
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% endwith %}

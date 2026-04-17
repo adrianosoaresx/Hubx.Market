@@ -1,0 +1,21 @@
+<section class="space-y-4">
+    <div class="flex items-center justify-between gap-4">
+        <div>
+            <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">{{ title|default:"Gerenciar registros" }}</h2>
+            {% if description %}<p class="text-sm text-[var(--color-text-secondary)]">{{ description }}</p>{% endif %}
+        </div>
+        <button
+            type="button"
+            class="ds-btn ds-btn-primary ds-btn-md"
+            hx-get="{{ create_url }}"
+            hx-target="{{ modal_target|default:'#crud-modal-root' }}"
+            hx-swap="innerHTML"
+        >
+            {{ create_label|default:"Novo registro" }}
+        </button>
+    </div>
+
+    <div id="{{ modal_target_id|default:'crud-modal-root' }}"></div>
+
+    {% include "shared/patterns/filter_table.html" with filter_url=list_url hx_target="#crud-table-results" hx_target_id="crud-table-results" columns=columns rows=rows status_options=status_options reset_url=reset_url search_value=search_value %}
+</section>

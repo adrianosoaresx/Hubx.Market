@@ -19,8 +19,11 @@ Usuário do painel da plataforma.
 ### OwnerUser
 Usuário administrador da loja.
 
+### AccountProfile
+Perfil persistido mínimo para identidade, contato e preferências da experiência de conta.
+
 ### Customer
-Comprador da loja.
+Comprador da loja, isolado por tenant, com base persistida mínima para identidade, contato e leitura operacional administrativa.
 
 ### CustomerAddress
 Endereço do customer.
@@ -51,11 +54,20 @@ Carrinho persistente do customer.
 ### CartItem
 Item do carrinho ligado à variante.
 
+### CheckoutSession
+Snapshot transitório do checkout por tenant, com contato, entrega, métodos e totais.
+
+### CheckoutSessionItem
+Snapshot dos itens exibidos durante o checkout.
+
 ### Order
 Pedido materializado no checkout.
 
 ### OrderItem
 Snapshot do item comprado.
+
+### OrderStatusHistory
+Histórico de transições e eventos relevantes do lifecycle do pedido.
 
 ## Pagamento e logística
 ### Payment
@@ -89,3 +101,4 @@ Registro de envios de e-mail.
 
 ### ApiKey
 Chave da API pública futura.
+

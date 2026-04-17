@@ -1,0 +1,30 @@
+{
+  "surface": {
+    "page": { "value": "{color.neutral.50.value}" },
+    "panel": { "value": "{color.neutral.0.value}" },
+    "subtle": { "value": "{color.neutral.100.value}" }
+  },
+  "text": {
+    "primary": { "value": "{color.neutral.900.value}" },
+    "secondary": { "value": "{color.neutral.600.value}" },
+    "inverse": { "value": "{color.neutral.0.value}" }
+  },
+  "border": {
+    "default": { "value": "{color.neutral.100.value}" },
+    "strong": { "value": "{color.neutral.300.value}" }
+  },
+  "action": {
+    "primary": { "value": "{color.brand.600.value}" },
+    "primary_hover": { "value": "{color.brand.700.value}" },
+    "secondary": { "value": "{color.neutral.900.value}" }
+  },
+  "feedback": {
+    "success": { "value": "{color.accent.500.value}" },
+    "info": { "value": "{color.info.500.value}" },
+    "warning": { "value": "{color.warning.500.value}" },
+    "danger": { "value": "{color.danger.500.value}" }
+  },
+  "focus": {
+    "ring": { "value": "rgba(79, 70, 229, 0.35)" }
+  }
+}

@@ -1,0 +1,46 @@
+{% extends "layouts/account_shell.html" %}
+
+{% block title %}{{ page_title|default:"Meu perfil" }}{% endblock %}
+
+{% block content %}
+<section class="space-y-6">
+    {% with eyebrow=eyebrow|default:"Customer Area" title=page_title|default:"Meu perfil" description=page_description|default:"Atualize seus dados pessoais, contato e preferências da conta." %}
+        {% include "shared/components/layout/page_header.html" %}
+    {% endwith %}
+
+    <form method="{{ form_method|default:'post' }}" action="{{ form_action|default:request.path }}" class="space-y-6">
+        {% csrf_token %}
+
+        <section class="ds-surface space-y-6 p-6">
+            <header class="space-y-1">
+                <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">{{ personal_info_title|default:"Informações pessoais" }}</h2>
+                <p class="text-sm text-[var(--color-text-secondary)]">{{ personal_info_description|default:"Dados básicos da conta do cliente." }}</p>
+            </header>
+
+            <div class="grid gap-4 md:grid-cols-2">
+                {% include "shared/components/forms/input.html" with name="first_name" label="Nome" value=first_name placeholder="Seu nome" autocomplete="given-name" %}
+                {% include "shared/components/forms/input.html" with name="last_name" label="Sobrenome" value=last_name placeholder="Seu sobrenome" autocomplete="family-name" %}
+            </div>
+
+            <div class="grid gap-4 md:grid-cols-2">
+                {% include "shared/components/forms/input.html" with name="email" label="E-mail" input_type="email" value=email placeholder="voce@exemplo.com" autocomplete="email" %}
+                {% include "shared/components/forms/input.html" with name="phone" label="Telefone" value=phone placeholder="(11) 99999-0000" autocomplete="tel" %}
+            </div>
+        </section>
+
+        <section class="ds-surface space-y-6 p-6">
+            <header class="space-y-1">
+                <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">{{ preferences_title|default:"Preferências" }}</h2>
+                <p class="text-sm text-[var(--color-text-secondary)]">{{ preferences_description|default:"Defina como deseja receber novidades e atualizações." }}</p>
+            </header>
+
+            {% include "shared/components/forms/checkbox.html" with name="newsletter_opt_in" label="Receber novidades por e-mail" description="Ofertas, lançamentos e atualizações da loja." checked=newsletter_opt_in %}
+            {% include "shared/components/forms/switch.html" with name="order_updates_opt_in" label="Receber atualizações de pedido" description="Notificações sobre pagamento, envio e entrega." checked=order_updates_opt_in %}
+        </section>
+
+        {% with primary_label=primary_label|default:"Salvar alterações" secondary_label=secondary_label|default:"Cancelar" secondary_href=secondary_href|default:'#' loading=loading disabled=disabled %}
+            {% include "shared/components/forms/form_actions.html" %}
+        {% endwith %}
+    </form>
+</section>
+{% endblock %}

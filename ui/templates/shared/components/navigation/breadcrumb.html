@@ -1,0 +1,24 @@
+{% if items %}
+<nav aria-label="{{ aria_label|default:'Breadcrumb' }}">
+    <ol class="flex flex-wrap items-center gap-2 text-sm text-[var(--color-text-secondary)]">
+        {% for item in items %}
+            <li class="flex items-center gap-2">
+                {% if not forloop.first %}
+                    <span aria-hidden="true">/</span>
+                {% endif %}
+                {% if item.href and not forloop.last %}
+                    <a href="{{ item.href }}" class="hover:text-[var(--color-text-primary)]">
+                        {% if item.icon %}<span aria-hidden="true">{{ item.icon }}</span>{% endif %}
+                        {{ item.label }}
+                    </a>
+                {% else %}
+                    <span class="{% if forloop.last %}font-medium text-[var(--color-text-primary)]{% endif %}">
+                        {% if item.icon %}<span aria-hidden="true">{{ item.icon }}</span>{% endif %}
+                        {{ item.label }}
+                    </span>
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ol>
+</nav>
+{% endif %}

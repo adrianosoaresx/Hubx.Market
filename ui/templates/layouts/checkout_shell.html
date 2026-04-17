@@ -1,0 +1,25 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}{% block checkout_shell_title %}{{ page_title|default:"Checkout" }}{% endblock %}{% endblock %}
+{% block ui_context %}checkout{% endblock %}
+{% block tenant_theme %}{{ tenant_theme|default:"default" }}{% endblock %}
+
+{% block body %}
+<div class="min-h-screen bg-[var(--color-surface-page)]">
+    <header class="border-b border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
+        <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
+            <div class="space-y-1">
+                <a href="/" class="text-lg font-semibold text-[var(--color-text-primary)]">Hubx Market</a>
+                <p class="text-sm text-[var(--color-text-secondary)]">Fluxo seguro de checkout</p>
+            </div>
+            {% block checkout_header_meta %}
+                <span class="text-sm text-[var(--color-text-secondary)]">Checkout</span>
+            {% endblock %}
+        </div>
+    </header>
+
+    <main class="mx-auto max-w-7xl px-6 py-8">
+        {% block checkout_content %}{% endblock %}
+    </main>
+</div>
+{% endblock %}

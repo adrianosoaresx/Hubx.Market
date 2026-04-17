@@ -1,0 +1,19 @@
+{% extends layout_template|default:"layouts/admin_shell.html" %}
+
+{% block content %}
+<section class="space-y-6">
+    <header class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div>
+            <h2 class="text-2xl font-semibold text-[var(--color-text-primary)]">{{ page_title|default:"Lista" }}</h2>
+            {% if page_description %}<p class="text-sm text-[var(--color-text-secondary)]">{{ page_description }}</p>{% endif %}
+        </div>
+        {% if primary_action %}
+            <div>{{ primary_action }}</div>
+        {% endif %}
+    </header>
+
+    {% block list_toolbar %}{% endblock %}
+
+    {% include "shared/patterns/filter_table.html" with filter_url=filter_url columns=columns rows=rows status_options=status_options reset_url=reset_url search_value=search_value %}
+</section>
+{% endblock %}

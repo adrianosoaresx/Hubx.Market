@@ -1,0 +1,7 @@
+/* Nike tenant pack used by the internal Design System preview. */
+
+[data-tenant="nike"] {
+  --tenant-brand-primary: #111827;
+  --tenant-brand-primary-hover: #1f2937;
+  --tenant-brand-secondary: #ef4444;
+}

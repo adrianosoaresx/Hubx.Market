@@ -1,0 +1,98 @@
+@import "./generated-tokens.css";
+
+body {
+  font-family: var(--font-family-base);
+}
+
+.ds-surface {
+  background-color: var(--color-surface-panel);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.ds-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  line-height: 1.2;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.ds-btn:focus-visible,
+.ds-input:focus-visible,
+.ds-select:focus-visible {
+  outline: 2px solid transparent;
+  box-shadow: 0 0 0 4px var(--focus-ring);
+}
+
+.ds-btn-primary {
+  background-color: var(--color-action-primary-bg);
+  color: var(--color-action-primary-text);
+}
+
+.ds-btn-primary:hover {
+  background-color: var(--color-action-primary-bg-hover);
+}
+
+.ds-btn-secondary {
+  background-color: var(--color-surface-panel);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-default);
+}
+
+.ds-btn-sm {
+  min-height: 2.25rem;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.875rem;
+}
+
+.ds-btn-md {
+  min-height: 2.75rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.9375rem;
+}
+
+.ds-input,
+.ds-select {
+  width: 100%;
+  min-height: 2.75rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-default);
+  background-color: var(--color-surface-panel);
+  color: var(--color-text-primary);
+  padding: 0.75rem 0.875rem;
+}
+
+.ds-input::placeholder {
+  color: var(--color-text-secondary);
+}
+
+.ds-alert {
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  padding: 1rem;
+}
+
+.ds-alert-info {
+  background: rgba(14, 165, 233, 0.10);
+  border-color: rgba(14, 165, 233, 0.20);
+}
+
+.ds-alert-success {
+  background: rgba(34, 197, 94, 0.10);
+  border-color: rgba(34, 197, 94, 0.20);
+}
+
+.ds-alert-warning {
+  background: rgba(217, 119, 6, 0.10);
+  border-color: rgba(217, 119, 6, 0.20);
+}
+
+.ds-alert-danger {
+  background: rgba(220, 38, 38, 0.10);
+  border-color: rgba(220, 38, 38, 0.20);
+}

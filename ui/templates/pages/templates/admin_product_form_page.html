@@ -1,0 +1,147 @@
+{% extends layout_template|default:"layouts/admin_shell.html" %}
+
+{% block page_title %}{{ page_title|default:"Editar produto" }}{% endblock %}
+{% block shell_title %}{% if shell_title %}{{ shell_title }}{% elif page_title %}{{ page_title }}{% else %}Editar produto{% endif %}{% endblock %}
+
+{% block content %}
+<section class="space-y-6">
+    {% with eyebrow=page_eyebrow|default:"Catálogo" title=page_title|default:"Produto" description=page_description|default:"Atualize informações principais, preço, estoque e visibilidade." meta=page_meta %}
+        {% include "shared/components/layout/page_header.html" %}
+    {% endwith %}
+
+    {% if page_actions or cancel_href or showcase_mode %}
+        <div class="flex flex-wrap justify-end gap-3">
+            {% if page_actions %}
+                {{ page_actions }}
+            {% else %}
+                {% if cancel_href %}
+                    {% include "shared/components/actions/button.html" with label=cancel_label|default:"Voltar" href=cancel_href variant="secondary" %}
+                {% elif showcase_mode %}
+                    {% include "shared/components/actions/button.html" with label="Voltar" href="#" variant="secondary" %}
+                {% endif %}
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <form method="{{ form_method|default:'post' }}" {% if form_action %}action="{{ form_action }}"{% elif request.path %}action="{{ request.path }}"{% endif %} class="space-y-6">
+        {% csrf_token %}
+
+        <section class="ds-surface space-y-6 p-6">
+            <div class="space-y-1">
+                <h2 class="text-base font-semibold text-[var(--color-text-primary)]">{{ core_section_title|default:"Informações principais" }}</h2>
+                <p class="text-sm text-[var(--color-text-secondary)]">{{ core_section_description|default:"Dados base do produto para catálogo e operação." }}</p>
+            </div>
+
+            <div class="grid gap-6 md:grid-cols-2">
+                {% with name="name" label="Nome do produto" value=name placeholder="Ex.: Tênis Hubx Runner" required=True %}
+                    {% include "shared/components/forms/input.html" %}
+                {% endwith %}
+
+                {% with name="slug" label="Slug" value=slug placeholder="tenis-hubx-runner" help_text="Usado em URLs amigáveis e integrações." %}
+                    {% include "shared/components/forms/input.html" %}
+                {% endwith %}
+            </div>
+
+            <div class="grid gap-6 md:grid-cols-2">
+                {% with name="sku" label="SKU principal" value=sku placeholder="RUNNER-001-BLK-42" %}
+                    {% include "shared/components/forms/input.html" %}
+                {% endwith %}
+
+                {% with name="brand" label="Marca" value=brand placeholder="Hubx" %}
+                    {% include "shared/components/forms/input.html" %}
+                {% endwith %}
+            </div>
+
+            {% with name="description" label="Descrição operacional" value=description rows="5" help_text="Use um texto curto e objetivo para catálogo, atendimento e canais." %}
+                {% include "shared/components/forms/textarea.html" %}
+            {% endwith %}
+        </section>
+
+        <section class="grid gap-6 xl:grid-cols-2">
+            <div class="ds-surface space-y-6 p-6">
+                <div class="space-y-1">
+                    <h2 class="text-base font-semibold text-[var(--color-text-primary)]">{{ pricing_section_title|default:"Preço e estoque" }}</h2>
+                    <p class="text-sm text-[var(--color-text-secondary)]">{{ pricing_section_description|default:"Campos principais para venda e disponibilidade." }}</p>
+                </div>
+
+                <div class="grid gap-6 md:grid-cols-2">
+                    {% with name="price" label="Preço" value=price input_type="number" prefix="R$" placeholder="0,00" required=True %}
+                        {% include "shared/components/forms/input.html" %}
+                    {% endwith %}
+
+                    {% with name="compare_price" label="Preço comparativo" value=compare_price input_type="number" prefix="R$" placeholder="0,00" help_text="Opcional para promoções e âncora de preço." %}
+                        {% include "shared/components/forms/input.html" %}
+                    {% endwith %}
+                </div>
+
+                <div class="grid gap-6 md:grid-cols-2">
+                    {% with name="stock" label="Estoque disponível" value=stock input_type="number" placeholder="0" %}
+                        {% include "shared/components/forms/input.html" %}
+                    {% endwith %}
+
+                    {% with name="reserved_stock" label="Reserva operacional" value=reserved_stock input_type="number" placeholder="0" %}
+                        {% include "shared/components/forms/input.html" %}
+                    {% endwith %}
+                </div>
+            </div>
+
+            <div class="ds-surface space-y-6 p-6">
+                <div class="space-y-1">
+                    <h2 class="text-base font-semibold text-[var(--color-text-primary)]">{{ visibility_section_title|default:"Status e visibilidade" }}</h2>
+                    <p class="text-sm text-[var(--color-text-secondary)]">{{ visibility_section_description|default:"Controles para publicação, destaque e comunicação." }}</p>
+                </div>
+
+                {% if status_options %}
+                    {% with name="status" label="Status" options=status_options selected=status_selected placeholder="Selecione um status" %}
+                        {% include "shared/components/forms/select.html" %}
+                    {% endwith %}
+                {% else %}
+                    {% with name="status" label="Status" value=status_selected placeholder="active" help_text="Ex.: active, inactive, draft." %}
+                        {% include "shared/components/forms/input.html" %}
+                    {% endwith %}
+                {% endif %}
+
+                {% if is_active %}
+                    {% with name="is_active" label="Produto ativo" description="Permite venda e exibição nos canais habilitados." checked=is_active %}
+                        {% include "shared/components/forms/switch.html" %}
+                    {% endwith %}
+                {% elif showcase_mode %}
+                    {% with name="is_active" label="Produto ativo" description="Permite venda e exibição nos canais habilitados." checked="checked" %}
+                        {% include "shared/components/forms/switch.html" %}
+                    {% endwith %}
+                {% else %}
+                    {% with name="is_active" label="Produto ativo" description="Permite venda e exibição nos canais habilitados." %}
+                        {% include "shared/components/forms/switch.html" %}
+                    {% endwith %}
+                {% endif %}
+
+                {% with name="is_featured" label="Produto em destaque" description="Permite uso em vitrines e listas promocionais." checked=is_featured %}
+                    {% include "shared/components/forms/switch.html" %}
+                {% endwith %}
+
+                {% if track_inventory %}
+                    {% with name="track_inventory" label="Controlar estoque" description="Mantenha o saldo sincronizado para operação e checkout." checked=track_inventory %}
+                        {% include "shared/components/forms/checkbox.html" %}
+                    {% endwith %}
+                {% elif showcase_mode %}
+                    {% with name="track_inventory" label="Controlar estoque" description="Mantenha o saldo sincronizado para operação e checkout." checked="checked" %}
+                        {% include "shared/components/forms/checkbox.html" %}
+                    {% endwith %}
+                {% else %}
+                    {% with name="track_inventory" label="Controlar estoque" description="Mantenha o saldo sincronizado para operação e checkout." %}
+                        {% include "shared/components/forms/checkbox.html" %}
+                    {% endwith %}
+                {% endif %}
+
+                {% with name="allow_backorder" label="Permitir venda sob encomenda" description="Habilite apenas quando a operação suportar backorder." checked=allow_backorder %}
+                    {% include "shared/components/forms/checkbox.html" %}
+                {% endwith %}
+            </div>
+        </section>
+
+        {% with primary_label=primary_label|default:"Salvar produto" secondary_label=secondary_label|default:"Cancelar" secondary_href=cancel_href|default:"#" loading=loading disabled=disabled %}
+            {% include "shared/components/forms/form_actions.html" %}
+        {% endwith %}
+    </form>
+</section>
+{% endblock %}

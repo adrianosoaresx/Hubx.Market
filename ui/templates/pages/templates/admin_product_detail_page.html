@@ -1,0 +1,108 @@
+{% extends layout_template|default:"layouts/admin_shell.html" %}
+
+{% block page_title %}{{ page_title|default:"Detalhes do produto" }}{% endblock %}
+{% block shell_title %}{% if shell_title %}{{ shell_title }}{% elif page_title %}{{ page_title }}{% else %}Detalhes do produto{% endif %}{% endblock %}
+
+{% block content %}
+<section class="space-y-6">
+    {% with eyebrow=page_eyebrow|default:"Catálogo" title=page_title|default:"Produto" description=page_description|default:"Resumo operacional do produto, preço, estoque e atividade recente." meta=page_meta %}
+        {% include "shared/components/layout/page_header.html" %}
+    {% endwith %}
+
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-3">
+            {% if status_label %}
+                {% include "shared/components/data_display/badge.html" with label=status_label variant=status_variant|default:"active" %}
+            {% elif showcase_mode %}
+                {% include "shared/components/data_display/badge.html" with label="Ativo" variant="active" %}
+            {% endif %}
+
+            {% if channel_label %}
+                {% include "shared/components/data_display/badge.html" with label=channel_label variant="info" size="xs" %}
+            {% elif showcase_mode %}
+                {% include "shared/components/data_display/badge.html" with label="Storefront" variant="info" size="xs" %}
+            {% endif %}
+        </div>
+
+        {% if page_actions %}
+            <div class="flex flex-wrap gap-3">
+                {{ page_actions }}
+            </div>
+        {% else %}
+            <div class="flex flex-wrap gap-3">
+                {% if back_href %}
+                    {% include "shared/components/actions/button.html" with label=back_label|default:"Voltar" href=back_href variant="secondary" %}
+                {% elif showcase_mode %}
+                    {% include "shared/components/actions/button.html" with label="Voltar" href="#" variant="secondary" %}
+                {% endif %}
+
+                {% if edit_href %}
+                    {% include "shared/components/actions/button.html" with label=edit_label|default:"Editar produto" href=edit_href variant="primary" %}
+                {% elif showcase_mode %}
+                    {% include "shared/components/actions/button.html" with label="Editar produto" href="#" variant="primary" %}
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(20rem,1fr)]">
+        <div class="space-y-6">
+            {% with title=summary_title|default:"Resumo do produto" subtitle=summary_subtitle|default:"Informações principais para operação e acompanhamento." content=summary_content|default:"Produto pronto para venda, com catálogo publicado e revisão operacional em dia." %}
+                {% include "shared/components/data_display/card.html" %}
+            {% endwith %}
+
+            <div class="grid gap-6 md:grid-cols-2">
+                {% with title=pricing_title|default:"Preço e venda" subtitle=pricing_subtitle|default:"Valores atuais e política promocional." content=pricing_content|default:"Preço atual: R$ 299,90 · Preço comparativo: R$ 349,90 · Promoção ativa nesta semana." %}
+                    {% include "shared/components/data_display/card.html" %}
+                {% endwith %}
+
+                {% with title=inventory_title|default:"Estoque e disponibilidade" subtitle=inventory_subtitle|default:"Disponibilidade atual da variante principal." content=inventory_content|default:"Estoque disponível: 24 unidades · Reserva operacional: 4 unidades · Última atualização há 15 minutos." %}
+                    {% include "shared/components/data_display/card.html" %}
+                {% endwith %}
+            </div>
+
+            {% with title=details_title|default:"Descrição operacional" subtitle=details_subtitle|default:"Observações e contexto útil para atendimento e catálogo." content=details_content|default:"Produto com mídia principal aprovada, descrição pública validada e compatível com os canais habilitados." %}
+                {% include "shared/components/data_display/card.html" %}
+            {% endwith %}
+
+            {% with title=activity_title|default:"Atividade recente" description=activity_description|default:"Histórico de mudanças e eventos relacionados ao produto." items=activity_items empty_title=activity_empty_title|default:"Nenhuma atividade recente" empty_description=activity_empty_description|default:"Atualizações e eventos operacionais aparecerão aqui." showcase_mode=showcase_mode %}
+                {% include "shared/components/data_display/activity_feed.html" %}
+            {% endwith %}
+        </div>
+
+        <aside class="space-y-6">
+            <section class="ds-surface p-6">
+                <div class="space-y-4">
+                    <div>
+                        <h2 class="text-base font-semibold text-[var(--color-text-primary)]">{{ sidebar_title|default:"Status operacional" }}</h2>
+                        <p class="mt-1 text-sm text-[var(--color-text-secondary)]">{{ sidebar_description|default:"Visibilidade, canal e metadados principais." }}</p>
+                    </div>
+
+                    <dl class="space-y-3 text-sm">
+                        <div class="flex items-start justify-between gap-4">
+                            <dt class="text-[var(--color-text-secondary)]">SKU principal</dt>
+                            <dd class="font-medium text-[var(--color-text-primary)]">{{ sku|default:"RUNNER-001-BLK-42" }}</dd>
+                        </div>
+                        <div class="flex items-start justify-between gap-4">
+                            <dt class="text-[var(--color-text-secondary)]">Categoria</dt>
+                            <dd class="font-medium text-[var(--color-text-primary)]">{{ category_label|default:"Calçados esportivos" }}</dd>
+                        </div>
+                        <div class="flex items-start justify-between gap-4">
+                            <dt class="text-[var(--color-text-secondary)]">Canal</dt>
+                            <dd class="font-medium text-[var(--color-text-primary)]">{{ sales_channel|default:"Storefront + Marketplace" }}</dd>
+                        </div>
+                        <div class="flex items-start justify-between gap-4">
+                            <dt class="text-[var(--color-text-secondary)]">Última atualização</dt>
+                            <dd class="font-medium text-[var(--color-text-primary)]">{{ updated_at|default:"há 15 minutos" }}</dd>
+                        </div>
+                    </dl>
+                </div>
+            </section>
+
+            {% with title=visibility_title|default:"Publicação" subtitle=visibility_subtitle|default:"Regras atuais de exibição do produto." content=visibility_content|default:"Produto visível na loja, elegível para destaque e habilitado para campanhas promocionais." %}
+                {% include "shared/components/data_display/card.html" %}
+            {% endwith %}
+        </aside>
+    </div>
+</section>
+{% endblock %}

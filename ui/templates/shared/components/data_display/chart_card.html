@@ -1,0 +1,62 @@
+{% with trend=trend|default:"neutral" %}
+<section class="ds-surface p-6">
+    <div class="space-y-5">
+        {% if title or description or actions %}
+            <header class="flex items-start justify-between gap-4">
+                <div class="space-y-1">
+                    {% if title %}<h3 class="text-base font-semibold text-[var(--color-text-primary)]">{{ title }}</h3>{% endif %}
+                    {% if description %}<p class="text-sm text-[var(--color-text-secondary)]">{{ description }}</p>{% endif %}
+                </div>
+                {% if actions %}<div class="flex flex-wrap gap-2">{{ actions }}</div>{% endif %}
+            </header>
+        {% endif %}
+
+        {% if value or delta %}
+            <div class="flex items-start justify-between gap-4">
+                <div class="space-y-2">
+                    {% if value %}
+                        <p class="text-3xl font-semibold text-[var(--color-text-primary)]">{{ value }}</p>
+                    {% endif %}
+                    {% if delta %}
+                        <div class="flex items-center gap-2 text-sm {% if trend == 'positive' %}text-emerald-600{% elif trend == 'negative' %}text-rose-600{% else %}text-[var(--color-text-secondary)]{% endif %}">
+                            {% if trend == 'positive' %}
+                                <span aria-hidden="true">↑</span>
+                            {% elif trend == 'negative' %}
+                                <span aria-hidden="true">↓</span>
+                            {% endif %}
+                            <span>{{ delta }}</span>
+                        </div>
+                    {% endif %}
+                </div>
+
+                {% if meta %}
+                    <p class="text-sm text-[var(--color-text-secondary)]">{{ meta }}</p>
+                {% endif %}
+            </div>
+        {% endif %}
+
+        {% if chart %}
+            <div class="rounded-xl border border-[var(--color-border-default)] bg-slate-50 p-4">
+                {{ chart }}
+            </div>
+        {% elif showcase_mode %}
+            <div class="rounded-xl border border-[var(--color-border-default)] bg-slate-50 p-4">
+                <div class="flex h-36 items-end gap-3">
+                    <div class="w-full rounded-t bg-indigo-200" style="height: 42%;"></div>
+                    <div class="w-full rounded-t bg-indigo-300" style="height: 58%;"></div>
+                    <div class="w-full rounded-t bg-indigo-400" style="height: 74%;"></div>
+                    <div class="w-full rounded-t bg-indigo-300" style="height: 55%;"></div>
+                    <div class="w-full rounded-t bg-indigo-500" style="height: 84%;"></div>
+                    <div class="w-full rounded-t bg-indigo-400" style="height: 68%;"></div>
+                </div>
+            </div>
+        {% endif %}
+
+        {% if footer %}
+            <footer class="border-t border-[var(--color-border-default)] pt-4 text-sm text-[var(--color-text-secondary)]">
+                {{ footer }}
+            </footer>
+        {% endif %}
+    </div>
+</section>
+{% endwith %}

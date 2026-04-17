@@ -1,0 +1,13 @@
+<div class="{% if align == 'right' %}text-right{% endif %}">
+    <div class="flex items-end gap-2 {% if align == 'right' %}justify-end{% endif %}">
+        <span class="{% if size == 'lg' %}text-lg{% elif size == 'sm' %}text-sm{% else %}text-base{% endif %} font-semibold text-[var(--color-text-primary)]">
+            {{ value|default:"R$ 0,00" }}
+        </span>
+        {% if compare_value %}
+            <span class="text-sm text-[var(--color-text-secondary)] line-through">{{ compare_value }}</span>
+        {% endif %}
+    </div>
+    {% if helper %}
+        <p class="mt-1 text-xs text-[var(--color-text-secondary)]">{{ helper }}</p>
+    {% endif %}
+</div>

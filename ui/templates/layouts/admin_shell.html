@@ -1,0 +1,30 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}{% block page_title %}Hubx Market Admin{% endblock %}{% endblock %}
+{% block ui_context %}admin{% endblock %}
+{% block body_class %}bg-slate-50{% endblock %}
+
+{% block body %}
+<div class="min-h-screen lg:grid lg:grid-cols-[16rem_minmax(0,1fr)]">
+    <aside class="border-r border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-6">
+        <div class="mb-8">
+            <a href="/" class="text-lg font-semibold text-[var(--color-text-primary)]">Hubx Market</a>
+        </div>
+        {% include "shared/partials/sidebar.html" %}
+    </aside>
+    <div class="min-w-0">
+        <header class="border-b border-[var(--color-border-default)] bg-[var(--color-surface-panel)] px-6 py-4">
+            <div class="mx-auto flex max-w-7xl items-center justify-between gap-4">
+                <div>
+                    <p class="text-sm text-[var(--color-text-secondary)]">Admin SaaS</p>
+                    <h1 class="text-xl font-semibold text-[var(--color-text-primary)]">{% block shell_title %}Painel{% endblock %}</h1>
+                </div>
+                {% include "shared/partials/navbar.html" %}
+            </div>
+        </header>
+        <main class="mx-auto max-w-7xl px-6 py-8">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</div>
+{% endblock %}

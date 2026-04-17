@@ -1,0 +1,54 @@
+{% extends "layouts/account_shell.html" %}
+
+{% block title %}{{ page_title|default:"Detalhes do pedido" }}{% endblock %}
+
+{% block content %}
+<section class="space-y-6">
+    {% with eyebrow=eyebrow|default:"Customer Area" title=page_title|default:"Pedido #1024" description=page_description|default:"Resumo do pedido, status atual e histórico de movimentações." meta=page_meta %}
+        {% include "shared/components/layout/page_header.html" %}
+    {% endwith %}
+
+    <div class="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_24rem]">
+        <div class="space-y-6">
+            <section class="grid gap-6 md:grid-cols-2">
+                {% with title=summary_title|default:"Resumo do pedido" subtitle=summary_subtitle|default:"Informações principais da compra." content=summary_content|default:"Pedido realizado com sucesso e aguardando atualização logística." %}
+                    {% include "shared/components/data_display/card.html" %}
+                {% endwith %}
+
+                <section class="ds-surface p-6">
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between gap-3">
+                            <h3 class="text-base font-semibold text-[var(--color-text-primary)]">{{ status_title|default:"Status atual" }}</h3>
+                            {% include "shared/components/data_display/badge.html" with label=order_status_label|default:"Pago" variant=order_status_variant|default:"paid" %}
+                        </div>
+                        <div class="space-y-2 text-sm text-[var(--color-text-secondary)]">
+                            <p><span class="font-medium text-[var(--color-text-primary)]">Pedido:</span> {{ order_number|default:"#1024" }}</p>
+                            <p><span class="font-medium text-[var(--color-text-primary)]">Pagamento:</span> {{ payment_status|default:"Confirmado" }}</p>
+                            <p><span class="font-medium text-[var(--color-text-primary)]">Entrega:</span> {{ shipping_status|default:"Preparando envio" }}</p>
+                        </div>
+                    </div>
+                </section>
+            </section>
+
+            <section class="space-y-4">
+                <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">{{ items_title|default:"Itens do pedido" }}</h2>
+                {% with title=order_summary_title|default:"Resumo da compra" description=order_summary_description|default:"Itens, totais e condições do pedido." items=order_items subtotal=subtotal shipping=shipping discount=discount installments=installments total=total note=summary_note showcase_mode=showcase_mode %}
+                    {% include "shared/components/composite/order_summary.html" %}
+                {% endwith %}
+            </section>
+        </div>
+
+        <aside class="space-y-6">
+            {% if activity_items or showcase_mode %}
+                {% with title=activity_title|default:"Linha do tempo" description=activity_description|default:"Acompanhe atualizações importantes do pedido." items=activity_items showcase_mode=showcase_mode %}
+                    {% include "shared/components/data_display/activity_feed.html" %}
+                {% endwith %}
+            {% else %}
+                {% with icon="🕒" title="Sem atualizações ainda" description="Assim que o pedido avançar, a linha do tempo aparecerá aqui." centered=False size="md" %}
+                    {% include "shared/components/feedback/empty_state.html" %}
+                {% endwith %}
+            {% endif %}
+        </aside>
+    </div>
+</section>
+{% endblock %}

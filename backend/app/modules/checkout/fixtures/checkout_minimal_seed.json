@@ -1,0 +1,126 @@
+[
+  {
+    "model": "tenants.tenant",
+    "pk": 2,
+    "fields": {
+      "name": "Hubx Checkout Demo",
+      "slug": "hubx-checkout-demo",
+      "subdomain": "hubx-checkout-demo",
+      "custom_domain": null,
+      "is_active": true,
+      "maintenance_mode": false,
+      "created_at": "2026-04-14T12:00:00Z",
+      "updated_at": "2026-04-14T12:00:00Z"
+    }
+  },
+  {
+    "model": "checkout.checkoutsession",
+    "pk": 1,
+    "fields": {
+      "tenant": 2,
+      "session_key": "11111111-1111-1111-1111-111111111111",
+      "status": "open",
+      "first_name": "Ana",
+      "last_name": "Souza",
+      "email": "ana.persisted@hubx.market",
+      "phone": "(11) 98888-0000",
+      "address_line_1": "Rua Persistida, 200",
+      "address_line_2": "Apto 84",
+      "city": "São Paulo",
+      "state": "SP",
+      "zip_code": "04567-000",
+      "shipping_methods": [
+        {
+          "value": "standard",
+          "label": "Entrega padrão",
+          "description": "Receba em até 5 dias úteis.",
+          "price": "R$ 24,90"
+        },
+        {
+          "value": "express",
+          "label": "Entrega expressa",
+          "description": "Receba em até 2 dias úteis.",
+          "price": "R$ 39,90"
+        }
+      ],
+      "shipping_method_selected": "express",
+      "payment_methods": [
+        {
+          "value": "credit_card",
+          "label": "Cartão de crédito",
+          "description": "Pagamento imediato com confirmação online.",
+          "meta": "3x sem juros"
+        },
+        {
+          "value": "pix",
+          "label": "PIX",
+          "description": "Aprovação rápida após a confirmação do pagamento.",
+          "meta": "5% de desconto no pagamento à vista"
+        }
+      ],
+      "payment_method_selected": "pix",
+      "subtotal": "459.80",
+      "shipping_total": "39.90",
+      "discount_total": "15.00",
+      "grand_total": "484.70",
+      "installments_summary": "3x de R$ 161,56 sem juros",
+      "installments_selected": "1x",
+      "installments_options": [
+        {
+          "value": "1x",
+          "label": "1x de R$ 484,70"
+        },
+        {
+          "value": "2x",
+          "label": "2x de R$ 242,35"
+        },
+        {
+          "value": "3x",
+          "label": "3x de R$ 161,56"
+        }
+      ],
+      "accept_terms": true,
+      "expires_at": null,
+      "created_at": "2026-04-14T12:00:00Z",
+      "updated_at": "2026-04-14T12:00:00Z"
+    }
+  },
+  {
+    "model": "checkout.checkoutsessionitem",
+    "pk": 1,
+    "fields": {
+      "checkout_session": 1,
+      "title": "Tênis Hubx Runner Persistido",
+      "subtitle": "Preto · 42",
+      "meta": "SKU RUNNER-PERSIST-001",
+      "image_url": "https://placehold.co/240x240?text=runner-persistido",
+      "image_alt": "Tênis Hubx Runner Persistido",
+      "price": "399.90",
+      "compare_price": "449.90",
+      "quantity": 1,
+      "quantity_readonly": true,
+      "sort_order": 1,
+      "created_at": "2026-04-14T12:00:00Z",
+      "updated_at": "2026-04-14T12:00:00Z"
+    }
+  },
+  {
+    "model": "checkout.checkoutsessionitem",
+    "pk": 2,
+    "fields": {
+      "checkout_session": 1,
+      "title": "Meia Performance Persistida",
+      "subtitle": "Pack com 3 pares",
+      "meta": "SKU MP-PERSIST-030",
+      "image_url": "https://placehold.co/240x240?text=meia-persistida",
+      "image_alt": "Meia Performance Persistida",
+      "price": "59.90",
+      "compare_price": null,
+      "quantity": 1,
+      "quantity_readonly": true,
+      "sort_order": 2,
+      "created_at": "2026-04-14T12:00:00Z",
+      "updated_at": "2026-04-14T12:00:00Z"
+    }
+  }
+]

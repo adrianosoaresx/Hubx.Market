@@ -1,0 +1,42 @@
+<details class="relative inline-block text-left" {% if open %}open{% endif %}>
+    <summary class="list-none">
+        {% if trigger %}
+            {{ trigger }}
+        {% else %}
+            {% include "shared/components/actions/button.html" with label=label|default:"Abrir menu" variant=variant|default:"secondary" size=size|default:"sm" %}
+        {% endif %}
+    </summary>
+
+    <div class="absolute right-0 z-20 mt-2 min-w-56 rounded-xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-2 shadow-lg">
+        {% if title %}
+            <div class="border-b border-[var(--color-border-default)] px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
+                {{ title }}
+            </div>
+        {% endif %}
+
+        <div class="py-1">
+            {% for item in items %}
+                {% if item.href %}
+                    <a
+                        href="{{ item.href }}"
+                        class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] hover:bg-slate-50 {% if item.disabled %}pointer-events-none opacity-50{% endif %}"
+                    >
+                        {% if item.icon %}<span aria-hidden="true">{{ item.icon }}</span>{% endif %}
+                        <span>{{ item.label }}</span>
+                    </a>
+                {% else %}
+                    <button
+                        type="{{ item.type|default:'button' }}"
+                        class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm text-[var(--color-text-primary)] hover:bg-slate-50 {% if item.disabled %}pointer-events-none opacity-50{% endif %}"
+                        {% if item.disabled %}disabled{% endif %}
+                    >
+                        {% if item.icon %}<span aria-hidden="true">{{ item.icon }}</span>{% endif %}
+                        <span>{{ item.label }}</span>
+                    </button>
+                {% endif %}
+            {% empty %}
+                <div class="px-3 py-2 text-sm text-[var(--color-text-secondary)]">Nenhuma ação disponível.</div>
+            {% endfor %}
+        </div>
+    </div>
+</details>

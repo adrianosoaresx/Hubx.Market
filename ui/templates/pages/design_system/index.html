@@ -1,0 +1,64 @@
+{% extends "layouts/admin_shell.html" %}
+
+{% block title %}Design System Showcase{% endblock %}
+{% block shell_title %}Design System Showcase{% endblock %}
+{% block tenant_theme %}{{ request.GET.tenant|default:'default' }}{% endblock %}
+
+{% block content %}
+<section class="space-y-8">
+    {% include "shared/components/layout/page_header.html" with
+        eyebrow="UI"
+        title="Design System Showcase"
+        description="Referência interna dos componentes, composites e page templates oficiais já implementados no Hubx.market."
+    %}
+    {% include "shared/partials/design_system_preview_context.html" %}
+
+    <section class="space-y-3 rounded-2xl border border-dashed border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-5">
+        <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div class="space-y-1">
+                <h2 class="text-base font-semibold text-[var(--color-text-primary)]">Tenant / Theme Preview</h2>
+                <p class="text-sm text-[var(--color-text-secondary)]">
+                    Pré-visualização interna do Design System com troca leve de contexto visual por querystring.
+                    Tenant atual: <code>{{ request.GET.tenant|default:"default" }}</code>.
+                </p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <a href="/__internal__/design-system/?tenant=default" class="ds-btn ds-btn-sm {% if request.GET.tenant|default:'default' == 'default' %}ds-btn-primary{% else %}ds-btn-secondary{% endif %}">Default</a>
+                <a href="/__internal__/design-system/?tenant=demo" class="ds-btn ds-btn-sm {% if request.GET.tenant == 'demo' %}ds-btn-primary{% else %}ds-btn-secondary{% endif %}">Demo</a>
+                <a href="/__internal__/design-system/?tenant=storefront" class="ds-btn ds-btn-sm {% if request.GET.tenant == 'storefront' %}ds-btn-primary{% else %}ds-btn-secondary{% endif %}">Storefront</a>
+                <a href="/__internal__/design-system/?tenant=nike" class="ds-btn ds-btn-sm {% if request.GET.tenant == 'nike' %}ds-btn-primary{% else %}ds-btn-secondary{% endif %}">Nike</a>
+            </div>
+        </div>
+    </section>
+
+    <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+        {% include "shared/components/data_display/card.html" with
+            title="Components"
+            subtitle="Building blocks reutilizáveis."
+            content="Demonstra componentes isolados, composites e blocos reutilizáveis do Design System."
+        %}
+        {% include "shared/components/data_display/card.html" with
+            title="Forms"
+            subtitle="Componentes de formulário."
+            content="Exemplos práticos de campos, mensagens, seleção e ações para CRUDs e fluxos internos."
+        %}
+        {% include "shared/components/data_display/card.html" with
+            title="Ecommerce"
+            subtitle="Commerce / Storefront components."
+            content="Demonstra componentes e composites da trilha pública de catálogo, produto, carrinho e resumo, sem páginas completas."
+        %}
+        {% include "shared/components/data_display/card.html" with
+            title="Page Templates"
+            subtitle="Admin, catálogo, clientes, pedidos, checkout, auth/account e customer area."
+            content="Área dedicada para visualizar a composição completa das page templates oficiais, incluindo dashboard admin e fluxos operacionais de produtos, pedidos e clientes."
+        %}
+    </div>
+
+    <div class="flex flex-wrap gap-3">
+        <a href="/__internal__/design-system/components/?tenant={{ request.GET.tenant|default:'default' }}" class="ds-btn ds-btn-primary ds-btn-sm">Abrir Components</a>
+        <a href="/__internal__/design-system/forms/?tenant={{ request.GET.tenant|default:'default' }}" class="ds-btn ds-btn-primary ds-btn-sm">Abrir Forms</a>
+        <a href="/__internal__/design-system/ecommerce/?tenant={{ request.GET.tenant|default:'default' }}" class="ds-btn ds-btn-primary ds-btn-sm">Abrir Ecommerce</a>
+        <a href="/__internal__/design-system/pages/?tenant={{ request.GET.tenant|default:'default' }}" class="ds-btn ds-btn-primary ds-btn-sm">Abrir Page Templates</a>
+    </div>
+</section>
+{% endblock %}

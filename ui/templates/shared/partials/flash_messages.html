@@ -1,1 +1,15 @@
-{# Placeholder: ui/templates/shared/partials/flash_messages.html #}
+{% if messages %}
+<div class="mx-auto max-w-7xl space-y-3 px-6 pt-4">
+    {% for message in messages %}
+        {% if "error" in message.tags %}
+            {% include "shared/components/feedback/alert.html" with variant="danger" description=message title="Mensagem" %}
+        {% elif "success" in message.tags %}
+            {% include "shared/components/feedback/alert.html" with variant="success" description=message title="Mensagem" %}
+        {% elif "warning" in message.tags %}
+            {% include "shared/components/feedback/alert.html" with variant="warning" description=message title="Mensagem" %}
+        {% else %}
+            {% include "shared/components/feedback/alert.html" with variant="info" description=message title="Mensagem" %}
+        {% endif %}
+    {% endfor %}
+</div>
+{% endif %}

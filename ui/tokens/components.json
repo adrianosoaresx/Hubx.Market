@@ -1,0 +1,33 @@
+{
+  "button": {
+    "primary": {
+      "bg": { "value": "{action.primary.value}" },
+      "bg_hover": { "value": "{action.primary_hover.value}" },
+      "text": { "value": "{text.inverse.value}" },
+      "radius": { "value": "{radius.md.value}" }
+    },
+    "secondary": {
+      "bg": { "value": "{surface.panel.value}" },
+      "border": { "value": "{border.default.value}" },
+      "text": { "value": "{text.primary.value}" }
+    }
+  },
+  "input": {
+    "bg": { "value": "{surface.panel.value}" },
+    "border": { "value": "{border.default.value}" },
+    "border_focus": { "value": "{action.primary.value}" },
+    "text": { "value": "{text.primary.value}" },
+    "placeholder": { "value": "{text.secondary.value}" }
+  },
+  "card": {
+    "bg": { "value": "{surface.panel.value}" },
+    "border": { "value": "{border.default.value}" },
+    "shadow": { "value": "{shadow.sm.value}" }
+  },
+  "alert": {
+    "info_bg": { "value": "rgba(14, 165, 233, 0.10)" },
+    "warning_bg": { "value": "rgba(217, 119, 6, 0.10)" },
+    "danger_bg": { "value": "rgba(220, 38, 38, 0.10)" },
+    "success_bg": { "value": "rgba(34, 197, 94, 0.10)" }
+  }
+}

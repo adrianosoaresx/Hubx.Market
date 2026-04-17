@@ -1,0 +1,56 @@
+{% extends "layouts/account_shell.html" %}
+
+{% block title %}{{ page_title|default:"Meus endereços" }}{% endblock %}
+
+{% block content %}
+<section class="space-y-6">
+    {% with eyebrow=eyebrow|default:"Customer Area" title=page_title|default:"Meus endereços" description=page_description|default:"Gerencie endereços de entrega e cobrança da sua conta." actions=page_actions %}
+        {% include "shared/components/layout/page_header.html" %}
+    {% endwith %}
+
+    {% if addresses %}
+        <div class="grid gap-6 xl:grid-cols-2">
+            {% for address in addresses %}
+                {% with title=address.title|default:"Endereço salvo" subtitle=address.subtitle content=address.content footer=address.footer actions=address.actions %}
+                    {% include "shared/components/data_display/card.html" %}
+                {% endwith %}
+            {% endfor %}
+        </div>
+    {% elif showcase_mode %}
+        <div class="grid gap-6 xl:grid-cols-2">
+            <section class="ds-surface p-6">
+                <div class="space-y-4">
+                    {% include "shared/components/data_display/card.html" with
+                        title="Casa"
+                        subtitle="Entrega principal"
+                        content="Rua das Laranjeiras, 100 · Apto 42 · Bela Vista · São Paulo/SP"
+                        footer="CEP 01310-100"
+                    %}
+                    <div class="flex gap-3">
+                        <a href="#" class="text-sm font-medium text-[var(--color-action-primary-bg)] hover:underline">Editar</a>
+                        <a href="#" class="text-sm font-medium text-rose-600 hover:underline">Remover</a>
+                    </div>
+                </div>
+            </section>
+            <section class="ds-surface p-6">
+                <div class="space-y-4">
+                    {% include "shared/components/data_display/card.html" with
+                        title="Escritório"
+                        subtitle="Entrega alternativa"
+                        content="Av. Paulista, 900 · 12º andar · São Paulo/SP"
+                        footer="CEP 01310-200"
+                    %}
+                    <div class="flex gap-3">
+                        <a href="#" class="text-sm font-medium text-[var(--color-action-primary-bg)] hover:underline">Editar</a>
+                        <a href="#" class="text-sm font-medium text-rose-600 hover:underline">Remover</a>
+                    </div>
+                </div>
+            </section>
+        </div>
+    {% else %}
+        {% with icon="📍" title=empty_title|default:"Nenhum endereço salvo" description=empty_description|default:"Adicione um endereço para agilizar futuras compras." primary_action=primary_action secondary_action=secondary_action %}
+            {% include "shared/components/feedback/empty_state.html" %}
+        {% endwith %}
+    {% endif %}
+</section>
+{% endblock %}

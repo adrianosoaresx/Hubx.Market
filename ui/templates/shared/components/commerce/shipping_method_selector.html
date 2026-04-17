@@ -1,0 +1,59 @@
+{% if methods or showcase_mode %}
+<div class="space-y-3">
+    {% if methods %}
+    {% for method in methods %}
+        <label class="flex items-start gap-3 rounded-xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-4 {% if method.disabled %}opacity-60{% else %}cursor-pointer{% endif %}">
+            <input
+                type="radio"
+                name="{{ name|default:'shipping_method' }}"
+                value="{{ method.value }}"
+                class="mt-1 h-4 w-4 border-[var(--color-border-strong)] text-[var(--color-action-primary-bg)] focus:ring-[var(--focus-ring)]"
+                {% if method.checked or method.value == selected %}checked{% endif %}
+                {% if method.disabled %}disabled{% endif %}
+            >
+            <div class="min-w-0 flex-1">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <p class="text-sm font-medium text-[var(--color-text-primary)]">{{ method.label }}</p>
+                        {% if method.description %}
+                            <p class="mt-1 text-sm text-[var(--color-text-secondary)]">{{ method.description }}</p>
+                        {% endif %}
+                    </div>
+                    {% include "shared/components/commerce/price_display.html" with value=method.price size="sm" align="right" %}
+                </div>
+                {% if method.meta %}
+                    <p class="mt-2 text-xs text-[var(--color-text-secondary)]">{{ method.meta }}</p>
+                {% endif %}
+            </div>
+        </label>
+    {% endfor %}
+    {% else %}
+        <label class="flex items-start gap-3 rounded-xl border border-[var(--color-action-primary-bg)] bg-indigo-50 p-4">
+            <input type="radio" name="{{ name|default:'shipping_method' }}" value="standard" class="mt-1 h-4 w-4 border-[var(--color-border-strong)] text-[var(--color-action-primary-bg)] focus:ring-[var(--focus-ring)]" checked>
+            <div class="min-w-0 flex-1">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <p class="text-sm font-medium text-[var(--color-text-primary)]">Entrega padrão</p>
+                        <p class="mt-1 text-sm text-[var(--color-text-secondary)]">Receba entre 3 e 5 dias úteis.</p>
+                    </div>
+                    {% include "shared/components/commerce/price_display.html" with value="R$ 24,90" size="sm" align="right" %}
+                </div>
+                <p class="mt-2 text-xs text-[var(--color-text-secondary)]">Frete econômico com rastreamento.</p>
+            </div>
+        </label>
+        <label class="flex items-start gap-3 rounded-xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-4 cursor-pointer">
+            <input type="radio" name="{{ name|default:'shipping_method' }}" value="express" class="mt-1 h-4 w-4 border-[var(--color-border-strong)] text-[var(--color-action-primary-bg)] focus:ring-[var(--focus-ring)]">
+            <div class="min-w-0 flex-1">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <p class="text-sm font-medium text-[var(--color-text-primary)]">Entrega expressa</p>
+                        <p class="mt-1 text-sm text-[var(--color-text-secondary)]">Receba no próximo dia útil.</p>
+                    </div>
+                    {% include "shared/components/commerce/price_display.html" with value="R$ 39,90" size="sm" align="right" %}
+                </div>
+                <p class="mt-2 text-xs text-[var(--color-text-secondary)]">Disponível para capitais e regiões selecionadas.</p>
+            </div>
+        </label>
+    {% endif %}
+</div>
+{% endif %}

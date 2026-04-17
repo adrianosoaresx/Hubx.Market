@@ -1,0 +1,67 @@
+<section class="space-y-4" aria-label="{{ aria_label|default:'Galeria do produto' }}">
+    <div class="overflow-hidden rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
+        <div class="aspect-square bg-slate-100">
+            {% if main_image_url %}
+                <img src="{{ main_image_url }}" alt="{{ main_image_alt|default:title|default:'Imagem principal do produto' }}" class="h-full w-full object-cover">
+            {% elif items %}
+                {% for item in items %}
+                    {% if forloop.first %}
+                        <img src="{{ item.url }}" alt="{{ item.alt|default:title|default:'Imagem do produto' }}" class="h-full w-full object-cover">
+                    {% endif %}
+                {% endfor %}
+            {% elif images %}
+                {% for item in images %}
+                    {% if forloop.first %}
+                        <img src="{{ item.url }}" alt="{{ item.alt|default:title|default:'Imagem do produto' }}" class="h-full w-full object-cover">
+                    {% endif %}
+                {% endfor %}
+            {% elif showcase_mode %}
+                <img src="https://placehold.co/800x800" alt="Imagem principal do produto" class="h-full w-full object-cover">
+            {% else %}
+                <div class="flex h-full items-center justify-center text-sm text-[var(--color-text-secondary)]">
+                    Sem imagens disponíveis
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if items %}
+        <div class="grid grid-cols-4 gap-3 sm:grid-cols-5">
+            {% for item in items %}
+                <div class="overflow-hidden rounded-xl border {% if item.active %}border-[var(--color-action-primary-bg)] ring-2 ring-[var(--focus-ring)]{% else %}border-[var(--color-border-default)]{% endif %} bg-[var(--color-surface-panel)]">
+                    <div class="aspect-square bg-slate-100">
+                        {% if item.url %}
+                            <img src="{{ item.url }}" alt="{{ item.alt|default:title|default:'Miniatura do produto' }}" class="h-full w-full object-cover">
+                        {% else %}
+                            <div class="flex h-full items-center justify-center text-xs text-[var(--color-text-secondary)]">Thumb</div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% elif images %}
+        <div class="grid grid-cols-4 gap-3 sm:grid-cols-5">
+            {% for item in images %}
+                <div class="overflow-hidden rounded-xl border {% if item.active %}border-[var(--color-action-primary-bg)] ring-2 ring-[var(--focus-ring)]{% else %}border-[var(--color-border-default)]{% endif %} bg-[var(--color-surface-panel)]">
+                    <div class="aspect-square bg-slate-100">
+                        {% if item.url %}
+                            <img src="{{ item.url }}" alt="{{ item.alt|default:title|default:'Miniatura do produto' }}" class="h-full w-full object-cover">
+                        {% else %}
+                            <div class="flex h-full items-center justify-center text-xs text-[var(--color-text-secondary)]">Thumb</div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% elif showcase_mode %}
+        <div class="grid grid-cols-4 gap-3 sm:grid-cols-5">
+            {% for thumb in "12345" %}
+                <div class="overflow-hidden rounded-xl border {% if forloop.first %}border-[var(--color-action-primary-bg)] ring-2 ring-[var(--focus-ring)]{% else %}border-[var(--color-border-default)]{% endif %} bg-[var(--color-surface-panel)]">
+                    <div class="aspect-square bg-slate-100">
+                        <img src="https://placehold.co/160x160" alt="Miniatura do produto" class="h-full w-full object-cover">
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</section>

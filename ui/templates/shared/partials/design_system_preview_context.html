@@ -1,0 +1,5 @@
+<div class="inline-flex items-center gap-2 rounded-full border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] px-3 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] shadow-sm">
+    <span class="inline-flex h-2 w-2 rounded-full bg-[var(--color-action-primary-bg)]"></span>
+    <span>Tenant:</span>
+    <span class="font-semibold text-[var(--color-text-primary)]">{{ request.GET.tenant|default:"Default"|title }}</span>
+</div>

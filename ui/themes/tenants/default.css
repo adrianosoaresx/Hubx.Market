@@ -1,0 +1,15 @@
+/* Default tenant alias pack.
+ * New tenant packs should override only tenant-scoped aliases such as:
+ * --tenant-brand-primary
+ * --tenant-brand-primary-hover
+ * --tenant-brand-secondary
+ * --tenant-radius-base
+ */
+
+:root,
+[data-tenant="default"] {
+  --tenant-brand-primary: var(--color-action-primary-bg);
+  --tenant-brand-primary-hover: var(--color-action-primary-bg-hover);
+  --tenant-brand-secondary: var(--color-action-secondary);
+  --tenant-radius-base: var(--radius-md);
+}

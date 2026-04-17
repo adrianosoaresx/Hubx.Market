@@ -1,0 +1,54 @@
+{% extends layout_template|default:"layouts/admin_shell.html" %}
+
+{% block page_title %}{{ page_title|default:"Produtos" }}{% endblock %}
+{% block shell_title %}{% if shell_title %}{{ shell_title }}{% elif page_title %}{{ page_title }}{% else %}Produtos{% endif %}{% endblock %}
+
+{% block content %}
+<section class="space-y-6">
+    {% with eyebrow=page_eyebrow|default:"Catálogo" title=page_title|default:"Produtos" description=page_description|default:"Gerencie listagem, status e disponibilidade dos produtos." meta=page_meta %}
+        {% include "shared/components/layout/page_header.html" %}
+    {% endwith %}
+
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        {% if page_actions %}
+            <div class="flex flex-wrap gap-3">
+                {{ page_actions }}
+            </div>
+        {% else %}
+            <div class="flex flex-wrap gap-3">
+                {% if create_href %}
+                    {% include "shared/components/actions/button.html" with label=create_label|default:"Novo produto" href=create_href variant="primary" %}
+                {% elif showcase_mode %}
+                    {% include "shared/components/actions/button.html" with label="Novo produto" href="#" variant="primary" %}
+                {% endif %}
+            </div>
+        {% endif %}
+
+        {% if page_note %}
+            <p class="text-sm text-[var(--color-text-secondary)]">{{ page_note }}</p>
+        {% endif %}
+    </div>
+
+    {% if search_name or status_options or reset_url or showcase_mode %}
+        {% if filter_action %}
+            {% with method=filter_method|default:"get" action=filter_action hx_get=hx_get hx_target=hx_target hx_swap=hx_swap title=filter_title|default:"Filtros" description=filter_description|default:"Busque produtos e refine a listagem operacional." search_name=search_name|default:"q" search_value=search_value search_label=search_label|default:"Buscar produtos" search_placeholder=search_placeholder|default:"Nome, SKU ou variante" status_name=status_name|default:"status" status_options=status_options status_selected=status_selected status_label=status_label|default:"Status" reset_url=reset_url submit_label=submit_label|default:"Aplicar filtros" reset_label=reset_label|default:"Limpar" extra_filters=extra_filters %}
+                {% include "shared/components/composite/filter_bar.html" %}
+            {% endwith %}
+        {% else %}
+            {% with method=filter_method|default:"get" hx_get=hx_get hx_target=hx_target hx_swap=hx_swap title=filter_title|default:"Filtros" description=filter_description|default:"Busque produtos e refine a listagem operacional." search_name=search_name|default:"q" search_value=search_value search_label=search_label|default:"Buscar produtos" search_placeholder=search_placeholder|default:"Nome, SKU ou variante" status_name=status_name|default:"status" status_options=status_options status_selected=status_selected status_label=status_label|default:"Status" reset_url=reset_url submit_label=submit_label|default:"Aplicar filtros" reset_label=reset_label|default:"Limpar" extra_filters=extra_filters %}
+                {% include "shared/components/composite/filter_bar.html" %}
+            {% endwith %}
+        {% endif %}
+    {% endif %}
+
+    {% if selection_count %}
+        {% include "shared/components/composite/bulk_actions_bar.html" with selection_count=selection_count actions=bulk_actions %}
+    {% elif showcase_mode %}
+        {% include "shared/components/composite/bulk_actions_bar.html" with selection_count="3" actions=bulk_actions_showcase %}
+    {% endif %}
+
+    {% with title=table_title|default:"Listagem de produtos" description=table_description|default:"Tabela operacional com status, estoque e atualização recente." count=table_count columns=columns rows=rows table_id=table_id|default:"admin-products-table" page=page total_pages=total_pages prev_url=prev_url next_url=next_url page_items=page_items empty_title=empty_title|default:"Nenhum produto encontrado" empty_description=empty_description|default:"Ajuste os filtros ou cadastre um novo produto." empty_primary_action=empty_primary_action empty_secondary_action=empty_secondary_action hx_target_id=hx_target_id|default:"admin-products-results" showcase_mode=showcase_mode %}
+        {% include "shared/components/data_display/data_table.html" %}
+    {% endwith %}
+</section>
+{% endblock %}

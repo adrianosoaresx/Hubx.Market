@@ -1,0 +1,128 @@
+[
+  {
+    "model": "tenants.tenant",
+    "pk": 7,
+    "fields": {
+      "name": "Hubx Customer Area Persisted",
+      "slug": "hubx-customer-area-persisted",
+      "subdomain": "hubx-customer-area-persisted",
+      "custom_domain": null,
+      "is_active": true,
+      "maintenance_mode": false,
+      "created_at": "2026-04-16T12:00:00Z",
+      "updated_at": "2026-04-16T12:00:00Z"
+    }
+  },
+  {
+    "model": "accounts.accountprofile",
+    "pk": 2,
+    "fields": {
+      "tenant": 7,
+      "email": "ana.area@hubx.market",
+      "first_name": "Ana",
+      "last_name": "Área",
+      "phone": "(11) 95555-0000",
+      "newsletter_opt_in": true,
+      "order_updates_opt_in": true,
+      "is_active": true,
+      "last_login_at": "2026-04-16T09:00:00Z",
+      "last_seen_at": "2026-04-16T12:05:00Z",
+      "created_at": "2026-04-16T09:00:00Z",
+      "updated_at": "2026-04-16T12:05:00Z"
+    }
+  },
+  {
+    "model": "customers.customer",
+    "pk": 2,
+    "fields": {
+      "tenant": 7,
+      "slug": "ana-area",
+      "reference": "#7701",
+      "full_name": "Ana Área",
+      "email": "ana.area@hubx.market",
+      "phone": "(11) 95555-0000",
+      "status": "active",
+      "account_type": "Storefront",
+      "last_seen_at": "2026-04-16T12:05:00Z",
+      "created_at": "2026-04-15T10:00:00Z",
+      "updated_at": "2026-04-16T12:05:00Z"
+    }
+  },
+  {
+    "model": "customers.customeraddress",
+    "pk": 1,
+    "fields": {
+      "customer": 2,
+      "label": "Casa",
+      "recipient_name": "Ana Área",
+      "line_1": "Rua Persistida, 321",
+      "line_2": "Apto 45",
+      "district": "Centro",
+      "city": "São Paulo",
+      "state": "SP",
+      "postal_code": "01010-100",
+      "is_default": true,
+      "created_at": "2026-04-15T10:00:00Z",
+      "updated_at": "2026-04-16T12:00:00Z"
+    }
+  },
+  {
+    "model": "customers.customeraddress",
+    "pk": 2,
+    "fields": {
+      "customer": 2,
+      "label": "Escritório",
+      "recipient_name": "Ana Área",
+      "line_1": "Av. Faria Lima, 1500",
+      "line_2": "8º andar",
+      "district": "Itaim Bibi",
+      "city": "São Paulo",
+      "state": "SP",
+      "postal_code": "04538-132",
+      "is_default": false,
+      "created_at": "2026-04-15T10:10:00Z",
+      "updated_at": "2026-04-16T12:00:00Z"
+    }
+  },
+  {
+    "model": "orders.order",
+    "pk": 2,
+    "fields": {
+      "tenant": 7,
+      "number": "3051",
+      "status": "paid",
+      "customer_name": "Ana Área",
+      "customer_email": "ana.area@hubx.market",
+      "customer_phone": "(11) 95555-0000",
+      "fulfillment_status_label": "Separando itens",
+      "fulfillment_status_variant": "info",
+      "payment_status": "Confirmado",
+      "shipping_status": "Preparando envio",
+      "shipping_address_summary": "Rua Persistida, 321 · São Paulo/SP",
+      "notes_content": "Entrega residencial em horário comercial.",
+      "subtotal": "249.90",
+      "shipping_total": "19.90",
+      "discount_total": "0.00",
+      "total": "269.80",
+      "installments_summary": "2x de R$ 134,90 sem juros",
+      "created_at": "2026-04-16T11:00:00Z",
+      "updated_at": "2026-04-16T12:00:00Z"
+    }
+  },
+  {
+    "model": "orders.orderitem",
+    "pk": 3,
+    "fields": {
+      "order": 2,
+      "title": "Tênis Hubx Area",
+      "subtitle": "Branco · 39",
+      "meta": "SKU AREA-001-WHT-39",
+      "price_snapshot": "249.90",
+      "quantity": 1,
+      "quantity_readonly": true,
+      "sort_order": 1,
+      "created_at": "2026-04-16T11:00:00Z",
+      "updated_at": "2026-04-16T12:00:00Z"
+    }
+  }
+]

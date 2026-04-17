@@ -1,0 +1,7 @@
+/* Demo tenant pack used by the internal Design System preview. */
+
+[data-tenant="demo"] {
+  --tenant-brand-primary: #7c3aed;
+  --tenant-brand-primary-hover: #6d28d9;
+  --tenant-brand-secondary: #14b8a6;
+}

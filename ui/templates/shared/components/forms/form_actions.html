@@ -1,0 +1,8 @@
+<div class="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
+    {% if secondary_label or secondary_href %}
+        {% include "shared/components/actions/button.html" with label=secondary_label|default:"Cancelar" href=secondary_href variant="secondary" %}
+    {% endif %}
+    {% if primary_label %}
+        {% include "shared/components/actions/button.html" with label=primary_label variant=primary_variant|default:"primary" type=primary_type|default:"submit" loading=loading disabled=disabled %}
+    {% endif %}
+</div>

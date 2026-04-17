@@ -1,0 +1,5 @@
+[data-ui-context="admin"] {
+  --layout-shell-max-width: 100%;
+  --layout-sidebar-width: 16rem;
+  --space-shell-gap: 1.5rem;
+}

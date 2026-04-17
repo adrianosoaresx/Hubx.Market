@@ -1,1 +1,25 @@
-{# Placeholder: ui/templates/layouts/auth.html #}
+{% extends "layouts/base.html" %}
+
+{% block title %}{% block page_title %}Hubx Market Auth{% endblock %}{% endblock %}
+{% block ui_context %}account{% endblock %}
+
+{% block body %}
+<div class="min-h-screen bg-[var(--color-surface-page)]">
+    <header class="border-b border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
+        <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
+            <a href="/" class="text-lg font-semibold text-[var(--color-text-primary)]">Hubx Market</a>
+            <div class="hidden md:block">
+                {% include "shared/partials/navbar.html" %}
+            </div>
+        </div>
+    </header>
+
+    <main class="mx-auto flex min-h-[calc(100vh-9rem)] max-w-7xl items-center justify-center px-6 py-10">
+        <div class="w-full max-w-lg">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    {% include "shared/partials/footer.html" %}
+</div>
+{% endblock %}

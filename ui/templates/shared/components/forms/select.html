@@ -1,0 +1,27 @@
+<div class="space-y-2">
+    {% if label %}
+        <label for="{{ id|default:name }}" class="block text-sm font-medium text-[var(--color-text-primary)]">
+            {{ label }}
+        </label>
+    {% endif %}
+    <select
+        id="{{ id|default:name }}"
+        name="{{ name }}"
+        class="ds-select {% if invalid %}!border-[var(--color-feedback-danger)]{% endif %} {% if disabled %}cursor-not-allowed bg-slate-50 text-slate-400{% endif %}"
+        {% if disabled %}disabled{% endif %}
+        {% if multiple %}multiple{% endif %}
+    >
+        {% if placeholder %}
+            <option value="">{{ placeholder }}</option>
+        {% endif %}
+        {% for option in options %}
+            <option value="{{ option.value }}" {% if option.value == selected %}selected{% endif %}>{{ option.label }}</option>
+        {% endfor %}
+    </select>
+    {% if help_text and not invalid %}
+        <p class="text-sm text-[var(--color-text-secondary)]">{{ help_text }}</p>
+    {% endif %}
+    {% if invalid and error_text %}
+        <p class="text-sm text-[var(--color-feedback-danger)]">{{ error_text }}</p>
+    {% endif %}
+</div>

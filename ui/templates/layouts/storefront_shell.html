@@ -1,0 +1,19 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}{% block page_title %}Hubx Market Storefront{% endblock %}{% endblock %}
+{% block ui_context %}storefront{% endblock %}
+
+{% block body %}
+<div class="min-h-screen bg-[var(--color-surface-page)]">
+    <header class="border-b border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
+        <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
+            <a href="/" class="text-lg font-semibold text-[var(--color-text-primary)]">Hubx Market</a>
+            {% include "shared/partials/navbar.html" %}
+        </div>
+    </header>
+    <main class="mx-auto max-w-7xl px-6 py-8">
+        {% block content %}{% endblock %}
+    </main>
+    {% include "shared/partials/footer.html" %}
+</div>
+{% endblock %}

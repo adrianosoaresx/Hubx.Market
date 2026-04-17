@@ -1,0 +1,33 @@
+{% if total_pages and total_pages > 1 %}
+<nav class="flex items-center justify-between gap-4 rounded-xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] px-4 py-3" aria-label="Paginação">
+    <div class="text-sm text-[var(--color-text-secondary)]">
+        Página {{ page|default:1 }} de {{ total_pages }}
+    </div>
+
+    <div class="flex items-center gap-2">
+        {% if prev_url %}
+            <a href="{{ prev_url }}" class="rounded-lg border border-[var(--color-border-default)] px-3 py-2 text-sm text-[var(--color-text-primary)] hover:bg-slate-50">Anterior</a>
+        {% else %}
+            <span class="cursor-not-allowed rounded-lg border border-[var(--color-border-default)] px-3 py-2 text-sm text-slate-400">Anterior</span>
+        {% endif %}
+
+        {% for item in page_items %}
+            {% if item.is_ellipsis %}
+                <span class="px-2 text-sm text-[var(--color-text-secondary)]">...</span>
+            {% elif item.number == page %}
+                <span class="rounded-lg bg-[var(--color-action-primary-bg)] px-3 py-2 text-sm font-semibold text-[var(--color-action-primary-text)]">{{ item.number }}</span>
+            {% else %}
+                <a href="{{ item.url }}" class="rounded-lg border border-[var(--color-border-default)] px-3 py-2 text-sm text-[var(--color-text-primary)] hover:bg-slate-50">{{ item.number }}</a>
+            {% endif %}
+        {% empty %}
+            <span class="rounded-lg bg-[var(--color-action-primary-bg)] px-3 py-2 text-sm font-semibold text-[var(--color-action-primary-text)]">{{ page|default:1 }}</span>
+        {% endfor %}
+
+        {% if next_url %}
+            <a href="{{ next_url }}" class="rounded-lg border border-[var(--color-border-default)] px-3 py-2 text-sm text-[var(--color-text-primary)] hover:bg-slate-50">Próxima</a>
+        {% else %}
+            <span class="cursor-not-allowed rounded-lg border border-[var(--color-border-default)] px-3 py-2 text-sm text-slate-400">Próxima</span>
+        {% endif %}
+    </div>
+</nav>
+{% endif %}

@@ -1,0 +1,91 @@
+{% if items or showcase_mode %}
+<section class="ds-surface p-6">
+    <div class="space-y-5">
+        {% if title or description %}
+            <header class="space-y-1">
+                {% if title %}<h3 class="text-base font-semibold text-[var(--color-text-primary)]">{{ title }}</h3>{% endif %}
+                {% if description %}<p class="text-sm text-[var(--color-text-secondary)]">{{ description }}</p>{% endif %}
+            </header>
+        {% endif %}
+
+        <ol class="space-y-4">
+            {% if items %}
+                {% for item in items %}
+                    <li class="flex gap-4">
+                        <div class="flex flex-col items-center">
+                            <span class="mt-1 h-2.5 w-2.5 rounded-full bg-[var(--color-action-primary-bg)]"></span>
+                            {% if not forloop.last %}<span class="mt-2 h-full w-px bg-[var(--color-border-default)]"></span>{% endif %}
+                        </div>
+                        <div class="min-w-0 flex-1 space-y-1 pb-4">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <p class="text-sm font-medium text-[var(--color-text-primary)]">{{ item.title }}</p>
+                                {% if item.badge_label %}
+                                    {% include "shared/components/data_display/badge.html" with label=item.badge_label variant=item.badge_variant|default:"neutral" size="xs" %}
+                                {% endif %}
+                            </div>
+                            {% if item.description %}<p class="text-sm text-[var(--color-text-secondary)]">{{ item.description }}</p>{% endif %}
+                            <div class="flex flex-wrap items-center gap-2 text-xs text-[var(--color-text-secondary)]">
+                                {% if item.meta %}<span>{{ item.meta }}</span>{% endif %}
+                                {% if item.timestamp %}<span>{{ item.timestamp }}</span>{% endif %}
+                            </div>
+                        </div>
+                    </li>
+                {% endfor %}
+            {% else %}
+                <li class="flex gap-4">
+                    <div class="flex flex-col items-center">
+                        <span class="mt-1 h-2.5 w-2.5 rounded-full bg-[var(--color-action-primary-bg)]"></span>
+                        <span class="mt-2 h-full w-px bg-[var(--color-border-default)]"></span>
+                    </div>
+                    <div class="min-w-0 flex-1 space-y-1 pb-4">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <p class="text-sm font-medium text-[var(--color-text-primary)]">Pedido confirmado</p>
+                            {% include "shared/components/data_display/badge.html" with label="Sistema" variant="info" size="xs" %}
+                        </div>
+                        <p class="text-sm text-[var(--color-text-secondary)]">O pagamento foi confirmado e o pedido seguiu para separação.</p>
+                        <div class="flex flex-wrap items-center gap-2 text-xs text-[var(--color-text-secondary)]">
+                            <span>Pedido #1024</span>
+                            <span>há 5 minutos</span>
+                        </div>
+                    </div>
+                </li>
+                <li class="flex gap-4">
+                    <div class="flex flex-col items-center">
+                        <span class="mt-1 h-2.5 w-2.5 rounded-full bg-[var(--color-action-primary-bg)]"></span>
+                        <span class="mt-2 h-full w-px bg-[var(--color-border-default)]"></span>
+                    </div>
+                    <div class="min-w-0 flex-1 space-y-1 pb-4">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <p class="text-sm font-medium text-[var(--color-text-primary)]">Integração sincronizada</p>
+                            {% include "shared/components/data_display/badge.html" with label="Integração" variant="success" size="xs" %}
+                        </div>
+                        <p class="text-sm text-[var(--color-text-secondary)]">Os produtos foram sincronizados com o canal externo com sucesso.</p>
+                        <div class="flex flex-wrap items-center gap-2 text-xs text-[var(--color-text-secondary)]">
+                            <span>Canal marketplace</span>
+                            <span>há 18 minutos</span>
+                        </div>
+                    </div>
+                </li>
+                <li class="flex gap-4">
+                    <div class="flex flex-col items-center">
+                        <span class="mt-1 h-2.5 w-2.5 rounded-full bg-[var(--color-action-primary-bg)]"></span>
+                    </div>
+                    <div class="min-w-0 flex-1 space-y-1">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <p class="text-sm font-medium text-[var(--color-text-primary)]">Usuário atualizou preços</p>
+                            {% include "shared/components/data_display/badge.html" with label="Admin" variant="warning" size="xs" %}
+                        </div>
+                        <p class="text-sm text-[var(--color-text-secondary)]">Uma regra promocional foi aplicada ao catálogo da loja.</p>
+                        <div class="flex flex-wrap items-center gap-2 text-xs text-[var(--color-text-secondary)]">
+                            <span>Catálogo</span>
+                            <span>há 1 hora</span>
+                        </div>
+                    </div>
+                </li>
+            {% endif %}
+        </ol>
+    </div>
+</section>
+{% else %}
+    {% include "shared/components/feedback/empty_state.html" with title=empty_title|default:"Nenhuma atividade recente" description=empty_description|default:"Eventos e notificações aparecerão aqui." size="md" %}
+{% endif %}

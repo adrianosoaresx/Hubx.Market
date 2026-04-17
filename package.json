@@ -1,0 +1,13 @@
+{
+  "name": "hubx-market-design-system-visuals",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Visual regression baseline for the Hubx.market Design System showcase",
+  "scripts": {
+    "test:visual": "playwright test tests/visual/showcase.spec.js",
+    "test:visual:update": "playwright test tests/visual/showcase.spec.js --update-snapshots"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.54.2"
+  }
+}

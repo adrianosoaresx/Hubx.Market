@@ -1,0 +1,17 @@
+/* Tenant pack template.
+ *
+ * How to use:
+ * 1. copy this file to `ui/themes/tenants/<tenant-slug>.css`
+ * 2. replace `<tenant-slug>` in the selector below
+ * 3. override only tenant-scoped aliases
+ * 4. import the new file in `ui/static/css/themes.css`
+ *
+ * Keep generated token variables and context-specific layout overrides out of this file.
+ */
+
+[data-tenant="<tenant-slug>"] {
+  --tenant-brand-primary: #4f46e5;
+  --tenant-brand-primary-hover: #4338ca;
+  --tenant-brand-secondary: #06b6d4;
+  --tenant-radius-base: var(--radius-md);
+}

@@ -1,0 +1,96 @@
+{% extends layout_template|default:"layouts/admin_shell.html" %}
+
+{% block page_title %}{{ page_title|default:"Detalhes do cliente" }}{% endblock %}
+{% block shell_title %}{% if shell_title %}{{ shell_title }}{% elif page_title %}{{ page_title }}{% else %}Detalhes do cliente{% endif %}{% endblock %}
+
+{% block content %}
+<section class="space-y-6">
+    {% with eyebrow=page_eyebrow|default:"Clientes" title=page_title|default:"Cliente" description=page_description|default:"Resumo operacional da conta, perfil e atividade recente." meta=page_meta %}
+        {% include "shared/components/layout/page_header.html" %}
+    {% endwith %}
+
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-3">
+            {% if customer_status_label %}
+                {% include "shared/components/data_display/badge.html" with label=customer_status_label variant=customer_status_variant|default:"active" %}
+            {% elif showcase_mode %}
+                {% include "shared/components/data_display/badge.html" with label="Ativo" variant="active" %}
+            {% endif %}
+
+            {% if account_type_label %}
+                {% include "shared/components/data_display/badge.html" with label=account_type_label variant="info" size="xs" %}
+            {% elif showcase_mode %}
+                {% include "shared/components/data_display/badge.html" with label="Storefront" variant="info" size="xs" %}
+            {% endif %}
+        </div>
+
+        {% if page_actions %}
+            <div class="flex flex-wrap gap-3">
+                {{ page_actions }}
+            </div>
+        {% else %}
+            <div class="flex flex-wrap gap-3">
+                {% if back_href %}
+                    {% include "shared/components/actions/button.html" with label=back_label|default:"Voltar" href=back_href variant="secondary" %}
+                {% elif showcase_mode %}
+                    {% include "shared/components/actions/button.html" with label="Voltar" href="#" variant="secondary" %}
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(22rem,1fr)]">
+        <div class="space-y-6">
+            <div class="grid gap-6 md:grid-cols-2">
+                {% with title=summary_title|default:"Resumo da conta" subtitle=summary_subtitle|default:"Informações principais do relacionamento com o cliente." content=summary_content|default:"Cliente ativo com pedidos recentes, perfil completo e canais de contato válidos." %}
+                    {% include "shared/components/data_display/card.html" %}
+                {% endwith %}
+
+                <section class="ds-surface p-6">
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between gap-3">
+                            <h3 class="text-base font-semibold text-[var(--color-text-primary)]">{{ status_title|default:"Status da conta" }}</h3>
+                            {% if customer_status_label %}
+                                {% include "shared/components/data_display/badge.html" with label=customer_status_label variant=customer_status_variant|default:"active" %}
+                            {% else %}
+                                {% include "shared/components/data_display/badge.html" with label="Ativo" variant="active" %}
+                            {% endif %}
+                        </div>
+                        <div class="space-y-2 text-sm text-[var(--color-text-secondary)]">
+                            <p><span class="font-medium text-[var(--color-text-primary)]">Cliente:</span> {{ customer_reference|default:"#8821" }}</p>
+                            <p><span class="font-medium text-[var(--color-text-primary)]">Cadastro:</span> {{ customer_since|default:"há 8 meses" }}</p>
+                            <p><span class="font-medium text-[var(--color-text-primary)]">Último acesso:</span> {{ last_seen|default:"hoje às 10:24" }}</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <div class="grid gap-6 md:grid-cols-2">
+                {% with title=contact_title|default:"Contato" subtitle=contact_subtitle|default:"Dados principais para atendimento." content=contact_content|default:"Ana Souza · ana@hubx.market · (11) 99999-0000" %}
+                    {% include "shared/components/data_display/card.html" %}
+                {% endwith %}
+
+                {% with title=profile_title|default:"Perfil" subtitle=profile_subtitle|default:"Características úteis da conta." content=profile_content|default:"Cliente recorrente, aceita comunicações de pedido e possui perfil completo." %}
+                    {% include "shared/components/data_display/card.html" %}
+                {% endwith %}
+            </div>
+
+            <div class="grid gap-6 md:grid-cols-2">
+                {% with title=orders_summary_title|default:"Pedidos" subtitle=orders_summary_subtitle|default:"Resumo do histórico de compras." content=orders_summary_content|default:"12 pedidos concluídos · ticket médio de R$ 186,00 · última compra há 4 dias." %}
+                    {% include "shared/components/data_display/card.html" %}
+                {% endwith %}
+
+                {% with title=account_notes_title|default:"Observações operacionais" subtitle=account_notes_subtitle|default:"Notas úteis para suporte e atendimento." content=account_notes_content|default:"Cliente com alta recorrência, sem incidentes recentes e preferência por contato por e-mail." %}
+                    {% include "shared/components/data_display/card.html" %}
+                {% endwith %}
+            </div>
+        </div>
+
+        <aside class="space-y-6">
+            {% with title=activity_title|default:"Atividade recente" description=activity_description|default:"Acompanhe acessos, compras e atualizações da conta." items=activity_items empty_title=activity_empty_title|default:"Sem atividade recente" empty_description=activity_empty_description|default:"Novos eventos do cliente aparecerão aqui." showcase_mode=showcase_mode %}
+                {% include "shared/components/data_display/activity_feed.html" %}
+            {% endwith %}
+        </aside>
+    </div>
+</section>
+{% endblock %}

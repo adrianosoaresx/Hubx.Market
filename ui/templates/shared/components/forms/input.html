@@ -1,0 +1,35 @@
+{% with input_type=input_type|default:"text" %}
+<div class="space-y-2">
+    {% if label %}
+        <label for="{{ id|default:name }}" class="block text-sm font-medium text-[var(--color-text-primary)]">
+            {{ label }}
+        </label>
+    {% endif %}
+    <div class="relative">
+        {% if prefix %}
+            <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-[var(--color-text-secondary)]">{{ prefix }}</span>
+        {% endif %}
+        <input
+            id="{{ id|default:name }}"
+            name="{{ name }}"
+            type="{{ input_type }}"
+            value="{{ value|default:'' }}"
+            placeholder="{{ placeholder|default:'' }}"
+            class="ds-input {% if prefix %}pl-10{% endif %} {% if suffix %}pr-10{% endif %} {% if invalid %}!border-[var(--color-feedback-danger)]{% endif %} {% if disabled %}cursor-not-allowed bg-slate-50 text-slate-400{% endif %}"
+            {% if required %}required{% endif %}
+            {% if disabled %}disabled{% endif %}
+            {% if readonly %}readonly{% endif %}
+            {% if autocomplete %}autocomplete="{{ autocomplete }}"{% endif %}
+        >
+        {% if suffix %}
+            <span class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-[var(--color-text-secondary)]">{{ suffix }}</span>
+        {% endif %}
+    </div>
+    {% if help_text and not invalid %}
+        <p class="text-sm text-[var(--color-text-secondary)]">{{ help_text }}</p>
+    {% endif %}
+    {% if invalid and error_text %}
+        <p class="text-sm text-[var(--color-feedback-danger)]">{{ error_text }}</p>
+    {% endif %}
+</div>
+{% endwith %}

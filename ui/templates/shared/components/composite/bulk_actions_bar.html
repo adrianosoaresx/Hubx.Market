@@ -1,0 +1,14 @@
+{% if selection_count %}
+<section class="flex flex-col gap-3 rounded-xl border border-[var(--color-border-default)] bg-slate-50 px-4 py-3 md:flex-row md:items-center md:justify-between">
+    <div class="flex items-center gap-3">
+        {% include "shared/components/data_display/badge.html" with label=selection_count variant="neutral" %}
+        <p class="text-sm text-[var(--color-text-primary)]">{{ selection_count }} item(ns) selecionado(s)</p>
+    </div>
+
+    {% if actions %}
+        <div class="flex flex-wrap gap-2">
+            {{ actions }}
+        </div>
+    {% endif %}
+</section>
+{% endif %}

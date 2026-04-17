@@ -1,0 +1,21 @@
+<label class="flex items-start gap-3 {% if disabled %}cursor-not-allowed opacity-60{% else %}cursor-pointer{% endif %}">
+    <input
+        id="{{ id|default:name }}"
+        name="{{ name }}"
+        type="checkbox"
+        value="{{ value|default:'1' }}"
+        class="mt-1 h-4 w-4 rounded border-[var(--color-border-strong)] text-[var(--color-action-primary-bg)] focus:ring-[var(--focus-ring)]"
+        {% if checked %}checked{% endif %}
+        {% if required %}required{% endif %}
+        {% if disabled %}disabled{% endif %}
+    >
+    <span class="space-y-1">
+        <span class="block text-sm font-medium text-[var(--color-text-primary)]">{{ label|default:"Checkbox" }}</span>
+        {% if description %}
+            <span class="block text-sm text-[var(--color-text-secondary)]">{{ description }}</span>
+        {% endif %}
+        {% if invalid and error_text %}
+            {% include "shared/components/forms/field_error.html" with text=error_text %}
+        {% endif %}
+    </span>
+</label>

@@ -1,0 +1,30 @@
+<div {% if table_id %}id="{{ table_id }}"{% endif %} class="overflow-hidden rounded-xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-[var(--color-border-default)] text-sm">
+            <thead class="bg-slate-50">
+                <tr>
+                    {% for column in columns %}
+                        <th class="px-4 py-3 text-left font-medium text-[var(--color-text-secondary)]">{{ column.label }}</th>
+                    {% empty %}
+                        <th class="px-4 py-3 text-left font-medium text-[var(--color-text-secondary)]">Coluna</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-[var(--color-border-default)]">
+                {% for row in rows %}
+                    <tr class="hover:bg-slate-50">
+                        {% for cell in row.cells %}
+                            <td class="px-4 py-3 text-[var(--color-text-primary)]">{{ cell }}</td>
+                        {% endfor %}
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="{{ columns|length|default:'1' }}" class="px-4 py-10 text-center text-[var(--color-text-secondary)]">
+                            {{ empty_message|default:"Nenhum registro encontrado." }}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>

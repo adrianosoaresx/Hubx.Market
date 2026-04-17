@@ -1,0 +1,71 @@
+{% if steps or showcase_mode %}
+<nav aria-label="{{ aria_label|default:'Etapas do checkout' }}">
+    <ol class="flex flex-col gap-4 md:flex-row md:items-center">
+        {% if steps %}
+        {% for step in steps %}
+            <li class="flex min-w-0 flex-1 items-center gap-3">
+                <div
+                    class="
+                        flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold
+                        {% if step.status == 'complete' %}
+                            bg-emerald-100 text-emerald-700
+                        {% elif step.status == 'current' %}
+                            bg-[var(--color-action-primary-bg)] text-[var(--color-action-primary-text)]
+                        {% elif step.status == 'error' %}
+                            bg-rose-100 text-rose-700
+                        {% else %}
+                            bg-slate-100 text-[var(--color-text-secondary)]
+                        {% endif %}
+                    "
+                >
+                    {% if step.status == 'complete' %}
+                        ✓
+                    {% elif step.status == 'error' %}
+                        !
+                    {% else %}
+                        {{ forloop.counter }}
+                    {% endif %}
+                </div>
+
+                <div class="min-w-0">
+                    <p class="text-sm font-medium {% if step.status == 'current' %}text-[var(--color-text-primary)]{% else %}text-[var(--color-text-secondary)]{% endif %}">
+                        {{ step.label }}
+                    </p>
+                    {% if step.description %}
+                        <p class="text-xs text-[var(--color-text-secondary)]">{{ step.description }}</p>
+                    {% endif %}
+                </div>
+
+                {% if not forloop.last %}
+                    <div class="hidden h-px flex-1 bg-[var(--color-border-default)] md:block"></div>
+                {% endif %}
+            </li>
+        {% endfor %}
+        {% else %}
+            <li class="flex min-w-0 flex-1 items-center gap-3">
+                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-semibold text-emerald-700">✓</div>
+                <div class="min-w-0">
+                    <p class="text-sm font-medium text-[var(--color-text-secondary)]">Carrinho</p>
+                    <p class="text-xs text-[var(--color-text-secondary)]">Itens revisados</p>
+                </div>
+                <div class="hidden h-px flex-1 bg-[var(--color-border-default)] md:block"></div>
+            </li>
+            <li class="flex min-w-0 flex-1 items-center gap-3">
+                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-action-primary-bg)] text-sm font-semibold text-[var(--color-action-primary-text)]">2</div>
+                <div class="min-w-0">
+                    <p class="text-sm font-medium text-[var(--color-text-primary)]">Entrega</p>
+                    <p class="text-xs text-[var(--color-text-secondary)]">Dados e frete</p>
+                </div>
+                <div class="hidden h-px flex-1 bg-[var(--color-border-default)] md:block"></div>
+            </li>
+            <li class="flex min-w-0 flex-1 items-center gap-3">
+                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-[var(--color-text-secondary)]">3</div>
+                <div class="min-w-0">
+                    <p class="text-sm font-medium text-[var(--color-text-secondary)]">Pagamento</p>
+                    <p class="text-xs text-[var(--color-text-secondary)]">Confirmação</p>
+                </div>
+            </li>
+        {% endif %}
+    </ol>
+</nav>
+{% endif %}

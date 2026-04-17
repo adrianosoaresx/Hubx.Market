@@ -1,0 +1,137 @@
+{% extends "layouts/admin_shell.html" %}
+
+{% block title %}Design System Forms{% endblock %}
+{% block shell_title %}Design System Forms{% endblock %}
+{% block tenant_theme %}{{ request.GET.tenant|default:'default' }}{% endblock %}
+
+{% block content %}
+<section class="space-y-8">
+    {% include "shared/components/layout/page_header.html" with
+        eyebrow="Showcase"
+        title="Forms"
+        description="Catálogo interno dos componentes oficiais de formulário do Design System."
+    %}
+    {% include "shared/partials/design_system_preview_context.html" %}
+    <div class="flex flex-wrap items-center gap-3">
+        <a href="/__internal__/design-system/?tenant={{ request.GET.tenant|default:'default' }}" class="ds-btn ds-btn-secondary ds-btn-sm">Voltar</a>
+        <div class="flex flex-wrap gap-2">
+            <a href="/__internal__/design-system/forms/?tenant=default" class="ds-btn ds-btn-sm {% if request.GET.tenant|default:'default' == 'default' %}ds-btn-primary{% else %}ds-btn-secondary{% endif %}">Default</a>
+            <a href="/__internal__/design-system/forms/?tenant=demo" class="ds-btn ds-btn-sm {% if request.GET.tenant == 'demo' %}ds-btn-primary{% else %}ds-btn-secondary{% endif %}">Demo</a>
+            <a href="/__internal__/design-system/forms/?tenant=storefront" class="ds-btn ds-btn-sm {% if request.GET.tenant == 'storefront' %}ds-btn-primary{% else %}ds-btn-secondary{% endif %}">Storefront</a>
+            <a href="/__internal__/design-system/forms/?tenant=nike" class="ds-btn ds-btn-sm {% if request.GET.tenant == 'nike' %}ds-btn-primary{% else %}ds-btn-secondary{% endif %}">Nike</a>
+        </div>
+        <p class="text-sm text-[var(--color-text-secondary)]">Theme preview: <code>{{ request.GET.tenant|default:"default" }}</code></p>
+    </div>
+
+    <form class="space-y-6">
+        <section class="ds-surface space-y-6 p-6">
+            <header class="space-y-1">
+                <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">Text Inputs</h2>
+                <p class="text-sm text-[var(--color-text-secondary)]">Exemplos base para CRUDs e configurações.</p>
+            </header>
+
+            <div class="grid gap-4 md:grid-cols-2">
+                {% include "shared/components/forms/input.html" with name="name" label="Nome" value="Hubx Store" help_text="Nome visível da loja." %}
+                {% include "shared/components/forms/input.html" with name="email" label="E-mail" input_type="email" value="contato@hubx.market" %}
+            </div>
+
+            {% include "shared/components/forms/select.html" with name="segment" label="Segmento" selected="fashion" options=form_select_options placeholder="Selecione" %}
+            {% include "shared/components/forms/textarea.html" with name="description" label="Descrição" value="Loja focada em moda e lifestyle." help_text="Texto exibido na apresentação da loja." %}
+
+            <div class="rounded-xl border border-dashed border-[var(--color-border-default)] bg-slate-50 p-4 text-sm">
+                <div class="space-y-3">
+                    <p class="font-medium text-[var(--color-text-primary)]">Developer note — `input.html`, `select.html`, `textarea.html`</p>
+
+                    <div class="space-y-1">
+                        <p class="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">Template path</p>
+                        <p class="text-[var(--color-text-secondary)]"><code>shared/components/forms/input.html</code> · <code>shared/components/forms/select.html</code> · <code>shared/components/forms/textarea.html</code></p>
+                    </div>
+
+                    <div class="space-y-1">
+                        <p class="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">Include example</p>
+                        <pre class="overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-100"><code>{% verbatim %}{% include "shared/components/forms/input.html" with name="email" label="E-mail" input_type="email" %}
+{% include "shared/components/forms/select.html" with name="segment" label="Segmento" options=segment_options %}
+{% include "shared/components/forms/textarea.html" with name="description" label="Descrição" rows=4 %}{% endverbatim %}</code></pre>
+                    </div>
+
+                    <div class="space-y-1">
+                        <p class="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">Key props</p>
+                        <p class="text-[var(--color-text-secondary)]"><code>name</code>, <code>label</code>, <code>value</code>, <code>placeholder</code>, <code>options</code>, <code>help_text</code>, <code>error_text</code>.</p>
+                    </div>
+                </div>
+</div>
+        </section>
+
+        <section class="ds-surface space-y-6 p-6">
+            <header class="space-y-1">
+                <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">Selection Controls</h2>
+            </header>
+
+            <div class="space-y-4">
+                {% include "shared/components/forms/checkbox.html" with name="active" label="Loja ativa" description="Permite navegação pública na storefront." checked=True %}
+                {% include "shared/components/forms/radio.html" with name="plan" value="pro" label="Plano Pro" description="Indicado para lojas em crescimento." checked=True %}
+                {% include "shared/components/forms/switch.html" with name="featured" label="Destacar loja" description="Exibir em listas promocionais do marketplace." checked=True %}
+            </div>
+
+            <div class="rounded-xl border border-dashed border-[var(--color-border-default)] bg-slate-50 p-4 text-sm">
+                <div class="space-y-3">
+                    <p class="font-medium text-[var(--color-text-primary)]">Developer note — `checkbox.html`, `radio.html`, `switch.html`</p>
+
+                    <div class="space-y-1">
+                        <p class="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">Template path</p>
+                        <p class="text-[var(--color-text-secondary)]"><code>shared/components/forms/checkbox.html</code> · <code>shared/components/forms/radio.html</code> · <code>shared/components/forms/switch.html</code></p>
+                    </div>
+
+                    <div class="space-y-1">
+                        <p class="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">Include example</p>
+                        <pre class="overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-100"><code>{% verbatim %}{% include "shared/components/forms/checkbox.html" with name="active" label="Loja ativa" checked=True %}
+{% include "shared/components/forms/radio.html" with name="plan" value="pro" label="Plano Pro" checked=True %}
+{% include "shared/components/forms/switch.html" with name="featured" label="Destacar loja" checked=True %}{% endverbatim %}</code></pre>
+                    </div>
+
+                    <div class="space-y-1">
+                        <p class="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">Key props</p>
+                        <p class="text-[var(--color-text-secondary)]"><code>name</code>, <code>label</code>, <code>description</code>, <code>checked</code>, <code>disabled</code>.</p>
+                    </div>
+                </div>
+</div>
+        </section>
+
+        <section class="ds-surface space-y-6 p-6">
+            <header class="space-y-1">
+                <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">Field Messages</h2>
+            </header>
+
+            <div class="space-y-3">
+                {% include "shared/components/forms/field_help.html" with text="Ajuda contextual para preenchimento correto." %}
+                {% include "shared/components/forms/field_error.html" with text="Mensagem de erro para validação de campo." %}
+            </div>
+
+            {% include "shared/components/forms/form_actions.html" with primary_label="Salvar alterações" secondary_label="Cancelar" secondary_href="#cancel" %}
+
+            <div class="rounded-xl border border-dashed border-[var(--color-border-default)] bg-slate-50 p-4 text-sm">
+                <div class="space-y-3">
+                    <p class="font-medium text-[var(--color-text-primary)]">Developer note — `field_help.html`, `field_error.html`, `form_actions.html`</p>
+
+                    <div class="space-y-1">
+                        <p class="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">Template path</p>
+                        <p class="text-[var(--color-text-secondary)]"><code>shared/components/forms/field_help.html</code> · <code>shared/components/forms/field_error.html</code> · <code>shared/components/forms/form_actions.html</code></p>
+                    </div>
+
+                    <div class="space-y-1">
+                        <p class="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">Include example</p>
+                        <pre class="overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-100"><code>{% verbatim %}{% include "shared/components/forms/field_help.html" with text="Texto de apoio." %}
+{% include "shared/components/forms/field_error.html" with text="Campo obrigatório." %}
+{% include "shared/components/forms/form_actions.html" with primary_label="Salvar" secondary_label="Cancelar" secondary_href=cancel_url %}{% endverbatim %}</code></pre>
+                    </div>
+
+                    <div class="space-y-1">
+                        <p class="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">Key props</p>
+                        <p class="text-[var(--color-text-secondary)]"><code>text</code> · <code>primary_label</code>, <code>secondary_label</code>, <code>secondary_href</code>, <code>loading</code>, <code>disabled</code>.</p>
+                    </div>
+                </div>
+</div>
+        </section>
+    </form>
+</section>
+{% endblock %}

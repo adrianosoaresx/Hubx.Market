@@ -1,2 +1,4 @@
-/* Placeholder inicial do app.css.
-   A implementação real deve refletir os tokens documentados em docs/ui/design-system.md */
+@import "./design-system.css";
+@import "./themes.css";
+
+/* Entry point da camada visual da UI. */

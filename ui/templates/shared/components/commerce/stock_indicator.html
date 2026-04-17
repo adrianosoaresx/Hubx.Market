@@ -1,0 +1,55 @@
+{% if state %}
+    {% with stock_state=state %}
+<div class="inline-flex items-center gap-2">
+    {% if stock_state == 'low_stock' %}
+        {% include "shared/components/data_display/badge.html" with label=label|default:"Estoque baixo" variant="warning" size=size|default:"sm" %}
+    {% elif stock_state == 'out_of_stock' %}
+        {% include "shared/components/data_display/badge.html" with label=label|default:"Sem estoque" variant="inactive" size=size|default:"sm" %}
+    {% elif stock_state == 'backorder' %}
+        {% include "shared/components/data_display/badge.html" with label=label|default:"Sob encomenda" variant="info" size=size|default:"sm" %}
+    {% else %}
+        {% include "shared/components/data_display/badge.html" with label=label|default:"Em estoque" variant="success" size=size|default:"sm" %}
+    {% endif %}
+
+    {% if helper %}
+        <span class="text-sm text-[var(--color-text-secondary)]">{{ helper }}</span>
+    {% endif %}
+</div>
+    {% endwith %}
+{% elif variant %}
+    {% with stock_state=variant %}
+<div class="inline-flex items-center gap-2">
+    {% if stock_state == 'low_stock' %}
+        {% include "shared/components/data_display/badge.html" with label=label|default:"Estoque baixo" variant="warning" size=size|default:"sm" %}
+    {% elif stock_state == 'out_of_stock' %}
+        {% include "shared/components/data_display/badge.html" with label=label|default:"Sem estoque" variant="inactive" size=size|default:"sm" %}
+    {% elif stock_state == 'backorder' %}
+        {% include "shared/components/data_display/badge.html" with label=label|default:"Sob encomenda" variant="info" size=size|default:"sm" %}
+    {% else %}
+        {% include "shared/components/data_display/badge.html" with label=label|default:"Em estoque" variant="success" size=size|default:"sm" %}
+    {% endif %}
+
+    {% if helper %}
+        <span class="text-sm text-[var(--color-text-secondary)]">{{ helper }}</span>
+    {% endif %}
+</div>
+    {% endwith %}
+{% else %}
+    {% with stock_state="in_stock" %}
+<div class="inline-flex items-center gap-2">
+    {% if stock_state == 'low_stock' %}
+        {% include "shared/components/data_display/badge.html" with label=label|default:"Estoque baixo" variant="warning" size=size|default:"sm" %}
+    {% elif stock_state == 'out_of_stock' %}
+        {% include "shared/components/data_display/badge.html" with label=label|default:"Sem estoque" variant="inactive" size=size|default:"sm" %}
+    {% elif stock_state == 'backorder' %}
+        {% include "shared/components/data_display/badge.html" with label=label|default:"Sob encomenda" variant="info" size=size|default:"sm" %}
+    {% else %}
+        {% include "shared/components/data_display/badge.html" with label=label|default:"Em estoque" variant="success" size=size|default:"sm" %}
+    {% endif %}
+
+    {% if helper %}
+        <span class="text-sm text-[var(--color-text-secondary)]">{{ helper }}</span>
+    {% endif %}
+</div>
+    {% endwith %}
+{% endif %}

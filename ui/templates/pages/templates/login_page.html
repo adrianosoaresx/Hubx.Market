@@ -1,0 +1,30 @@
+{% extends "layouts/auth.html" %}
+
+{% block title %}{{ page_title|default:"Entrar" }}{% endblock %}
+
+{% block content %}
+<section class="space-y-6">
+    {% with title=page_title|default:"Entrar" subtitle=page_description|default:"Acesse sua conta para acompanhar pedidos, perfil e preferências." padding="lg" %}
+        {% include "shared/components/data_display/card.html" %}
+    {% endwith %}
+
+    <form method="{{ form_method|default:'post' }}" action="{{ form_action|default:request.path }}" class="ds-surface space-y-6 p-6">
+        {% csrf_token %}
+
+        {% block login_fields %}
+            {% include "shared/components/forms/input.html" with name="login" label=login_label|default:"E-mail ou usuário" value=login_value placeholder="voce@exemplo.com" autocomplete="username" %}
+            {% include "shared/components/forms/input.html" with name="password" label="Senha" input_type="password" placeholder="Digite sua senha" autocomplete="current-password" %}
+            {% include "shared/components/forms/checkbox.html" with name="remember_me" label="Continuar conectado" description="Mantém a sessão ativa neste dispositivo." checked=remember_me %}
+        {% endblock %}
+
+        <div class="flex items-center justify-between gap-3 text-sm">
+            <span class="text-[var(--color-text-secondary)]">{{ helper_text|default:"Use suas credenciais para entrar na área do cliente." }}</span>
+            <a href="{{ forgot_password_href|default:'#' }}" class="font-medium text-[var(--color-action-primary-bg)] hover:underline">Esqueci minha senha</a>
+        </div>
+
+        {% with primary_label=primary_label|default:"Entrar" secondary_label=secondary_label|default:"Criar conta" secondary_href=register_href|default:'#' %}
+            {% include "shared/components/forms/form_actions.html" %}
+        {% endwith %}
+    </form>
+</section>
+{% endblock %}

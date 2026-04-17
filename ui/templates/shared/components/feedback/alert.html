@@ -1,0 +1,14 @@
+{% with variant=variant|default:"info" %}
+<div class="ds-alert ds-alert-{{ variant }}">
+    <div class="flex items-start gap-3">
+        {% if icon %}<span class="mt-0.5" aria-hidden="true">{{ icon }}</span>{% endif %}
+        <div class="min-w-0 flex-1">
+            {% if title %}<p class="font-semibold text-[var(--color-text-primary)]">{{ title }}</p>{% endif %}
+            {% if description %}<p class="mt-1 text-sm text-[var(--color-text-secondary)]">{{ description }}</p>{% endif %}
+        </div>
+        {% if dismissible %}
+            <button type="button" class="text-sm text-[var(--color-text-secondary)]">Fechar</button>
+        {% endif %}
+    </div>
+</div>
+{% endwith %}

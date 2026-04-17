@@ -1,0 +1,116 @@
+{% extends layout_template|default:"layouts/storefront_shell.html" %}
+
+{% block page_title %}{{ page_title|default:product_title|default:"Produto" }}{% endblock %}
+
+{% block content %}
+<section class="space-y-8">
+    {% if breadcrumbs %}
+        {% include "shared/components/navigation/breadcrumb.html" with items=breadcrumbs %}
+    {% endif %}
+
+    <div class="grid gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(22rem,1fr)] lg:items-start">
+        <div class="space-y-6">
+            {% with title=product_title items=product_gallery_items images=product_images main_image_url=main_image_url main_image_alt=main_image_alt showcase_mode=showcase_mode %}
+                {% include "shared/components/commerce/product_gallery.html" %}
+            {% endwith %}
+        </div>
+
+        <div class="space-y-6">
+            <header class="space-y-4">
+                {% if eyebrow %}
+                    <p class="text-xs font-medium uppercase tracking-wide text-[var(--color-text-secondary)]">{{ eyebrow }}</p>
+                {% endif %}
+
+                <div class="space-y-3">
+                    <h1 class="text-3xl font-semibold tracking-tight text-[var(--color-text-primary)]">
+                        {{ product_title|default:"Nome do produto" }}
+                    </h1>
+
+                    {% if product_subtitle %}
+                        <p class="text-base text-[var(--color-text-secondary)]">{{ product_subtitle }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="space-y-3">
+                    {% with value=price|default:"R$ 0,00" compare_value=compare_price helper=price_helper size="lg" %}
+                        {% include "shared/components/commerce/price_display.html" %}
+                    {% endwith %}
+
+                    {% with state=stock_state|default:"in_stock" label=stock_label helper=stock_helper %}
+                        {% include "shared/components/commerce/stock_indicator.html" %}
+                    {% endwith %}
+                </div>
+            </header>
+
+            {% if short_description %}
+                <div class="rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-5">
+                    <p class="text-sm leading-6 text-[var(--color-text-secondary)]">{{ short_description }}</p>
+                </div>
+            {% endif %}
+
+            <form
+                method="{{ form_method|default:'post' }}"
+                action="{{ form_action|default:'' }}"
+                class="space-y-6 rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-6"
+            >
+                {% csrf_token %}
+
+                {% if variant_groups %}
+                    <div class="space-y-5">
+                        {% for group in variant_groups %}
+                            {% with variant=group.variant name=group.name label=group.label options=group.options selected=group.selected placeholder=group.placeholder help_text=group.help_text error_text=group.error_text invalid=group.invalid %}
+                                {% include "shared/components/commerce/variant_selector.html" %}
+                            {% endwith %}
+                        {% endfor %}
+                    </div>
+                {% elif variant_options %}
+                    {% with variant=variant_selector_variant name=variant_name label=variant_label|default:"Variação" options=variant_options selected=variant_selected placeholder=variant_placeholder help_text=variant_help_text error_text=variant_error_text invalid=variant_invalid %}
+                        {% include "shared/components/commerce/variant_selector.html" %}
+                    {% endwith %}
+                {% elif showcase_mode %}
+                    <div class="space-y-5">
+                        {% include "shared/components/commerce/variant_selector.html" with label="Tamanho" name="size" variant="buttons" showcase_mode=True help_text="Selecione o tamanho desejado." %}
+                        {% include "shared/components/commerce/variant_selector.html" with label="Cor" name="color" variant="swatches" showcase_mode=True %}
+                    </div>
+                {% endif %}
+
+                {% if purchase_note %}
+                    {% include "shared/components/forms/field_help.html" with text=purchase_note %}
+                {% endif %}
+
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                    <div class="space-y-2">
+                        {% if quantity_label %}
+                            <label class="block text-sm font-medium text-[var(--color-text-primary)]">{{ quantity_label }}</label>
+                        {% endif %}
+                        {% with value=quantity|default:1 disabled=quantity_disabled %}
+                            {% include "shared/components/commerce/quantity_selector.html" %}
+                        {% endwith %}
+                    </div>
+
+                    <div class="flex w-full flex-col gap-3 sm:w-auto sm:min-w-72">
+                        {% with label=primary_action_label|default:"Adicionar ao carrinho" variant=primary_action_variant|default:"primary" type=primary_action_type|default:"submit" full_width=True disabled=primary_action_disabled loading=primary_action_loading %}
+                            {% include "shared/components/actions/button.html" %}
+                        {% endwith %}
+
+                        {% if secondary_action_label %}
+                            {% with label=secondary_action_label variant=secondary_action_variant|default:"secondary" href=secondary_action_href type=secondary_action_type|default:"button" full_width=True disabled=secondary_action_disabled %}
+                                {% include "shared/components/actions/button.html" %}
+                            {% endwith %}
+                        {% endif %}
+                    </div>
+                </div>
+            </form>
+
+            {% if long_description %}
+                <section class="space-y-3 rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-6">
+                    <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">{{ long_description_title|default:"Descrição" }}</h2>
+                    <div class="prose prose-slate max-w-none text-sm text-[var(--color-text-secondary)]">
+                        {{ long_description }}
+                    </div>
+                </section>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}

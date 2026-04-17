@@ -1,0 +1,183 @@
+{% extends "layouts/admin_shell.html" %}
+
+{% block title %}Design System Components{% endblock %}
+{% block shell_title %}Design System Components{% endblock %}
+{% block tenant_theme %}{{ request.GET.tenant|default:'default' }}{% endblock %}
+
+{% block content %}
+<section class="space-y-8">
+    {% include "shared/components/layout/page_header.html" with
+        eyebrow="Showcase"
+        title="Components"
+        description="Catálogo visual dos componentes, composites e blocos reutilizáveis do Design System."
+    %}
+    {% include "shared/partials/design_system_preview_context.html" %}
+    <div class="flex flex-wrap items-center gap-3">
+        <a href="/__internal__/design-system/?tenant={{ request.GET.tenant|default:'default' }}" class="ds-btn ds-btn-secondary ds-btn-sm">Voltar</a>
+        <div class="flex flex-wrap gap-2">
+            <a href="/__internal__/design-system/components/?tenant=default" class="ds-btn ds-btn-sm {% if request.GET.tenant|default:'default' == 'default' %}ds-btn-primary{% else %}ds-btn-secondary{% endif %}">Default</a>
+            <a href="/__internal__/design-system/components/?tenant=demo" class="ds-btn ds-btn-sm {% if request.GET.tenant == 'demo' %}ds-btn-primary{% else %}ds-btn-secondary{% endif %}">Demo</a>
+            <a href="/__internal__/design-system/components/?tenant=storefront" class="ds-btn ds-btn-sm {% if request.GET.tenant == 'storefront' %}ds-btn-primary{% else %}ds-btn-secondary{% endif %}">Storefront</a>
+            <a href="/__internal__/design-system/components/?tenant=nike" class="ds-btn ds-btn-sm {% if request.GET.tenant == 'nike' %}ds-btn-primary{% else %}ds-btn-secondary{% endif %}">Nike</a>
+        </div>
+        <p class="text-sm text-[var(--color-text-secondary)]">Theme preview: <code>{{ request.GET.tenant|default:"default" }}</code></p>
+    </div>
+
+    <section class="space-y-4">
+        <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">Actions</h2>
+        <div class="ds-surface flex flex-wrap gap-3 p-6">
+            {% include "shared/components/actions/button.html" with label="Primary" variant="primary" %}
+            {% include "shared/components/actions/button.html" with label="Secondary" variant="secondary" %}
+            {% include "shared/components/actions/button.html" with label="Loading" variant="primary" loading=True %}
+        </div>
+        <div class="rounded-xl border border-dashed border-[var(--color-border-default)] bg-slate-50 p-4 text-sm">
+            <div class="space-y-3">
+                <p class="font-medium text-[var(--color-text-primary)]">Developer note — `button.html`</p>
+
+                <div class="space-y-1">
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">Template path</p>
+                    <p class="text-[var(--color-text-secondary)]"><code>shared/components/actions/button.html</code></p>
+                </div>
+
+                <div class="space-y-1">
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">Include example</p>
+                    <pre class="overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-100"><code>{% verbatim %}{% include "shared/components/actions/button.html" with label="Salvar" variant="primary" type="submit" %}{% endverbatim %}</code></pre>
+                </div>
+
+                <div class="space-y-1">
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">Key props</p>
+                    <p class="text-[var(--color-text-secondary)]"><code>label</code>, <code>variant</code>, <code>type</code>, <code>href</code>, <code>loading</code>, <code>disabled</code>.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="space-y-4">
+        <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">Navigation</h2>
+        <div class="space-y-4">
+            {% include "shared/components/navigation/pagination.html" with page=2 total_pages=8 prev_url='?page=1' next_url='?page=3' page_items=pagination_items %}
+        </div>
+        <div class="rounded-xl border border-dashed border-[var(--color-border-default)] bg-slate-50 p-4 text-sm">
+            <div class="space-y-3">
+                <p class="font-medium text-[var(--color-text-primary)]">Developer note — `pagination.html`</p>
+
+                <div class="space-y-1">
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">Template path</p>
+                    <p class="text-[var(--color-text-secondary)]"><code>shared/components/navigation/pagination.html</code></p>
+                </div>
+
+                <div class="space-y-1">
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">Include example</p>
+                    <pre class="overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-100"><code>{% verbatim %}{% include "shared/components/navigation/pagination.html" with page=2 total_pages=8 prev_url="?page=1" next_url="?page=3" page_items=page_items %}{% endverbatim %}</code></pre>
+                </div>
+
+                <div class="space-y-1">
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">Key props</p>
+                    <p class="text-[var(--color-text-secondary)]"><code>page</code>, <code>total_pages</code>, <code>prev_url</code>, <code>next_url</code>, <code>page_items</code>.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="space-y-4">
+        <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">Data Display & Admin Components</h2>
+        <div class="grid gap-6 lg:grid-cols-2">
+            {% include "shared/components/data_display/card.html" with title="Card" subtitle="Bloco base de conteúdo" content="Use este componente para agrupar blocos de interface com consistência visual." %}
+            {% include "shared/components/data_display/stat_card.html" with title="Receita" subtitle="Últimos 30 dias" value="R$ 42.500" delta="+12,4%" trend="positive" icon="R$" %}
+        </div>
+        <div class="rounded-xl border border-dashed border-[var(--color-border-default)] bg-slate-50 p-4 text-sm">
+            <div class="space-y-3">
+                <p class="font-medium text-[var(--color-text-primary)]">Developer note — `page_header.html`, `badge.html`, `stat_card.html`</p>
+
+                <div class="space-y-1">
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">Template path</p>
+                    <p class="text-[var(--color-text-secondary)]"><code>shared/components/layout/page_header.html</code> · <code>shared/components/data_display/badge.html</code> · <code>shared/components/data_display/stat_card.html</code></p>
+                </div>
+
+                <div class="space-y-1">
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">Include example</p>
+                    <pre class="overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-100"><code>{% verbatim %}{% include "shared/components/layout/page_header.html" with title="Pedidos" description="Visão geral." %}
+{% include "shared/components/data_display/badge.html" with label="Pago" variant="paid" %}
+{% include "shared/components/data_display/stat_card.html" with title="Receita" value="R$ 42.500" delta="+12,4%" trend="positive" %}{% endverbatim %}</code></pre>
+                </div>
+
+                <div class="space-y-1">
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">Key props</p>
+                    <p class="text-[var(--color-text-secondary)]"><code>title</code>, <code>description</code>, <code>actions</code> · <code>label</code>, <code>variant</code> · <code>value</code>, <code>delta</code>, <code>trend</code>.</p>
+                </div>
+            </div>
+        </div>
+        <div class="grid gap-6 xl:grid-cols-2">
+            {% include "shared/components/data_display/chart_card.html" with title="GMV" description="Volume bruto de mercadorias no período." value="R$ 128.900" delta="+18,3%" trend="positive" meta="Últimos 30 dias" showcase_mode=True footer="Atualizado há 5 minutos." %}
+            {% include "shared/components/data_display/activity_feed.html" with title="Atividade recente" description="Eventos operacionais da plataforma." showcase_mode=True %}
+        </div>
+        <div class="ds-surface flex flex-wrap gap-3 p-6">
+            {% include "shared/components/data_display/badge.html" with label="Ativo" variant="active" %}
+            {% include "shared/components/data_display/badge.html" with label="Pendente" variant="pending" %}
+            {% include "shared/components/data_display/badge.html" with label="Pago" variant="paid" %}
+        </div>
+        {% include "shared/components/data_display/table.html" with columns=table_columns rows=table_rows empty_message="Sem dados para exibir." %}
+        {% include "shared/components/data_display/audit_log.html" with title="Audit Log" description="Eventos críticos do sistema e da operação." showcase_mode=True %}
+        <div class="rounded-xl border border-dashed border-[var(--color-border-default)] bg-slate-50 p-4 text-sm">
+            <div class="space-y-3">
+                <p class="font-medium text-[var(--color-text-primary)]">Developer note — `data_table.html`</p>
+
+                <div class="space-y-1">
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">Template path</p>
+                    <p class="text-[var(--color-text-secondary)]"><code>shared/components/data_display/data_table.html</code></p>
+                </div>
+
+                <div class="space-y-1">
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">Include example</p>
+                    <pre class="overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-100"><code>{% verbatim %}{% include "shared/components/data_display/data_table.html" with title="Pedidos" columns=columns rows=rows page=page_obj.number total_pages=page_obj.paginator.num_pages %}{% endverbatim %}</code></pre>
+                </div>
+
+                <div class="space-y-1">
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">Key props</p>
+                    <p class="text-[var(--color-text-secondary)]"><code>title</code>, <code>columns</code>, <code>rows</code>, <code>actions</code>, <code>page</code>, <code>total_pages</code>, <code>empty_title</code>.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="space-y-4">
+        <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">Feedback & Overlays</h2>
+        <div class="space-y-4">
+            {% include "shared/components/feedback/alert.html" with variant="info" title="Informação" description="Os componentes abaixo usam a taxonomia oficial do Design System." %}
+            {% include "shared/components/feedback/empty_state.html" with icon="UI" title="Sem componentes extras" description="Use empty states quando não houver conteúdo para exibir." %}
+            <div class="flex flex-wrap gap-4">
+                {% include "shared/components/overlays/dropdown.html" with label="Abrir menu" title="Ações rápidas" %}
+            </div>
+        </div>
+        <div class="rounded-xl border border-dashed border-[var(--color-border-default)] bg-slate-50 p-4 text-sm">
+            <div class="space-y-3">
+                <p class="font-medium text-[var(--color-text-primary)]">Developer note — `empty_state.html`, `dropdown.html`, `drawer.html`</p>
+
+                <div class="space-y-1">
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">Template path</p>
+                    <p class="text-[var(--color-text-secondary)]"><code>shared/components/feedback/empty_state.html</code> · <code>shared/components/overlays/dropdown.html</code> · <code>shared/components/feedback/drawer.html</code></p>
+                </div>
+
+                <div class="space-y-1">
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">Include example</p>
+                    <pre class="overflow-x-auto rounded-lg bg-slate-900 p-3 text-xs text-slate-100"><code>{% verbatim %}{% include "shared/components/feedback/empty_state.html" with title="Nenhum dado" description="Nada para exibir." %}
+{% include "shared/components/overlays/dropdown.html" with label="Ações" items=menu_items %}
+{% include "shared/components/feedback/drawer.html" with open=True title="Resumo" body=drawer_body %}{% endverbatim %}</code></pre>
+                </div>
+
+                <div class="space-y-1">
+                    <p class="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">Key props</p>
+                    <p class="text-[var(--color-text-secondary)]"><code>title</code>, <code>description</code>, <code>primary_action</code> · <code>label</code>, <code>items</code> · <code>open</code>, <code>title</code>, <code>body</code>.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="space-y-3 rounded-2xl border border-dashed border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-5">
+        <h2 class="text-base font-semibold text-[var(--color-text-primary)]">Looking for page templates?</h2>
+        <p class="text-sm text-[var(--color-text-secondary)]">
+            As prévias de composição completa agora ficam centralizadas em <a href="/__internal__/design-system/pages/" class="font-medium text-[var(--color-action-primary-bg)] hover:underline">Page Templates</a>, enquanto esta página permanece focada em componentes e composites.
+        </p>
+    </section>
+</section>
+{% endblock %}

@@ -1,0 +1,50 @@
+[
+  {
+    "model": "tenants.tenant",
+    "pk": 1,
+    "fields": {
+      "name": "Hubx Demo Store",
+      "slug": "hubx-demo",
+      "subdomain": "hubx-demo",
+      "custom_domain": null,
+      "is_active": true,
+      "maintenance_mode": false,
+      "created_at": "2026-04-14T12:00:00Z",
+      "updated_at": "2026-04-14T12:00:00Z"
+    }
+  },
+  {
+    "model": "catalog.product",
+    "pk": 1,
+    "fields": {
+      "tenant": 1,
+      "name": "Tênis Hubx Runner Persistido",
+      "slug": "tenis-hubx-runner-persistido",
+      "description": "Produto persistido de demonstração para validar a primeira leitura real do catálogo.",
+      "brand_name": "Hubx Persisted",
+      "category_label": "Calçados esportivos",
+      "status": "active",
+      "is_active": true,
+      "is_featured": true,
+      "created_at": "2026-04-14T12:00:00Z",
+      "updated_at": "2026-04-14T12:00:00Z"
+    }
+  },
+  {
+    "model": "catalog.productvariant",
+    "pk": 1,
+    "fields": {
+      "product": 1,
+      "sku": "RUNNER-PERSIST-001",
+      "price": "399.90",
+      "compare_price": "449.90",
+      "stock": 12,
+      "reserved_stock": 2,
+      "track_inventory": true,
+      "allow_backorder": false,
+      "is_default": true,
+      "created_at": "2026-04-14T12:00:00Z",
+      "updated_at": "2026-04-14T12:00:00Z"
+    }
+  }
+]

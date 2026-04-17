@@ -1,0 +1,54 @@
+{% extends layout_template|default:"layouts/admin_shell.html" %}
+
+{% block page_title %}{{ page_title|default:"Pedidos" }}{% endblock %}
+{% block shell_title %}{% if shell_title %}{{ shell_title }}{% elif page_title %}{{ page_title }}{% else %}Pedidos{% endif %}{% endblock %}
+
+{% block content %}
+<section class="space-y-6">
+    {% with eyebrow=page_eyebrow|default:"Pedidos" title=page_title|default:"Pedidos" description=page_description|default:"Acompanhe a operação de pedidos, pagamentos e expedição." meta=page_meta %}
+        {% include "shared/components/layout/page_header.html" %}
+    {% endwith %}
+
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        {% if page_actions %}
+            <div class="flex flex-wrap gap-3">
+                {{ page_actions }}
+            </div>
+        {% else %}
+            <div class="flex flex-wrap gap-3">
+                {% if export_href %}
+                    {% include "shared/components/actions/button.html" with label=export_label|default:"Exportar" href=export_href variant="secondary" %}
+                {% elif showcase_mode %}
+                    {% include "shared/components/actions/button.html" with label="Exportar" href="#" variant="secondary" %}
+                {% endif %}
+            </div>
+        {% endif %}
+
+        {% if page_note %}
+            <p class="text-sm text-[var(--color-text-secondary)]">{{ page_note }}</p>
+        {% endif %}
+    </div>
+
+    {% if search_name or status_options or reset_url or showcase_mode %}
+        {% if filter_action %}
+            {% with method=filter_method|default:"get" action=filter_action hx_get=hx_get hx_target=hx_target hx_swap=hx_swap title=filter_title|default:"Filtros" description=filter_description|default:"Busque pedidos e refine a fila operacional." search_name=search_name|default:"q" search_value=search_value search_label=search_label|default:"Buscar pedidos" search_placeholder=search_placeholder|default:"Número, cliente ou SKU" status_name=status_name|default:"status" status_options=status_options status_selected=status_selected status_label=status_label|default:"Status" reset_url=reset_url submit_label=submit_label|default:"Aplicar filtros" reset_label=reset_label|default:"Limpar" extra_filters=extra_filters %}
+                {% include "shared/components/composite/filter_bar.html" %}
+            {% endwith %}
+        {% else %}
+            {% with method=filter_method|default:"get" hx_get=hx_get hx_target=hx_target hx_swap=hx_swap title=filter_title|default:"Filtros" description=filter_description|default:"Busque pedidos e refine a fila operacional." search_name=search_name|default:"q" search_value=search_value search_label=search_label|default:"Buscar pedidos" search_placeholder=search_placeholder|default:"Número, cliente ou SKU" status_name=status_name|default:"status" status_options=status_options status_selected=status_selected status_label=status_label|default:"Status" reset_url=reset_url submit_label=submit_label|default:"Aplicar filtros" reset_label=reset_label|default:"Limpar" extra_filters=extra_filters %}
+                {% include "shared/components/composite/filter_bar.html" %}
+            {% endwith %}
+        {% endif %}
+    {% endif %}
+
+    {% if selection_count %}
+        {% include "shared/components/composite/bulk_actions_bar.html" with selection_count=selection_count actions=bulk_actions %}
+    {% elif showcase_mode %}
+        {% include "shared/components/composite/bulk_actions_bar.html" with selection_count="2" actions=bulk_actions_showcase %}
+    {% endif %}
+
+    {% with title=table_title|default:"Listagem de pedidos" description=table_description|default:"Tabela operacional com status, cliente, pagamento e atualização recente." count=table_count columns=columns rows=rows table_id=table_id|default:"admin-orders-table" page=page total_pages=total_pages prev_url=prev_url next_url=next_url page_items=page_items empty_title=empty_title|default:"Nenhum pedido encontrado" empty_description=empty_description|default:"Ajuste os filtros para localizar pedidos ou aguarde novas compras." empty_primary_action=empty_primary_action empty_secondary_action=empty_secondary_action hx_target_id=hx_target_id|default:"admin-orders-results" showcase_mode=showcase_mode %}
+        {% include "shared/components/data_display/data_table.html" %}
+    {% endwith %}
+</section>
+{% endblock %}

@@ -1,0 +1,7 @@
+/* Storefront tenant pack used by the internal Design System preview. */
+
+[data-tenant="storefront"] {
+  --tenant-brand-primary: #0f766e;
+  --tenant-brand-primary-hover: #115e59;
+  --tenant-brand-secondary: #f59e0b;
+}

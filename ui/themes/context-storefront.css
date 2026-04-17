@@ -1,0 +1,5 @@
+[data-ui-context="storefront"] {
+  --layout-shell-max-width: 80rem;
+  --layout-sidebar-width: 0rem;
+  --space-shell-gap: 2rem;
+}

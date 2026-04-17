@@ -1,0 +1,389 @@
+{% extends "layouts/admin_shell.html" %}
+
+{% block title %}Design System Page Templates{% endblock %}
+{% block shell_title %}Design System Page Templates{% endblock %}
+{% block tenant_theme %}{{ request.GET.tenant|default:'default' }}{% endblock %}
+
+{% block content %}
+<section class="space-y-8">
+    {% include "shared/components/layout/page_header.html" with
+        eyebrow="Showcase"
+        title="Page Templates"
+        description="Prévia interna das page templates oficiais do Design System para admin, storefront, checkout, auth/account e customer area, separadas dos demos de componentes e composites."
+    %}
+    {% include "shared/partials/design_system_preview_context.html" %}
+
+    <div class="flex flex-wrap items-center gap-3">
+        <a href="/__internal__/design-system/?tenant={{ request.GET.tenant|default:'default' }}" class="ds-btn ds-btn-secondary ds-btn-sm">Voltar</a>
+        <div class="flex flex-wrap gap-2">
+            <a href="/__internal__/design-system/pages/?tenant=default" class="ds-btn ds-btn-sm {% if request.GET.tenant|default:'default' == 'default' %}ds-btn-primary{% else %}ds-btn-secondary{% endif %}">Default</a>
+            <a href="/__internal__/design-system/pages/?tenant=demo" class="ds-btn ds-btn-sm {% if request.GET.tenant == 'demo' %}ds-btn-primary{% else %}ds-btn-secondary{% endif %}">Demo</a>
+            <a href="/__internal__/design-system/pages/?tenant=storefront" class="ds-btn ds-btn-sm {% if request.GET.tenant == 'storefront' %}ds-btn-primary{% else %}ds-btn-secondary{% endif %}">Storefront</a>
+            <a href="/__internal__/design-system/pages/?tenant=nike" class="ds-btn ds-btn-sm {% if request.GET.tenant == 'nike' %}ds-btn-primary{% else %}ds-btn-secondary{% endif %}">Nike</a>
+        </div>
+        <p class="text-sm text-[var(--color-text-secondary)]">Theme preview: <code>{{ request.GET.tenant|default:"default" }}</code></p>
+    </div>
+
+    <section class="space-y-4">
+        <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">Admin Page Templates</h2>
+        <p class="text-sm text-[var(--color-text-secondary)]">
+            Referência de dashboard administrativo e fluxos operacionais do catálogo, separados por previews reutilizáveis da trilha admin.
+        </p>
+
+        <div class="space-y-6">
+            <div class="space-y-3">
+                <h3 class="text-base font-semibold text-[var(--color-text-primary)]">Dashboard Preview</h3>
+                <div class="overflow-hidden rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
+                    {% include "pages/templates/admin_dashboard_page.html" with
+                        page_title="Admin Dashboard"
+                        page_description="Visão geral da operação, atividade recente e indicadores principais."
+                        showcase_mode=True
+                    %}
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <h3 class="text-base font-semibold text-[var(--color-text-primary)]">Product Management Flow</h3>
+                <p class="text-sm text-[var(--color-text-secondary)]">
+                    Fluxo operacional de produtos com listagem, detalhe e formulário usando somente page templates oficiais da trilha admin.
+                </p>
+
+                <div class="grid gap-6">
+                    <div class="overflow-hidden rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
+                        {% include "pages/templates/admin_products_list_page.html" with
+                            page_title="Produtos"
+                            page_description="Gerencie catálogo, disponibilidade e status dos produtos."
+                            showcase_mode=True
+                            search_name="q"
+                            search_value="runner"
+                            page=1
+                            total_pages=4
+                            next_url="?page=2"
+                        %}
+                    </div>
+
+                    <div class="overflow-hidden rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
+                        {% include "pages/templates/admin_product_detail_page.html" with
+                            page_title="Tênis Hubx Runner"
+                            page_description="Resumo operacional do produto com preço, estoque e atividade recente."
+                            status_label="Ativo"
+                            status_variant="active"
+                            showcase_mode=True
+                        %}
+                    </div>
+
+                    <div class="overflow-hidden rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
+                        {% include "pages/templates/admin_product_form_page.html" with
+                            page_title="Editar produto"
+                            page_description="Atualize informações, preço, estoque e regras de publicação."
+                            showcase_mode=True
+                            name="Tênis Hubx Runner"
+                            slug="tenis-hubx-runner"
+                            sku="RUNNER-001-BLK-42"
+                            brand="Hubx"
+                            description="Produto de demonstração para validar o formulário administrativo de produtos."
+                            price="299.90"
+                            compare_price="349.90"
+                            stock="24"
+                            reserved_stock="4"
+                        %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <h3 class="text-base font-semibold text-[var(--color-text-primary)]">Order Management Flow</h3>
+                <p class="text-sm text-[var(--color-text-secondary)]">
+                    Fluxo operacional de pedidos com listagem e detalhe, reaproveitando os blocos oficiais de operação, status e resumo.
+                </p>
+
+                <div class="grid gap-6">
+                    <div class="overflow-hidden rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
+                        {% include "pages/templates/admin_orders_list_page.html" with
+                            page_title="Pedidos"
+                            page_description="Acompanhe pagamentos, expedição e atendimento."
+                            showcase_mode=True
+                            search_name="q"
+                            search_value="1048"
+                            page=1
+                            total_pages=5
+                            next_url="?page=2"
+                        %}
+                    </div>
+
+                    <div class="overflow-hidden rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
+                        {% include "pages/templates/admin_order_detail_page.html" with
+                            page_title="Pedido #1048"
+                            page_description="Resumo operacional do pedido com cliente, pagamento e entrega."
+                            order_status_label="Pago"
+                            order_status_variant="paid"
+                            fulfillment_status_label="Separando itens"
+                            fulfillment_status_variant="info"
+                            showcase_mode=True
+                            subtotal="R$ 299,90"
+                            shipping="R$ 24,90"
+                            total="R$ 324,80"
+                        %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <h3 class="text-base font-semibold text-[var(--color-text-primary)]">Customer Management Flow</h3>
+                <p class="text-sm text-[var(--color-text-secondary)]">
+                    Fluxo operacional de clientes com listagem e detalhe, usando page templates oficiais para conta, contato e atividade recente.
+                </p>
+
+                <div class="grid gap-6">
+                    <div class="overflow-hidden rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
+                        {% include "pages/templates/admin_customers_list_page.html" with
+                            page_title="Clientes"
+                            page_description="Acompanhe contas, status e atividade dos clientes."
+                            showcase_mode=True
+                            search_name="q"
+                            search_value="ana"
+                            page=1
+                            total_pages=4
+                            next_url="?page=2"
+                        %}
+                    </div>
+
+                    <div class="overflow-hidden rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
+                        {% include "pages/templates/admin_customer_detail_page.html" with
+                            page_title="Ana Souza"
+                            page_description="Resumo operacional da conta com contato, perfil e atividade."
+                            customer_status_label="Ativo"
+                            customer_status_variant="active"
+                            account_type_label="Storefront"
+                            showcase_mode=True
+                        %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="space-y-4">
+        <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">Storefront Page Templates</h2>
+        <p class="text-sm text-[var(--color-text-secondary)]">
+            Fluxo público com listagem de catálogo e detalhe do produto usando os templates oficiais da trilha storefront.
+        </p>
+
+        <div class="space-y-6">
+            <div class="space-y-3">
+                <h3 class="text-base font-semibold text-[var(--color-text-primary)]">Catalog Page Preview</h3>
+                <div class="overflow-hidden rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
+                    {% include "pages/templates/catalog_page.html" with
+                        page_title="Tênis e Performance"
+                        page_description="Explore os destaques da coleção com foco em corrida, treino e lifestyle."
+                        results_meta="3 itens de demonstração"
+                        filter_title="Filtrar produtos"
+                        filter_description="Exemplo de busca e filtros do catálogo público."
+                        search_value="runner"
+                        reset_url="#"
+                        showcase_mode=True
+                        page=1
+                        total_pages=3
+                        next_url="?page=2"
+                    %}
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <h3 class="text-base font-semibold text-[var(--color-text-primary)]">Product Detail Page Preview</h3>
+                <div class="overflow-hidden rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
+                    {% include "pages/templates/product_detail_page.html" with
+                        product_title="Tênis Hubx Runner"
+                        product_subtitle="Modelo de alta performance para treinos e corridas urbanas."
+                        price="R$ 299,90"
+                        compare_price="R$ 349,90"
+                        price_helper="ou 3x de R$ 99,97 sem juros"
+                        stock_state="low_stock"
+                        stock_helper="Restam 4 unidades"
+                        short_description="Produto de demonstração para validar a composição da página de detalhe na trilha storefront."
+                        main_image_url="https://placehold.co/900x900"
+                        main_image_alt="Tênis Hubx Runner"
+                        showcase_mode=True
+                        quantity=1
+                        primary_action_label="Adicionar ao carrinho"
+                        secondary_action_label="Comprar agora"
+                        secondary_action_href="#checkout"
+                        purchase_note="Seletores de variante aparecem automaticamente quando o backend fornecer opções estruturadas."
+                    %}
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="space-y-4">
+        <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">Checkout Page Template</h2>
+        <p class="text-sm text-[var(--color-text-secondary)]">
+            Referência da page template de checkout com etapas, formulários, revisão de itens e resumo lateral.
+        </p>
+        <div class="overflow-hidden rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
+            {% include "pages/templates/checkout_page.html" with
+                page_title="Finalizar compra"
+                page_description="Exemplo da composição base de entrega, pagamento e revisão."
+                showcase_mode=True
+                first_name="Ana"
+                last_name="Souza"
+                email="ana@hubx.market"
+                phone="(11) 99999-0000"
+                address_line_1="Rua das Laranjeiras, 100"
+                address_line_2="Apto 42"
+                city="São Paulo"
+                state="SP"
+                zip_code="01310-100"
+                subtotal="R$ 359,80"
+                shipping_total="R$ 24,90"
+                discount_total="-R$ 20,00"
+                installments_summary="3x de R$ 121,56 sem juros"
+                grand_total="R$ 364,70"
+                installments_selected="3x"
+            %}
+        </div>
+    </section>
+
+    <section class="space-y-4">
+        <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">Auth / Account Page Templates</h2>
+        <p class="text-sm text-[var(--color-text-secondary)]">
+            Fluxos base de autenticação e área do cliente com composição reutilizável para login, cadastro, recuperação de senha e visão geral da conta.
+        </p>
+
+        <div class="space-y-6">
+            <div class="space-y-3">
+                <h3 class="text-base font-semibold text-[var(--color-text-primary)]">Login / Register / Password Flows</h3>
+                <div class="grid gap-6 xl:grid-cols-2">
+                    <div class="overflow-hidden rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
+                        {% include "pages/templates/login_page.html" with
+                            page_title="Entrar"
+                            page_description="Acesse sua conta para acompanhar pedidos e preferências."
+                            login_value="cliente@hubx.market"
+                            remember_me=True
+                            forgot_password_href="#forgot-password"
+                            register_href="#register"
+                        %}
+                    </div>
+
+                    <div class="overflow-hidden rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
+                        {% include "pages/templates/register_page.html" with
+                            page_title="Criar conta"
+                            page_description="Cadastre-se para comprar, acompanhar pedidos e salvar seus dados."
+                            full_name="Ana Souza"
+                            email="ana@hubx.market"
+                            login_href="#login"
+                        %}
+                    </div>
+                </div>
+
+                <div class="grid gap-6 xl:grid-cols-2">
+                    <div class="overflow-hidden rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
+                        {% include "pages/templates/forgot_password_page.html" with
+                            page_title="Recuperar senha"
+                            page_description="Informe o e-mail para receber instruções."
+                            email="cliente@hubx.market"
+                            login_href="#login"
+                        %}
+                    </div>
+
+                    <div class="overflow-hidden rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
+                        {% include "pages/templates/reset_password_page.html" with
+                            page_title="Redefinir senha"
+                            page_description="Defina uma nova senha para continuar."
+                            login_href="#login"
+                        %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <h3 class="text-base font-semibold text-[var(--color-text-primary)]">Account Overview Preview</h3>
+                <div class="overflow-hidden rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
+                    {% include "pages/templates/account_overview_page.html" with
+                        page_title="Minha conta"
+                        page_description="Resumo da conta, atalhos rápidos e pedidos recentes."
+                        summary_content="Cliente ativo com perfil completo e últimos pedidos sincronizados."
+                        quick_links=account_quick_links
+                        recent_order_columns=account_order_columns
+                        recent_orders=account_recent_orders
+                        activity_content="Último acesso realizado hoje às 10:24."
+                    %}
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="space-y-4">
+        <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">Customer Area Page Templates</h2>
+        <p class="text-sm text-[var(--color-text-secondary)]">
+            Fluxos reutilizáveis da área do cliente para pedidos, detalhe de pedido, endereços e perfil, usando o shell e os componentes oficiais já implementados.
+        </p>
+
+        <div class="space-y-6">
+            <div class="space-y-3">
+                <h3 class="text-base font-semibold text-[var(--color-text-primary)]">Orders and Order Detail</h3>
+                <div class="grid gap-6">
+                    <div class="overflow-hidden rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
+                        {% include "pages/templates/orders_page.html" with
+                            page_title="Meus pedidos"
+                            page_description="Acompanhe o histórico de compras e o status de cada pedido."
+                            showcase_mode=True
+                            search_name="q"
+                            search_value="1048"
+                            status_options=customer_order_status_options
+                            status_selected="paid"
+                            order_columns=customer_order_columns
+                            page=1
+                            total_pages=3
+                            next_url="?page=2"
+                        %}
+                    </div>
+
+                    <div class="overflow-hidden rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
+                        {% include "pages/templates/order_detail_page.html" with
+                            page_title="Pedido #1048"
+                            page_description="Resumo do pedido, status atual e movimentações recentes."
+                            page_meta="Realizado em 12/04/2026"
+                            summary_content="Pagamento confirmado e pedido em preparação para envio."
+                            order_status_label="Pago"
+                            order_status_variant="paid"
+                            payment_status="Confirmado"
+                            shipping_status="Separando itens"
+                            showcase_mode=True
+                            subtotal="R$ 299,90"
+                            shipping="R$ 24,90"
+                            total="R$ 324,80"
+                        %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <h3 class="text-base font-semibold text-[var(--color-text-primary)]">Addresses and Profile</h3>
+                <div class="grid gap-6">
+                    <div class="overflow-hidden rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
+                        {% include "pages/templates/addresses_page.html" with
+                            page_title="Meus endereços"
+                            page_description="Gerencie endereços de entrega e cobrança da conta."
+                            showcase_mode=True
+                        %}
+                    </div>
+
+                    <div class="overflow-hidden rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
+                        {% include "pages/templates/profile_page.html" with
+                            page_title="Meu perfil"
+                            page_description="Atualize seus dados pessoais, contato e preferências."
+                            first_name="Ana"
+                            last_name="Souza"
+                            email="ana@hubx.market"
+                            phone="(11) 99999-0000"
+                            newsletter_opt_in=True
+                            order_updates_opt_in=True
+                        %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</section>
+{% endblock %}

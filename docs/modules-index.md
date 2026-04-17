@@ -49,6 +49,7 @@ Responsabilidade:
 Gerenciar autenticação e usuários administrativos da loja.
 
 Entidades principais:
+AccountProfile
 OwnerUser
 
 Dependências:
@@ -163,7 +164,8 @@ Responsabilidade:
 Orquestrar fluxo de finalização da compra.
 
 Entidades principais:
-CheckoutSession (conceitual)
+CheckoutSession
+CheckoutSessionItem
 
 Dependências:
 cart  

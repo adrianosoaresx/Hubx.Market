@@ -1,0 +1,33 @@
+[
+  {
+    "model": "tenants.tenant",
+    "pk": 6,
+    "fields": {
+      "name": "Hubx Customers Persisted",
+      "slug": "hubx-customers-persisted",
+      "subdomain": "hubx-customers-persisted",
+      "custom_domain": null,
+      "is_active": true,
+      "maintenance_mode": false,
+      "created_at": "2026-04-10T09:00:00Z",
+      "updated_at": "2026-04-10T09:00:00Z"
+    }
+  },
+  {
+    "model": "customers.customer",
+    "pk": 1,
+    "fields": {
+      "tenant": 6,
+      "slug": "ana-persistida",
+      "reference": "#9901",
+      "full_name": "Ana Persistida",
+      "email": "ana.persistida@hubx.market",
+      "phone": "(11) 98888-1111",
+      "status": "vip",
+      "account_type": "Storefront",
+      "last_seen_at": "2026-04-15T16:10:00Z",
+      "created_at": "2026-04-10T12:30:00Z",
+      "updated_at": "2026-04-15T17:45:00Z"
+    }
+  }
+]

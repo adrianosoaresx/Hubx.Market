@@ -1,0 +1,68 @@
+<section class="space-y-4">
+    {% if title or description or count or actions or selection_count or bulk_actions or search_name or filters %}
+        {% include "shared/components/composite/data_table_toolbar.html" with
+            title=title
+            description=description
+            count=count
+            search_name=search_name
+            search_value=search_value
+            search_label=search_label
+            search_placeholder=search_placeholder
+            filters=filters
+            actions=actions
+            selection_count=selection_count
+            bulk_actions=bulk_actions
+        %}
+    {% endif %}
+
+    <div {% if hx_target_id %}id="{{ hx_target_id }}"{% endif %} class="space-y-4">
+        {% if rows %}
+            {% include "shared/components/data_display/table.html" with table_id=table_id columns=columns rows=rows empty_message=empty_message %}
+            {% include "shared/components/navigation/pagination.html" with page=page total_pages=total_pages prev_url=prev_url next_url=next_url page_items=page_items %}
+        {% elif showcase_mode %}
+            <div class="overflow-hidden rounded-xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-[var(--color-border-default)] text-sm">
+                        <thead class="bg-slate-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left font-medium text-[var(--color-text-secondary)]">Registro</th>
+                                <th class="px-4 py-3 text-left font-medium text-[var(--color-text-secondary)]">Status</th>
+                                <th class="px-4 py-3 text-left font-medium text-[var(--color-text-secondary)]">Canal</th>
+                                <th class="px-4 py-3 text-left font-medium text-[var(--color-text-secondary)]">Atualização</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-[var(--color-border-default)]">
+                            <tr class="hover:bg-slate-50">
+                                <td class="px-4 py-3 text-[var(--color-text-primary)]">Pedido #1048</td>
+                                <td class="px-4 py-3">{% include "shared/components/data_display/badge.html" with label="Pago" variant="paid" size="xs" %}</td>
+                                <td class="px-4 py-3 text-[var(--color-text-primary)]">Storefront</td>
+                                <td class="px-4 py-3 text-[var(--color-text-secondary)]">há 4 min</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50">
+                                <td class="px-4 py-3 text-[var(--color-text-primary)]">Cliente #8821</td>
+                                <td class="px-4 py-3">{% include "shared/components/data_display/badge.html" with label="Ativo" variant="active" size="xs" %}</td>
+                                <td class="px-4 py-3 text-[var(--color-text-primary)]">CRM</td>
+                                <td class="px-4 py-3 text-[var(--color-text-secondary)]">há 18 min</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50">
+                                <td class="px-4 py-3 text-[var(--color-text-primary)]">Produto / Hubx Runner</td>
+                                <td class="px-4 py-3">{% include "shared/components/data_display/badge.html" with label="Pendente" variant="pending" size="xs" %}</td>
+                                <td class="px-4 py-3 text-[var(--color-text-primary)]">Marketplace</td>
+                                <td class="px-4 py-3 text-[var(--color-text-secondary)]">há 41 min</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% include "shared/components/navigation/pagination.html" with page=1 total_pages=3 next_url='?page=2' %}
+        {% else %}
+            {% include "shared/components/feedback/empty_state.html" with
+                icon=empty_icon
+                title=empty_title|default:"Nenhum registro encontrado"
+                description=empty_description|default:"Não há dados para exibir com os filtros atuais."
+                primary_action=empty_primary_action
+                secondary_action=empty_secondary_action
+            %}
+        {% endif %}
+    </div>
+</section>

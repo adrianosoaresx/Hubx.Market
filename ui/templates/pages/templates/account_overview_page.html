@@ -1,0 +1,57 @@
+{% extends "layouts/account_shell.html" %}
+
+{% block title %}{{ page_title|default:"Minha conta" }}{% endblock %}
+
+{% block content %}
+<section class="space-y-6">
+    {% with eyebrow=eyebrow|default:"Customer Area" title=page_title|default:"Minha conta" description=page_description|default:"Acompanhe seus dados, pedidos recentes e acessos rápidos da área do cliente." %}
+        {% include "shared/components/layout/page_header.html" %}
+    {% endwith %}
+
+    <div class="grid gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,0.9fr)]">
+        <div class="space-y-6">
+            {% with title=summary_title|default:"Resumo da conta" subtitle=summary_subtitle|default:"Informações principais do perfil do cliente." content=summary_content|default:"Cliente ativo com acesso à área de pedidos, endereços e preferências." %}
+                {% include "shared/components/data_display/card.html" %}
+            {% endwith %}
+
+            <section class="space-y-4">
+                <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">{{ recent_orders_title|default:"Pedidos recentes" }}</h2>
+                {% if recent_orders %}
+                    {% include "shared/components/data_display/table.html" with columns=recent_order_columns rows=recent_orders empty_message="Nenhum pedido recente." %}
+                {% else %}
+                    {% with icon="📦" title="Nenhum pedido recente" description="Assim que houver pedidos, eles aparecerão aqui para acompanhamento rápido." centered=False %}
+                        {% include "shared/components/feedback/empty_state.html" %}
+                    {% endwith %}
+                {% endif %}
+            </section>
+        </div>
+
+        <aside class="space-y-6">
+            {% with title=quick_links_title|default:"Ações rápidas" subtitle=quick_links_subtitle|default:"Atalhos comuns da área do cliente." content=quick_links_content %}
+                {% include "shared/components/data_display/card.html" %}
+            {% endwith %}
+
+            {% if quick_links %}
+                <div class="ds-surface p-6">
+                    <div class="space-y-3">
+                        {% for link in quick_links %}
+                            <a href="{{ link.href|default:'#' }}" class="block rounded-lg border border-[var(--color-border-default)] px-4 py-3 text-sm text-[var(--color-text-primary)] hover:bg-slate-50">
+                                <div class="font-medium">{{ link.label }}</div>
+                                {% if link.description %}<div class="mt-1 text-[var(--color-text-secondary)]">{{ link.description }}</div>{% endif %}
+                            </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% else %}
+                {% with icon="↗" title="Sem atalhos configurados" description="Use este bloco para expor links rápidos como pedidos, endereços e perfil." centered=False %}
+                    {% include "shared/components/feedback/empty_state.html" %}
+                {% endwith %}
+            {% endif %}
+
+            {% with title=activity_title|default:"Atividade recente" subtitle=activity_subtitle|default:"Resumo curto do que aconteceu na conta." content=activity_content|default:"Nenhuma atividade adicional para exibir no momento." %}
+                {% include "shared/components/data_display/card.html" %}
+            {% endwith %}
+        </aside>
+    </div>
+</section>
+{% endblock %}

@@ -16,6 +16,7 @@
 ### Identidade
 - PlatformUser
 - OwnerUser
+- AccountProfile
 - Customer
 - CustomerAddress
 
@@ -32,6 +33,8 @@
 ### Carrinho / Checkout
 - Cart
 - CartItem
+- CheckoutSession
+- CheckoutSessionItem
 
 ### Pedidos / Pagamentos
 - Order
@@ -56,6 +59,7 @@
 
 ## 3. Relacionamentos principais
 - Tenant 1:N OwnerUser
+- Tenant 1:N AccountProfile
 - Tenant 1:N Customer
 - Tenant 1:N Product
 - Product 1:N ProductVariant
@@ -63,6 +67,8 @@
 - Product N:N Tag
 - Product 1:N ProductImage
 - Customer 1:N CustomerAddress
+- Tenant 1:N CheckoutSession
+- CheckoutSession 1:N CheckoutSessionItem
 - Customer 1:N Order
 - Order 1:N OrderItem
 - Order 1:1 Payment
@@ -74,7 +80,11 @@
 ## 4. Observações de modelagem
 - preço pertence à ProductVariant
 - estoque pertence à ProductVariant
+- checkout pode persistir snapshots transitórios antes da criação do pedido
 - OrderItem guarda price_snapshot
 - produto inativo não é deletado
 - customer é isolado por tenant
+- `Customer` já possui base persistida mínima para leituras administrativas de list/detail`r`n- `CustomerAddress` passa a existir como base persistida mínima para leituras futuras da área logada
 - owner e customer são entidades diferentes
+- `AccountProfile` serve como base de experiência de conta, não como substituto de `Customer`
+

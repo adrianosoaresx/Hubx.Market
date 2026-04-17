@@ -1,0 +1,61 @@
+/* Manual theme layer.
+ * Runtime-safe copy of context + tenant alias rules.
+ * Source-of-truth references live in:
+ * - ui/themes/context-*.css
+ * - ui/themes/tenants/*.css
+ */
+
+:root,
+[data-tenant="default"] {
+  --tenant-brand-primary: var(--color-action-primary-bg);
+  --tenant-brand-primary-hover: var(--color-action-primary-bg-hover);
+  --tenant-brand-secondary: var(--color-action-secondary);
+  --tenant-radius-base: var(--radius-md);
+}
+
+[data-ui-context="admin"] {
+  --layout-shell-max-width: 100%;
+  --layout-sidebar-width: 16rem;
+  --space-shell-gap: 1.5rem;
+}
+
+[data-ui-context="storefront"] {
+  --layout-shell-max-width: 80rem;
+  --layout-sidebar-width: 0rem;
+  --space-shell-gap: 2rem;
+}
+
+[data-ui-context="checkout"] {
+  --layout-shell-max-width: 72rem;
+  --space-shell-gap: 1.5rem;
+  --color-surface-page: #ffffff;
+}
+
+[data-ui-context="account"] {
+  --layout-shell-max-width: 72rem;
+  --layout-sidebar-width: 14rem;
+  --space-shell-gap: 1.5rem;
+}
+
+[data-tenant="demo"] {
+  --tenant-brand-primary: #7c3aed;
+  --tenant-brand-primary-hover: #6d28d9;
+  --tenant-brand-secondary: #14b8a6;
+}
+
+[data-tenant="storefront"] {
+  --tenant-brand-primary: #0f766e;
+  --tenant-brand-primary-hover: #115e59;
+  --tenant-brand-secondary: #f59e0b;
+}
+
+[data-tenant="nike"] {
+  --tenant-brand-primary: #111827;
+  --tenant-brand-primary-hover: #1f2937;
+  --tenant-brand-secondary: #ef4444;
+}
+
+[data-tenant] {
+  --color-action-primary-bg: var(--tenant-brand-primary);
+  --color-action-primary-bg-hover: var(--tenant-brand-primary-hover);
+}

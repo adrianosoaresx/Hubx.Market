@@ -2,6 +2,7 @@ from pathlib import Path
 import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+REPO_ROOT = BASE_DIR.parent
 
 SECRET_KEY = os.getenv("SECRET_KEY", "insecure-dev-key")
 DEBUG = os.getenv("DEBUG", "1") == "1"
@@ -53,7 +54,7 @@ ROOT_URLCONF = "config.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [REPO_ROOT / "ui" / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -83,6 +84,7 @@ USE_TZ = True
 
 STATIC_URL = "/static/"
 STATIC_ROOT = str(BASE_DIR / "staticfiles")
+STATICFILES_DIRS = [REPO_ROOT / "ui" / "static"]
 MEDIA_URL = "/media/"
 MEDIA_ROOT = str(BASE_DIR / "media")
 

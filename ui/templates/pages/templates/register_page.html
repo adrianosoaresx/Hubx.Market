@@ -1,0 +1,26 @@
+{% extends "layouts/auth.html" %}
+
+{% block title %}{{ page_title|default:"Criar conta" }}{% endblock %}
+
+{% block content %}
+<section class="space-y-6">
+    {% with title=page_title|default:"Criar conta" subtitle=page_description|default:"Cadastre-se para comprar, acompanhar pedidos e salvar seus dados." padding="lg" %}
+        {% include "shared/components/data_display/card.html" %}
+    {% endwith %}
+
+    <form method="{{ form_method|default:'post' }}" action="{{ form_action|default:request.path }}" class="ds-surface space-y-6 p-6">
+        {% csrf_token %}
+
+        {% block register_fields %}
+            {% include "shared/components/forms/input.html" with name="full_name" label="Nome completo" value=full_name placeholder="Seu nome" autocomplete="name" %}
+            {% include "shared/components/forms/input.html" with name="email" label="E-mail" input_type="email" value=email placeholder="voce@exemplo.com" autocomplete="email" %}
+            {% include "shared/components/forms/input.html" with name="password" label="Senha" input_type="password" placeholder="Crie uma senha" autocomplete="new-password" %}
+            {% include "shared/components/forms/input.html" with name="confirm_password" label="Confirmar senha" input_type="password" placeholder="Repita a senha" autocomplete="new-password" %}
+        {% endblock %}
+
+        {% with primary_label=primary_label|default:"Criar conta" secondary_label=secondary_label|default:"Já tenho conta" secondary_href=login_href|default:'#' %}
+            {% include "shared/components/forms/form_actions.html" %}
+        {% endwith %}
+    </form>
+</section>
+{% endblock %}

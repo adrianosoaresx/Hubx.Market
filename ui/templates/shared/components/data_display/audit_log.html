@@ -1,0 +1,71 @@
+{% if entries or showcase_mode %}
+<section class="ds-surface p-6">
+    <div class="space-y-5">
+        {% if title or description %}
+            <header class="space-y-1">
+                {% if title %}<h3 class="text-base font-semibold text-[var(--color-text-primary)]">{{ title }}</h3>{% endif %}
+                {% if description %}<p class="text-sm text-[var(--color-text-secondary)]">{{ description }}</p>{% endif %}
+            </header>
+        {% endif %}
+
+        <div class="overflow-hidden rounded-xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-[var(--color-border-default)] text-sm">
+                    <thead class="bg-slate-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left font-medium text-[var(--color-text-secondary)]">Data/Hora</th>
+                            <th class="px-4 py-3 text-left font-medium text-[var(--color-text-secondary)]">Ator</th>
+                            <th class="px-4 py-3 text-left font-medium text-[var(--color-text-secondary)]">Ação</th>
+                            <th class="px-4 py-3 text-left font-medium text-[var(--color-text-secondary)]">Objeto</th>
+                            <th class="px-4 py-3 text-left font-medium text-[var(--color-text-secondary)]">Meta</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-[var(--color-border-default)]">
+                        {% if entries %}
+                            {% for entry in entries %}
+                                <tr class="hover:bg-slate-50">
+                                    <td class="px-4 py-3 text-[var(--color-text-primary)]">{{ entry.timestamp }}</td>
+                                    <td class="px-4 py-3 text-[var(--color-text-primary)]">{{ entry.actor|default:"Sistema" }}</td>
+                                    <td class="px-4 py-3">
+                                        {% if entry.badge_label %}
+                                            {% include "shared/components/data_display/badge.html" with label=entry.badge_label variant=entry.badge_variant|default:"neutral" size="xs" %}
+                                        {% else %}
+                                            <span class="text-[var(--color-text-primary)]">{{ entry.action }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-4 py-3 text-[var(--color-text-primary)]">{{ entry.target|default:"-" }}</td>
+                                    <td class="px-4 py-3 text-[var(--color-text-secondary)]">{{ entry.meta|default:"-" }}</td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr class="hover:bg-slate-50">
+                                <td class="px-4 py-3 text-[var(--color-text-primary)]">2026-04-12 10:30</td>
+                                <td class="px-4 py-3 text-[var(--color-text-primary)]">ana@hubx.market</td>
+                                <td class="px-4 py-3">{% include "shared/components/data_display/badge.html" with label="Atualização" variant="info" size="xs" %}</td>
+                                <td class="px-4 py-3 text-[var(--color-text-primary)]">Produto / Tênis Hubx Runner</td>
+                                <td class="px-4 py-3 text-[var(--color-text-secondary)]">Preço alterado de R$ 349,90 para R$ 299,90</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50">
+                                <td class="px-4 py-3 text-[var(--color-text-primary)]">2026-04-12 09:12</td>
+                                <td class="px-4 py-3 text-[var(--color-text-primary)]">system</td>
+                                <td class="px-4 py-3">{% include "shared/components/data_display/badge.html" with label="Integração" variant="success" size="xs" %}</td>
+                                <td class="px-4 py-3 text-[var(--color-text-primary)]">Canal marketplace</td>
+                                <td class="px-4 py-3 text-[var(--color-text-secondary)]">Sincronização concluída com 24 registros</td>
+                            </tr>
+                            <tr class="hover:bg-slate-50">
+                                <td class="px-4 py-3 text-[var(--color-text-primary)]">2026-04-11 18:47</td>
+                                <td class="px-4 py-3 text-[var(--color-text-primary)]">owner@hubx.market</td>
+                                <td class="px-4 py-3">{% include "shared/components/data_display/badge.html" with label="Acesso" variant="warning" size="xs" %}</td>
+                                <td class="px-4 py-3 text-[var(--color-text-primary)]">Painel financeiro</td>
+                                <td class="px-4 py-3 text-[var(--color-text-secondary)]">Exportação CSV iniciada</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+{% else %}
+    {% include "shared/components/feedback/empty_state.html" with title=empty_title|default:"Nenhum evento auditável" description=empty_description|default:"O histórico aparecerá aqui conforme eventos forem registrados." size="md" %}
+{% endif %}

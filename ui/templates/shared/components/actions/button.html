@@ -1,0 +1,26 @@
+{% with variant=variant|default:"primary" size=size|default:"md" label=label|default:"Ação" %}
+{% if href %}
+<a
+    href="{{ href }}"
+    class="ds-btn {% if variant == 'secondary' %}ds-btn-secondary{% else %}ds-btn-primary{% endif %} {% if size == 'sm' %}ds-btn-sm{% else %}ds-btn-md{% endif %} {% if full_width %}w-full{% endif %} {% if disabled %}pointer-events-none opacity-50{% endif %}"
+>
+    {% if icon_left %}<span aria-hidden="true">{{ icon_left }}</span>{% endif %}
+    <span>{{ label }}</span>
+    {% if icon_right %}<span aria-hidden="true">{{ icon_right }}</span>{% endif %}
+</a>
+{% else %}
+<button
+    type="{{ type|default:'button' }}"
+    class="ds-btn {% if variant == 'secondary' %}ds-btn-secondary{% else %}ds-btn-primary{% endif %} {% if size == 'sm' %}ds-btn-sm{% else %}ds-btn-md{% endif %} {% if full_width %}w-full{% endif %} {% if disabled %}pointer-events-none opacity-50{% endif %}"
+    {% if disabled or loading %}disabled{% endif %}
+>
+    {% if loading %}
+        <span class="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent" aria-hidden="true"></span>
+    {% elif icon_left %}
+        <span aria-hidden="true">{{ icon_left }}</span>
+    {% endif %}
+    <span>{{ label }}</span>
+    {% if icon_right %}<span aria-hidden="true">{{ icon_right }}</span>{% endif %}
+</button>
+{% endif %}
+{% endwith %}

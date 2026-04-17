@@ -1,0 +1,23 @@
+<section class="ds-surface {% if centered != False %}text-center{% endif %} {% if size == 'lg' %}p-10{% else %}p-8{% endif %}">
+    <div class="mx-auto max-w-xl space-y-4">
+        {% if icon %}
+            <div class="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-[var(--color-text-secondary)]" aria-hidden="true">
+                {{ icon }}
+            </div>
+        {% endif %}
+
+        <div class="space-y-2">
+            <h3 class="text-xl font-semibold text-[var(--color-text-primary)]">{{ title|default:"Nenhum resultado encontrado" }}</h3>
+            {% if description %}
+                <p class="text-sm text-[var(--color-text-secondary)]">{{ description }}</p>
+            {% endif %}
+        </div>
+
+        {% if primary_action or secondary_action %}
+            <div class="flex flex-col justify-center gap-3 sm:flex-row">
+                {% if secondary_action %}{{ secondary_action }}{% endif %}
+                {% if primary_action %}{{ primary_action }}{% endif %}
+            </div>
+        {% endif %}
+    </div>
+</section>
