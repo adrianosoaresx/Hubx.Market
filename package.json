@@ -4,10 +4,16 @@
   "version": "0.1.0",
   "description": "Visual regression baseline for the Hubx.market Design System showcase",
   "scripts": {
+    "build:css": "npx @tailwindcss/cli -i ./ui/static_src/css/app.tailwind.css -o ./ui/static/css/app.css --minify",
+    "watch:css": "npx @tailwindcss/cli -i ./ui/static_src/css/app.tailwind.css -o ./ui/static/css/app.css --watch",
     "test:visual": "playwright test tests/visual/showcase.spec.js",
     "test:visual:update": "playwright test tests/visual/showcase.spec.js --update-snapshots"
   },
   "devDependencies": {
-    "@playwright/test": "^1.54.2"
+    "@playwright/test": "^1.54.2",
+    "@tailwindcss/cli": "^4.2.2",
+    "@tailwindcss/postcss": "^4.2.2",
+    "postcss": "^8.5.10",
+    "tailwindcss": "^4.2.2"
   }
 }
