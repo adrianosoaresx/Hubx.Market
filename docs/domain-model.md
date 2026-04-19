@@ -20,10 +20,14 @@ Usuário do painel da plataforma.
 Usuário administrador da loja.
 
 ### AccountProfile
-Perfil persistido mínimo para identidade, contato e preferências da experiência de conta.
+Perfil persistido mínimo para identidade, contato e preferências da experiência de conta, com vínculo opcional para `Customer`.
 
 ### Customer
 Comprador da loja, isolado por tenant, com base persistida mínima para identidade, contato e leitura operacional administrativa.
+- também pode guardar flags operacionais leves para execução manual:
+  - `marked_for_followup`
+  - `marked_for_reengagement`
+  - `marked_as_priority`
 
 ### CustomerAddress
 Endereço do customer.
@@ -45,7 +49,7 @@ Entidade principal de catálogo.
 SKU e unidade efetiva de venda.
 
 ### ProductImage
-Imagem do produto.
+Imagem persistida mínima do produto, baseada em URL e ordenação simples para uso em storefront/admin.
 
 ## Compra
 ### Cart
@@ -61,13 +65,13 @@ Snapshot transitório do checkout por tenant, com contato, entrega, métodos e t
 Snapshot dos itens exibidos durante o checkout.
 
 ### Order
-Pedido materializado no checkout.
+Pedido materializado no checkout, com vínculo opcional para `Customer` e snapshots preservados de customer.
 
 ### OrderItem
 Snapshot do item comprado.
 
 ### OrderStatusHistory
-Histórico de transições e eventos relevantes do lifecycle do pedido.
+Histórico leve de transições e eventos operacionais relevantes do pedido, usado para enriquecer timelines administrativas, com atribuição opcional de origem/contexto.
 
 ## Pagamento e logística
 ### Payment

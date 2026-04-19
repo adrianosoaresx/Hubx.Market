@@ -7,10 +7,12 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.views.generic import TemplateView, View
 
+from app.modules.accounts.application.account_address_commands import account_address_commands
 from app.modules.accounts.application.account_page_queries import account_page_queries
 from app.modules.accounts.application.account_customer_area_queries import (
     account_customer_area_queries,
 )
+from .forms import AccountAddressForm
 
 
 def _quick_links() -> list[dict[str, str]]:
@@ -63,6 +65,136 @@ def _extract_address_id(address: dict[str, object]) -> int | None:
             if digits:
                 return int(digits)
     return None
+
+
+def _address_form_state(form: AccountAddressForm) -> dict[str, object]:
+    def field_value(name: str) -> object:
+        return form[name].value() if name in form.fields else ""
+
+    def field_error(name: str) -> str:
+        if name not in form.fields:
+            return ""
+        return form.errors.get(name, [""])[0]
+
+    return {
+        "values": {
+            "label": field_value("label"),
+            "recipient_name": field_value("recipient_name"),
+            "line_1": field_value("line_1"),
+            "line_2": field_value("line_2"),
+            "district": field_value("district"),
+            "city": field_value("city"),
+            "state": field_value("state"),
+            "postal_code": field_value("postal_code"),
+            "is_default": bool(field_value("is_default")),
+        },
+        "errors": {
+            "label": field_error("label"),
+            "recipient_name": field_error("recipient_name"),
+            "line_1": field_error("line_1"),
+            "line_2": field_error("line_2"),
+            "district": field_error("district"),
+            "city": field_error("city"),
+            "state": field_error("state"),
+            "postal_code": field_error("postal_code"),
+            "is_default": field_error("is_default"),
+        },
+        "non_field_errors": list(form.non_field_errors()),
+        "is_bound": form.is_bound,
+    }
+
+
+def _build_address_form_context(request, *, form: AccountAddressForm | None = None, intent: str | None = None, address_id: int | None = None) -> dict[str, object]:
+    resolved_intent = intent or request.GET.get("intent", "").strip()
+    resolved_address_id = address_id
+    if resolved_address_id is None:
+        raw_address_id = request.GET.get("address_id", "").strip()
+        if raw_address_id.isdigit():
+            resolved_address_id = int(raw_address_id)
+
+    if resolved_intent not in {"create", "edit"}:
+        return {}
+
+    if form is None:
+        initial = {}
+        if resolved_intent == "edit" and resolved_address_id is not None:
+            initial = account_address_commands.get_address_initial(resolved_address_id) or {}
+        form = AccountAddressForm(initial=initial)
+
+    form_action = (
+        reverse("accounts:account-address-create")
+        if resolved_intent == "create"
+        else reverse("accounts:account-address-edit", kwargs={"address_id": resolved_address_id or 0})
+    )
+    context = {
+        "address_form": _address_form_state(form),
+        "address_form_mode": resolved_intent,
+        "address_form_title": "Adicionar endereço" if resolved_intent == "create" else "Editar endereço",
+        "address_form_description": (
+            "Cadastre um novo endereço para futuras compras."
+            if resolved_intent == "create"
+            else "Atualize os dados do endereço salvo."
+        ),
+        "address_form_action": form_action,
+        "address_form_cancel_href": reverse("accounts:account-addresses"),
+    }
+    if form.is_bound and not form.is_valid():
+        context["address_feedback"] = {
+            "variant": "danger",
+            "icon": "⚠️",
+            "title": "Revise os campos do endereço",
+            "description": "Algumas informações precisam ser corrigidas antes de salvar.",
+        }
+    return context
+
+
+def _build_address_delete_context(request) -> dict[str, object]:
+    intent = request.GET.get("intent", "").strip()
+    raw_address_id = request.GET.get("address_id", "").strip()
+    if intent != "delete" or not raw_address_id.isdigit():
+        return {}
+    address_id = int(raw_address_id)
+    summary = account_address_commands.get_address_summary(address_id)
+    if summary is None:
+        return {}
+    return {
+        "address_delete": summary,
+        "address_delete_action": reverse("accounts:account-address-delete", kwargs={"address_id": address_id}),
+        "address_delete_cancel_href": reverse("accounts:account-addresses"),
+    }
+
+
+def _build_address_feedback_context(request) -> dict[str, object]:
+    result = request.GET.get("result", "").strip()
+    mapping = {
+        "address-created": {
+            "variant": "success",
+            "icon": "✅",
+            "title": "Endereço salvo",
+            "description": "O novo endereço já está disponível para suas próximas compras.",
+        },
+        "address-updated": {
+            "variant": "success",
+            "icon": "✅",
+            "title": "Endereço atualizado",
+            "description": "As alterações foram salvas com sucesso.",
+        },
+        "address-deleted": {
+            "variant": "success",
+            "icon": "🗑️",
+            "title": "Endereço removido",
+            "description": "O endereço foi removido da sua conta.",
+        },
+        "address-delete-blocked": {
+            "variant": "warning",
+            "icon": "ℹ️",
+            "title": "Endereço não removido",
+            "description": "Só é possível remover endereços vinculados à conta atual.",
+        },
+    }
+    if result not in mapping:
+        return {}
+    return {"address_feedback": mapping[result]}
 
 
 class LoginView(TemplateView):
@@ -166,10 +298,22 @@ class AccountOrdersView(TemplateView):
                     {
                         "cells": [
                             f'#{order["order_number"]}',
-                            order["order_status_label"],
+                            (
+                                f'{order.get("order_status_summary", order["order_status_label"])}'
+                                + (
+                                    f' · {order["recent_update_hint"].lower()}'
+                                    if order.get("recent_update_hint")
+                                    else ""
+                                )
+                                + (
+                                    f' · {order["reengagement_hint"]}'
+                                    if order.get("reengagement_hint")
+                                    else ""
+                                )
+                            ),
                             order["payment_status"],
                             order["shipping_status"],
-                            order["updated_at"],
+                            f'Atualizado em {order["updated_at"]}',
                         ]
                     }
                     for order in page_obj.object_list
@@ -234,6 +378,9 @@ class AccountAddressesView(TemplateView):
                 ),
             }
         )
+        context.update(_build_address_feedback_context(self.request))
+        context.update(_build_address_form_context(self.request))
+        context.update(_build_address_delete_context(self.request))
         return context
 
 
@@ -261,14 +408,42 @@ class _AccountAddressReadyRedirectView(View):
     def get(self, request, *args, **kwargs):
         return HttpResponseRedirect(self.get_redirect_url(**kwargs))
 
+    def _render_form_page(self, request, *, form: AccountAddressForm, address_id: int | None = None):
+        view = AccountAddressesView()
+        view.setup(request)
+        context = view.get_context_data()
+        context.update(_build_address_form_context(request, form=form, intent=self.intent, address_id=address_id))
+        return view.render_to_response(context)
+
 
 class AccountAddressCreateReadyView(_AccountAddressReadyRedirectView):
     intent = "create"
+
+    def post(self, request, *args, **kwargs):
+        form = AccountAddressForm(request.POST)
+        if not form.is_valid():
+            return self._render_form_page(request, form=form)
+        account_address_commands.create_address(form.cleaned_data)
+        return HttpResponseRedirect(f'{reverse("accounts:account-addresses")}?result=address-created#address-management')
 
 
 class AccountAddressEditReadyView(_AccountAddressReadyRedirectView):
     intent = "edit"
 
+    def post(self, request, *args, **kwargs):
+        address_id = int(kwargs["address_id"])
+        form = AccountAddressForm(request.POST)
+        if not form.is_valid():
+            return self._render_form_page(request, form=form, address_id=address_id)
+        account_address_commands.update_address(address_id, form.cleaned_data)
+        return HttpResponseRedirect(f'{reverse("accounts:account-addresses")}?result=address-updated#address-management')
+
 
 class AccountAddressDeleteReadyView(_AccountAddressReadyRedirectView):
     intent = "delete"
+
+    def post(self, request, *args, **kwargs):
+        address_id = int(kwargs["address_id"])
+        deleted = account_address_commands.delete_address(address_id)
+        result = "address-deleted" if deleted else "address-delete-blocked"
+        return HttpResponseRedirect(f'{reverse("accounts:account-addresses")}?result={result}#address-management')

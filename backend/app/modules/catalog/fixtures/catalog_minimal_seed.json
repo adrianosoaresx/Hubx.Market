@@ -35,7 +35,7 @@
     "pk": 1,
     "fields": {
       "product": 1,
-      "sku": "RUNNER-PERSIST-001",
+      "sku": "RUNNER-PERSIST-BLK-42",
       "price": "399.90",
       "compare_price": "449.90",
       "stock": 12,
@@ -43,6 +43,79 @@
       "track_inventory": true,
       "allow_backorder": false,
       "is_default": true,
+      "created_at": "2026-04-14T12:00:00Z",
+      "updated_at": "2026-04-14T12:00:00Z"
+    }
+  },
+  {
+    "model": "catalog.productvariant",
+    "pk": 2,
+    "fields": {
+      "product": 1,
+      "sku": "RUNNER-PERSIST-BLK-43",
+      "price": "399.90",
+      "compare_price": "449.90",
+      "stock": 0,
+      "reserved_stock": 0,
+      "track_inventory": true,
+      "allow_backorder": false,
+      "is_default": false,
+      "created_at": "2026-04-14T12:00:00Z",
+      "updated_at": "2026-04-14T12:00:00Z"
+    }
+  },
+  {
+    "model": "catalog.productvariant",
+    "pk": 3,
+    "fields": {
+      "product": 1,
+      "sku": "RUNNER-PERSIST-WHT-42",
+      "price": "399.90",
+      "compare_price": "449.90",
+      "stock": 5,
+      "reserved_stock": 1,
+      "track_inventory": true,
+      "allow_backorder": false,
+      "is_default": false,
+      "created_at": "2026-04-14T12:00:00Z",
+      "updated_at": "2026-04-14T12:00:00Z"
+    }
+  },
+  {
+    "model": "catalog.productimage",
+    "pk": 1,
+    "fields": {
+      "product": 1,
+      "image_url": "https://cdn.hubx.market/demo/catalog/runner-primary.jpg",
+      "alt_text": "Tênis Hubx Runner Persistido · imagem principal",
+      "position": 1,
+      "is_primary": true,
+      "created_at": "2026-04-14T12:00:00Z",
+      "updated_at": "2026-04-14T12:00:00Z"
+    }
+  },
+  {
+    "model": "catalog.productimage",
+    "pk": 2,
+    "fields": {
+      "product": 1,
+      "image_url": "https://cdn.hubx.market/demo/catalog/runner-angle.jpg",
+      "alt_text": "Tênis Hubx Runner Persistido · ângulo lateral",
+      "position": 2,
+      "is_primary": false,
+      "created_at": "2026-04-14T12:00:00Z",
+      "updated_at": "2026-04-14T12:00:00Z"
+    }
+  },
+  {
+    "model": "catalog.productimage",
+    "pk": 3,
+    "fields": {
+      "product": 1,
+      "image_url": "https://cdn.hubx.market/demo/catalog/runner-detail.jpg",
+      "alt_text": "Tênis Hubx Runner Persistido · detalhe do material",
+      "position": 3,
+      "is_primary": false,
       "created_at": "2026-04-14T12:00:00Z",
       "updated_at": "2026-04-14T12:00:00Z"
     }

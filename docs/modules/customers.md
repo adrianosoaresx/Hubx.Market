@@ -27,6 +27,9 @@ Gerenciar compradores, perfis, contato, endereços e visão operacional da conta
 ## Persistência mínima disponível
 - `Customer` existe como base persistida mínima para leituras reais do Admin Customers
 - `CustomerAddress` agora existe como base persistida mínima para futuras leituras reais da área logada do cliente
+- `Customer` também passa a ser o elo explícito preferencial para:
+  - `AccountProfile.customer`
+  - `Order.customer`
 - a estrutura cobre o mínimo necessário para:
   - listagem administrativa
   - detalhe administrativo básico
@@ -60,7 +63,7 @@ Gerenciar compradores, perfis, contato, endereços e visão operacional da conta
   - `accounts.AccountProfile` para identidade e preferências
 
 ## O que ainda permanece faltando
-- resolução tenant-aware explícita entre `AccountProfile`, `Customer` e `Order`
+- backfill progressivo dos vínculos explícitos em registros legados
 - agregados reais de pedidos por cliente autenticado
 - histórico operacional mais rico
 - preferências além do escopo atual de `AccountProfile`
@@ -73,9 +76,123 @@ Gerenciar compradores, perfis, contato, endereços e visão operacional da conta
   - status
   - tipo de conta
   - timestamps administrativos
+  - agregados simples de valor do cliente com base em `Order`:
+    - total de pedidos
+    - total gasto
+    - ticket médio
+    - data do último pedido
 - ainda permanece em fallback controlado:
   - resumo real de pedidos
   - histórico operacional mais rico
+
+## Enriquecimento operacional atual
+- `orders_summary_content` agora usa agregados reais de pedidos quando houver histórico persistido
+- `summary_content` também passa a refletir valor do cliente quando existirem pedidos
+- a leitura também já deriva mix simples de status:
+  - pedidos pagos
+  - pedidos enviados
+  - pedidos cancelados
+  - status e total do último pedido
+- e agora também deriva indicadores simples de recência/retenção:
+  - dias desde o último pedido
+  - bucket de recência
+  - cliente recorrente
+  - cliente em risco
+- a leitura prefere:
+  - `Order.customer`
+  - fallback por `tenant + customer_email` quando o vínculo explícito ainda não existir
+
+## Business intelligence lite
+- `Admin Customers` agora também deriva sinais simples e explicáveis para leitura operacional:
+  - tier de valor
+  - engajamento atual
+  - highlights de lista como `alto valor`, `recorrente` e `em risco`
+- esses sinais continuam baseados apenas em agregados já existentes de `Order`
+- o objetivo é melhorar priorização operacional sem criar um motor analítico separado
+
+## Guidance operacional leve
+- a query layer agora também deriva um próximo passo simples por cliente:
+  - `Revisar e reengajar`
+  - `Priorizar e monitorar`
+  - `Acompanhar próxima recompra`
+  - `Observar próxima interação`
+  - `Estimular primeiro retorno`
+- essa guidance continua totalmente determinística e usa apenas:
+  - tier de valor
+  - engajamento
+  - recência
+  - repetição
+  - risco
+
+## Revenue awareness
+- `Admin Customers` agora deixa a contribuição de receita mais visível com sinais simples:
+  - receita acumulada
+  - leitura textual de contribuição (`receita relevante`, `em desenvolvimento`, `inicial`)
+  - reforço do ticket médio no contexto de valor
+- esses sinais continuam apenas na query layer e usam exclusivamente agregados já persistidos de `Order`
+
+## Lifecycle simples
+- a query layer agora organiza os sinais existentes em um lifecycle determinístico:
+  - `Novo`
+  - `Ativo`
+  - `Recorrente`
+  - `Em risco`
+  - `Perdido`
+- a derivação usa apenas:
+  - total de pedidos
+  - dias desde o último pedido
+  - repetição
+  - risco
+- isso ajuda a consolidar leitura operacional sem criar um engine separado
+
+## Growth signals leves
+- `Admin Customers` agora também deriva uma direção simples de crescimento:
+  - `Incentivar primeira recompra`
+  - `Manter engajamento`
+  - `Expandir frequência de compra`
+  - `Recuperar cliente`
+  - `Recuperação seletiva`
+- essa leitura continua determinística e usa somente:
+  - lifecycle
+  - tier de valor
+  - engajamento
+  - repetição
+  - risco
+
+## Prioritização simples
+- a query layer agora também deriva `priority_label`:
+  - `Alta prioridade`
+  - `Média prioridade`
+  - `Baixa prioridade`
+- a priorização usa apenas sinais já existentes:
+  - tier de valor
+  - lifecycle
+  - risco
+  - direção de crescimento
+
+## Execução mínima
+- `Admin Customers` agora permite ações operacionais simples no detalhe do cliente:
+  - marcar `follow-up`
+  - marcar `reengajamento`
+  - marcar `prioridade manual`
+- essas ações usam apenas flags leves no próprio `Customer`
+- o objetivo é permitir execução mínima dentro do sistema sem abrir um CRM completo
+- a list view passa a priorizar highlights compactos e escaneáveis com:
+  - prioridade
+  - estágio de lifecycle / base ativa
+  - direção de crescimento
+  - flags manuais de execução quando existirem
+- a ordenação da lista também segue leitura operacional determinística:
+  - `Alta prioridade` primeiro, depois `Média`, depois `Baixa`
+  - dentro de cada grupo: risco, dias desde o último pedido e receita acumulada
+  - flags manuais de execução ajudam a puxar casos já sinalizados para o topo do grupo
+- a listagem também aceita filtros rápidos por querystring:
+  - `high_priority`
+  - `at_risk`
+  - `followup`
+  - `repeat`
+  - `new`
+- filtros rápidos são aplicados antes da ordenação e filtros desconhecidos são ignorados com fallback seguro
 
 ## Estado atual da readiness para customer area
 - a próxima wave de persisted read da área logada já pode reaproveitar:
@@ -83,3 +200,9 @@ Gerenciar compradores, perfis, contato, endereços e visão operacional da conta
   - `Order`/`OrderItem` para pedidos
   - `CustomerAddress` para endereços
 - o próximo passo deixa de ser modelagem e passa a ser integração de leitura tenant-aware
+
+## Readiness de vínculo explícito
+- seeds e utilitários de backfill agora podem preencher com segurança:
+  - `AccountProfile.customer`
+  - `Order.customer`
+- o vínculo só é aplicado quando o match por `tenant + email` é inequívoco

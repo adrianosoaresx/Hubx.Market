@@ -8,6 +8,62 @@
         {% include "shared/components/layout/page_header.html" %}
     {% endwith %}
 
+    {% if address_feedback %}
+        {% include "shared/components/feedback/alert.html" with variant=address_feedback.variant icon=address_feedback.icon title=address_feedback.title description=address_feedback.description %}
+    {% endif %}
+
+    {% if address_form %}
+        <section id="address-management" class="ds-surface space-y-6 p-6">
+            <div class="space-y-2">
+                <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">{{ address_form_title|default:"Gerenciar endereço" }}</h2>
+                <p class="text-sm text-[var(--color-text-secondary)]">{{ address_form_description|default:"Atualize os dados do endereço." }}</p>
+            </div>
+            {% if address_form.non_field_errors %}
+                <div class="rounded-2xl border border-[var(--color-feedback-danger)]/20 bg-rose-50 p-4 text-sm text-[var(--color-feedback-danger)]">
+                    {% for error in address_form.non_field_errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            <form method="post" action="{{ address_form_action }}" class="space-y-6">
+                {% csrf_token %}
+                <div class="grid gap-4 md:grid-cols-2">
+                    {% include "shared/components/forms/input.html" with name="label" label="Identificação" value=address_form.values.label error_text=address_form.errors.label invalid=address_form.errors.label required=True placeholder="Casa" %}
+                    {% include "shared/components/forms/input.html" with name="recipient_name" label="Destinatário" value=address_form.values.recipient_name error_text=address_form.errors.recipient_name invalid=address_form.errors.recipient_name placeholder="Nome de quem recebe" %}
+                    {% include "shared/components/forms/input.html" with name="line_1" label="Endereço" value=address_form.values.line_1 error_text=address_form.errors.line_1 invalid=address_form.errors.line_1 required=True placeholder="Rua, número" %}
+                    {% include "shared/components/forms/input.html" with name="line_2" label="Complemento" value=address_form.values.line_2 error_text=address_form.errors.line_2 invalid=address_form.errors.line_2 placeholder="Apto, bloco, referência" %}
+                    {% include "shared/components/forms/input.html" with name="district" label="Bairro" value=address_form.values.district error_text=address_form.errors.district invalid=address_form.errors.district placeholder="Bairro" %}
+                    {% include "shared/components/forms/input.html" with name="postal_code" label="CEP" value=address_form.values.postal_code error_text=address_form.errors.postal_code invalid=address_form.errors.postal_code required=True placeholder="00000-000" %}
+                    {% include "shared/components/forms/input.html" with name="city" label="Cidade" value=address_form.values.city error_text=address_form.errors.city invalid=address_form.errors.city required=True placeholder="Cidade" %}
+                    {% include "shared/components/forms/input.html" with name="state" label="Estado" value=address_form.values.state error_text=address_form.errors.state invalid=address_form.errors.state required=True placeholder="UF" %}
+                </div>
+                {% include "shared/components/forms/checkbox.html" with name="is_default" label="Definir como endereço principal" description="Usar este endereço como padrão nas próximas compras." checked=address_form.values.is_default error_text=address_form.errors.is_default invalid=address_form.errors.is_default %}
+                {% if address_form_mode == "edit" %}
+                    {% include "shared/components/forms/form_actions.html" with primary_label="Salvar alterações" secondary_label="Cancelar" secondary_href=address_form_cancel_href %}
+                {% else %}
+                    {% include "shared/components/forms/form_actions.html" with primary_label="Salvar endereço" secondary_label="Cancelar" secondary_href=address_form_cancel_href %}
+                {% endif %}
+            </form>
+        </section>
+    {% endif %}
+
+    {% if address_delete %}
+        <section id="address-management" class="ds-surface space-y-6 p-6">
+            <div class="space-y-2">
+                <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">Remover endereço</h2>
+                <p class="text-sm text-[var(--color-text-secondary)]">Confirme a remoção do endereço salvo abaixo.</p>
+            </div>
+            {% with title=address_delete.title subtitle=address_delete.subtitle content=address_delete.content footer=address_delete.footer %}
+                {% include "shared/components/data_display/card.html" %}
+            {% endwith %}
+            <form method="post" action="{{ address_delete_action }}" class="space-y-4">
+                {% csrf_token %}
+                <p class="text-sm text-[var(--color-text-secondary)]">Essa ação remove o endereço da sua conta atual.</p>
+                {% include "shared/components/forms/form_actions.html" with primary_label="Remover endereço" secondary_label="Cancelar" secondary_href=address_delete_cancel_href %}
+            </form>
+        </section>
+    {% endif %}
+
     {% if addresses %}
         <div class="grid gap-6 xl:grid-cols-2">
             {% for address in addresses %}

@@ -17,6 +17,116 @@ def _customer_order_status_options() -> list[dict[str, str]]:
     ]
 
 
+def _retention_signals(*, total_orders: int, latest_recent_hint: str, persisted: bool) -> dict[str, str]:
+    if not persisted or total_orders <= 0:
+        return {
+            "orders_page_description": "Acompanhe o histórico das suas compras, o andamento da entrega e os próximos passos de cada pedido.",
+            "table_description": "Cada pedido mostra um resumo curto do andamento para você localizar mais rápido o que precisa.",
+            "row_hint": "",
+            "detail_note": "Seu histórico continuará salvo na conta para facilitar novos acompanhamentos quando precisar voltar.",
+            "activity_description": "Seu histórico fica salvo na conta para facilitar consultas futuras sempre que você quiser voltar.",
+        }
+    if total_orders > 1:
+        recency_copy = f" Última movimentação: {latest_recent_hint.lower()}." if latest_recent_hint else ""
+        return {
+            "orders_page_description": f"Você já comprou com a gente antes e pode acompanhar cada etapa por aqui com mais confiança.{recency_copy}",
+            "table_description": "Seus pedidos anteriores continuam reunidos aqui para facilitar recompras, consultas e novos acompanhamentos.",
+            "row_hint": "cliente recorrente",
+            "detail_note": "Você já voltou a comprar por aqui antes, então este histórico permanece salvo para facilitar sua próxima visita.",
+            "activity_description": "Seu histórico mostra compras anteriores e deixa o retorno mais simples sempre que você quiser explorar de novo.",
+        }
+    recency_copy = f" {latest_recent_hint}." if latest_recent_hint else ""
+    return {
+        "orders_page_description": f"Seu histórico já está salvo nesta conta para facilitar novas compras e consultas futuras.{recency_copy}",
+        "table_description": "Este pedido já fica guardado na sua conta para você retomar o acompanhamento e voltar a comprar quando quiser.",
+        "row_hint": "histórico salvo",
+        "detail_note": "Este pedido já fica salvo na sua conta para tornar uma próxima compra mais simples quando você quiser voltar.",
+        "activity_description": "Seu primeiro pedido já fica registrado na conta, deixando o caminho pronto para uma próxima compra com mais tranquilidade.",
+    }
+
+
+def _recency_hint(value: object) -> str:
+    if not isinstance(value, datetime):
+        return ""
+    aware_value = timezone.localtime(value) if timezone.is_aware(value) else value
+    now = timezone.localtime(timezone.now())
+    delta_days = (now.date() - aware_value.date()).days
+    if delta_days <= 0:
+        return "Atualizado hoje"
+    if delta_days == 1:
+        return "Atualizado ontem"
+    return f"Atualizado há {delta_days} dias"
+
+
+def _customer_status_summary(status_label: str, payment_status: str, shipping_status: str) -> str:
+    return f"{status_label} · pagamento {payment_status.lower()} · entrega {shipping_status.lower()}"
+
+
+def _current_state_helper(*, status_label: str, payment_status: str, shipping_status: str, fulfillment_status_label: str) -> str:
+    lowered_payment = payment_status.lower()
+    lowered_shipping = shipping_status.lower()
+    lowered_fulfillment = fulfillment_status_label.lower()
+    lowered_status = status_label.lower()
+    if "cancel" in lowered_status:
+        return "Seu pedido foi encerrado e não terá novas movimentações enquanto permanecer cancelado."
+    if "trânsito" in lowered_shipping or "enviado" in lowered_status:
+        return "Seu pagamento já foi confirmado e o pedido segue em deslocamento até a entrega."
+    if "prepar" in lowered_shipping or "separ" in lowered_fulfillment:
+        return "Seu pagamento já foi aprovado e nosso time está preparando o pacote para envio."
+    if "confirm" in lowered_payment or "pago" in lowered_status:
+        return "Seu pedido está confirmado e aguardando a próxima atualização operacional."
+    return "Estamos acompanhando o pedido e avisaremos assim que houver uma nova atualização importante."
+
+
+def _customer_order_summary(order_number: str, payment_status: str, shipping_status: str, fulfillment_status_label: str) -> str:
+    return (
+        f"Pedido #{order_number} com pagamento {payment_status.lower()}, "
+        f"entrega em {shipping_status.lower()} e operação em {fulfillment_status_label.lower()}."
+    )
+
+
+def _customer_order_note(notes_content: str, shipping_address_summary: str) -> str:
+    base = f"Entrega prevista para {shipping_address_summary}."
+    if notes_content and notes_content != "Sem observações adicionais para este pedido.":
+        return f"{base} {notes_content}"
+    return base
+
+
+def _timeline_items(updated_at: str, *, order_status_label: str, payment_status: str, shipping_status: str, fulfillment_status_label: str) -> list[dict[str, object]]:
+    state_helper = _current_state_helper(
+        status_label=order_status_label,
+        payment_status=payment_status,
+        shipping_status=shipping_status,
+        fulfillment_status_label=fulfillment_status_label,
+    )
+    return [
+        {
+            "title": "Status atual confirmado",
+            "description": f"Seu pedido está {order_status_label.lower()} e a etapa operacional atual é {fulfillment_status_label.lower()}. {state_helper}",
+            "timestamp": updated_at,
+            "badge_label": "Pedido",
+            "badge_variant": "info",
+        },
+        {
+            "title": "Pagamento e entrega acompanhados",
+            "description": f"Pagamento {payment_status.lower()} e entrega em {shipping_status.lower()}, com acompanhamento contínuo pela área do cliente.",
+            "timestamp": updated_at,
+            "badge_label": "Entrega",
+            "badge_variant": "shipped" if "trânsito" in shipping_status.lower() else "paid",
+        },
+    ]
+
+
+def _retention_activity_item(*, updated_at: str, description: str) -> dict[str, object]:
+    return {
+        "title": "Histórico salvo na sua conta",
+        "description": description,
+        "timestamp": updated_at,
+        "badge_label": "Conta",
+        "badge_variant": "info",
+    }
+
+
 def _fallback_customer_order_fixtures() -> list[dict[str, object]]:
     return [
         {
@@ -201,13 +311,20 @@ class DjangoOrmAccountProfileRepository:
         if not self.is_ready():
             return None
         try:
-            profile = self.profile_model._default_manager.filter(is_active=True).order_by("-updated_at", "-id").first()
+            profile = (
+                self.profile_model._default_manager.select_related("customer")
+                .filter(is_active=True)
+                .order_by("-updated_at", "-id")
+                .first()
+            )
         except Exception:
             return None
         if not profile:
             return None
         return {
             "tenant_id": getattr(profile, "tenant_id", None),
+            "customer_id": getattr(profile, "customer_id", None),
+            "customer_linkage_mode": "explicit" if getattr(profile, "customer_id", None) else "fallback",
             "email": str(getattr(profile, "email", "") or ""),
             "first_name": str(getattr(profile, "first_name", "") or ""),
             "last_name": str(getattr(profile, "last_name", "") or ""),
@@ -286,9 +403,20 @@ class DjangoOrmCustomerAreaRepository:
     def _orders_queryset(self, profile: dict[str, object]):
         tenant_id = profile.get("tenant_id")
         email = str(profile.get("email") or "").strip()
-        if not tenant_id or not email:
+        if not tenant_id:
             return None
+        customer = self._resolve_customer(profile)
         try:
+            if customer is not None and hasattr(self.order_model, "customer_id"):
+                explicit_queryset = (
+                    self.order_model._default_manager.filter(tenant_id=tenant_id, customer_id=customer.pk)
+                    .prefetch_related("items")
+                    .order_by("-updated_at", "-id")
+                )
+                if explicit_queryset.exists():
+                    return explicit_queryset
+            if not email:
+                return None
             return (
                 self.order_model._default_manager.filter(tenant_id=tenant_id, customer_email=email)
                 .prefetch_related("items")
@@ -299,10 +427,21 @@ class DjangoOrmCustomerAreaRepository:
 
     def _resolve_customer(self, profile: dict[str, object]):
         tenant_id = profile.get("tenant_id")
+        customer_id = profile.get("customer_id")
         email = str(profile.get("email") or "").strip()
-        if not tenant_id or not email:
+        if not tenant_id:
             return None
         try:
+            if customer_id:
+                linked_customer = (
+                    self.customer_model._default_manager.filter(tenant_id=tenant_id, pk=customer_id)
+                    .prefetch_related("addresses")
+                    .first()
+                )
+                if linked_customer is not None:
+                    return linked_customer
+            if not email:
+                return None
             return (
                 self.customer_model._default_manager.filter(tenant_id=tenant_id, email=email)
                 .prefetch_related("addresses")
@@ -338,42 +477,53 @@ class DjangoOrmCustomerAreaRepository:
         )
         items = self._serialize_items(order)
 
+        summary_content = _customer_order_summary(
+            self._string_value(getattr(order, "number", None), default="0000"),
+            payment_status,
+            shipping_status,
+            fulfillment_status_label,
+        )
+        order_status_summary = _customer_status_summary(order_status_label, payment_status, shipping_status)
+        summary_note = _customer_order_note(notes_content, shipping_address_summary)
+        state_helper = _current_state_helper(
+            status_label=order_status_label,
+            payment_status=payment_status,
+            shipping_status=shipping_status,
+            fulfillment_status_label=fulfillment_status_label,
+        )
+        recent_update_hint = _recency_hint(getattr(order, "updated_at", None))
+        page_meta = f"Entrega em {shipping_address_summary} · última atualização em {updated_at}"
+        if recent_update_hint:
+            page_meta = f"{page_meta} · {recent_update_hint.lower()}"
+
         return {
             "order_number": self._string_value(getattr(order, "number", None), default="0000"),
+            "customer_linkage_mode": "explicit" if getattr(order, "customer_id", None) else "fallback",
             "status": "processing" if status == "pending" else status,
             "order_status_label": order_status_label,
             "order_status_variant": order_status_variant,
+            "order_status_summary": order_status_summary,
+            "recent_update_hint": recent_update_hint,
+            "current_state_helper": state_helper,
             "payment_status": payment_status,
             "shipping_status": shipping_status,
             "updated_at": updated_at,
-            "summary_content": (
-                f"Pedido #{getattr(order, 'number', '0000')} com pagamento {payment_status.lower()} "
-                f"e andamento logístico {shipping_status.lower()}."
-            ),
-            "page_meta": f"Entrega em {shipping_address_summary}",
+            "summary_content": summary_content,
+            "page_meta": page_meta,
             "subtotal": self._money_value(getattr(order, "subtotal", None)),
             "shipping": self._money_value(getattr(order, "shipping_total", None)),
             "discount": self._money_value(getattr(order, "discount_total", None), allow_empty=True),
             "installments": self._string_value(getattr(order, "installments_summary", None), default=""),
             "total": self._money_value(getattr(order, "total", None)),
-            "summary_note": notes_content,
+            "summary_note": f"{state_helper} {summary_note}",
             "order_items": items,
-            "activity_items": [
-                {
-                    "title": "Pedido sincronizado",
-                    "description": f"Status operacional atual: {fulfillment_status_label.lower()}.",
-                    "timestamp": updated_at,
-                    "badge_label": "Pedido",
-                    "badge_variant": "info",
-                },
-                {
-                    "title": "Entrega monitorada",
-                    "description": f"Última atualização de envio: {shipping_status.lower()}.",
-                    "timestamp": updated_at,
-                    "badge_label": "Entrega",
-                    "badge_variant": order_status_variant,
-                },
-            ],
+            "activity_items": _timeline_items(
+                updated_at,
+                order_status_label=order_status_label,
+                payment_status=payment_status,
+                shipping_status=shipping_status,
+                fulfillment_status_label=fulfillment_status_label,
+            ),
         }
 
     def _serialize_address(self, address: object) -> dict[str, object]:
@@ -390,6 +540,7 @@ class DjangoOrmCustomerAreaRepository:
         if recipient_name:
             subtitle = f"{subtitle} · {recipient_name}"
         return {
+            "address_id": getattr(address, "pk", None),
             "title": label,
             "subtitle": subtitle,
             "content": " · ".join(part for part in content_parts if part),
@@ -505,15 +656,62 @@ class AccountCustomerAreaQueryService:
         except Exception:
             return False
 
+    def get_linkage_visibility(self) -> dict[str, str]:
+        profile = self._profile()
+        profile_mode = str(profile.get("customer_linkage_mode") or "fixture")
+        orders_mode = "fixture"
+        addresses_mode = "fixture"
+        orders = self.area_repository.list_orders(profile)
+        if orders:
+            orders_mode = "explicit" if all(order.get("customer_linkage_mode") == "explicit" for order in orders) else "fallback"
+        elif self.using_persisted_orders_source():
+            orders_mode = "fallback"
+        if self.area_repository.get_addresses(profile):
+            addresses_mode = "explicit" if profile_mode == "explicit" else "fallback"
+        elif self.using_persisted_addresses_source():
+            addresses_mode = "fallback"
+        return {
+            "profile_mode": profile_mode,
+            "orders_mode": orders_mode,
+            "addresses_mode": addresses_mode,
+        }
+
     def _profile(self) -> dict[str, object]:
         return self.profile_repository.get_primary_profile() or self.fallback_profile_repository.get_primary_profile()
 
     def list_orders(self) -> list[dict[str, object]]:
         profile = self._profile()
         real_orders = self.area_repository.list_orders(profile)
-        return real_orders or self.fallback_area_repository.list_orders(profile)
+        orders = real_orders or self.fallback_area_repository.list_orders(profile)
+        persisted = bool(real_orders)
+        latest_recent_hint = str((orders[0] if orders else {}).get("recent_update_hint") or "")
+        retention = _retention_signals(
+            total_orders=len(orders),
+            latest_recent_hint=latest_recent_hint,
+            persisted=persisted,
+        )
+        enriched_orders: list[dict[str, object]] = []
+        for order in orders:
+            enriched_order = dict(order)
+            enriched_order["reengagement_hint"] = retention["row_hint"]
+            if enriched_order.get("activity_items"):
+                enriched_order["activity_items"] = list(enriched_order["activity_items"]) + [
+                    _retention_activity_item(
+                        updated_at=str(enriched_order.get("updated_at") or "agora"),
+                        description=retention["activity_description"],
+                    )
+                ]
+            enriched_order["summary_note"] = (
+                f'{enriched_order.get("summary_note", "").strip()} {retention["detail_note"]}'.strip()
+            )
+            enriched_orders.append(enriched_order)
+        return enriched_orders
 
     def get_order(self, order_number: str) -> dict[str, object]:
+        normalized = order_number.lstrip("#")
+        for order in self.list_orders():
+            if str(order.get("order_number") or "") == normalized:
+                return order
         profile = self._profile()
         real_order = self.area_repository.get_order(profile, order_number)
         if real_order:
@@ -521,7 +719,6 @@ class AccountCustomerAreaQueryService:
         fallback_order = self.fallback_area_repository.get_order(profile, order_number)
         if fallback_order:
             return fallback_order
-        normalized = order_number.lstrip("#")
         return {
             "order_number": normalized,
             "status": "processing",
@@ -541,12 +738,21 @@ class AccountCustomerAreaQueryService:
         }
 
     def get_orders_page_data(self) -> dict[str, object]:
+        linkage_visibility = self.get_linkage_visibility()
+        orders = self.list_orders()
+        retention = _retention_signals(
+            total_orders=len(orders),
+            latest_recent_hint=str((orders[0] if orders else {}).get("recent_update_hint") or ""),
+            persisted=self.using_persisted_orders_source(),
+        )
         return {
             "page_title": "Meus pedidos",
-            "page_description": "Acompanhe o histórico, status e próximos passos das suas compras.",
+            "page_description": retention["orders_page_description"],
             "search_name": "q",
             "status_name": "status",
             "status_options": _customer_order_status_options(),
+            "operational_linkage_visibility": linkage_visibility,
+            "table_description": retention["table_description"],
             "order_columns": [
                 {"label": "Pedido"},
                 {"label": "Status"},
@@ -560,13 +766,14 @@ class AccountCustomerAreaQueryService:
         order = self.get_order(order_number)
         return {
             "page_title": f'Pedido #{order["order_number"]}',
-            "page_description": "Veja o status atual, itens comprados e histórico de atualizações do seu pedido.",
+            "page_description": "Veja o andamento atual do pedido, os itens da compra e as últimas atualizações mais importantes.",
             "page_meta": order.get("page_meta") or "Área do cliente · acompanhe pagamentos, envio e entregas em um só lugar.",
             "order_status_label": order["order_status_label"],
             "order_status_variant": order["order_status_variant"],
             "order_number": f'#{order["order_number"]}',
             "payment_status": order["payment_status"],
             "shipping_status": order["shipping_status"],
+            "summary_subtitle": order.get("recent_update_hint") or order.get("order_status_summary", "Resumo rápido do pedido."),
             "summary_content": order["summary_content"],
             "order_items": order["order_items"],
             "subtotal": order["subtotal"],
@@ -576,6 +783,7 @@ class AccountCustomerAreaQueryService:
             "total": order["total"],
             "summary_note": order.get("summary_note", ""),
             "activity_items": order["activity_items"],
+            "operational_linkage_mode": order.get("customer_linkage_mode", "fixture"),
         }
 
     def get_addresses_page_data(self) -> dict[str, object]:
@@ -585,19 +793,21 @@ class AccountCustomerAreaQueryService:
             "page_title": "Meus endereços",
             "page_description": "Gerencie endereços de entrega e cobrança usados nas suas compras.",
             "addresses": addresses,
+            "operational_linkage_visibility": self.get_linkage_visibility(),
         }
 
     def get_profile_page_data(self) -> dict[str, object]:
         profile = self._profile()
         return {
             "page_title": "Meu perfil",
-            "page_description": "Atualize seus dados pessoais, contato e preferências da conta.",
+            "page_description": "Revise seus dados, mantenha o contato atualizado e escolha como prefere receber novidades e avisos dos pedidos.",
             "first_name": profile["first_name"],
             "last_name": profile["last_name"],
             "email": profile["email"],
             "phone": profile["phone"],
             "newsletter_opt_in": profile["newsletter_opt_in"],
             "order_updates_opt_in": profile["order_updates_opt_in"],
+            "operational_linkage_mode": profile.get("customer_linkage_mode", "fixture"),
         }
 
 

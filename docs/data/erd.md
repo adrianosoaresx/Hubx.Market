@@ -61,6 +61,7 @@
 - Tenant 1:N OwnerUser
 - Tenant 1:N AccountProfile
 - Tenant 1:N Customer
+- Customer 1:N AccountProfile (opcional)
 - Tenant 1:N Product
 - Product 1:N ProductVariant
 - Product N:N Category
@@ -69,8 +70,9 @@
 - Customer 1:N CustomerAddress
 - Tenant 1:N CheckoutSession
 - CheckoutSession 1:N CheckoutSessionItem
-- Customer 1:N Order
+- Customer 1:N Order (opcional e preferencial para integrações da área logada)
 - Order 1:N OrderItem
+- Order 1:N OrderStatusHistory
 - Order 1:1 Payment
 - Order 1:1 Shipment
 - Tenant 1:N Coupon
@@ -84,7 +86,13 @@
 - OrderItem guarda price_snapshot
 - produto inativo não é deletado
 - customer é isolado por tenant
-- `Customer` já possui base persistida mínima para leituras administrativas de list/detail`r`n- `CustomerAddress` passa a existir como base persistida mínima para leituras futuras da área logada
+- `Customer` já possui base persistida mínima para leituras administrativas de list/detail
+- `Customer` também pode guardar flags operacionais leves para execução manual no admin (`marked_for_followup`, `marked_for_reengagement`, `marked_as_priority`)
+- `CustomerAddress` passa a existir como base persistida mínima para leituras futuras da área logada
+- `CustomerAddress` passa a existir como base persistida mínima para leituras futuras da área logada
+- `AccountProfile.customer` e `Order.customer` são vínculos opcionais e backward-compatible; quando ausentes, o sistema ainda pode operar via `tenant + email`
+- `OrderStatusHistory` pode guardar atribuição leve de origem/contexto (`source_type`, `source_label`, `actor_label`) sem virar um framework completo de auditoria
+- `ProductImage` fornece mídia mínima persistida via URL, sem introduzir pipeline de upload/CDN
 - owner e customer são entidades diferentes
 - `AccountProfile` serve como base de experiência de conta, não como substituto de `Customer`
 

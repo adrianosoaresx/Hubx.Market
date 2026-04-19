@@ -143,6 +143,8 @@ class ProductReadRepository(Protocol):
 def _clone_product(product: dict[str, object]) -> dict[str, object]:
     cloned = dict(product)
     cloned["activity_items"] = [dict(item) for item in product.get("activity_items", [])]
+    cloned["variants"] = [dict(item) for item in product.get("variants", [])]
+    cloned["images"] = [dict(item) for item in product.get("images", [])]
     return cloned
 
 
@@ -302,9 +304,11 @@ class DjangoOrmProductRepository:
             from app.modules.catalog import models as catalog_models
         except Exception:
             self.product_model = None
+            self.image_model = None
             return
 
         self.product_model = getattr(catalog_models, "Product", None)
+        self.image_model = getattr(catalog_models, "ProductImage", None)
 
     def _has_real_model(self) -> bool:
         return self.product_model is not None
@@ -329,12 +333,29 @@ class DjangoOrmProductRepository:
 
         return table_names.issubset(set(tables))
 
+    def _images_ready(self) -> bool:
+        if self.image_model is None:
+            return False
+        try:
+            image_table = self.image_model._meta.db_table
+        except Exception:
+            return False
+        try:
+            with connection.cursor() as cursor:
+                tables = connection.introspection.table_names(cursor)
+        except Exception:
+            return False
+        return image_table in set(tables)
+
     def list_products(self) -> list[dict[str, object]]:
         if not self.is_ready():
             return []
 
         try:
-            queryset = self.product_model._default_manager.all().prefetch_related("variants").order_by("-id")
+            prefetches = ["variants"]
+            if self._images_ready():
+                prefetches.append("images")
+            queryset = self.product_model._default_manager.all().prefetch_related(*prefetches).order_by("-id")
         except Exception:
             return []
 
@@ -345,7 +366,10 @@ class DjangoOrmProductRepository:
             return None
 
         try:
-            product = self.product_model._default_manager.filter(slug=product_slug).first()
+            prefetches = ["variants"]
+            if self._images_ready():
+                prefetches.append("images")
+            product = self.product_model._default_manager.filter(slug=product_slug).prefetch_related(*prefetches).first()
         except Exception:
             return None
 
@@ -422,6 +446,8 @@ class DjangoOrmProductRepository:
             "is_featured": is_featured,
             "track_inventory": track_inventory,
             "allow_backorder": allow_backorder,
+            "variants": self._serialize_variants(product),
+            "images": self._serialize_images(product),
             "activity_items": _build_activity_items(
                 updated_at=getattr(product, "updated_at", ""),
                 is_featured=is_featured,
@@ -453,6 +479,48 @@ class DjangoOrmProductRepository:
         if explicit_status in {"active", "draft", "inactive"}:
             return str(explicit_status)
         return "active" if bool(getattr(product, "is_active", False)) else "inactive"
+
+    @staticmethod
+    def _serialize_variants(product: object) -> list[dict[str, object]]:
+        variants = getattr(product, "variants", None)
+        if variants is None:
+            return []
+        try:
+            variant_list = list(variants.all())
+        except Exception:
+            return []
+        return [
+            {
+                "sku": DjangoOrmProductRepository._string_value(getattr(variant, "sku", None), default=""),
+                "price": DjangoOrmProductRepository._string_value(getattr(variant, "price", None), default="0.00"),
+                "compare_price": DjangoOrmProductRepository._string_value(getattr(variant, "compare_price", None), default=""),
+                "stock": DjangoOrmProductRepository._string_value(getattr(variant, "stock", None), default="0"),
+                "reserved_stock": DjangoOrmProductRepository._string_value(getattr(variant, "reserved_stock", None), default="0"),
+                "track_inventory": bool(getattr(variant, "track_inventory", True)),
+                "allow_backorder": bool(getattr(variant, "allow_backorder", False)),
+                "is_default": bool(getattr(variant, "is_default", False)),
+            }
+            for variant in variant_list
+        ]
+
+    @staticmethod
+    def _serialize_images(product: object) -> list[dict[str, object]]:
+        images = getattr(product, "images", None)
+        if images is None:
+            return []
+        try:
+            image_list = list(images.all())
+        except Exception:
+            return []
+        return [
+            {
+                "image_url": DjangoOrmProductRepository._string_value(getattr(image, "image_url", None), default=""),
+                "alt_text": DjangoOrmProductRepository._string_value(getattr(image, "alt_text", None), default=""),
+                "position": int(getattr(image, "position", 0) or 0),
+                "is_primary": bool(getattr(image, "is_primary", False)),
+            }
+            for image in image_list
+        ]
 
     @staticmethod
     def _string_value(value: object, *, default: str) -> str:

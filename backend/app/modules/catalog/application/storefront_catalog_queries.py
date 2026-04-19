@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from urllib.parse import quote_plus
 
 from app.modules.catalog.application.admin_product_queries import (
     FallbackProductRepository,
@@ -29,113 +30,387 @@ def _stock_state(product: dict[str, object]) -> str:
 def _stock_helper(product: dict[str, object]) -> str:
     state = _stock_state(product)
     stock = _safe_int(product.get("stock"))
+    variant_context = _variant_context_label(product)
     if state == "low_stock":
-        return f"Restam {stock} unidades"
+        return f"Restam {stock} unidades para envio imediato{variant_context}"
     if state == "out_of_stock":
-        return "Indisponível no momento"
+        return f"Variante indisponível no momento{variant_context}, sujeita a reposição"
     if state == "backorder":
-        return "Envio sob encomenda"
-    return "Pronta entrega"
+        return f"Variante disponível por encomenda{variant_context}, com prazo confirmado antes do pagamento"
+    if stock <= 12:
+        return f"{stock} unidades em pronta entrega{variant_context}"
+    return f"Pronta entrega com envio rápido{variant_context}"
 
 
 def _badge(product: dict[str, object]) -> tuple[str | None, str]:
     state = _stock_state(product)
     status = str(product.get("status"))
+    has_compare_price = bool(str(product.get("compare_price", "") or "").strip())
+    selected_variant = _selected_variant_label(product)
     if status == "draft":
         return "Em breve", "neutral"
     if state == "low_stock":
-        return "Últimas unidades", "warning"
+        return f"Últimas unidades{selected_variant}", "warning"
     if state == "backorder":
         return "Sob encomenda", "neutral"
-    return "Destaque", "info"
+    if has_compare_price:
+        return f"Oferta ativa{selected_variant}", "success"
+    if product.get("is_featured"):
+        return "Destaque da semana", "info"
+    return f"Disponível agora{selected_variant}", "info"
 
 
 def _price_helper(product: dict[str, object]) -> str:
     compare_price = str(product.get("compare_price", "") or "")
+    state = _stock_state(product)
+    variant_copy = _variant_copy(product)
+    if state == "low_stock":
+        return f"compra rápida{variant_copy}, com poucas unidades restantes para envio imediato"
     if compare_price:
-        return "ou 3x sem juros"
+        return f"oferta disponível{variant_copy}, com economia frente ao valor anterior e parcelamento em até 3x sem juros"
     if product.get("allow_backorder"):
-        return "parcelamento disponível e envio sob encomenda"
-    return "parcelamento disponível"
+        return f"parcelamento disponível com reserva imediata{variant_copy}"
+    return f"parcelamento disponível{variant_copy} e disponibilidade pronta para compra"
 
 
 def _purchase_note(product: dict[str, object]) -> str:
     state = _stock_state(product)
+    category_label = str(product.get("category_label", "") or "").strip()
+    selected_variant = _selected_variant_label(product)
     if state == "low_stock":
-        return "Poucas unidades disponíveis para compra imediata."
+        return f"Poucas unidades disponíveis{selected_variant}, com saída rápida no catálogo atual."
     if state == "backorder":
-        return "Produto disponível por encomenda, com prazo informado na entrega."
+        return f"Produto disponível por encomenda{selected_variant}, com confirmação de prazo antes de finalizar a compra."
     if state == "out_of_stock":
-        return "Produto indisponível no momento. Cadastre-se para acompanhar reposição."
+        return f"Produto indisponível no momento{selected_variant}. Ative o acompanhamento para saber quando houver reposição."
     if product.get("is_featured"):
-        return "Produto em destaque com disponibilidade imediata no storefront."
-    return "Selecione a variante desejada e avance para o checkout."
+        return f"Combinação em destaque{selected_variant}, com disponibilidade imediata e compra segura no storefront."
+    if category_label:
+        return f"Escolha sua combinação ideal{selected_variant} de {category_label.lower()} e avance para o checkout com segurança."
+    return f"Selecione a variante desejada{selected_variant} e avance para o checkout com segurança."
+
+
+def _variant_copy(product: dict[str, object]) -> str:
+    selected = _selected_variant_label(product)
+    if not selected:
+        return ""
+    return f" para {selected.lstrip(' · ')}"
+
+
+def _variant_context_label(product: dict[str, object]) -> str:
+    selected = _selected_variant_label(product)
+    return selected if selected else ""
+
+
+def _variant_emphasis_copy(product: dict[str, object]) -> str:
+    selected = _selected_variant_label(product)
+    if not selected:
+        return "a variante padrão atual"
+    return selected.lstrip(" · ")
+
+def _gallery_seed(product: dict[str, object]) -> str:
+    brand = str(product.get("brand", "") or "").strip()
+    category = str(product.get("category_label", "") or "").strip()
+    return " ".join(part for part in [brand, category, str(product.get("name", ""))] if part).strip()
 
 
 def _gallery_items(product: dict[str, object]) -> list[dict[str, object]]:
     slug = str(product["slug"])
     name = str(product["name"])
+    seed = quote_plus(_gallery_seed(product) or slug)
+    palette = [
+        ("studio", "principal"),
+        ("angle", "ângulo lateral"),
+        ("detail", "detalhe do material"),
+        ("lifestyle", "uso em contexto"),
+    ]
     return [
-        {"url": f"https://placehold.co/900x900?text={slug}-1", "alt": f"{name} imagem 1", "active": True},
-        {"url": f"https://placehold.co/900x900?text={slug}-2", "alt": f"{name} imagem 2"},
-        {"url": f"https://placehold.co/900x900?text={slug}-3", "alt": f"{name} imagem 3"},
-        {"url": f"https://placehold.co/900x900?text={slug}-4", "alt": f"{name} imagem 4"},
+        {
+            "url": f"https://placehold.co/900x900/f8fafc/0f172a?text={seed}+{quote_plus(label)}",
+            "alt": f"{name} · vista {alt_label}",
+            "active": index == 0,
+        }
+        for index, (label, alt_label) in enumerate(palette)
     ]
 
 
+def _variant_tokens(product: dict[str, object]) -> tuple[str, str]:
+    variant = _effective_variant(product)
+    return _color_token(variant), _size_token(variant)
+
+
+def _image_relevance_score(image: dict[str, object], product: dict[str, object]) -> tuple[int, int, int, str]:
+    color_token, size_token = _variant_tokens(product)
+    haystack = " ".join(
+        [
+            str(image.get("image_url", "") or "").upper(),
+            str(image.get("alt_text", "") or "").upper(),
+        ]
+    )
+    color_match = 0 if color_token and color_token in haystack else 1
+    size_match = 0 if size_token and size_token in haystack else 1
+    primary_rank = 0 if image.get("is_primary") else 1
+    return (
+        color_match,
+        size_match,
+        primary_rank,
+        f"{int(image.get('position') or 0):04d}-{str(image.get('image_url', ''))}",
+    )
+
+
+def _persisted_gallery_items(product: dict[str, object]) -> list[dict[str, object]]:
+    images = list(product.get("images") or [])
+    if not images:
+        return []
+    ordered = sorted(images, key=lambda item: _image_relevance_score(item, product))
+    name = str(product["name"])
+    return [
+        {
+            "url": str(image.get("image_url") or ""),
+            "alt": str(image.get("alt_text") or f"{name} · imagem {index + 1}"),
+            "active": index == 0,
+        }
+        for index, image in enumerate(ordered)
+        if str(image.get("image_url") or "").strip()
+    ]
+
+
+def _variant_attribute(variant: dict[str, object], index_from_end: int) -> str:
+    sku = str(variant.get("sku", "") or "").strip()
+    if not sku:
+        return ""
+    parts = [part for part in sku.split("-") if part]
+    if len(parts) < abs(index_from_end):
+        return ""
+    return str(parts[index_from_end]).strip().upper()
+
+
+def _size_token(variant: dict[str, object]) -> str:
+    token = _variant_attribute(variant, -1)
+    if not token:
+        return ""
+    valid_sizes = {"PP", "P", "M", "G", "GG", "XG", "U"}
+    if token in valid_sizes:
+        return token
+    if token.isdigit():
+        return token
+    return ""
+
+
+def _color_token(variant: dict[str, object]) -> str:
+    token = _variant_attribute(variant, -2)
+    if not token:
+        return ""
+    if token.isalpha():
+        return token
+    return ""
+
+
+def _color_option(token: str) -> dict[str, str]:
+    palette = {
+        "BLK": {"label": "Preto", "color": "#111827"},
+        "WHT": {"label": "Branco", "color": "#e5e7eb"},
+        "GRY": {"label": "Grafite", "color": "#6b7280"},
+        "NAV": {"label": "Marinho", "color": "#1e3a8a"},
+        "RED": {"label": "Vermelho", "color": "#b91c1c"},
+        "GRN": {"label": "Verde", "color": "#166534"},
+    }
+    return palette.get(token, {"label": token.title(), "color": "#9ca3af"})
+
+
+def _effective_variant(product: dict[str, object]) -> dict[str, object]:
+    variants = list(product.get("variants") or [])
+    if variants:
+        for variant in variants:
+            if variant.get("is_default"):
+                return dict(variant)
+        return dict(variants[0])
+    return {
+        "sku": product.get("sku", ""),
+        "price": product.get("price", ""),
+        "compare_price": product.get("compare_price", ""),
+        "stock": product.get("stock", ""),
+        "reserved_stock": product.get("reserved_stock", ""),
+        "track_inventory": product.get("track_inventory", True),
+        "allow_backorder": product.get("allow_backorder", False),
+        "is_default": True,
+    }
+
+
+def _selected_variant_label(product: dict[str, object]) -> str:
+    variant = _effective_variant(product)
+    size = _size_token(variant)
+    color = _color_token(variant)
+    parts = []
+    if color:
+        parts.append(_color_option(color)["label"])
+    if size:
+        parts.append(size)
+    if not parts:
+        return ""
+    return " · " + " · ".join(parts)
+
+
 def _variant_groups(product: dict[str, object]) -> list[dict[str, object]]:
+    real_variants = list(product.get("variants") or [])
+    if real_variants:
+        real_groups = _persisted_variant_groups(product, real_variants)
+        if real_groups:
+            return real_groups
     stock = _safe_int(product.get("stock"))
-    main_size = "42" if stock > 0 else "40"
+    status = _stock_state(product)
+    category_label = str(product.get("category_label", "") or "").lower()
+    uses_apparel_sizes = any(keyword in category_label for keyword in ["camiseta", "jaqueta", "moletom"])
+    base_size = "M" if uses_apparel_sizes and stock > 0 else "P" if uses_apparel_sizes else "42" if stock > 0 else "40"
+    size_options = (
+        [
+            {"value": "P", "label": "P", "selected": base_size == "P"},
+            {"value": "M", "label": "M", "selected": base_size == "M"},
+            {"value": "G", "label": "G", "selected": base_size == "G"},
+            {"value": "GG", "label": "GG", "out_of_stock": status == "low_stock"},
+        ]
+        if uses_apparel_sizes
+        else [
+            {"value": "39", "label": "39", "selected": base_size == "39"},
+            {"value": "40", "label": "40", "selected": base_size == "40"},
+            {"value": "41", "label": "41", "selected": base_size == "41"},
+            {"value": "42", "label": "42", "selected": base_size == "42"},
+            {"value": "43", "label": "43", "out_of_stock": status in {"low_stock", "out_of_stock"}},
+        ]
+    )
+    default_color = "preto" if product.get("is_featured") else "grafite"
     return [
         {
             "variant": "buttons",
             "name": "size",
-            "label": "Tamanho",
-            "selected": main_size,
-            "help_text": "Selecione a grade desejada.",
-            "options": [
-                {"value": "40", "label": "40", "selected": main_size == "40"},
-                {"value": "41", "label": "41", "selected": main_size == "41"},
-                {"value": "42", "label": "42", "selected": main_size == "42"},
-                {"value": "43", "label": "43", "out_of_stock": stock <= 5},
-            ],
+            "label": "Tamanho disponível",
+            "selected": base_size,
+            "help_text": "Escolha o tamanho com disponibilidade imediata para envio.",
+            "options": size_options,
         },
         {
             "variant": "swatches",
             "name": "color",
             "label": "Cor",
-            "selected": "preto",
+            "selected": default_color,
             "options": [
-                {"value": "preto", "label": "Preto", "color": "#111827", "selected": True},
-                {"value": "cinza", "label": "Cinza", "color": "#94a3b8"},
-                {"value": "azul", "label": "Azul", "color": "#3b82f6", "out_of_stock": stock <= 0},
+                {"value": "preto", "label": "Preto", "color": "#111827", "selected": default_color == "preto"},
+                {"value": "grafite", "label": "Grafite", "color": "#6b7280", "selected": default_color == "grafite"},
+                {"value": "offwhite", "label": "Off-white", "color": "#e5e7eb", "out_of_stock": status == "out_of_stock"},
             ],
         },
     ]
 
 
+def _persisted_variant_groups(product: dict[str, object], variants: list[dict[str, object]]) -> list[dict[str, object]]:
+    default_variant = next((variant for variant in variants if variant.get("is_default")), variants[0])
+    size_values = []
+    for variant in variants:
+        size = _size_token(variant)
+        if size and size not in size_values:
+            size_values.append(size)
+    color_values = []
+    for variant in variants:
+        color = _color_token(variant)
+        if color and color not in color_values:
+            color_values.append(color)
+
+    groups: list[dict[str, object]] = []
+    selected_size = _size_token(default_variant)
+    if size_values:
+        groups.append(
+            {
+                "variant": "buttons",
+                "name": "size",
+                "label": "Tamanho disponível",
+                "selected": selected_size or size_values[0],
+                "help_text": f"Preço e estoque exibidos refletem a variante padrão {_variant_emphasis_copy({'variants': variants})}.",
+                "options": [
+                    {
+                        "value": size,
+                        "label": size,
+                        "selected": size == (selected_size or size_values[0]),
+                        "out_of_stock": not any(
+                            _size_token(variant) == size
+                            and (_safe_int(variant.get("stock")) > 0 or variant.get("allow_backorder"))
+                            for variant in variants
+                        ),
+                    }
+                    for size in size_values
+                ],
+            }
+        )
+
+    selected_color = _color_token(default_variant)
+    if color_values:
+        groups.append(
+            {
+                "variant": "swatches",
+                "name": "color",
+                "label": "Cor",
+                "selected": selected_color or color_values[0].lower(),
+                "help_text": f"A mídia principal e os textos comerciais priorizam {_variant_emphasis_copy({'variants': variants})}.",
+                "options": [
+                    {
+                        "value": color.lower(),
+                        "label": _color_option(color)["label"],
+                        "color": _color_option(color)["color"],
+                        "selected": color == (selected_color or color_values[0]),
+                        "out_of_stock": not any(
+                            _color_token(variant) == color
+                            and (_safe_int(variant.get("stock")) > 0 or variant.get("allow_backorder"))
+                            for variant in variants
+                        ),
+                    }
+                    for color in color_values
+                ],
+            }
+        )
+
+    return groups
+
+
 def _enrich_product(product: dict[str, object]) -> dict[str, object]:
     enriched = dict(product)
-    badge_label, badge_variant = _badge(product)
-    gallery_items = _gallery_items(product)
+    effective_variant = _effective_variant(product)
     enriched.update(
         {
-            "stock_state": _stock_state(product),
-            "stock_helper": _stock_helper(product),
+            "sku": str(effective_variant.get("sku") or product.get("sku") or ""),
+            "price": str(effective_variant.get("price") or product.get("price") or ""),
+            "compare_price": str(effective_variant.get("compare_price") or product.get("compare_price") or ""),
+            "stock": str(effective_variant.get("stock") or product.get("stock") or ""),
+            "reserved_stock": str(effective_variant.get("reserved_stock") or product.get("reserved_stock") or ""),
+            "track_inventory": bool(effective_variant.get("track_inventory", product.get("track_inventory", True))),
+            "allow_backorder": bool(effective_variant.get("allow_backorder", product.get("allow_backorder", False))),
+        }
+    )
+    badge_label, badge_variant = _badge(enriched)
+    gallery_items = _persisted_gallery_items(enriched) or _gallery_items(enriched)
+    enriched.update(
+        {
+            "stock_state": _stock_state(enriched),
+            "stock_helper": _stock_helper(enriched),
             "badge_label": badge_label,
             "badge_variant": badge_variant,
-            "price_helper": _price_helper(product),
+            "price_helper": _price_helper(enriched),
             "product_gallery_items": gallery_items,
             "main_image_url": gallery_items[0]["url"],
             "main_image_alt": gallery_items[0]["alt"],
-            "variant_groups": _variant_groups(product),
+            "variant_groups": _variant_groups(enriched),
             "short_description": str(product.get("description", "") or ""),
-            "purchase_note": _purchase_note(product),
-            "primary_action_label": "Adicionar ao carrinho",
+            "purchase_note": _purchase_note(enriched),
+            "primary_action_label": (
+                "Avise-me da reposição"
+                if _stock_state(enriched) == "out_of_stock"
+                else "Reservar por encomenda"
+                if _stock_state(enriched) == "backorder"
+                else "Adicionar ao carrinho"
+            ),
             "secondary_action_label": "Comprar agora",
             "secondary_action_href": "#checkout",
             "quantity": 1,
             "eyebrow": product["brand"],
+            "effective_variant_label": _variant_emphasis_copy(enriched),
         }
     )
     return enriched

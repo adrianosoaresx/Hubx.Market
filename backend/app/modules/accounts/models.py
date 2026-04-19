@@ -1,8 +1,16 @@
+from django.apps import apps
 from django.db import models
 
 
 class AccountProfile(models.Model):
     tenant = models.ForeignKey("tenants.Tenant", on_delete=models.CASCADE, related_name="account_profiles")
+    customer = models.ForeignKey(
+        "customers.Customer",
+        on_delete=models.SET_NULL,
+        related_name="account_profiles",
+        null=True,
+        blank=True,
+    )
     email = models.EmailField()
     first_name = models.CharField(max_length=120, blank=True)
     last_name = models.CharField(max_length=120, blank=True)
@@ -20,6 +28,29 @@ class AccountProfile(models.Model):
         constraints = [
             models.UniqueConstraint(fields=("tenant", "email"), name="accounts_profile_unique_email_per_tenant"),
         ]
+
+    def save(self, *args, **kwargs):
+        if self.customer_id is None:
+            self.customer = self._resolve_customer_link()
+        super().save(*args, **kwargs)
+
+    def _resolve_customer_link(self):
+        normalized_email = str(self.email or "").strip()
+        if not self.tenant_id or not normalized_email:
+            return None
+        try:
+            customer_model = apps.get_model("customers", "Customer")
+        except Exception:
+            return None
+        matches = list(
+            customer_model._default_manager.filter(
+                tenant_id=self.tenant_id,
+                email__iexact=normalized_email,
+            )[:2]
+        )
+        if len(matches) != 1:
+            return None
+        return matches[0]
 
     def __str__(self) -> str:  # pragma: no cover
         return f"{self.tenant_id}:{self.email}"

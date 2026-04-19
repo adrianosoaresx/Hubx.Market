@@ -210,7 +210,11 @@ class DjangoOrmOrderRepository:
             return []
 
         try:
-            queryset = self.order_model._default_manager.all().prefetch_related("items").order_by("-updated_at", "-id")
+            queryset = (
+                self.order_model._default_manager.all()
+                .prefetch_related("items", "status_history")
+                .order_by("-updated_at", "-id")
+            )
         except Exception:
             return []
 
@@ -223,7 +227,7 @@ class DjangoOrmOrderRepository:
         try:
             order = (
                 self.order_model._default_manager.filter(number=order_number.lstrip("#"))
-                .prefetch_related("items")
+                .prefetch_related("items", "status_history")
                 .first()
             )
         except Exception:
@@ -253,10 +257,17 @@ class DjangoOrmOrderRepository:
         total = self._money_value(getattr(order, "total", None))
         installments = self._string_value(getattr(order, "installments_summary", None), default="")
         items = self._serialize_items(order)
+        next_step_label, next_step_helper, blocked_action_guidance = self._build_next_step_guidance(
+            status=status,
+            payment_status=payment_status,
+            shipping_status=shipping_status,
+            fulfillment_status_label=fulfillment_status_label,
+        )
 
         return {
             "order_number": order_number,
             "customer": customer_name,
+            "customer_linkage_mode": "explicit" if getattr(order, "customer_id", None) else "fallback",
             "status": status,
             "order_status_label": status_label,
             "fulfillment_status_label": fulfillment_status_label,
@@ -274,8 +285,12 @@ class DjangoOrmOrderRepository:
             "discount": discount,
             "installments": installments,
             "total": total,
+            "next_step_label": next_step_label,
+            "next_step_helper": next_step_helper,
+            "blocked_action_guidance": blocked_action_guidance,
             "order_items": items,
             "activity_items": self._build_activity_items(
+                order=order,
                 updated_at=updated_at,
                 payment_status=payment_status,
                 shipping_status=shipping_status,
@@ -344,8 +359,8 @@ class DjangoOrmOrderRepository:
         ]
 
     @staticmethod
-    def _build_activity_items(*, updated_at: str, payment_status: str, shipping_status: str, fulfillment_status_label: str) -> list[dict[str, object]]:
-        return [
+    def _build_activity_items(*, order: object, updated_at: str, payment_status: str, shipping_status: str, fulfillment_status_label: str) -> list[dict[str, object]]:
+        derived_items = [
             {
                 "title": "Snapshot persistido sincronizado",
                 "description": f"Pedido carregado com pagamento {payment_status.lower()} e envio em estado {shipping_status.lower()}.",
@@ -361,6 +376,88 @@ class DjangoOrmOrderRepository:
                 "badge_variant": "warning" if "aguard" in fulfillment_status_label.lower() else "success",
             },
         ]
+        try:
+            history_items = list(getattr(order, "status_history").all())
+        except Exception:
+            history_items = []
+        if not history_items:
+            return derived_items
+        timeline_items = [
+            {
+                "title": str(getattr(item, "title", "") or "Atualização operacional"),
+                "description": DjangoOrmOrderRepository._history_description(item),
+                "timestamp": DjangoOrmOrderRepository._format_timestamp(getattr(item, "created_at", None)),
+                "badge_label": str(getattr(item, "badge_label", "") or "Operação"),
+                "badge_variant": str(getattr(item, "badge_variant", "") or "info"),
+            }
+            for item in history_items[:3]
+        ]
+        timeline_items.extend(derived_items)
+        return timeline_items[:4]
+
+    @staticmethod
+    def _build_next_step_guidance(
+        *,
+        status: str,
+        payment_status: str,
+        shipping_status: str,
+        fulfillment_status_label: str,
+    ) -> tuple[str, str, str]:
+        lowered_payment = payment_status.lower()
+        lowered_shipping = shipping_status.lower()
+        lowered_fulfillment = fulfillment_status_label.lower()
+
+        if status == "canceled":
+            return (
+                "Pedido encerrado",
+                "Nenhuma nova ação operacional é necessária. Mantenha apenas acompanhamento de atendimento, se houver contato do cliente.",
+                "Cancelamento concluído; novas mudanças exigem revisão manual do pedido.",
+            )
+        if status == "shipped" or "trânsito" in lowered_shipping:
+            return (
+                "Acompanhar transporte",
+                "Pedido já saiu da operação interna. O próximo passo é monitorar rastreio e tratar exceções de entrega, se aparecerem.",
+                "Cancelamento simples fica bloqueado depois do envio; trate qualquer exceção com fluxo operacional específico.",
+            )
+        if "aguard" in lowered_payment or "pix" in lowered_payment and "confirm" not in lowered_payment:
+            return (
+                "Confirmar pagamento",
+                "Aguarde a confirmação financeira antes de liberar separação, expedição ou qualquer comunicação de envio.",
+                "Enquanto o pagamento estiver pendente, mantenha o pedido fora da fila de despacho.",
+            )
+        if "separ" in lowered_fulfillment or "picking" in lowered_fulfillment or status == "paid":
+            return (
+                "Separar e preparar envio",
+                "Pagamento já confirmado. Priorize picking, conferência e atualização da operação para trânsito assim que o pacote estiver pronto.",
+                "Se faltar estoque ou houver divergência, pause a expedição antes de avançar o status.",
+            )
+        if "conclu" in lowered_fulfillment:
+            return (
+                "Confirmar encerramento operacional",
+                "A operação interna já foi concluída. Verifique se a comunicação final e o acompanhamento pós-entrega estão consistentes.",
+                "Evite novas mudanças de status sem revisar primeiro o histórico recente do pedido.",
+            )
+        return (
+            "Revisar próximo passo operacional",
+            "Confira pagamento, expedição e histórico recente para decidir o próximo avanço do pedido com segurança.",
+            "Quando houver dúvida no estado atual, prefira revisar a timeline antes de aplicar uma nova ação.",
+        )
+
+    @staticmethod
+    def _history_description(item: object) -> str:
+        base_description = str(getattr(item, "description", "") or "").strip()
+        extras: list[str] = []
+        source_label = str(getattr(item, "source_label", "") or "").strip()
+        actor_label = str(getattr(item, "actor_label", "") or "").strip()
+        if source_label:
+            extras.append(f"Origem: {source_label}.")
+        if actor_label:
+            extras.append(f"Responsável: {actor_label}.")
+        if not extras:
+            return base_description
+        if not base_description:
+            return " ".join(extras)
+        return f"{base_description} {' '.join(extras)}"
 
 
 def _fallback_order(order_number: str) -> dict[str, object]:
@@ -385,6 +482,9 @@ def _fallback_order(order_number: str) -> dict[str, object]:
         "discount": "",
         "installments": "",
         "total": "R$ 0,00",
+        "next_step_label": "Revisar integração do pedido",
+        "next_step_helper": "Enquanto o pedido estiver em fallback, confirme manualmente pagamento, envio e operação antes de qualquer ação.",
+        "blocked_action_guidance": "Sem trilha persistida suficiente para orientar bloqueios reais; mantenha revisão operacional manual.",
         "order_items": [],
         "activity_items": [],
     }
@@ -400,6 +500,30 @@ class AdminOrderQueryService:
             return bool(self.orm_repository.list_orders())
         except Exception:
             return False
+
+    def get_operational_visibility_note(self) -> str:
+        try:
+            orders = self.orm_repository.list_orders()
+        except Exception:
+            orders = []
+        if not orders:
+            return "Visibilidade operacional: listagem ainda depende de fallback de apresentação."
+        explicit_count = sum(1 for order in orders if order.get("customer_linkage_mode") == "explicit")
+        fallback_count = sum(1 for order in orders if order.get("customer_linkage_mode") != "explicit")
+        return (
+            "Visibilidade operacional: "
+            f"{explicit_count} pedido(s) com vínculo explícito `Order.customer` e "
+            f"{fallback_count} ainda resolvido(s) por snapshot/fallback."
+        )
+
+    def get_order_operational_visibility(self, order_number: str) -> str:
+        order = self.get_order(order_number)
+        mode = order.get("customer_linkage_mode")
+        if mode == "explicit":
+            return "Visibilidade operacional: cliente resolvido por vínculo explícito `Order.customer`."
+        if mode == "fallback":
+            return "Visibilidade operacional: cliente resolvido por snapshot/fallback (`customer_email`)."
+        return "Visibilidade operacional: pedido ainda fora da trilha persistida principal."
 
     def list_orders(self) -> list[dict[str, object]]:
         real_orders = self.orm_repository.list_orders()

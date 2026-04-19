@@ -14,24 +14,6 @@
     }
   },
   {
-    "model": "accounts.accountprofile",
-    "pk": 2,
-    "fields": {
-      "tenant": 7,
-      "email": "ana.area@hubx.market",
-      "first_name": "Ana",
-      "last_name": "Área",
-      "phone": "(11) 95555-0000",
-      "newsletter_opt_in": true,
-      "order_updates_opt_in": true,
-      "is_active": true,
-      "last_login_at": "2026-04-16T09:00:00Z",
-      "last_seen_at": "2026-04-16T12:05:00Z",
-      "created_at": "2026-04-16T09:00:00Z",
-      "updated_at": "2026-04-16T12:05:00Z"
-    }
-  },
-  {
     "model": "customers.customer",
     "pk": 2,
     "fields": {
@@ -45,6 +27,25 @@
       "account_type": "Storefront",
       "last_seen_at": "2026-04-16T12:05:00Z",
       "created_at": "2026-04-15T10:00:00Z",
+      "updated_at": "2026-04-16T12:05:00Z"
+    }
+  },
+  {
+    "model": "accounts.accountprofile",
+    "pk": 2,
+    "fields": {
+      "tenant": 7,
+      "customer": 2,
+      "email": "ana.area@hubx.market",
+      "first_name": "Ana",
+      "last_name": "Área",
+      "phone": "(11) 95555-0000",
+      "newsletter_opt_in": true,
+      "order_updates_opt_in": true,
+      "is_active": true,
+      "last_login_at": "2026-04-16T09:00:00Z",
+      "last_seen_at": "2026-04-16T12:05:00Z",
+      "created_at": "2026-04-16T09:00:00Z",
       "updated_at": "2026-04-16T12:05:00Z"
     }
   },
@@ -89,10 +90,11 @@
     "pk": 2,
     "fields": {
       "tenant": 7,
+      "customer": 2,
       "number": "3051",
       "status": "paid",
       "customer_name": "Ana Área",
-      "customer_email": "ana.area@hubx.market",
+      "customer_email": "snapshot.area@hubx.market",
       "customer_phone": "(11) 95555-0000",
       "fulfillment_status_label": "Separando itens",
       "fulfillment_status_variant": "info",

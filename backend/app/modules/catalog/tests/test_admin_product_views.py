@@ -69,11 +69,11 @@ class AdminProductPersistedReadTests(TestCase):
         self.assertTrue(admin_product_queries.using_persisted_source())
         self.assertEqual(product["name"], "Tênis Hubx Runner Persistido")
         self.assertEqual(product["brand"], "Hubx Persisted")
-        self.assertEqual(product["sku"], "RUNNER-PERSIST-001")
+        self.assertEqual(product["sku"], "RUNNER-PERSIST-BLK-42")
         self.assertEqual(product["price"], "399.90")
         self.assertEqual(form_initial["name"], "Tênis Hubx Runner Persistido")
         self.assertIn("Hubx Persisted", product["summary_content"])
-        self.assertIn("SKU principal RUNNER-PERSIST-001", product["summary_content"])
+        self.assertIn("SKU principal RUNNER-PERSIST-BLK-42", product["summary_content"])
         self.assertIn("Preço atual: R$ 399,90", product["pricing_content"])
         self.assertIn("Estoque disponível: 12 unidade(s)", product["inventory_content"])
         self.assertIn("visível no catálogo", product["visibility_content"])
@@ -86,7 +86,7 @@ class AdminProductPersistedReadTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Tênis Hubx Runner Persistido")
-        self.assertContains(response, "RUNNER-PERSIST-001")
+        self.assertContains(response, "RUNNER-PERSIST-BLK-42")
         self.assertContains(response, "14/04/2026 às 12:00")
 
     def test_admin_product_detail_view_renders_enriched_persisted_content(self):
@@ -95,6 +95,6 @@ class AdminProductPersistedReadTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "SKU principal RUNNER-PERSIST-001")
+        self.assertContains(response, "SKU principal RUNNER-PERSIST-BLK-42")
         self.assertContains(response, "Estoque disponível: 12 unidade(s)")
         self.assertContains(response, "Produto com destaque ativo")
