@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from math import ceil
+from urllib.parse import urlencode
 
 from django.core.paginator import Paginator
+from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.utils.text import slugify
 from django.views.generic import TemplateView
@@ -13,6 +15,9 @@ from app.modules.catalog.application.admin_product_queries import (
 )
 from app.modules.catalog.application.storefront_catalog_queries import (
     storefront_catalog_queries,
+)
+from app.modules.checkout.application.checkout_activation_commands import (
+    checkout_activation_commands,
 )
 
 def _all_products() -> list[dict[str, object]]:
@@ -91,17 +96,17 @@ def _storefront_badge(product: dict[str, object]) -> tuple[str | None, str]:
 def _build_storefront_product_card(product: dict[str, object]) -> dict[str, object]:
     return {
         "href": reverse("storefront:product-detail", kwargs={"product_slug": product["slug"]}),
-        "image_url": f'https://placehold.co/640x640?text={slugify(str(product["name"]))}',
-        "image_alt": str(product["name"]),
+        "image_url": product.get("main_image_url") or f'https://placehold.co/640x640?text={slugify(str(product["name"]))}',
+        "image_alt": product.get("main_image_alt") or str(product["name"]),
         "eyebrow": product.get("eyebrow", product["brand"]),
         "title": product["name"],
-        "subtitle": product["category_label"],
+        "subtitle": product.get("catalog_card_subtitle") or product["category_label"],
         "badge_label": product.get("badge_label") or _storefront_badge(product)[0],
         "badge_variant": product.get("badge_variant") or _storefront_badge(product)[1],
         "price": f'R$ {str(product["price"]).replace(".", ",")}',
         "compare_price": f'R$ {str(product["compare_price"]).replace(".", ",")}' if product.get("compare_price") else "",
-        "price_helper": product.get("price_helper", "ou 3x sem juros"),
-        "meta": product["sku"],
+        "price_helper": product.get("catalog_card_price_helper") or product.get("price_helper", "ou 3x sem juros"),
+        "meta": product.get("catalog_card_meta") or product["sku"],
         "stock_state": product.get("stock_state", _storefront_stock_state(product)),
         "stock_helper": product.get("stock_helper", _storefront_stock_helper(product)),
         "clickable": True,
@@ -204,7 +209,11 @@ class AdminProductsListView(TemplateView):
                             product["name"],
                             product["sku"],
                             product["status_label"],
-                            f'{product["stock"]} un.',
+                            (
+                                f'{product["stock"]} un. · reservadas {product.get("reserved_stock", "0")} '
+                                f'· recuperadas {product.get("recovered_stock", "0")} '
+                                f'· finalizadas {product.get("finalized_stock", "0")}'
+                            ),
                             product["updated_at"],
                         ]
                     }
@@ -216,7 +225,7 @@ class AdminProductsListView(TemplateView):
                 "prev_url": build_query(page_obj.previous_page_number()) if page_obj.has_previous() else None,
                 "next_url": build_query(page_obj.next_page_number()) if page_obj.has_next() else None,
                 "page_items": _page_items(page_obj.number, paginator.num_pages, base_url),
-                "page_note": "Primeira wiring real: view fina com adapter de contexto, pronta para trocar fixtures por serviço real.",
+                "page_note": admin_product_queries.get_inventory_visibility_note(),
             }
         )
         return context
@@ -239,7 +248,17 @@ class AdminProductDetailView(TemplateView):
                 "edit_href": reverse("catalog:admin-products-edit", kwargs={"product_slug": product["slug"]}),
                 "summary_content": product["summary_content"],
                 "pricing_content": product["pricing_content"],
-                "inventory_content": product["inventory_content"],
+                "inventory_content": " ".join(
+                    part
+                    for part in [
+                        product["inventory_content"],
+                        product.get("inventory_visibility_content", ""),
+                        product.get("inventory_recovery_content", ""),
+                        product.get("inventory_finalization_content", ""),
+                        product.get("inventory_timeline_content", ""),
+                    ]
+                    if part
+                ),
                 "details_content": product["details_content"],
                 "visibility_content": product["visibility_content"],
                 "sku": product["sku"],
@@ -324,12 +343,33 @@ class CatalogListView(TemplateView):
             suffix = "&".join(query_params)
             return f"{base_url}?{suffix + '&' if suffix else ''}page={number}"
 
+        category_label = next(
+            (option["label"] for option in _storefront_category_options() if option["value"] == category_selected),
+            "",
+        )
+        if category_label:
+            page_description = (
+                f"Explore {category_label.lower()} com mídia, preço e disponibilidade atualizados para decidir com mais confiança."
+            )
+        else:
+            page_description = "Explore produtos com mídia, preço e disponibilidade atualizados para encontrar sua próxima compra com mais confiança."
+        if search_value:
+            filter_description = f'Resultados para “{search_value}”, combinando nome, marca e SKU já disponíveis no catálogo.'
+        elif category_label:
+            filter_description = f"Use a categoria atual para refinar a vitrine sem perder os sinais comerciais mais importantes."
+        else:
+            filter_description = "Use busca e categoria para encontrar mais rápido produtos com melhor contexto de preço, estoque e oferta."
+        results_meta = f"{paginator.count} produto(s) encontrado(s)"
+        if category_label:
+            results_meta = f"{results_meta} · categoria atual: {category_label}"
+
         context.update(
             {
                 "page_title": "Catálogo",
-                "page_description": "Explore produtos, novidades e categorias disponíveis na loja.",
-                "results_meta": f"{paginator.count} produto(s) encontrado(s)",
+                "page_description": page_description,
+                "results_meta": results_meta,
                 "filter_action": base_url,
+                "filter_description": filter_description,
                 "search_name": "q",
                 "search_value": search_value,
                 "status_name": "category",
@@ -352,9 +392,27 @@ class CatalogListView(TemplateView):
 class ProductDetailView(TemplateView):
     template_name = "pages/templates/product_detail_page.html"
 
+    def post(self, request, *args, **kwargs):
+        product = storefront_catalog_queries.get_product(kwargs["product_slug"])
+        product_detail_url = reverse("storefront:product-detail", kwargs={"product_slug": kwargs["product_slug"]})
+        if str(product.get("stock_state") or "") == "out_of_stock":
+            return HttpResponseRedirect(product_detail_url)
+
+        session_key = checkout_activation_commands.activate_from_product(product)
+        params = {"back_url": product_detail_url}
+        if session_key:
+            params["session_key"] = session_key
+        return HttpResponseRedirect(f'{reverse("checkout:checkout-page")}?{urlencode(params)}')
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         product = storefront_catalog_queries.get_product(kwargs["product_slug"])
+        product_detail_url = reverse("storefront:product-detail", kwargs={"product_slug": kwargs["product_slug"]})
+        secondary_target = str(product.get("secondary_action_target") or "checkout")
+        if secondary_target == "catalog":
+            secondary_action_href = reverse("storefront:catalog-list")
+        else:
+            secondary_action_href = f'{reverse("checkout:checkout-page")}?{urlencode({"back_url": product_detail_url})}'
         gallery_items = product.get("product_gallery_items") or _build_product_gallery_items(product)
         stock_state = product.get("stock_state", _storefront_stock_state(product))
         stock_helper = product.get("stock_helper", _storefront_stock_helper(product))
@@ -362,7 +420,7 @@ class ProductDetailView(TemplateView):
         context.update(
             {
                 "product_title": product["name"],
-                "product_subtitle": product["description"],
+                "product_subtitle": product.get("product_subtitle", product["description"]),
                 "price": f'R$ {str(product["price"]).replace(".", ",")}',
                 "compare_price": f'R$ {str(product["compare_price"]).replace(".", ",")}' if product.get("compare_price") else "",
                 "price_helper": product.get("price_helper", "parcelamento disponível"),
@@ -373,9 +431,11 @@ class ProductDetailView(TemplateView):
                 "main_image_alt": product.get("main_image_alt", gallery_items[0]["alt"]),
                 "variant_groups": product.get("variant_groups") or _build_variant_groups(product),
                 "quantity": product.get("quantity", 1),
+                "form_action": product_detail_url,
                 "primary_action_label": product.get("primary_action_label", "Adicionar ao carrinho"),
+                "primary_action_disabled": product.get("primary_action_disabled", False),
                 "secondary_action_label": product.get("secondary_action_label", "Comprar agora"),
-                "secondary_action_href": product.get("secondary_action_href", "#checkout"),
+                "secondary_action_href": secondary_action_href,
                 "short_description": product.get("short_description", product["description"]),
                 "purchase_note": product.get("purchase_note", "Seletores e estoque usam adapter de apresentação fino nesta primeira integração real."),
                 "eyebrow": product.get("eyebrow", product["brand"]),

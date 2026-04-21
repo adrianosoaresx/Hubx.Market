@@ -108,6 +108,95 @@ def _variant_emphasis_copy(product: dict[str, object]) -> str:
         return "a variante padrão atual"
     return selected.lstrip(" · ")
 
+
+def _catalog_card_subtitle(product: dict[str, object]) -> str:
+    category = str(product.get("category_label", "") or "").strip()
+    variant = _variant_emphasis_copy(product)
+    if category and variant != "a variante padrão atual":
+        return f"{category} · {variant}"
+    return category or variant
+
+
+def _catalog_card_meta(product: dict[str, object]) -> str:
+    sku = str(product.get("sku", "") or "").strip()
+    state = _stock_state(product)
+    if state == "low_stock":
+        context = "saída rápida"
+    elif state == "backorder":
+        context = "reserva disponível"
+    elif state == "out_of_stock":
+        context = "reposição em acompanhamento"
+    elif str(product.get("compare_price", "") or "").strip():
+        context = "oferta ativa"
+    else:
+        context = "compra pronta"
+    if sku:
+        return f"SKU {sku} · {context}"
+    return context.capitalize()
+
+
+def _catalog_card_price_helper(product: dict[str, object]) -> str:
+    state = _stock_state(product)
+    variant_copy = _variant_copy(product)
+    compare_price = str(product.get("compare_price", "") or "").strip()
+    if state == "low_stock":
+        return f"economia pronta para checkout{variant_copy}, com poucas unidades restantes"
+    if state == "backorder":
+        return f"reserva confirmada{variant_copy}, com parcelamento disponível"
+    if state == "out_of_stock":
+        return f"acompanhe a reposição{variant_copy} e volte quando houver estoque"
+    if compare_price:
+        return f"oferta ativa{variant_copy}, com parcelamento em até 3x sem juros"
+    return f"compra pronta{variant_copy}, com parcelamento e envio rápido"
+
+
+def _catalog_to_pdp_continuity_note(product: dict[str, object]) -> str:
+    variant = _variant_emphasis_copy(product)
+    state = _stock_state(product)
+    if variant == "a variante padrão atual":
+        return "Os sinais comerciais exibidos no catálogo continuam alinhados com esta página do produto."
+    if state == "backorder":
+        return f"A combinação destacada no catálogo continua sendo {variant}, agora com o mesmo contexto de reserva e prazo nesta página."
+    if state == "out_of_stock":
+        return f"A combinação destacada no catálogo continua sendo {variant}, com o mesmo contexto de reposição mostrado aqui."
+    if state == "low_stock":
+        return f"A combinação destacada no catálogo continua sendo {variant}, com a mesma leitura de poucas unidades disponível nesta página."
+    return f"A combinação destacada no catálogo continua sendo {variant}, com preço, mídia e disponibilidade alinhados aqui também."
+
+
+def _pdp_subtitle(product: dict[str, object]) -> str:
+    description = str(product.get("description", "") or "").strip()
+    continuity_note = _catalog_to_pdp_continuity_note(product)
+    if description:
+        return f"{description} {continuity_note}"
+    return continuity_note
+
+
+def _pdp_short_description(product: dict[str, object]) -> str:
+    base = str(product.get("description", "") or "").strip()
+    continuity_note = _catalog_to_pdp_continuity_note(product)
+    if base and continuity_note not in base:
+        return f"{base} {continuity_note}"
+    return continuity_note or base
+
+
+def _pdp_purchase_note(product: dict[str, object]) -> str:
+    purchase_note = _purchase_note(product)
+    continuity_note = _catalog_to_pdp_continuity_note(product)
+    return f"{purchase_note} {continuity_note}".strip()
+
+
+def _checkout_continuity_note(product: dict[str, object]) -> str:
+    state = _stock_state(product)
+    variant = _variant_emphasis_copy(product)
+    if state == "out_of_stock":
+        return f"A combinação {variant} ainda não segue para checkout, então o próximo passo mais seguro é acompanhar a reposição ou voltar ao catálogo."
+    if state == "backorder":
+        return f"A combinação {variant} já pode seguir para checkout com o mesmo contexto de reserva e prazo mostrado aqui."
+    if state == "low_stock":
+        return f"A combinação {variant} já pode seguir para checkout agora, com o mesmo contexto de poucas unidades destacado nesta página."
+    return f"A combinação {variant} já pode seguir para checkout com o mesmo preço e disponibilidade vistos aqui."
+
 def _gallery_seed(product: dict[str, object]) -> str:
     brand = str(product.get("brand", "") or "").strip()
     category = str(product.get("category_label", "") or "").strip()
@@ -386,28 +475,35 @@ def _enrich_product(product: dict[str, object]) -> dict[str, object]:
     )
     badge_label, badge_variant = _badge(enriched)
     gallery_items = _persisted_gallery_items(enriched) or _gallery_items(enriched)
+    stock_state = _stock_state(enriched)
     enriched.update(
         {
-            "stock_state": _stock_state(enriched),
+            "stock_state": stock_state,
             "stock_helper": _stock_helper(enriched),
             "badge_label": badge_label,
             "badge_variant": badge_variant,
             "price_helper": _price_helper(enriched),
+            "catalog_card_subtitle": _catalog_card_subtitle(enriched),
+            "catalog_card_meta": _catalog_card_meta(enriched),
+            "catalog_card_price_helper": _catalog_card_price_helper(enriched),
             "product_gallery_items": gallery_items,
             "main_image_url": gallery_items[0]["url"],
             "main_image_alt": gallery_items[0]["alt"],
             "variant_groups": _variant_groups(enriched),
-            "short_description": str(product.get("description", "") or ""),
-            "purchase_note": _purchase_note(enriched),
+            "product_subtitle": _pdp_subtitle(enriched),
+            "short_description": _pdp_short_description(enriched),
+            "purchase_note": f'{_pdp_purchase_note(enriched)} {_checkout_continuity_note(enriched)}'.strip(),
             "primary_action_label": (
                 "Avise-me da reposição"
-                if _stock_state(enriched) == "out_of_stock"
-                else "Reservar por encomenda"
-                if _stock_state(enriched) == "backorder"
-                else "Adicionar ao carrinho"
+                if stock_state == "out_of_stock"
+                else "Reservar e ir para checkout"
+                if stock_state == "backorder"
+                else "Ir para checkout"
             ),
-            "secondary_action_label": "Comprar agora",
-            "secondary_action_href": "#checkout",
+            "primary_action_disabled": stock_state == "out_of_stock",
+            "secondary_action_label": "Ver catálogo" if stock_state == "out_of_stock" else "Ir para checkout",
+            "secondary_action_target": "catalog" if stock_state == "out_of_stock" else "checkout",
+            "secondary_action_href": "#catalog" if stock_state == "out_of_stock" else "#checkout",
             "quantity": 1,
             "eyebrow": product["brand"],
             "effective_variant_label": _variant_emphasis_copy(enriched),

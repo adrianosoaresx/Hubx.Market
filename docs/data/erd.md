@@ -83,7 +83,12 @@
 - preço pertence à ProductVariant
 - estoque pertence à ProductVariant
 - checkout pode persistir snapshots transitórios antes da criação do pedido
-- OrderItem guarda price_snapshot
+- `CheckoutSessionItem` pode preservar `variant_sku` como vínculo explícito com a variante escolhida
+- OrderItem guarda `price_snapshot`
+- `OrderItem` pode preservar `variant_sku` como snapshot explícito da variante comprada
+- `Order` pode guardar `inventory_reserved_at` para indicar quando a baixa operacional de estoque já foi aplicada após o pagamento
+- `Order` pode guardar `inventory_recovered_at` para indicar quando a devolução operacional de estoque já foi aplicada após cancelamento seguro
+- `Order` pode guardar `inventory_finalized_at` para indicar quando a reserva operacional já foi consumida de forma final após a entrega
 - produto inativo não é deletado
 - customer é isolado por tenant
 - `Customer` já possui base persistida mínima para leituras administrativas de list/detail

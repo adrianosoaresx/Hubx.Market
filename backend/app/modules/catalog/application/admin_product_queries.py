@@ -230,6 +230,64 @@ def _build_inventory_content(*, stock: str, reserved_stock: str, track_inventory
     )
 
 
+def _build_inventory_visibility_content(*, stock: str, reserved_stock: str, track_inventory: bool) -> str:
+    stock_value = _safe_int(stock)
+    reserved_value = _safe_int(reserved_stock)
+    free_value = max(stock_value - reserved_value, 0)
+    if not track_inventory:
+        return "Visibilidade de estoque limitada: controle manual ativo, sem leitura operacional confiável de reserva."
+    if reserved_value <= 0:
+        return f"Sem impacto operacional recente de pedidos confirmado no estoque principal. Saldo livre atual: {free_value} unidade(s)."
+    if free_value <= 3:
+        return (
+            f"Estoque comprometido: {reserved_value} unidade(s) já reservadas e apenas {free_value} livre(s) na variante principal."
+        )
+    return (
+        f"Impacto operacional visível: {reserved_value} unidade(s) já reservadas em pedidos confirmados, com {free_value} livre(s) na variante principal."
+    )
+
+
+def _build_inventory_recovery_content(*, recovered_units: int, recovery_events_count: int, last_recovered_at: object) -> str:
+    if recovered_units <= 0:
+        return "Nenhuma devolução operacional recente de estoque foi registrada para este produto."
+    return (
+        f"Devolução operacional visível: {recovered_units} unidade(s) já voltaram ao estoque em "
+        f"{recovery_events_count} cancelamento(s). Última recuperação em {_format_admin_timestamp(last_recovered_at)}."
+    )
+
+
+def _build_inventory_finalization_content(*, finalized_units: int, finalization_events_count: int, last_finalized_at: object) -> str:
+    if finalized_units <= 0:
+        return "Nenhum consumo final recente de reserva foi registrado para este produto."
+    return (
+        f"Consumo final visível: {finalized_units} unidade(s) já concluíram a reserva operacional em "
+        f"{finalization_events_count} entrega(s). Última finalização em {_format_admin_timestamp(last_finalized_at)}."
+    )
+
+
+def _build_inventory_timeline_content(
+    *,
+    stock: str,
+    reserved_stock: str,
+    recovered_units: int,
+    finalized_units: int,
+    track_inventory: bool,
+) -> str:
+    if not track_inventory:
+        return "Linha operacional do estoque indisponível: a variante principal ainda usa controle manual."
+    stock_value = _safe_int(stock)
+    reserved_value = _safe_int(reserved_stock)
+    recovered_value = _safe_int(recovered_units)
+    free_value = max(stock_value - reserved_value, 0)
+    return (
+        "Linha operacional do estoque: "
+        f"{reserved_value} unidade(s) reservadas após pagamento confirmado · "
+        f"{recovered_value} recuperada(s) por cancelamentos operacionais · "
+        f"{finalized_units} finalizada(s) como consumo após entrega · "
+        f"{free_value} livre(s) na variante principal agora."
+    )
+
+
 def _build_details_content(*, description: str, category: str, brand: str) -> str:
     if description:
         return description
@@ -249,8 +307,14 @@ def _build_activity_items(
     track_inventory: bool,
     allow_backorder: bool,
     stock: str,
+    reserved_stock: str,
+    recovered_units: int,
+    last_recovered_at: object,
+    finalized_units: int,
+    last_finalized_at: object,
 ) -> list[dict[str, object]]:
     timestamp = _format_admin_timestamp(updated_at)
+    reserved_value = _safe_int(reserved_stock)
     items = [
         {
             "title": "Registro persistido sincronizado",
@@ -263,11 +327,50 @@ def _build_activity_items(
     if track_inventory:
         items.append(
             {
-                "title": "Configuração de estoque ativa",
-                "description": f"Variante principal com {_safe_int(stock)} unidade(s) registradas e acompanhamento operacional ativo.",
+                "title": "Saldo livre atual",
+                "description": (
+                    f"Variante principal com {max(_safe_int(stock) - reserved_value, 0)} unidade(s) livres, "
+                    f"{reserved_value} reservadas e {_safe_int(stock)} registradas no total."
+                ),
                 "timestamp": timestamp,
                 "badge_label": "Estoque",
                 "badge_variant": "success",
+            }
+        )
+    if track_inventory and reserved_value > 0:
+        items.append(
+            {
+                "title": "Reserva operacional visível",
+                "description": f"{reserved_value} unidade(s) da variante principal já estão comprometidas por pedidos confirmados.",
+                "timestamp": timestamp,
+                "badge_label": "Reserva",
+                "badge_variant": "warning",
+            }
+        )
+    if track_inventory and recovered_units > 0:
+        items.append(
+            {
+                "title": "Devolução operacional registrada",
+                "description": (
+                    f"{recovered_units} unidade(s) já retornaram ao estoque depois de cancelamentos operacionais. "
+                    f"Última recuperação em {_format_admin_timestamp(last_recovered_at)}."
+                ),
+                "timestamp": _format_admin_timestamp(last_recovered_at),
+                "badge_label": "Recuperação",
+                "badge_variant": "success",
+            }
+        )
+    if track_inventory and finalized_units > 0:
+        items.append(
+            {
+                "title": "Consumo final registrado",
+                "description": (
+                    f"{finalized_units} unidade(s) já saíram do estado reservado e viraram consumo final após entrega. "
+                    f"Última finalização em {_format_admin_timestamp(last_finalized_at)}."
+                ),
+                "timestamp": _format_admin_timestamp(last_finalized_at),
+                "badge_label": "Finalização",
+                "badge_variant": "info",
             }
         )
     if is_featured or allow_backorder:
@@ -284,7 +387,7 @@ def _build_activity_items(
                 "badge_variant": "warning" if allow_backorder and not is_featured else "info",
             }
         )
-    return items
+    return items[:5]
 
 
 class FallbackProductRepository:
@@ -302,13 +405,18 @@ class DjangoOrmProductRepository:
     def __init__(self) -> None:
         try:
             from app.modules.catalog import models as catalog_models
+            from app.modules.orders import models as order_models
         except Exception:
             self.product_model = None
             self.image_model = None
+            self.order_model = None
+            self.order_item_model = None
             return
 
         self.product_model = getattr(catalog_models, "Product", None)
         self.image_model = getattr(catalog_models, "ProductImage", None)
+        self.order_model = getattr(order_models, "Order", None)
+        self.order_item_model = getattr(order_models, "OrderItem", None)
 
     def _has_real_model(self) -> bool:
         return self.product_model is not None
@@ -347,6 +455,23 @@ class DjangoOrmProductRepository:
             return False
         return image_table in set(tables)
 
+    def _orders_ready(self) -> bool:
+        if self.order_model is None or self.order_item_model is None:
+            return False
+        try:
+            table_names = {
+                self.order_model._meta.db_table,
+                self.order_item_model._meta.db_table,
+            }
+        except Exception:
+            return False
+        try:
+            with connection.cursor() as cursor:
+                tables = connection.introspection.table_names(cursor)
+        except Exception:
+            return False
+        return table_names.issubset(set(tables))
+
     def list_products(self) -> list[dict[str, object]]:
         if not self.is_ready():
             return []
@@ -377,6 +502,76 @@ class DjangoOrmProductRepository:
             return None
         return self._serialize_product(product)
 
+    def _inventory_recovery_snapshot(self, product: object) -> dict[str, object]:
+        if not self._orders_ready():
+            return {"recovered_units": 0, "recovery_events_count": 0, "last_recovered_at": None}
+        variant_list = self._serialize_variants(product)
+        variant_skus = [str(variant.get("sku") or "").strip() for variant in variant_list if str(variant.get("sku") or "").strip()]
+        if not variant_skus:
+            return {"recovered_units": 0, "recovery_events_count": 0, "last_recovered_at": None}
+        try:
+            order_items = (
+                self.order_item_model._default_manager.filter(
+                    variant_sku__in=variant_skus,
+                    order__tenant_id=getattr(product, "tenant_id", None),
+                    order__inventory_recovered_at__isnull=False,
+                )
+                .select_related("order")
+                .order_by("-order__inventory_recovered_at", "-id")
+            )
+        except Exception:
+            return {"recovered_units": 0, "recovery_events_count": 0, "last_recovered_at": None}
+        recovered_units = 0
+        order_ids: set[int] = set()
+        last_recovered_at = None
+        for item in order_items:
+            recovered_units += int(getattr(item, "quantity", 0) or 0)
+            order_id = getattr(item, "order_id", None)
+            if order_id:
+                order_ids.add(int(order_id))
+            if last_recovered_at is None:
+                last_recovered_at = getattr(getattr(item, "order", None), "inventory_recovered_at", None)
+        return {
+            "recovered_units": recovered_units,
+            "recovery_events_count": len(order_ids),
+            "last_recovered_at": last_recovered_at,
+        }
+
+    def _inventory_finalization_snapshot(self, product: object) -> dict[str, object]:
+        if not self._orders_ready():
+            return {"finalized_units": 0, "finalization_events_count": 0, "last_finalized_at": None}
+        variant_list = self._serialize_variants(product)
+        variant_skus = [str(variant.get("sku") or "").strip() for variant in variant_list if str(variant.get("sku") or "").strip()]
+        if not variant_skus:
+            return {"finalized_units": 0, "finalization_events_count": 0, "last_finalized_at": None}
+        try:
+            order_items = (
+                self.order_item_model._default_manager.filter(
+                    variant_sku__in=variant_skus,
+                    order__tenant_id=getattr(product, "tenant_id", None),
+                    order__inventory_finalized_at__isnull=False,
+                )
+                .select_related("order")
+                .order_by("-order__inventory_finalized_at", "-id")
+            )
+        except Exception:
+            return {"finalized_units": 0, "finalization_events_count": 0, "last_finalized_at": None}
+        finalized_units = 0
+        order_ids: set[int] = set()
+        last_finalized_at = None
+        for item in order_items:
+            finalized_units += int(getattr(item, "quantity", 0) or 0)
+            order_id = getattr(item, "order_id", None)
+            if order_id:
+                order_ids.add(int(order_id))
+            if last_finalized_at is None:
+                last_finalized_at = getattr(getattr(item, "order", None), "inventory_finalized_at", None)
+        return {
+            "finalized_units": finalized_units,
+            "finalization_events_count": len(order_ids),
+            "last_finalized_at": last_finalized_at,
+        }
+
     def _serialize_product(self, product: object) -> dict[str, object]:
         status = self._status_value(product)
         status_label = dict((option["value"], option["label"]) for option in STATUS_OPTIONS).get(status, "Rascunho")
@@ -396,8 +591,11 @@ class DjangoOrmProductRepository:
         channel_label = "Storefront" if is_active else "Catálogo interno"
         sales_channel = "Storefront" if is_active else "Storefront não publicado"
         updated_at = _format_admin_timestamp(getattr(product, "updated_at", ""))
+        inventory_recovery = self._inventory_recovery_snapshot(product)
+        inventory_finalization = self._inventory_finalization_snapshot(product)
 
         return {
+            "tenant_id": getattr(product, "tenant_id", None),
             "slug": self._string_value(getattr(product, "slug", ""), default=slugify(self._string_value(getattr(product, "name", ""), default="produto"))),
             "name": self._string_value(getattr(product, "name", ""), default="Produto"),
             "sku": sku,
@@ -411,6 +609,10 @@ class DjangoOrmProductRepository:
             "compare_price": compare_price,
             "stock": stock,
             "reserved_stock": reserved_stock,
+            "recovered_stock": str(inventory_recovery["recovered_units"]),
+            "finalized_stock": str(inventory_finalization["finalized_units"]),
+            "recovery_events_count": inventory_recovery["recovery_events_count"],
+            "finalization_events_count": inventory_finalization["finalization_events_count"],
             "updated_at": updated_at,
             "summary_content": _build_summary_content(
                 name=self._string_value(getattr(product, "name", ""), default="Produto"),
@@ -429,6 +631,28 @@ class DjangoOrmProductRepository:
                 reserved_stock=reserved_stock,
                 track_inventory=track_inventory,
                 allow_backorder=allow_backorder,
+            ),
+            "inventory_visibility_content": _build_inventory_visibility_content(
+                stock=stock,
+                reserved_stock=reserved_stock,
+                track_inventory=track_inventory,
+            ),
+            "inventory_recovery_content": _build_inventory_recovery_content(
+                recovered_units=inventory_recovery["recovered_units"],
+                recovery_events_count=inventory_recovery["recovery_events_count"],
+                last_recovered_at=inventory_recovery["last_recovered_at"],
+            ),
+            "inventory_finalization_content": _build_inventory_finalization_content(
+                finalized_units=inventory_finalization["finalized_units"],
+                finalization_events_count=inventory_finalization["finalization_events_count"],
+                last_finalized_at=inventory_finalization["last_finalized_at"],
+            ),
+            "inventory_timeline_content": _build_inventory_timeline_content(
+                stock=stock,
+                reserved_stock=reserved_stock,
+                recovered_units=inventory_recovery["recovered_units"],
+                finalized_units=inventory_finalization["finalized_units"],
+                track_inventory=track_inventory,
             ),
             "details_content": _build_details_content(
                 description=description,
@@ -454,6 +678,11 @@ class DjangoOrmProductRepository:
                 track_inventory=track_inventory,
                 allow_backorder=allow_backorder,
                 stock=stock,
+                reserved_stock=reserved_stock,
+                recovered_units=inventory_recovery["recovered_units"],
+                last_recovered_at=inventory_recovery["last_recovered_at"],
+                finalized_units=inventory_finalization["finalized_units"],
+                last_finalized_at=inventory_finalization["last_finalized_at"],
             ),
         }
 
@@ -543,6 +772,27 @@ class AdminProductQueryService:
     def list_products(self) -> list[dict[str, object]]:
         real_products = self.orm_repository.list_products()
         return real_products or self.fallback_repository.list_products()
+
+    def get_inventory_visibility_note(self) -> str:
+        products = self.list_products()
+        if not products:
+            return "Visibilidade de estoque: catálogo ainda sem fonte persistida para destacar impacto de pedidos."
+        reserved_products = sum(1 for product in products if _safe_int(product.get("reserved_stock")) > 0)
+        recovered_products = sum(1 for product in products if _safe_int(product.get("recovered_stock")) > 0)
+        finalized_products = sum(1 for product in products if _safe_int(product.get("finalized_stock")) > 0)
+        constrained_products = sum(
+            1
+            for product in products
+            if max(_safe_int(product.get("stock")) - _safe_int(product.get("reserved_stock")), 0) <= 3
+            and _safe_int(product.get("reserved_stock")) > 0
+        )
+        return (
+            "Visibilidade de estoque: "
+            f"{reserved_products} produto(s) já mostram reserva operacional e "
+            f"{constrained_products} com saldo livre mais sensível. "
+            f"Recuperação operacional já visível em {recovered_products} produto(s). "
+            f"Consumo final já visível em {finalized_products} produto(s)."
+        )
 
     def get_product(self, product_slug: str) -> dict[str, object]:
         real_product = self.orm_repository.get_product(product_slug)

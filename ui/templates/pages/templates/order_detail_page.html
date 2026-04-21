@@ -4,9 +4,13 @@
 
 {% block content %}
 <section class="space-y-6">
-    {% with eyebrow=eyebrow|default:"Customer Area" title=page_title|default:"Pedido #1024" description=page_description|default:"Resumo do pedido, status atual e histórico de movimentações." meta=page_meta %}
+    {% with eyebrow=eyebrow|default:"Customer Area" title=page_title|default:"Pedido #1024" description=page_description|default:"Resumo do pedido, status atual e histórico de movimentações." meta=page_meta actions=page_actions %}
         {% include "shared/components/layout/page_header.html" %}
     {% endwith %}
+
+    {% if page_feedback %}
+        {% include "shared/components/feedback/alert.html" with variant=page_feedback.variant icon=page_feedback.icon title=page_feedback.title description=page_feedback.description %}
+    {% endif %}
 
     <div class="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_24rem]">
         <div class="space-y-6">

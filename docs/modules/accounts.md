@@ -141,3 +141,59 @@ Gerenciar autenticação e contas administrativas.
   - descrição da lista de pedidos
   - contexto do detalhe do pedido
 - quando não houver leitura persistida real de pedidos, a experiência continua com copy genérica e fallback seguro
+
+## Continuidade de pedidos na customer area
+- a lista e o detalhe de pedidos agora reforçam melhor a continuidade da jornada usando apenas dados já persistidos:
+  - status atual
+  - recência da última atualização
+  - quantidade de pedidos já salvos na conta
+- a query layer passou a derivar:
+  - hints curtos por linha para indicar continuidade do histórico
+  - um `próximo passo esperado` no detalhe do pedido
+  - descrições mais úteis sobre quando voltar para acompanhar ou comprar de novo
+- tudo continua sem redesign e sem depender de integrações externas de tracking ou recomendação
+
+## Continuidade na visão geral da conta
+- a `account overview` agora também consome os pedidos persistidos da customer area quando eles existirem
+- isso permite mostrar:
+  - descrição da página mais alinhada ao histórico real da conta
+  - resumo da conta com contexto do pedido mais recente
+  - tabela de pedidos recentes usando os mesmos sinais de continuidade já aplicados na área de pedidos
+- quando não houver leitura persistida real de pedidos, a visão geral continua usando fallback seguro
+
+## Continuidade entre perfil e endereços
+- `profile` e `addresses` agora também reforçam a continuidade da conta usando apenas dados já persistidos:
+  - quantidade de pedidos já salvos
+  - quantidade de endereços disponíveis
+  - existência de endereço principal
+- isso melhora:
+  - a descrição do perfil
+  - o contexto das preferências
+  - a descrição da página de endereços
+- a intenção é deixar mais claro como dados pessoais, preferências e endereços sustentam o acompanhamento do pedido atual e as próximas compras
+
+## Guidance de retorno ao catálogo
+- a área do cliente agora também usa guidance leve de retorno ao catálogo em:
+  - lista de pedidos
+  - detalhe do pedido
+- esse guidance continua totalmente honesto e baseado só no estado atual da conta:
+  - quantidade de pedidos salvos
+  - status atual do pedido
+  - estágio de envio
+- a intenção não é recomendar produtos, e sim deixar mais claro quando o catálogo continua sendo o próximo ponto natural para uma nova compra
+
+## Confirmação inicial do pedido
+- quando um pedido nasce a partir da etapa `review` do checkout, o detalhe do pedido na área do cliente agora também pode entrar em `confirmation mode`
+- isso não cria uma nova página; apenas reforça no mesmo template que:
+  - o pedido foi iniciado com sucesso
+  - esta ainda é uma confirmação inicial
+  - a evolução real de pagamento, preparo e envio passa a aparecer dali em diante
+- a view continua fina e apenas repassa o contexto; a copy de confirmação fica na query layer da customer area
+
+## Fechamento de pedido na customer area
+- a área do cliente agora também reflete melhor quando o pedido já chegou ao fim do ciclo operacional
+- quando o pedido estiver com entrega concluída, o detalhe passa a comunicar melhor que:
+  - a compra foi entregue com segurança
+  - o histórico continua salvo na conta
+  - o próximo passo natural já não é acompanhamento, e sim retorno opcional ao catálogo
+- isso continua sem redesign e usando apenas os estados persistidos já existentes do pedido

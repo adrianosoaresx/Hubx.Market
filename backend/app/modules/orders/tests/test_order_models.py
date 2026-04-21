@@ -45,6 +45,7 @@ class OrderReadinessModelTests(TestCase):
             title="Tênis Hubx Runner",
             subtitle="Preto · 42",
             meta="SKU RUNNER-001-BLK-42",
+            variant_sku="RUNNER-001-BLK-42",
             price_snapshot="299.90",
             quantity=1,
             sort_order=1,
@@ -58,6 +59,9 @@ class OrderReadinessModelTests(TestCase):
         self.assertEqual(stored.payment_status, "Confirmado")
         self.assertEqual(stored.items.count(), 1)
         self.assertEqual(stored.items.first().title, "Tênis Hubx Runner")
+        self.assertEqual(stored.items.first().variant_sku, "RUNNER-001-BLK-42")
+        self.assertIsNone(stored.inventory_reserved_at)
+        self.assertIsNone(stored.inventory_finalized_at)
 
     def test_order_auto_populates_customer_when_match_is_unambiguous(self):
         tenant = Tenant.objects.create(

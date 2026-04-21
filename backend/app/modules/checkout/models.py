@@ -61,6 +61,7 @@ class CheckoutSessionItem(models.Model):
     title = models.CharField(max_length=255)
     subtitle = models.CharField(max_length=255, blank=True)
     meta = models.CharField(max_length=255, blank=True)
+    variant_sku = models.CharField(max_length=120, blank=True)
     image_url = models.URLField(max_length=500, blank=True)
     image_alt = models.CharField(max_length=255, blank=True)
     price = models.DecimalField(max_digits=12, decimal_places=2, default=0)

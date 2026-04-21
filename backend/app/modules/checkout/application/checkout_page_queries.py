@@ -112,8 +112,15 @@ def _fallback_order_items() -> list[dict[str, object]]:
     ]
 
 
+VALID_CHECKOUT_STAGES = ("delivery", "payment", "review")
+
+
 class CheckoutReadRepository(Protocol):
-    def get_checkout_page_data(self) -> dict[str, object] | None:
+    def get_checkout_page_data(
+        self,
+        session_key: str | None = None,
+        requested_stage: str | None = None,
+    ) -> dict[str, object] | None:
         ...
 
 
@@ -147,9 +154,173 @@ def _build_checkout_description(*, item_count: int, shipping_label: str, payment
     return " ".join(parts)
 
 
+def _normalize_stage(requested_stage: str | None) -> str | None:
+    normalized = str(requested_stage or "").strip().lower()
+    return normalized if normalized in VALID_CHECKOUT_STAGES else None
+
+
+def _build_stage_context(
+    *,
+    requested_stage: str | None,
+    has_items: bool,
+    delivery_complete: bool,
+    payment_complete: bool,
+) -> dict[str, object]:
+    requested = _normalize_stage(requested_stage)
+    redirected = False
+
+    if not has_items:
+        current_stage = "delivery"
+    elif requested == "payment" and not delivery_complete:
+        current_stage = "delivery"
+        redirected = True
+    elif requested == "review" and not payment_complete:
+        current_stage = "payment" if delivery_complete else "delivery"
+        redirected = True
+    elif requested:
+        current_stage = requested
+    elif not delivery_complete:
+        current_stage = "delivery"
+    elif not payment_complete:
+        current_stage = "payment"
+    else:
+        current_stage = "review"
+
+    stage_labels = {
+        "delivery": "Entrega",
+        "payment": "Pagamento",
+        "review": "Revisão",
+    }
+    submit_labels = {
+        "delivery": "Salvar entrega e continuar",
+        "payment": "Salvar pagamento e revisar",
+        "review": "Gerar pedido a partir da revisão",
+    }
+    stage_titles = {
+        "delivery": "Etapa atual: entrega",
+        "payment": "Etapa atual: pagamento",
+        "review": "Etapa atual: revisão",
+    }
+    stage_descriptions = {
+        "delivery": "Confirme contato, endereço e frete antes de avançar para o pagamento.",
+        "payment": "Agora confirme a forma de pagamento e os termos para revisar o pedido com segurança.",
+        "review": "Tudo principal já foi salvo. Revise o pedido e gere uma confirmação persistida sem depender de pagamento real neste momento.",
+    }
+    shipping_descriptions = {
+        "delivery": "Preencha as informações de envio do pedido para liberar a próxima etapa.",
+        "payment": "As informações de entrega já podem ser revisadas e ajustadas antes da confirmação final.",
+        "review": "Entrega salva na sessão atual. Ajuste algo aqui apenas se precisar revisar os dados de envio.",
+    }
+    payment_descriptions = {
+        "delivery": "Esta etapa fica mais útil depois que entrega e frete estiverem definidos na sessão.",
+        "payment": "Selecione a forma de pagamento e confirme os dados finais desta sessão.",
+        "review": "Pagamento salvo na sessão atual. Revise a forma escolhida e mantenha os dados consistentes antes do próximo passo.",
+    }
+    review_descriptions = {
+        "delivery": "Os itens ficam aqui para orientar esta etapa enquanto você prepara entrega e frete.",
+        "payment": "Com a entrega definida, use os itens e totais para revisar a compra enquanto escolhe o pagamento.",
+        "review": "Revise itens, totais e parcelamento salvos antes de seguir para uma evolução futura do fluxo.",
+    }
+
+    if current_stage == "delivery":
+        next_stage = "payment" if delivery_complete else "delivery"
+    elif current_stage == "payment":
+        next_stage = "review" if payment_complete else "payment"
+    else:
+        next_stage = "review"
+
+    stage_feedback = None
+    if redirected:
+        stage_feedback = {
+            "variant": "info",
+            "icon": "↩️",
+            "title": "Etapa ajustada automaticamente",
+            "description": "Abrimos a etapa que já pode ser trabalhada com segurança na sessão atual.",
+        }
+
+    return {
+        "current_stage": current_stage,
+        "current_stage_label": stage_labels[current_stage],
+        "next_stage": next_stage,
+        "submit_label": submit_labels[current_stage],
+        "stage_feedback": stage_feedback,
+        "stage_title": stage_titles[current_stage],
+        "stage_description": stage_descriptions[current_stage],
+        "shipping_section_description": shipping_descriptions[current_stage],
+        "payment_section_description": payment_descriptions[current_stage],
+        "review_section_description": review_descriptions[current_stage],
+    }
+
+
+def _build_completion_hints(
+    *,
+    has_items: bool,
+    has_shipping_address: bool,
+    has_shipping_method: bool,
+    has_payment_method: bool,
+    accepted_terms: bool,
+    current_stage: str,
+) -> dict[str, object]:
+    delivery_ready = has_items and has_shipping_address and has_shipping_method
+    payment_ready = delivery_ready and has_payment_method and accepted_terms
+
+    delivery_hint = {
+        "variant": "success" if delivery_ready else "warning",
+        "icon": "✅" if delivery_ready else "📝",
+        "title": "Entrega salva" if delivery_ready else "Entrega ainda incompleta",
+        "description": (
+            "Contato, endereço e frete já estão salvos nesta sessão."
+            if delivery_ready
+            else "Preencha contato, endereço e selecione um frete para liberar a próxima etapa."
+        ),
+    }
+    payment_hint = {
+        "variant": "success" if payment_ready else ("info" if delivery_ready else "warning"),
+        "icon": "✅" if payment_ready else ("💳" if delivery_ready else "⏳"),
+        "title": "Pagamento pronto para revisão" if payment_ready else ("Pagamento em andamento" if delivery_ready else "Pagamento aguardando entrega"),
+        "description": (
+            "Forma de pagamento, parcelamento e termos já ficaram consistentes para revisão."
+            if payment_ready
+            else (
+                "Agora você já pode confirmar pagamento, parcelas e termos nesta sessão."
+                if delivery_ready
+                else "Assim que a entrega estiver completa, o pagamento fica pronto para ser confirmado."
+            )
+        ),
+    }
+    review_hint = {
+        "variant": "success" if payment_ready else "info",
+        "icon": "🧾" if payment_ready else "👀",
+        "title": "Revisão pronta" if payment_ready else "Revisão ainda parcial",
+        "description": (
+            "Itens, totais e parcelamento já podem ser revisados com o estado atual salvo."
+            if payment_ready
+            else "Os totais já aparecem aqui, mas a revisão fica mais confiável depois de concluir entrega e pagamento."
+        ),
+    }
+
+    current_hint = {
+        "delivery": delivery_hint,
+        "payment": payment_hint,
+        "review": review_hint,
+    }[current_stage]
+
+    return {
+        "delivery_completion_hint": delivery_hint,
+        "payment_completion_hint": payment_hint,
+        "review_completion_hint": review_hint,
+        "current_stage_completion_hint": current_hint,
+        "completion_hints": [delivery_hint, payment_hint, review_hint],
+    }
+
+
 class FallbackCheckoutRepository:
-    def get_checkout_page_data(self) -> dict[str, object]:
-        return {
+    def get_checkout_page_data(
+        self,
+        session_key: str | None = None,
+        requested_stage: str | None = None,
+    ) -> dict[str, object]:
+        payload = {
             "page_title": "Finalizar compra",
             "page_description": "Revise seus itens, informe entrega e pagamento antes de concluir o pedido.",
             "checkout_steps": _fallback_checkout_steps(),
@@ -180,6 +351,27 @@ class FallbackCheckoutRepository:
             ],
             "accept_terms": True,
         }
+        payload.update(
+            _build_stage_context(
+                requested_stage=requested_stage,
+                has_items=bool(payload["order_items"]),
+                delivery_complete=True,
+                payment_complete=True,
+            )
+        )
+        payload.update(
+            _build_completion_hints(
+                has_items=bool(payload["order_items"]),
+                has_shipping_address=True,
+                has_shipping_method=True,
+                has_payment_method=True,
+                accepted_terms=True,
+                current_stage=str(payload["current_stage"]),
+            )
+        )
+        payload["page_description"] = f'{payload["page_description"]} {payload["stage_description"]}'
+        payload["summary_description"] = payload["review_section_description"]
+        return payload
 
 
 class DjangoOrmCheckoutRepository:
@@ -212,26 +404,28 @@ class DjangoOrmCheckoutRepository:
 
         return table_names.issubset(set(tables))
 
-    def get_checkout_page_data(self) -> dict[str, object] | None:
+    def get_checkout_page_data(
+        self,
+        session_key: str | None = None,
+        requested_stage: str | None = None,
+    ) -> dict[str, object] | None:
         if not self.is_ready():
             return None
 
         try:
-            session = (
-                self.session_model._default_manager.filter(status="open")
-                .prefetch_related("items")
-                .order_by("-updated_at", "-id")
-                .first()
-            )
+            queryset = self.session_model._default_manager.filter(status="open").prefetch_related("items")
+            if session_key:
+                queryset = queryset.filter(session_key=session_key)
+            session = queryset.order_by("-updated_at", "-id").first()
         except Exception:
             return None
 
         if not session:
             return None
 
-        return self._serialize_session(session)
+        return self._serialize_session(session, requested_stage=requested_stage)
 
-    def _serialize_session(self, session: object) -> dict[str, object]:
+    def _serialize_session(self, session: object, *, requested_stage: str | None = None) -> dict[str, object]:
         shipping_selected = str(getattr(session, "shipping_method_selected", "") or "")
         payment_selected = str(getattr(session, "payment_method_selected", "") or "")
 
@@ -257,14 +451,31 @@ class DjangoOrmCheckoutRepository:
         session_status = str(getattr(session, "status", "open") or "open")
         accepted_terms = bool(getattr(session, "accept_terms", False))
         serialized_items = [self._serialize_item(item) for item in items]
+        delivery_complete = bool(serialized_items) and has_shipping_address and bool(shipping_selected)
+        payment_complete = delivery_complete and bool(payment_selected) and accepted_terms
+        stage_context = _build_stage_context(
+            requested_stage=requested_stage,
+            has_items=bool(serialized_items),
+            delivery_complete=delivery_complete,
+            payment_complete=payment_complete,
+        )
+        completion_hints = _build_completion_hints(
+            has_items=bool(serialized_items),
+            has_shipping_address=has_shipping_address,
+            has_shipping_method=bool(shipping_selected),
+            has_payment_method=bool(payment_selected),
+            accepted_terms=accepted_terms,
+            current_stage=str(stage_context["current_stage"]),
+        )
+        page_description = _build_checkout_description(
+            item_count=len(serialized_items),
+            shipping_label=str(selected_shipping.get("label", "") or ""),
+            payment_label=str(selected_payment.get("label", "") or ""),
+        )
 
-        return {
+        payload = {
             "page_title": "Finalizar compra",
-            "page_description": _build_checkout_description(
-                item_count=len(serialized_items),
-                shipping_label=str(selected_shipping.get("label", "") or ""),
-                payment_label=str(selected_payment.get("label", "") or ""),
-            ),
+            "page_description": f"{page_description} {stage_context['stage_description']}",
             "checkout_steps": _build_checkout_steps_from_session(
                 has_items=bool(serialized_items),
                 has_shipping_address=has_shipping_address,
@@ -295,7 +506,11 @@ class DjangoOrmCheckoutRepository:
             "installments_selected": str(getattr(session, "installments_selected", "") or ""),
             "installments_options": list(getattr(session, "installments_options", []) or []),
             "accept_terms": accepted_terms,
+            "summary_description": stage_context["review_section_description"],
         }
+        payload.update(stage_context)
+        payload.update(completion_hints)
+        return payload
 
     @staticmethod
     def _serialize_item(item: object) -> dict[str, object]:
@@ -324,9 +539,19 @@ class CheckoutPageQueryService:
         except Exception:
             return False
 
-    def get_checkout_page_data(self) -> dict[str, object]:
-        real_payload = self.orm_repository.get_checkout_page_data()
-        return real_payload or self.fallback_repository.get_checkout_page_data()
+    def get_checkout_page_data(
+        self,
+        session_key: str | None = None,
+        requested_stage: str | None = None,
+    ) -> dict[str, object]:
+        real_payload = self.orm_repository.get_checkout_page_data(
+            session_key=session_key,
+            requested_stage=requested_stage,
+        )
+        return real_payload or self.fallback_repository.get_checkout_page_data(
+            session_key=session_key,
+            requested_stage=requested_stage,
+        )
 
 
 checkout_page_queries = CheckoutPageQueryService(

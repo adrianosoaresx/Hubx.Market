@@ -63,12 +63,17 @@ Snapshot transitório do checkout por tenant, com contato, entrega, métodos e t
 
 ### CheckoutSessionItem
 Snapshot dos itens exibidos durante o checkout.
+- também pode preservar `variant_sku` para manter o vínculo explícito com a unidade vendável escolhida
 
 ### Order
 Pedido materializado no checkout, com vínculo opcional para `Customer` e snapshots preservados de customer.
+- também pode guardar `inventory_reserved_at` para registrar quando a baixa operacional de estoque já foi aplicada
+- também pode guardar `inventory_recovered_at` para registrar quando a devolução operacional de estoque já foi aplicada
+- também pode guardar `inventory_finalized_at` para registrar quando a reserva operacional já virou consumo final após entrega
 
 ### OrderItem
 Snapshot do item comprado.
+- também pode preservar `variant_sku` como snapshot explícito da variante comprada
 
 ### OrderStatusHistory
 Histórico leve de transições e eventos operacionais relevantes do pedido, usado para enriquecer timelines administrativas, com atribuição opcional de origem/contexto.

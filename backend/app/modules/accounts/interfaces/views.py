@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from django.core.paginator import Paginator
 from django.http import HttpResponseRedirect
+from django.middleware.csrf import get_token
 from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
@@ -11,6 +12,9 @@ from app.modules.accounts.application.account_address_commands import account_ad
 from app.modules.accounts.application.account_page_queries import account_page_queries
 from app.modules.accounts.application.account_customer_area_queries import (
     account_customer_area_queries,
+)
+from app.modules.orders.application.customer_order_payment_commands import (
+    customer_order_payment_commands,
 )
 from .forms import AccountAddressForm
 
@@ -197,6 +201,84 @@ def _build_address_feedback_context(request) -> dict[str, object]:
     return {"address_feedback": mapping[result]}
 
 
+def _build_order_detail_feedback_context(request) -> dict[str, object]:
+    result = request.GET.get("result", "").strip()
+    mapping = {
+        "checkout-completed": {
+            "variant": "success",
+            "icon": "✅",
+            "title": "Pedido gerado com sucesso",
+            "description": "Seu pedido já foi persistido e agora pode ser acompanhado por aqui enquanto o fluxo de pagamento evolui.",
+        },
+        "payment-confirmed": {
+            "variant": "success",
+            "icon": "💳",
+            "title": "Pagamento confirmado",
+            "description": "A confirmação interna do pagamento já liberou a preparação do pedido e as próximas atualizações de envio.",
+        },
+        "payment-already-confirmed": {
+            "variant": "info",
+            "icon": "ℹ️",
+            "title": "Pagamento já confirmado",
+            "description": "Este pedido já estava em um estado confirmado, então nenhuma nova alteração foi necessária.",
+        },
+        "payment-confirmation-blocked": {
+            "variant": "warning",
+            "icon": "🧩",
+            "title": "Confirmação não disponível",
+            "description": "Este pedido já avançou além da etapa inicial de pagamento ou não pode mais receber essa confirmação.",
+        },
+        "payment-confirmation-unavailable": {
+            "variant": "warning",
+            "icon": "ℹ️",
+            "title": "Não foi possível confirmar o pagamento",
+            "description": "Não encontramos um pedido elegível para esta conta agora. Recarregue a página ou tente novamente mais tarde.",
+        },
+        "payment-confirmation-inventory-link-missing": {
+            "variant": "warning",
+            "icon": "🧩",
+            "title": "Vínculo de estoque incompleto",
+            "description": "Este pedido não possui ligação segura com a variante vendável necessária para confirmar o pagamento com impacto de estoque.",
+        },
+        "payment-confirmation-inventory-unavailable": {
+            "variant": "warning",
+            "icon": "📦",
+            "title": "Variante indisponível",
+            "description": "A variante ligada a este pedido não está mais disponível para confirmação segura de pagamento.",
+        },
+        "payment-confirmation-stock-conflict": {
+            "variant": "warning",
+            "icon": "⚠️",
+            "title": "Estoque insuficiente para confirmar",
+            "description": "O saldo livre atual da variante não é suficiente para aplicar a reserva operacional deste pedido.",
+        },
+    }
+    if result not in mapping:
+        return {}
+    return {"page_feedback": mapping[result]}
+
+
+def _build_order_detail_actions(request, context: dict[str, object], *, order_number: str) -> dict[str, object]:
+    if not context.get("payment_progression_available"):
+        return {}
+    csrf_token = get_token(request)
+    action_html = format_html(
+        '<div class="flex flex-col items-stretch gap-2 md:items-end">'
+        '  <form method="post" action="{}" class="inline-flex">'
+        '    <input type="hidden" name="csrfmiddlewaretoken" value="{}">'
+        '    <input type="hidden" name="action_type" value="confirm_payment">'
+        '    <button type="submit" class="ds-btn-primary">{}</button>'
+        "  </form>"
+        '  <p class="text-right text-xs text-[var(--color-text-secondary)]">{}</p>'
+        "</div>",
+        reverse("accounts:account-order-detail", kwargs={"order_number": order_number}),
+        csrf_token,
+        str(context.get("payment_progression_label") or "Confirmar pagamento"),
+        str(context.get("payment_progression_helper") or ""),
+    )
+    return {"page_actions": mark_safe(action_html)}
+
+
 class LoginView(TemplateView):
     template_name = "pages/templates/login_page.html"
 
@@ -331,9 +413,33 @@ class AccountOrdersView(TemplateView):
 class AccountOrderDetailView(TemplateView):
     template_name = "pages/templates/order_detail_page.html"
 
+    def post(self, request, *args, **kwargs):
+        if request.POST.get("action_type", "").strip() != "confirm_payment":
+            return HttpResponseRedirect(
+                reverse("accounts:account-order-detail", kwargs={"order_number": kwargs["order_number"]})
+            )
+        profile = account_customer_area_queries.get_active_profile_context()
+        result = customer_order_payment_commands.confirm_internal_payment(
+            tenant_id=profile.get("tenant_id"),
+            customer_id=profile.get("customer_id"),
+            email=str(profile.get("email") or ""),
+            order_number=kwargs["order_number"],
+        )
+        return HttpResponseRedirect(
+            f'{reverse("accounts:account-order-detail", kwargs={"order_number": kwargs["order_number"]})}?result={result}'
+        )
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context.update(account_customer_area_queries.get_order_detail_page_data(kwargs["order_number"]))
+        confirmation_mode = self.request.GET.get("result", "").strip() == "checkout-completed"
+        context.update(
+            account_customer_area_queries.get_order_detail_page_data(
+                kwargs["order_number"],
+                confirmation_mode=confirmation_mode,
+            )
+        )
+        context.update(_build_order_detail_actions(self.request, context, order_number=kwargs["order_number"]))
+        context.update(_build_order_detail_feedback_context(self.request))
         return context
 
 

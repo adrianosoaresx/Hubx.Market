@@ -193,6 +193,39 @@ Gerenciar compradores, perfis, contato, endereços e visão operacional da conta
   - `repeat`
   - `new`
 - filtros rápidos são aplicados antes da ordenação e filtros desconhecidos são ignorados com fallback seguro
+- quando um filtro rápido está ativo, a list view explicita:
+  - nome do filtro ativo
+  - quantidade de clientes naquela visão
+  - orientação para limpar o filtro e voltar à lista completa
+- quando a visão filtrada retorna `0` resultados, a list view também usa mensagens específicas por segmento:
+  - alta prioridade
+  - em risco
+  - follow-up
+  - recorrentes
+  - novos
+- buscas sem resultado adicionam contexto curto com o termo pesquisado, mantendo a orientação de limpar o filtro
+- a listagem também oferece ações rápidas mínimas por linha para:
+  - marcar `follow-up`
+  - marcar `prioridade manual`
+- essas ações reutilizam o mesmo endpoint de detalhe e preservam o retorno para a visão atual da lista via querystring
+- follow-up e prioridade manual também são reversíveis:
+  - `clear_followup`
+  - `clear_priority`
+- detail e list continuam compartilhando o mesmo endpoint de atualização, com feedback seguro para marcar, remover ou ignorar estados já aplicados
+- a list view agora suporta `bulk actions lite` sobre a visão segmentada atual:
+  - marcar `follow-up` na visão
+  - marcar `prioridade manual` na visão
+- a wave seguinte fecha a reversibilidade em lote para a mesma visão:
+  - remover `follow-up` na visão
+  - remover `prioridade manual` na visão
+- a simetria operacional também passa a cobrir `reengajamento`:
+  - marcar / remover no detail
+  - marcar / remover na list
+  - marcar / remover em lote na visão segmentada
+- essas ações em lote:
+  - só aparecem quando existe busca ou filtro ativo
+  - operam sobre o conjunto filtrado atual antes da paginação
+  - retornam para a mesma visão com feedback simples
 
 ## Estado atual da readiness para customer area
 - a próxima wave de persisted read da área logada já pode reaproveitar:

@@ -25,6 +25,60 @@ class AdminCustomerViewTests(TestCase):
         self.assertContains(response, "Bruno Lima")
         self.assertNotContains(response, "Ana Souza")
 
+    def test_customers_list_view_surfaces_active_quick_filter_clarity(self):
+        response = self.client.get(reverse("customers:admin-customers-list"), {"quick_filter": "high_priority"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Visualizando clientes com filtro rápido ativo: Alta prioridade.")
+        self.assertContains(
+            response,
+            "Filtro ativo: Alta prioridade",
+        )
+        self.assertContains(
+            response,
+            "Resultados filtrados por alta prioridade e ordenados por prioridade operacional.",
+        )
+
+    def test_customers_list_view_without_quick_filter_keeps_default_clarity(self):
+        response = self.client.get(reverse("customers:admin-customers-list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Acompanhe clientes, status da conta e atividade recente.")
+        self.assertContains(response, "Lista ordenada por prioridade operacional e pronta para filtros rápidos de clientes.")
+        self.assertNotContains(response, "Filtro ativo:")
+
+    def test_customers_list_view_surfaces_quick_actions(self):
+        response = self.client.get(reverse("customers:admin-customers-list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Marcar follow-up")
+        self.assertContains(response, "Marcar reengajamento")
+        self.assertContains(response, "Marcar prioridade")
+        self.assertNotContains(response, "item(ns) selecionado(s)")
+
+    def test_customers_list_view_surfaces_bulk_actions_for_segmented_view(self):
+        response = self.client.get(reverse("customers:admin-customers-list"), {"q": "Ana"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "item(ns) selecionado(s)")
+        self.assertContains(response, "Marcar follow-up na visão")
+        self.assertContains(response, "Remover follow-up na visão")
+        self.assertContains(response, "Marcar reengajamento na visão")
+        self.assertContains(response, "Remover reengajamento na visão")
+        self.assertContains(response, "Marcar prioridade na visão")
+        self.assertContains(response, "Remover prioridade na visão")
+
+    def test_customers_list_view_shows_segment_empty_state_for_active_filter(self):
+        response = self.client.get(
+            reverse("customers:admin-customers-list"),
+            {"quick_filter": "followup", "q": "nao-existe"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["empty_title"], "Nenhum follow-up pendente agora")
+        self.assertIn("Busca atual: “nao-existe”.", response.context["empty_description"])
+        self.assertContains(response, "Filtro ativo: Com follow-up · 0 cliente(s) nesta visão.")
+
     def test_customer_detail_view_renders_design_system_template(self):
         response = self.client.get(reverse("customers:admin-customers-detail", kwargs={"customer_slug": "ana-souza"}))
 
@@ -256,6 +310,27 @@ class AdminCustomerPersistedReadTests(TestCase):
         self.assertContains(plain_detail, "reengajamento")
         self.assertTrue(Customer.objects.get(pk=1).marked_for_reengagement)
 
+    def test_admin_customer_clear_reengagement_updates_flag_and_feedback(self):
+        Customer.objects.filter(pk=1).update(marked_for_reengagement=True)
+
+        response = self.client.post(
+            reverse("customers:admin-customer-update", kwargs={"customer_slug": "ana-persistida"}),
+            {"action_type": "clear_reengagement"},
+        )
+
+        self.assertRedirects(
+            response,
+            "/ops/customers/ana-persistida/?result=customer-reengagement-cleared",
+            fetch_redirect_response=False,
+        )
+
+        refreshed = self.client.get(
+            reverse("customers:admin-customers-detail", kwargs={"customer_slug": "ana-persistida"})
+            + "?result=customer-reengagement-cleared"
+        )
+        self.assertContains(refreshed, "Reengajamento removido do cliente.")
+        self.assertFalse(Customer.objects.get(pk=1).marked_for_reengagement)
+
     def test_admin_customer_mark_priority_updates_flag_and_feedback(self):
         response = self.client.post(
             reverse("customers:admin-customer-update", kwargs={"customer_slug": "ana-persistida"}),
@@ -277,6 +352,303 @@ class AdminCustomerPersistedReadTests(TestCase):
         self.assertContains(plain_detail, "prioridade manual")
         self.assertTrue(Customer.objects.get(pk=1).marked_as_priority)
 
+    def test_admin_customer_clear_followup_updates_flag_and_feedback(self):
+        Customer.objects.filter(pk=1).update(marked_for_followup=True)
+
+        response = self.client.post(
+            reverse("customers:admin-customer-update", kwargs={"customer_slug": "ana-persistida"}),
+            {"action_type": "clear_followup"},
+        )
+
+        self.assertRedirects(
+            response,
+            "/ops/customers/ana-persistida/?result=customer-followup-cleared",
+            fetch_redirect_response=False,
+        )
+
+        refreshed = self.client.get(
+            reverse("customers:admin-customers-detail", kwargs={"customer_slug": "ana-persistida"})
+            + "?result=customer-followup-cleared"
+        )
+        self.assertContains(refreshed, "Follow-up removido do cliente.")
+        self.assertFalse(Customer.objects.get(pk=1).marked_for_followup)
+
+    def test_admin_customer_clear_priority_updates_flag_and_feedback(self):
+        Customer.objects.filter(pk=1).update(marked_as_priority=True)
+
+        response = self.client.post(
+            reverse("customers:admin-customer-update", kwargs={"customer_slug": "ana-persistida"}),
+            {"action_type": "clear_priority"},
+        )
+
+        self.assertRedirects(
+            response,
+            "/ops/customers/ana-persistida/?result=customer-priority-cleared",
+            fetch_redirect_response=False,
+        )
+
+        refreshed = self.client.get(
+            reverse("customers:admin-customers-detail", kwargs={"customer_slug": "ana-persistida"})
+            + "?result=customer-priority-cleared"
+        )
+        self.assertContains(refreshed, "Prioridade manual removida do cliente.")
+        self.assertFalse(Customer.objects.get(pk=1).marked_as_priority)
+
+    def test_admin_customer_list_quick_action_preserves_list_return_and_feedback(self):
+        response = self.client.post(
+            reverse("customers:admin-customer-update", kwargs={"customer_slug": "ana-persistida"}),
+            {
+                "action_type": "mark_for_followup",
+                "next": "/ops/customers/?quick_filter=followup&page=1",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            "/ops/customers/?quick_filter=followup&page=1&result=customer-followup-marked",
+            fetch_redirect_response=False,
+        )
+
+        refreshed = self.client.get("/ops/customers/?quick_filter=followup&page=1&result=customer-followup-marked")
+        self.assertContains(refreshed, "Cliente marcado para follow-up.")
+        self.assertContains(refreshed, "Filtro rápido ativo: Com follow-up.")
+        self.assertTrue(Customer.objects.get(pk=1).marked_for_followup)
+
+    def test_admin_customer_list_quick_action_can_clear_priority_and_preserve_list_return(self):
+        Customer.objects.filter(pk=1).update(marked_as_priority=True)
+
+        response = self.client.post(
+            reverse("customers:admin-customer-update", kwargs={"customer_slug": "ana-persistida"}),
+            {
+                "action_type": "clear_priority",
+                "next": "/ops/customers/?page=1",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            "/ops/customers/?page=1&result=customer-priority-cleared",
+            fetch_redirect_response=False,
+        )
+
+        refreshed = self.client.get("/ops/customers/?page=1&result=customer-priority-cleared")
+        self.assertContains(refreshed, "Prioridade manual removida do cliente.")
+        self.assertFalse(Customer.objects.get(pk=1).marked_as_priority)
+
+    def test_admin_customer_bulk_followup_marks_segmented_view(self):
+        tenant = Tenant.objects.create(
+            name="Hubx Customer Bulk Followup",
+            slug="hubx-customer-bulk-followup",
+            subdomain="hubx-customer-bulk-followup",
+        )
+        Customer.objects.create(
+            tenant=tenant,
+            slug="bulk-new-one",
+            reference="#BF-1",
+            full_name="Bulk New One",
+            email="bulk.one@hubx.market",
+            phone="(11) 94444-0001",
+            status="active",
+            account_type="Storefront",
+        )
+        Customer.objects.create(
+            tenant=tenant,
+            slug="bulk-new-two",
+            reference="#BF-2",
+            full_name="Bulk New Two",
+            email="bulk.two@hubx.market",
+            phone="(11) 94444-0002",
+            status="active",
+            account_type="Storefront",
+        )
+        repeat_customer = Customer.objects.create(
+            tenant=tenant,
+            slug="bulk-repeat",
+            reference="#BF-3",
+            full_name="Bulk Repeat",
+            email="bulk.repeat@hubx.market",
+            phone="(11) 94444-0003",
+            status="active",
+            account_type="Storefront",
+        )
+        repeat_order = Order.objects.create(
+            tenant=tenant,
+            customer=repeat_customer,
+            number="7300",
+            status="paid",
+            customer_name=repeat_customer.full_name,
+            customer_email=repeat_customer.email,
+            customer_phone=repeat_customer.phone,
+            payment_status="Confirmado",
+            shipping_status="Entregue",
+            fulfillment_status_label="Concluído",
+            fulfillment_status_variant="success",
+            subtotal="120.00",
+            shipping_total="10.00",
+            discount_total="0.00",
+            total="130.00",
+        )
+        Order.objects.filter(pk=repeat_order.pk).update(
+            created_at=timezone.now() - timedelta(days=2),
+            updated_at=timezone.now() - timedelta(days=2),
+        )
+
+        response = self.client.post(
+            reverse("customers:admin-customer-update", kwargs={"customer_slug": "_bulk"}),
+            {
+                "action_type": "bulk_mark_for_followup",
+                "next": "/ops/customers/?quick_filter=new&page=1",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            "/ops/customers/?quick_filter=new&page=1&result=customer-bulk-followup-marked",
+            fetch_redirect_response=False,
+        )
+
+        refreshed = self.client.get("/ops/customers/?quick_filter=new&page=1&result=customer-bulk-followup-marked")
+        self.assertContains(refreshed, "Ação em lote concluída: clientes marcados para follow-up.")
+        self.assertTrue(Customer.objects.get(slug="bulk-new-one").marked_for_followup)
+        self.assertTrue(Customer.objects.get(slug="bulk-new-two").marked_for_followup)
+        self.assertFalse(Customer.objects.get(slug="bulk-repeat").marked_for_followup)
+
+    def test_admin_customer_bulk_clear_followup_clears_segmented_view(self):
+        tenant = Tenant.objects.create(
+            name="Hubx Customer Bulk Clear Followup",
+            slug="hubx-customer-bulk-clear-followup",
+            subdomain="hubx-customer-bulk-clear-followup",
+        )
+        Customer.objects.create(
+            tenant=tenant,
+            slug="bulk-clear-one",
+            reference="#BCF-1",
+            full_name="Bulk Clear One",
+            email="bulk.clear.one@hubx.market",
+            phone="(11) 95555-0001",
+            status="active",
+            account_type="Storefront",
+            marked_for_followup=True,
+        )
+        Customer.objects.create(
+            tenant=tenant,
+            slug="bulk-clear-two",
+            reference="#BCF-2",
+            full_name="Bulk Clear Two",
+            email="bulk.clear.two@hubx.market",
+            phone="(11) 95555-0002",
+            status="active",
+            account_type="Storefront",
+            marked_for_followup=True,
+        )
+
+        response = self.client.post(
+            reverse("customers:admin-customer-update", kwargs={"customer_slug": "_bulk"}),
+            {
+                "action_type": "bulk_clear_followup",
+                "next": "/ops/customers/?quick_filter=followup&page=1",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            "/ops/customers/?quick_filter=followup&page=1&result=customer-bulk-followup-cleared",
+            fetch_redirect_response=False,
+        )
+
+        refreshed = self.client.get("/ops/customers/?quick_filter=followup&page=1&result=customer-bulk-followup-cleared")
+        self.assertContains(refreshed, "Ação em lote concluída: follow-up removido dos clientes desta visão.")
+        self.assertFalse(Customer.objects.get(slug="bulk-clear-one").marked_for_followup)
+        self.assertFalse(Customer.objects.get(slug="bulk-clear-two").marked_for_followup)
+
+    def test_admin_customer_bulk_clear_priority_clears_segmented_view(self):
+        Customer.objects.filter(pk=1).update(marked_as_priority=True)
+
+        response = self.client.post(
+            reverse("customers:admin-customer-update", kwargs={"customer_slug": "_bulk"}),
+            {
+                "action_type": "bulk_clear_priority",
+                "next": "/ops/customers/?q=Ana&page=1",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            "/ops/customers/?q=Ana&page=1&result=customer-bulk-priority-cleared",
+            fetch_redirect_response=False,
+        )
+
+        refreshed = self.client.get("/ops/customers/?q=Ana&page=1&result=customer-bulk-priority-cleared")
+        self.assertContains(refreshed, "Ação em lote concluída: prioridade manual removida dos clientes desta visão.")
+        self.assertFalse(Customer.objects.get(pk=1).marked_as_priority)
+
+    def test_admin_customer_bulk_reengagement_marks_segmented_view(self):
+        tenant = Tenant.objects.create(
+            name="Hubx Customer Bulk Reengagement",
+            slug="hubx-customer-bulk-reengagement",
+            subdomain="hubx-customer-bulk-reengagement",
+        )
+        Customer.objects.create(
+            tenant=tenant,
+            slug="bulk-reengage-one",
+            reference="#BR-1",
+            full_name="Bulk Reengage One",
+            email="bulk.reengage.one@hubx.market",
+            phone="(11) 96666-0001",
+            status="active",
+            account_type="Storefront",
+        )
+        Customer.objects.create(
+            tenant=tenant,
+            slug="bulk-reengage-two",
+            reference="#BR-2",
+            full_name="Bulk Reengage Two",
+            email="bulk.reengage.two@hubx.market",
+            phone="(11) 96666-0002",
+            status="active",
+            account_type="Storefront",
+        )
+
+        response = self.client.post(
+            reverse("customers:admin-customer-update", kwargs={"customer_slug": "_bulk"}),
+            {
+                "action_type": "bulk_mark_reengagement",
+                "next": "/ops/customers/?q=Bulk Reengage&page=1",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            "/ops/customers/?q=Bulk+Reengage&page=1&result=customer-bulk-reengagement-marked",
+            fetch_redirect_response=False,
+        )
+
+        refreshed = self.client.get("/ops/customers/?q=Bulk+Reengage&page=1&result=customer-bulk-reengagement-marked")
+        self.assertContains(refreshed, "Ação em lote concluída: clientes marcados para reengajamento.")
+        self.assertTrue(Customer.objects.get(slug="bulk-reengage-one").marked_for_reengagement)
+        self.assertTrue(Customer.objects.get(slug="bulk-reengage-two").marked_for_reengagement)
+
+    def test_admin_customer_bulk_clear_reengagement_clears_segmented_view(self):
+        Customer.objects.filter(pk=1).update(marked_for_reengagement=True)
+
+        response = self.client.post(
+            reverse("customers:admin-customer-update", kwargs={"customer_slug": "_bulk"}),
+            {
+                "action_type": "bulk_clear_reengagement",
+                "next": "/ops/customers/?q=Ana&page=1",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            "/ops/customers/?q=Ana&page=1&result=customer-bulk-reengagement-cleared",
+            fetch_redirect_response=False,
+        )
+
+        refreshed = self.client.get("/ops/customers/?q=Ana&page=1&result=customer-bulk-reengagement-cleared")
+        self.assertContains(refreshed, "Ação em lote concluída: reengajamento removido dos clientes desta visão.")
+        self.assertFalse(Customer.objects.get(pk=1).marked_for_reengagement)
+
     def test_admin_customer_repeated_action_is_safe(self):
         Customer.objects.filter(pk=1).update(marked_for_followup=True)
 
@@ -288,6 +660,30 @@ class AdminCustomerPersistedReadTests(TestCase):
         self.assertRedirects(
             response,
             "/ops/customers/ana-persistida/?result=customer-followup-already-marked",
+            fetch_redirect_response=False,
+        )
+
+    def test_admin_customer_repeated_clear_action_is_safe(self):
+        response = self.client.post(
+            reverse("customers:admin-customer-update", kwargs={"customer_slug": "ana-persistida"}),
+            {"action_type": "clear_priority"},
+        )
+
+        self.assertRedirects(
+            response,
+            "/ops/customers/ana-persistida/?result=customer-priority-already-clear",
+            fetch_redirect_response=False,
+        )
+
+    def test_admin_customer_repeated_reengagement_clear_is_safe(self):
+        response = self.client.post(
+            reverse("customers:admin-customer-update", kwargs={"customer_slug": "ana-persistida"}),
+            {"action_type": "clear_reengagement"},
+        )
+
+        self.assertRedirects(
+            response,
+            "/ops/customers/ana-persistida/?result=customer-reengagement-already-clear",
             fetch_redirect_response=False,
         )
 

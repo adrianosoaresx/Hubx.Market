@@ -75,3 +75,77 @@ Gerenciar produtos, variantes, categorias, marcas, tags e imagens.
   - backorder
   - destaque do produto
 - a intenção é reforçar clareza comercial sem criar urgência artificial ou promessas não suportadas
+
+## Listagem: enrichment comercial leve
+- a listagem do catálogo agora reaproveita melhor os mesmos sinais reais do PDP:
+  - mídia principal persistida
+  - variante padrão efetiva
+  - contexto de oferta, estoque e disponibilidade
+- isso permite enriquecer os cards com:
+  - subtítulo mais coerente com categoria + variante
+  - meta curta com SKU + contexto comercial
+  - helper de preço mais orientado à decisão
+- a página de catálogo também passa a comunicar melhor quando os resultados já refletem preço, mídia e disponibilidade atualizados
+
+## Continuidade entre catálogo e PDP
+- o storefront agora reforça melhor que a combinação em destaque na listagem continua sendo a mesma base comercial no PDP
+- essa continuidade usa apenas sinais já persistidos:
+  - variante padrão efetiva
+  - mídia principal
+  - preço
+  - disponibilidade
+- isso melhora:
+  - `product_subtitle`
+  - `short_description`
+  - `purchase_note`
+- a intenção é reduzir a sensação de ruptura entre card e detalhe sem abrir seleção dinâmica de variante
+
+## Ativação mínima PDP → checkout
+- o PDP agora consegue iniciar uma `CheckoutSession` mínima a partir do produto exibido
+- essa ativação usa apenas a variante efetiva atual e cria um snapshot simples para o checkout:
+  - item
+  - preço
+  - imagem principal
+  - métodos padrão de entrega e pagamento
+- quando a variante está indisponível, o fluxo não força checkout e mantém o retorno seguro ao catálogo
+
+## Inventory visibility / stock impact clarity
+- `Admin Products` agora destaca melhor quando o estoque principal já está parcialmente comprometido por pedidos confirmados
+- a leitura permanece leve e baseada em sinais já persistidos:
+  - `stock`
+  - `reserved_stock`
+  - saldo livre estimado
+- a listagem e o detalhe administrativo passam a comunicar:
+  - produtos com reserva operacional
+  - produtos com saldo livre mais sensível
+
+## Inventory recovery visibility / admin feedback
+- `Admin Products` agora também passa a refletir quando devoluções operacionais de estoque já começaram a acontecer
+- essa leitura usa sinais já persistidos do fluxo de pedidos:
+  - `Order.inventory_recovered_at`
+  - `OrderItem.variant_sku`
+- a intenção é deixar mais claro quando a variante principal já recebeu retorno de saldo por cancelamentos operacionais, sem abrir um engine novo de inventário
+
+## Inventory timeline consolidation
+- `Admin Products` agora também consolida os sinais principais de estoque em uma leitura operacional única por variante principal:
+  - reserva após pagamento
+  - recuperação após cancelamento
+  - saldo livre atual
+- essa consolidação aparece:
+  - no bloco de estoque do detalhe
+  - na atividade operacional do produto
+- a intenção é reduzir leitura fragmentada e deixar mais claro o “estado vivo” do estoque sem criar uma timeline própria de inventário
+
+## Inventory finalization visibility
+- `Admin Products` agora também passa a refletir quando a reserva operacional já virou consumo final após entrega
+- essa leitura usa sinais persistidos do fluxo de pedidos:
+  - `Order.inventory_finalized_at`
+  - `OrderItem.variant_sku`
+- isso permite distinguir melhor, no admin:
+  - reserva ainda ativa
+  - recuperação por cancelamento
+  - consumo final já concluído
+- a visibilidade aparece:
+  - na listagem administrativa
+  - no bloco de estoque do detalhe
+  - na atividade operacional do produto

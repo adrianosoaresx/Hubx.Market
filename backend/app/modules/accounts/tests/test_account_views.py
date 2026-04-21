@@ -78,3 +78,28 @@ class AccountPersistedReadTests(TestCase):
         self.assertTemplateUsed(response, "pages/templates/account_overview_page.html")
         self.assertContains(response, "Ana Persistida")
         self.assertContains(response, "Veja rapidamente como sua conta está preparada")
+
+
+class AccountOverviewContinuityTests(TestCase):
+    fixtures = ["customer_area_minimal_seed.json"]
+
+    def test_account_overview_uses_persisted_order_continuity_when_available(self):
+        overview_payload = account_page_queries.get_account_overview_data()
+
+        self.assertIn("acompanha 1 pedido", overview_payload["page_description"])
+        self.assertIn("primeiro pedido", overview_payload["summary_subtitle"].lower())
+        self.assertEqual(overview_payload["recent_orders"][0]["cells"][0], "#3051")
+        self.assertIn("histórico salvo", overview_payload["recent_orders"][0]["cells"][1].lower())
+        self.assertEqual(overview_payload["recent_orders"][0]["cells"][2], "R$ 269,80")
+        self.assertIn("pedido mais recente pago", overview_payload["activity_content"].lower())
+        self.assertIn("confirmação do envio", overview_payload["activity_content"].lower())
+
+    def test_account_overview_view_renders_continuity_context(self):
+        response = self.client.get(reverse("accounts:account-overview"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "acompanha 1 pedido")
+        self.assertContains(response, "primeiro pedido já aparece aqui")
+        self.assertContains(response, "#3051")
+        self.assertContains(response, "histórico salvo")
+        self.assertContains(response, "Pedido mais recente pago")

@@ -45,6 +45,136 @@ def _retention_signals(*, total_orders: int, latest_recent_hint: str, persisted:
     }
 
 
+def _customer_order_next_step(*, status_label: str, payment_status: str, shipping_status: str, fulfillment_status_label: str) -> str:
+    lowered_payment = payment_status.lower()
+    lowered_shipping = shipping_status.lower()
+    lowered_fulfillment = fulfillment_status_label.lower()
+    lowered_status = status_label.lower()
+    if "cancel" in lowered_status:
+        return "Se quiser continuar comprando depois, você pode voltar ao catálogo quando for um bom momento para iniciar um novo pedido."
+    if "entreg" in lowered_shipping or "conclu" in lowered_fulfillment:
+        return "Seu pedido já foi concluído com segurança. Agora vale guardar este histórico na conta e voltar ao catálogo quando fizer sentido iniciar uma nova compra."
+    if "trânsito" in lowered_shipping or "enviado" in lowered_status:
+        return "Agora vale acompanhar a entrega por aqui e usar este histórico como referência sempre que quiser revisar a compra."
+    if "prepar" in lowered_shipping or "separ" in lowered_fulfillment:
+        return "O próximo passo é a confirmação do envio; até lá, esta página continua sendo o melhor lugar para acompanhar a preparação."
+    if "confirm" in lowered_payment or "pago" in lowered_status:
+        return "Seu pedido já está confirmado e a próxima atualização deve mostrar o avanço da preparação para envio."
+    return "Assim que houver uma nova atualização importante, ela aparecerá aqui para você seguir acompanhando com tranquilidade."
+
+
+def _customer_order_continuity_hint(
+    *,
+    total_orders: int,
+    order_index: int,
+    status_label: str,
+    shipping_status: str,
+    recent_update_hint: str,
+    fallback_hint: str,
+) -> str:
+    lowered_shipping = shipping_status.lower()
+    lowered_status = status_label.lower()
+    if "entreg" in lowered_shipping:
+        return "pedido concluído"
+    if "trânsito" in lowered_shipping or "enviado" in lowered_status:
+        return "acompanhe a entrega"
+    if "cancel" in lowered_status:
+        return "histórico preservado"
+    if total_orders > 1 and order_index == 0:
+        return "pedido mais recente"
+    if total_orders > 1:
+        return "compra anterior salva"
+    return fallback_hint
+
+
+def _customer_orders_continuity_description(*, total_orders: int, persisted: bool, latest_recent_hint: str) -> str:
+    if not persisted or total_orders <= 0:
+        return "Acompanhe o histórico das suas compras, o andamento da entrega e os próximos passos de cada pedido."
+    if total_orders > 1:
+        latest_copy = f" {latest_recent_hint}." if latest_recent_hint else ""
+        return (
+            f"Você já tem {total_orders} pedidos salvos nesta conta, então ficou mais fácil retomar acompanhamentos, "
+            f"revisar compras anteriores e decidir quando vale voltar ao catálogo.{latest_copy}"
+        )
+    latest_copy = f" {latest_recent_hint}." if latest_recent_hint else ""
+    return (
+        "Seu primeiro pedido já está salvo nesta conta, deixando o acompanhamento mais claro agora "
+        "e o caminho mais simples quando você quiser voltar a comprar."
+        f"{latest_copy}"
+    )
+
+
+def _profile_continuity_copy(*, total_orders: int, address_count: int, order_updates_opt_in: bool, latest_recent_hint: str) -> dict[str, str]:
+    if total_orders > 1:
+        page_description = (
+            f"Revise seus dados para manter {total_orders} pedidos e {address_count or 0} endereços salvos sempre prontos para a próxima compra."
+        )
+        if latest_recent_hint:
+            page_description = f"{page_description} {latest_recent_hint}."
+        return {
+            "page_description": page_description,
+            "personal_info_description": "Seus dados pessoais ajudam a manter o histórico da conta consistente entre pedidos, entregas e novas visitas.",
+            "preferences_description": (
+                "Suas preferências mantêm a conta alinhada ao acompanhamento dos pedidos e aos retornos futuros."
+                if order_updates_opt_in
+                else "Ative os avisos de pedido quando quiser acompanhar novas compras com menos esforço."
+            ),
+        }
+    if total_orders == 1:
+        page_description = "Revise seus dados para deixar seu primeiro pedido, seus contatos e sua próxima compra sempre alinhados nesta conta."
+        if latest_recent_hint:
+            page_description = f"{page_description} {latest_recent_hint}."
+        return {
+            "page_description": page_description,
+            "personal_info_description": "Seus dados pessoais deixam o histórico da conta mais confiável para acompanhar o pedido atual e facilitar o próximo retorno.",
+            "preferences_description": (
+                "Mantenha os avisos ativos para acompanhar o andamento do pedido atual sem perder atualizações importantes."
+                if order_updates_opt_in
+                else "Você pode ativar avisos de pedido quando quiser receber novidades do pedido atual com mais tranquilidade."
+            ),
+        }
+    return {
+        "page_description": "Revise seus dados, mantenha o contato atualizado e escolha como prefere receber novidades e avisos dos pedidos.",
+        "personal_info_description": "Dados básicos da conta do cliente.",
+        "preferences_description": "Defina como deseja receber novidades e atualizações.",
+    }
+
+
+def _addresses_continuity_description(*, address_count: int, total_orders: int, default_address_title: str) -> str:
+    default_copy = f" O endereço principal atual é {default_address_title}." if default_address_title else ""
+    if address_count > 1 and total_orders > 0:
+        return (
+            f"Você já tem {address_count} endereços salvos nesta conta para acelerar próximas compras e acompanhar entregas com mais tranquilidade."
+            f"{default_copy}"
+        )
+    if address_count == 1 and total_orders > 0:
+        return (
+            "Seu endereço salvo já ajuda a deixar o pedido atual e a próxima compra mais simples de confirmar."
+            f"{default_copy}"
+        )
+    if address_count > 0:
+        return f"Gerencie seus endereços salvos para manter entregas e futuras compras organizadas.{default_copy}"
+    return "Adicione um endereço para deixar suas próximas compras mais rápidas e manter a conta pronta para novas entregas."
+
+
+def _return_to_catalog_guidance(*, total_orders: int, status_label: str = "", shipping_status: str = "") -> str:
+    lowered_status = status_label.lower()
+    lowered_shipping = shipping_status.lower()
+    if "cancel" in lowered_status:
+        return "Quando fizer sentido retomar, o catálogo continua sendo o melhor ponto para começar uma nova compra com calma."
+    if "entreg" in lowered_shipping:
+        return "Seu pedido já foi concluído e o catálogo continua disponível para uma próxima compra quando você quiser voltar."
+    if "trânsito" in lowered_shipping or "enviado" in lowered_status:
+        return (
+            "Enquanto a entrega avança, você pode voltar ao catálogo quando quiser explorar a próxima compra sem perder o histórico desta conta."
+        )
+    if total_orders > 1:
+        return "Quando quiser comprar de novo, o catálogo continua disponível para você explorar novidades sem perder o histórico já salvo."
+    if total_orders == 1:
+        return "Quando quiser dar o próximo passo, o catálogo segue disponível para você explorar novos produtos com a conta já preparada."
+    return "Quando estiver pronta para começar, o catálogo continua disponível para explorar produtos e iniciar sua próxima compra."
+
+
 def _recency_hint(value: object) -> str:
     if not isinstance(value, datetime):
         return ""
@@ -69,6 +199,8 @@ def _current_state_helper(*, status_label: str, payment_status: str, shipping_st
     lowered_status = status_label.lower()
     if "cancel" in lowered_status:
         return "Seu pedido foi encerrado e não terá novas movimentações enquanto permanecer cancelado."
+    if "entreg" in lowered_shipping or "conclu" in lowered_fulfillment:
+        return "Seu pedido já foi entregue e encerrado com sucesso, então agora ele fica disponível aqui como histórico da sua conta."
     if "trânsito" in lowered_shipping or "enviado" in lowered_status:
         return "Seu pagamento já foi confirmado e o pedido segue em deslocamento até a entrega."
     if "prepar" in lowered_shipping or "separ" in lowered_fulfillment:
@@ -99,20 +231,34 @@ def _timeline_items(updated_at: str, *, order_status_label: str, payment_status:
         shipping_status=shipping_status,
         fulfillment_status_label=fulfillment_status_label,
     )
+    next_step = _customer_order_next_step(
+        status_label=order_status_label,
+        payment_status=payment_status,
+        shipping_status=shipping_status,
+        fulfillment_status_label=fulfillment_status_label,
+    )
+    delivered = "entreg" in shipping_status.lower() or "conclu" in fulfillment_status_label.lower()
     return [
         {
-            "title": "Status atual confirmado",
+            "title": "Pedido concluído" if delivered else "Status atual confirmado",
             "description": f"Seu pedido está {order_status_label.lower()} e a etapa operacional atual é {fulfillment_status_label.lower()}. {state_helper}",
             "timestamp": updated_at,
-            "badge_label": "Pedido",
-            "badge_variant": "info",
+            "badge_label": "Entrega" if delivered else "Pedido",
+            "badge_variant": "success" if delivered else "info",
         },
         {
-            "title": "Pagamento e entrega acompanhados",
+            "title": "Entrega concluída" if delivered else "Pagamento e entrega acompanhados",
             "description": f"Pagamento {payment_status.lower()} e entrega em {shipping_status.lower()}, com acompanhamento contínuo pela área do cliente.",
             "timestamp": updated_at,
             "badge_label": "Entrega",
-            "badge_variant": "shipped" if "trânsito" in shipping_status.lower() else "paid",
+            "badge_variant": "success" if delivered else "shipped" if "trânsito" in shipping_status.lower() else "paid",
+        },
+        {
+            "title": "Próximo passo esperado",
+            "description": next_step,
+            "timestamp": updated_at,
+            "badge_label": "Próximo passo",
+            "badge_variant": "info",
         },
     ]
 
@@ -507,6 +653,7 @@ class DjangoOrmCustomerAreaRepository:
             "current_state_helper": state_helper,
             "payment_status": payment_status,
             "shipping_status": shipping_status,
+            "fulfillment_status_label": fulfillment_status_label,
             "updated_at": updated_at,
             "summary_content": summary_content,
             "page_meta": page_meta,
@@ -679,6 +826,9 @@ class AccountCustomerAreaQueryService:
     def _profile(self) -> dict[str, object]:
         return self.profile_repository.get_primary_profile() or self.fallback_profile_repository.get_primary_profile()
 
+    def get_active_profile_context(self) -> dict[str, object]:
+        return dict(self._profile())
+
     def list_orders(self) -> list[dict[str, object]]:
         profile = self._profile()
         real_orders = self.area_repository.list_orders(profile)
@@ -691,9 +841,23 @@ class AccountCustomerAreaQueryService:
             persisted=persisted,
         )
         enriched_orders: list[dict[str, object]] = []
-        for order in orders:
+        for index, order in enumerate(orders):
             enriched_order = dict(order)
-            enriched_order["reengagement_hint"] = retention["row_hint"]
+            enriched_order["reengagement_hint"] = _customer_order_continuity_hint(
+                total_orders=len(orders),
+                order_index=index,
+                status_label=str(enriched_order.get("order_status_label") or ""),
+                shipping_status=str(enriched_order.get("shipping_status") or ""),
+                recent_update_hint=str(enriched_order.get("recent_update_hint") or ""),
+                fallback_hint=retention["row_hint"],
+            )
+            next_step = _customer_order_next_step(
+                status_label=str(enriched_order.get("order_status_label") or ""),
+                payment_status=str(enriched_order.get("payment_status") or ""),
+                shipping_status=str(enriched_order.get("shipping_status") or ""),
+                fulfillment_status_label=str(enriched_order.get("fulfillment_status_label") or ""),
+            )
+            enriched_order["next_step_hint"] = next_step
             if enriched_order.get("activity_items"):
                 enriched_order["activity_items"] = list(enriched_order["activity_items"]) + [
                     _retention_activity_item(
@@ -702,7 +866,7 @@ class AccountCustomerAreaQueryService:
                     )
                 ]
             enriched_order["summary_note"] = (
-                f'{enriched_order.get("summary_note", "").strip()} {retention["detail_note"]}'.strip()
+                f'{enriched_order.get("summary_note", "").strip()} {next_step} {retention["detail_note"]}'.strip()
             )
             enriched_orders.append(enriched_order)
         return enriched_orders
@@ -740,19 +904,26 @@ class AccountCustomerAreaQueryService:
     def get_orders_page_data(self) -> dict[str, object]:
         linkage_visibility = self.get_linkage_visibility()
         orders = self.list_orders()
+        catalog_guidance = _return_to_catalog_guidance(total_orders=len(orders))
+        latest_recent_hint = str((orders[0] if orders else {}).get("recent_update_hint") or "")
         retention = _retention_signals(
             total_orders=len(orders),
-            latest_recent_hint=str((orders[0] if orders else {}).get("recent_update_hint") or ""),
+            latest_recent_hint=latest_recent_hint,
             persisted=self.using_persisted_orders_source(),
         )
         return {
             "page_title": "Meus pedidos",
-            "page_description": retention["orders_page_description"],
+            "page_description": _customer_orders_continuity_description(
+                total_orders=len(orders),
+                persisted=self.using_persisted_orders_source(),
+                latest_recent_hint=latest_recent_hint,
+            ),
             "search_name": "q",
             "status_name": "status",
             "status_options": _customer_order_status_options(),
             "operational_linkage_visibility": linkage_visibility,
-            "table_description": retention["table_description"],
+            "table_description": f'{retention["table_description"]} {catalog_guidance}'.strip(),
+            "empty_description": catalog_guidance,
             "order_columns": [
                 {"label": "Pedido"},
                 {"label": "Status"},
@@ -762,18 +933,40 @@ class AccountCustomerAreaQueryService:
             ],
         }
 
-    def get_order_detail_page_data(self, order_number: str) -> dict[str, object]:
+    def get_order_detail_page_data(self, order_number: str, *, confirmation_mode: bool = False) -> dict[str, object]:
         order = self.get_order(order_number)
-        return {
+        total_orders = len(self.list_orders())
+        next_step_hint = str(order.get("next_step_hint") or "")
+        payment_status = str(order.get("payment_status") or "")
+        order_status = str(order.get("status") or "")
+        catalog_guidance = _return_to_catalog_guidance(
+            total_orders=total_orders,
+            status_label=str(order.get("order_status_label") or ""),
+            shipping_status=str(order.get("shipping_status") or ""),
+        )
+        payment_progression_available = order_status in {"pending", "processing"} and "pendente" in payment_status.lower()
+        continuity_description = (
+            "Seu histórico continua salvo nesta conta para facilitar novas consultas e uma próxima compra quando fizer sentido."
+            if total_orders > 1
+            else "Este pedido já deixa sua conta pronta para um próximo retorno sempre que você quiser acompanhar ou comprar de novo."
+        )
+        payload = {
             "page_title": f'Pedido #{order["order_number"]}',
-            "page_description": "Veja o andamento atual do pedido, os itens da compra e as últimas atualizações mais importantes.",
+            "page_description": f"{next_step_hint} {continuity_description} {catalog_guidance}".strip(),
             "page_meta": order.get("page_meta") or "Área do cliente · acompanhe pagamentos, envio e entregas em um só lugar.",
+            "eyebrow": "Customer Area",
+            "summary_title": "Resumo do pedido",
             "order_status_label": order["order_status_label"],
             "order_status_variant": order["order_status_variant"],
+            "status_title": "Status atual",
             "order_number": f'#{order["order_number"]}',
             "payment_status": order["payment_status"],
             "shipping_status": order["shipping_status"],
-            "summary_subtitle": order.get("recent_update_hint") or order.get("order_status_summary", "Resumo rápido do pedido."),
+            "summary_subtitle": (
+                f'{order.get("recent_update_hint")} · {next_step_hint}'
+                if order.get("recent_update_hint") and next_step_hint
+                else order.get("recent_update_hint") or order.get("order_status_summary", "Resumo rápido do pedido.")
+            ),
             "summary_content": order["summary_content"],
             "order_items": order["order_items"],
             "subtotal": order["subtotal"],
@@ -781,26 +974,89 @@ class AccountCustomerAreaQueryService:
             "discount": order["discount"],
             "installments": order["installments"],
             "total": order["total"],
-            "summary_note": order.get("summary_note", ""),
+            "summary_note": f'{order.get("summary_note", "")} {catalog_guidance}'.strip(),
             "activity_items": order["activity_items"],
+            "activity_description": catalog_guidance,
+            "activity_title": "Linha do tempo",
             "operational_linkage_mode": order.get("customer_linkage_mode", "fixture"),
+            "payment_progression_available": payment_progression_available,
+            "payment_progression_label": "Confirmar pagamento" if payment_progression_available else "",
+            "payment_progression_helper": (
+                "Finalize a evolução inicial deste pedido para liberar a preparação e as próximas atualizações de envio."
+                if payment_progression_available
+                else ""
+            ),
         }
+        if confirmation_mode:
+            confirmation_step = (
+                "Seu pedido foi iniciado com sucesso e agora entra em acompanhamento pela conta."
+            )
+            payload.update(
+                {
+                    "eyebrow": "Confirmação inicial do pedido",
+                    "page_description": (
+                        f"{confirmation_step} "
+                        "Esta é a confirmação inicial do checkout, antes da evolução real do pagamento. "
+                        f"{next_step_hint}"
+                    ).strip(),
+                    "page_meta": "Pedido iniciado no checkout · acompanhe por aqui a evolução de pagamento, preparo e entrega.",
+                    "summary_title": "Pedido iniciado com sucesso",
+                    "status_title": "Confirmação inicial",
+                    "summary_subtitle": (
+                        f'{order.get("recent_update_hint")} · aguardando evolução do pagamento'
+                        if order.get("recent_update_hint")
+                        else "Aguardando evolução do pagamento"
+                    ),
+                    "summary_note": (
+                        "Este é o primeiro registro persistido do seu pedido. "
+                        "Pagamento, preparo e envio passam a aparecer por aqui conforme o fluxo evoluir."
+                    ),
+                    "activity_title": "Próximas atualizações do pedido",
+                    "activity_description": (
+                        "Acompanhe aqui a confirmação do pagamento, o início da preparação e as próximas movimentações do pedido."
+                    ),
+                }
+            )
+        return payload
 
     def get_addresses_page_data(self) -> dict[str, object]:
         profile = self._profile()
         addresses = self.area_repository.get_addresses(profile) or self.fallback_area_repository.get_addresses(profile)
+        orders = self.list_orders()
+        default_address_title = next(
+            (
+                str(address.get("title") or "")
+                for address in addresses
+                if "principal" in str(address.get("subtitle") or "").lower()
+            ),
+            "",
+        )
         return {
             "page_title": "Meus endereços",
-            "page_description": "Gerencie endereços de entrega e cobrança usados nas suas compras.",
+            "page_description": _addresses_continuity_description(
+                address_count=len(addresses),
+                total_orders=len(orders),
+                default_address_title=default_address_title,
+            ),
             "addresses": addresses,
             "operational_linkage_visibility": self.get_linkage_visibility(),
         }
 
     def get_profile_page_data(self) -> dict[str, object]:
         profile = self._profile()
+        orders = self.list_orders()
+        addresses = self.area_repository.get_addresses(profile) or self.fallback_area_repository.get_addresses(profile)
+        profile_copy = _profile_continuity_copy(
+            total_orders=len(orders),
+            address_count=len(addresses),
+            order_updates_opt_in=bool(profile["order_updates_opt_in"]),
+            latest_recent_hint=str((orders[0] if orders else {}).get("recent_update_hint") or ""),
+        )
         return {
             "page_title": "Meu perfil",
-            "page_description": "Revise seus dados, mantenha o contato atualizado e escolha como prefere receber novidades e avisos dos pedidos.",
+            "page_description": profile_copy["page_description"],
+            "personal_info_description": profile_copy["personal_info_description"],
+            "preferences_description": profile_copy["preferences_description"],
             "first_name": profile["first_name"],
             "last_name": profile["last_name"],
             "email": profile["email"],

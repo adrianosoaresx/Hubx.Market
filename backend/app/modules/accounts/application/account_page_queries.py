@@ -136,6 +136,76 @@ def _overview_reengagement_copy() -> dict[str, str]:
     }
 
 
+def _overview_orders_context() -> dict[str, object]:
+    fallback = {
+        "page_description": "Acompanhe seus dados, pedidos recentes e acessos rápidos da área do cliente.",
+        "summary_subtitle": "Veja rapidamente como sua conta está preparada para acompanhar compras e entregas.",
+        "recent_orders": [
+            {"cells": ["#1048", "Pago", "R$ 324,80", "12/04/2026"]},
+            {"cells": ["#1041", "Entregue", "R$ 189,90", "02/04/2026"]},
+        ],
+        "activity_content": None,
+    }
+    try:
+        from app.modules.accounts.application.account_customer_area_queries import account_customer_area_queries
+    except Exception:
+        return fallback
+
+    if not account_customer_area_queries.using_persisted_orders_source():
+        return fallback
+
+    orders = account_customer_area_queries.list_orders()
+    if not orders:
+        return fallback
+
+    total_orders = len(orders)
+    latest_order = orders[0]
+    latest_status = str(latest_order.get("order_status_label") or "Pedido em andamento")
+    latest_hint = str(latest_order.get("recent_update_hint") or "")
+    next_step_hint = str(latest_order.get("next_step_hint") or "")
+    continuity_hint = str(latest_order.get("reengagement_hint") or "")
+    page_description = (
+        f"Você já acompanha {total_orders} pedido{'s' if total_orders > 1 else ''} por aqui, "
+        "com histórico salvo e próximos passos mais fáceis de localizar na sua conta."
+    )
+    if latest_hint:
+        page_description = f"{page_description} {latest_hint}."
+
+    summary_subtitle = (
+        f"Seu pedido mais recente está {latest_status.lower()} e a conta continua pronta para retomar acompanhamentos sempre que você voltar."
+        if total_orders > 1
+        else f"Seu primeiro pedido já aparece aqui com status {latest_status.lower()} para deixar o acompanhamento mais simples desde agora."
+    )
+
+    recent_orders = [
+        {
+            "cells": [
+                f'#{order["order_number"]}',
+                (
+                    f'{order["order_status_label"]}'
+                    + (f' · {order["recent_update_hint"].lower()}' if order.get("recent_update_hint") else "")
+                    + (f' · {order["reengagement_hint"]}' if order.get("reengagement_hint") else "")
+                ),
+                order["total"],
+                f'Atualizado em {order["updated_at"]}',
+            ]
+        }
+        for order in orders[:2]
+    ]
+    activity_content = (
+        f"Pedido mais recente {latest_status.lower()}."
+        + (f" {latest_hint}." if latest_hint else "")
+        + (f" {next_step_hint}" if next_step_hint else "")
+        + (f" Contexto atual: {continuity_hint}." if continuity_hint else "")
+    ).strip()
+    return {
+        "page_description": page_description,
+        "summary_subtitle": summary_subtitle,
+        "recent_orders": recent_orders,
+        "activity_content": activity_content,
+    }
+
+
 @dataclass
 class AccountPageQueryService:
     orm_repository: AccountProfileReadRepository
@@ -197,11 +267,12 @@ class AccountPageQueryService:
     def get_account_overview_data(self) -> dict[str, object]:
         profile = self._profile()
         reengagement_copy = _overview_reengagement_copy()
+        orders_context = _overview_orders_context()
         return {
             "page_title": "Minha conta",
-            "page_description": "Acompanhe seus dados, pedidos recentes e acessos rápidos da área do cliente.",
+            "page_description": orders_context["page_description"],
             "summary_title": "Resumo da conta",
-            "summary_subtitle": "Veja rapidamente como sua conta está preparada para acompanhar compras e entregas.",
+            "summary_subtitle": orders_context["summary_subtitle"],
             "summary_content": f'{_profile_trust_summary(profile)}{reengagement_copy["summary_suffix"]}',
             "quick_links_content": reengagement_copy["quick_links_content"],
             "recent_orders_title": "Pedidos recentes",
@@ -215,11 +286,8 @@ class AccountPageQueryService:
                 {"label": "Total"},
                 {"label": "Data"},
             ],
-            "recent_orders": [
-                {"cells": ["#1048", "Pago", "R$ 324,80", "12/04/2026"]},
-                {"cells": ["#1041", "Entregue", "R$ 189,90", "02/04/2026"]},
-            ],
-            "activity_content": _format_account_activity(profile),
+            "recent_orders": orders_context["recent_orders"],
+            "activity_content": orders_context["activity_content"] or _format_account_activity(profile),
         }
 
 
