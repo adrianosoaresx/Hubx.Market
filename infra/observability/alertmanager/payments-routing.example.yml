@@ -1,0 +1,31 @@
+route:
+  receiver: payments-default
+  group_by:
+    - alertname
+    - domain
+    - severity
+  routes:
+    - matchers:
+        - domain="payments"
+        - severity="critical"
+      receiver: payments-critical
+      continue: false
+
+    - matchers:
+        - domain="payments"
+        - severity="warning"
+      receiver: payments-warning
+      continue: false
+
+receivers:
+  - name: payments-default
+    webhook_configs:
+      - url: https://alert-router.internal.example/hubx/default
+
+  - name: payments-warning
+    webhook_configs:
+      - url: https://alert-router.internal.example/hubx/payments-warning
+
+  - name: payments-critical
+    webhook_configs:
+      - url: https://alert-router.internal.example/hubx/payments-critical

@@ -133,10 +133,10 @@ FALLBACK_PRODUCT_FIXTURES = [
 
 
 class ProductReadRepository(Protocol):
-    def list_products(self) -> list[dict[str, object]]:
+    def list_products(self, *, tenant_id: int | None = None) -> list[dict[str, object]]:
         ...
 
-    def get_product(self, product_slug: str) -> dict[str, object] | None:
+    def get_product(self, product_slug: str, *, tenant_id: int | None = None) -> dict[str, object] | None:
         ...
 
 
@@ -391,11 +391,11 @@ def _build_activity_items(
 
 
 class FallbackProductRepository:
-    def list_products(self) -> list[dict[str, object]]:
+    def list_products(self, *, tenant_id: int | None = None) -> list[dict[str, object]]:
         return [_clone_product(product) for product in FALLBACK_PRODUCT_FIXTURES]
 
-    def get_product(self, product_slug: str) -> dict[str, object] | None:
-        for product in self.list_products():
+    def get_product(self, product_slug: str, *, tenant_id: int | None = None) -> dict[str, object] | None:
+        for product in self.list_products(tenant_id=tenant_id):
             if product["slug"] == product_slug:
                 return product
         return None
@@ -472,7 +472,7 @@ class DjangoOrmProductRepository:
             return False
         return table_names.issubset(set(tables))
 
-    def list_products(self) -> list[dict[str, object]]:
+    def list_products(self, *, tenant_id: int | None = None) -> list[dict[str, object]]:
         if not self.is_ready():
             return []
 
@@ -480,13 +480,15 @@ class DjangoOrmProductRepository:
             prefetches = ["variants"]
             if self._images_ready():
                 prefetches.append("images")
-            queryset = self.product_model._default_manager.all().prefetch_related(*prefetches).order_by("-id")
+            queryset = self.product_model._default_manager.prefetch_related(*prefetches).order_by("-id")
+            if tenant_id:
+                queryset = queryset.filter(tenant_id=tenant_id)
         except Exception:
             return []
 
         return [self._serialize_product(product) for product in queryset]
 
-    def get_product(self, product_slug: str) -> dict[str, object] | None:
+    def get_product(self, product_slug: str, *, tenant_id: int | None = None) -> dict[str, object] | None:
         if not self.is_ready():
             return None
 
@@ -494,7 +496,10 @@ class DjangoOrmProductRepository:
             prefetches = ["variants"]
             if self._images_ready():
                 prefetches.append("images")
-            product = self.product_model._default_manager.filter(slug=product_slug).prefetch_related(*prefetches).first()
+            queryset = self.product_model._default_manager.filter(slug=product_slug).prefetch_related(*prefetches)
+            if tenant_id:
+                queryset = queryset.filter(tenant_id=tenant_id)
+            product = queryset.first()
         except Exception:
             return None
 
@@ -763,20 +768,30 @@ class AdminProductQueryService:
     orm_repository: ProductReadRepository
     fallback_repository: ProductReadRepository
 
-    def using_persisted_source(self) -> bool:
+    @staticmethod
+    def _allow_fixture_fallback(*, tenant_id: int | None) -> bool:
+        return not bool(tenant_id)
+
+    def using_persisted_source(self, *, tenant_id: int | None = None) -> bool:
         try:
-            return bool(self.orm_repository.list_products())
+            return bool(self.orm_repository.list_products(tenant_id=tenant_id))
         except Exception:
             return False
 
-    def list_products(self) -> list[dict[str, object]]:
-        real_products = self.orm_repository.list_products()
-        return real_products or self.fallback_repository.list_products()
+    def list_products(self, *, tenant_id: int | None = None) -> list[dict[str, object]]:
+        real_products = self.orm_repository.list_products(tenant_id=tenant_id)
+        if real_products:
+            return real_products
+        if self._allow_fixture_fallback(tenant_id=tenant_id):
+            return self.fallback_repository.list_products(tenant_id=tenant_id)
+        return []
 
-    def get_inventory_visibility_note(self) -> str:
-        products = self.list_products()
+    def get_inventory_visibility_note(self, *, tenant_id: int | None = None) -> str:
+        products = self.list_products(tenant_id=tenant_id)
         if not products:
-            return "Visibilidade de estoque: catálogo ainda sem fonte persistida para destacar impacto de pedidos."
+            if self._allow_fixture_fallback(tenant_id=tenant_id):
+                return "Visibilidade de estoque: catálogo ainda sem fonte persistida para destacar impacto de pedidos."
+            return "Visibilidade de estoque: nenhum produto persistido foi encontrado no tenant atual."
         reserved_products = sum(1 for product in products if _safe_int(product.get("reserved_stock")) > 0)
         recovered_products = sum(1 for product in products if _safe_int(product.get("recovered_stock")) > 0)
         finalized_products = sum(1 for product in products if _safe_int(product.get("finalized_stock")) > 0)
@@ -794,18 +809,26 @@ class AdminProductQueryService:
             f"Consumo final já visível em {finalized_products} produto(s)."
         )
 
-    def get_product(self, product_slug: str) -> dict[str, object]:
-        real_product = self.orm_repository.get_product(product_slug)
+    def get_product(self, product_slug: str, *, tenant_id: int | None = None) -> dict[str, object]:
+        real_product = self.orm_repository.get_product(product_slug, tenant_id=tenant_id)
         if real_product:
             return real_product
 
-        fallback_product = self.fallback_repository.get_product(product_slug)
-        if fallback_product:
-            return fallback_product
+        if self._allow_fixture_fallback(tenant_id=tenant_id):
+            fallback_product = self.fallback_repository.get_product(product_slug, tenant_id=tenant_id)
+            if fallback_product:
+                return fallback_product
 
-        return _fallback_product(product_slug)
+        return {
+            **_fallback_product(product_slug),
+            "summary_content": "Produto não encontrado no tenant atual; exibindo estado explícito de ausência em vez de fallback de demonstração.",
+            "pricing_content": "Sem preço persistido disponível para este produto no tenant atual.",
+            "inventory_content": "Sem estoque persistido disponível para este produto no tenant atual.",
+            "details_content": "Nenhum produto persistido foi localizado com este slug dentro da loja atual.",
+            "visibility_content": "Sem visibilidade persistida disponível para este produto no tenant atual.",
+        }
 
-    def get_form_initial(self, product_slug: str | None) -> dict[str, object]:
+    def get_form_initial(self, product_slug: str | None, *, tenant_id: int | None = None) -> dict[str, object]:
         if not product_slug:
             return {
                 "name": "",
@@ -824,7 +847,7 @@ class AdminProductQueryService:
                 "allow_backorder": False,
             }
 
-        product = self.get_product(product_slug)
+        product = self.get_product(product_slug, tenant_id=tenant_id)
         return {
             "name": product["name"],
             "slug": product["slug"],

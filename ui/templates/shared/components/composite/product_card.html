@@ -39,8 +39,20 @@
             {% if meta %}
                 <p class="text-sm text-[var(--color-text-secondary)]">{{ meta }}</p>
             {% endif %}
+            {% if variant_summary %}
+                <p class="text-sm text-[var(--color-text-secondary)]">{{ variant_summary }}</p>
+            {% endif %}
+            {% if curation_note %}
+                <p class="text-sm text-[var(--color-text-secondary)]">{{ curation_note }}</p>
+            {% endif %}
             {% if stock_state or stock_label or stock_helper %}
                 {% include "shared/components/commerce/stock_indicator.html" with state=stock_state label=stock_label helper=stock_helper %}
+            {% endif %}
+            {% if availability_note %}
+                <p class="text-sm text-[var(--color-text-secondary)]">{{ availability_note }}</p>
+            {% endif %}
+            {% if click_helper %}
+                <p class="text-sm text-[var(--color-text-secondary)]">{{ click_helper }}</p>
             {% endif %}
         </div>
 

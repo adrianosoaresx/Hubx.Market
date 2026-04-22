@@ -4,7 +4,7 @@
 
 {% block checkout_content %}
 <section class="space-y-8">
-    {% with eyebrow=page_eyebrow|default:"Checkout" title=page_title|default:"Finalizar compra" description=page_description|default:"Revise seus itens, informe entrega e pagamento antes de concluir o pedido." %}
+    {% with eyebrow=page_eyebrow|default:"Checkout" title=page_title|default:"Finalizar compra" description=page_description|default:"Revise seus itens, informe entrega e pagamento antes de concluir o pedido." meta=page_meta %}
         {% include "shared/components/layout/page_header.html" %}
     {% endwith %}
 
@@ -24,6 +24,45 @@
         {% include "shared/components/feedback/alert.html" with variant=current_stage_completion_hint.variant icon=current_stage_completion_hint.icon title=current_stage_completion_hint.title description=current_stage_completion_hint.description %}
     {% endif %}
 
+    {% if review_readiness_items %}
+        <section class="ds-surface space-y-4 p-6">
+            <div class="space-y-1">
+                <h2 class="text-base font-semibold text-[var(--color-text-primary)]">{{ review_readiness_title }}</h2>
+                <p class="text-sm text-[var(--color-text-secondary)]">{{ review_readiness_description }}</p>
+            </div>
+            <div class="space-y-3">
+                {% for item in review_readiness_items %}
+                    <div class="rounded-2xl border border-[var(--color-border-default)] p-4">
+                        <p class="text-sm font-medium text-[var(--color-text-primary)]">
+                            {% if item.ready %}✅{% else %}⏳{% endif %} {{ item.label }}
+                        </p>
+                        <p class="mt-1 text-sm text-[var(--color-text-secondary)]">{{ item.description }}</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+    {% endif %}
+
+    {% if checkout_recovery %}
+        <section class="ds-surface space-y-4 p-6">
+            <div class="space-y-1">
+                <h2 class="text-base font-semibold text-[var(--color-text-primary)]">{{ checkout_recovery.title }}</h2>
+                <p class="text-sm text-[var(--color-text-secondary)]">{{ checkout_recovery.description }}</p>
+                {% if checkout_recovery.helper %}
+                    <p class="text-sm text-[var(--color-text-secondary)]">{{ checkout_recovery.helper }}</p>
+                {% endif %}
+            </div>
+            <div class="flex flex-wrap gap-3">
+                {% if checkout_recovery.primary_label and checkout_recovery.primary_href %}
+                    {% include "shared/components/actions/button.html" with label=checkout_recovery.primary_label href=checkout_recovery.primary_href variant="primary" %}
+                {% endif %}
+                {% if checkout_recovery.secondary_label and checkout_recovery.secondary_href %}
+                    {% include "shared/components/actions/button.html" with label=checkout_recovery.secondary_label href=checkout_recovery.secondary_href variant="secondary" %}
+                {% endif %}
+            </div>
+        </section>
+    {% endif %}
+
     {% if checkout_steps or showcase_mode %}
         {% with steps=checkout_steps showcase_mode=showcase_mode %}
             {% include "shared/components/composite/checkout_steps.html" %}
@@ -38,6 +77,7 @@
                 <input type="hidden" name="back_url" value="{{ back_url|default:'' }}">
                 <input type="hidden" name="current_stage" value="{{ current_stage|default:'delivery' }}">
 
+                {% if show_delivery_surface %}
                 <section class="ds-surface space-y-6 p-6">
                     <header class="space-y-1">
                         <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">Entrega</h2>
@@ -75,7 +115,9 @@
 
                     {% block shipping_fields %}{% endblock %}
                 </section>
+                {% endif %}
 
+                {% if show_payment_surface %}
                 <section class="ds-surface space-y-6 p-6">
                     <header class="space-y-1">
                         <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">Pagamento</h2>
@@ -112,6 +154,7 @@
 
                     {% block payment_fields %}{% endblock %}
                 </section>
+                {% endif %}
 
                 <section class="ds-surface space-y-5 p-6">
                     <header class="space-y-1">
@@ -124,7 +167,7 @@
 
                     <div class="space-y-4">
                         {% for item in order_items %}
-                            {% with image_url=item.image_url image_alt=item.image_alt title=item.title subtitle=item.subtitle meta=item.meta price=item.price compare_price=item.compare_price quantity=item.quantity actions=item.actions quantity_readonly=item.quantity_readonly %}
+                            {% with image_url=item.image_url image_alt=item.image_alt title=item.title subtitle=item.subtitle meta=item.meta price=item.price compare_price=item.compare_price quantity=item.quantity actions=item.actions mutation_actions=item.mutation_actions quantity_readonly=item.quantity_readonly %}
                                 {% include "shared/components/commerce/cart_item.html" %}
                             {% endwith %}
                         {% empty %}
@@ -142,10 +185,30 @@
                         {% endfor %}
                     </div>
 
+                    {% if show_cart_surface %}
+                        <div class="rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-4">
+                            <p class="text-sm font-medium text-[var(--color-text-primary)]">Carrinho leve desta sessão</p>
+                            <p class="mt-1 text-sm text-[var(--color-text-secondary)]">Ajuste itens e totais aqui. Quando estiver tudo certo, siga para entrega sem sair do fluxo atual.</p>
+                        </div>
+                    {% endif %}
+
                     {% block review_items %}{% endblock %}
                 </section>
 
                 <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                    {% if final_action_title or final_action_description or final_action_helper %}
+                        <div class="mr-auto max-w-xl space-y-1 text-sm text-[var(--color-text-secondary)]">
+                            {% if final_action_title %}
+                                <p class="font-medium text-[var(--color-text-primary)]">{{ final_action_title }}</p>
+                            {% endif %}
+                            {% if final_action_description %}
+                                <p>{{ final_action_description }}</p>
+                            {% endif %}
+                            {% if final_action_helper %}
+                                <p>{{ final_action_helper }}</p>
+                            {% endif %}
+                        </div>
+                    {% endif %}
                     {% include "shared/components/actions/button.html" with label=back_label|default:"Voltar ao carrinho" variant="secondary" href=back_url|default:"#cart" %}
                     {% include "shared/components/actions/button.html" with label=submit_label|default:"Confirmar pedido" variant="primary" type="submit" loading=is_submitting %}
                 </div>
@@ -153,7 +216,7 @@
         </div>
 
         <aside class="space-y-6">
-            {% with title=summary_title|default:"Resumo do pedido" description=summary_description|default:"Confira os totais antes de finalizar." items=order_items subtotal=subtotal shipping=shipping_total discount=discount_total total=grand_total installments=installments_summary actions=summary_actions showcase_mode=showcase_mode %}
+            {% with title=summary_title|default:"Resumo do pedido" description=summary_description|default:"Confira os totais antes de finalizar." note=summary_note items=order_items subtotal=subtotal shipping=shipping_total discount=discount_total total=grand_total installments=installments_summary actions=summary_actions showcase_mode=showcase_mode %}
                 {% include "shared/components/composite/order_summary.html" %}
             {% endwith %}
 

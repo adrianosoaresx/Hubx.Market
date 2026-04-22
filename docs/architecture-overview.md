@@ -23,6 +23,8 @@ exemplo:
 
 lojax.hubx.market
 
+No contrato atual, esse acesso por subdomínio é também a única forma oficial de resolução HTTP de tenant. O campo `custom_domain` já existe no modelo de `tenants`, mas permanece como readiness de domínio até que exista suporte explícito no middleware e nas regras operacionais associadas.
+
 Cada tenant possui:
 
 - catálogo próprio

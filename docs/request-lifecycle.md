@@ -55,7 +55,7 @@ Exemplos:
 
 # 3. Tenant Resolution
 
-O tenant é identificado principalmente pelo **subdomínio**.
+O tenant é identificado, no contrato atual, pelo **subdomínio**.
 
 Exemplo:
 
@@ -71,6 +71,8 @@ Regras:
 
 - nenhum dado pode ser acessado sem tenant
 - isolamento entre tenants é obrigatório
+- hosts fora de `*.hubx.market` não resolvem tenant por padrão neste estágio
+- `custom_domain` ainda não participa da resolução HTTP; quando aparecer no modelo, ele não deve ser interpretado como capability ativa sem suporte explícito no middleware
 
 ---
 
@@ -101,6 +103,12 @@ Responsabilidades:
 - coordenar módulos
 - aplicar regras de fluxo
 - iniciar eventos
+
+Regra adicional para superfícies tenant-owned:
+
+- quando o middleware já resolveu a loja, `tenant_id` deve seguir explicitamente da `view` para os services de `application/`
+- query/command services não devem voltar a inferir tenant por contexto global se ele já estiver disponível na requisição
+- quando um fluxo ainda operar sem tenant explícito por compatibilidade, isso deve ser tratado como exceção documentada, não como padrão implícito
 
 ---
 

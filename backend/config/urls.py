@@ -9,6 +9,7 @@ urlpatterns = [
     path("accounts/", include(("app.modules.accounts.interfaces.urls", "accounts"), namespace="accounts")),
     path("catalog/", include(("app.modules.catalog.interfaces.storefront_urls", "storefront"), namespace="storefront")),
     path("checkout/", include(("app.modules.checkout.interfaces.urls", "checkout"), namespace="checkout")),
+    path("payments/", include(("app.modules.payments.interfaces.urls", "payments"), namespace="payments")),
     path("ops/catalog/", include(("app.modules.catalog.interfaces.urls", "catalog"), namespace="catalog")),
     path("ops/customers/", include(("app.modules.customers.interfaces.urls", "customers"), namespace="customers")),
     path("ops/orders/", include(("app.modules.orders.interfaces.urls", "orders"), namespace="orders")),

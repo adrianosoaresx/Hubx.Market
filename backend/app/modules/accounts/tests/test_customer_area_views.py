@@ -1,5 +1,8 @@
-from django.test import TestCase
+from datetime import timedelta
+
+from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 from app.modules.accounts.models import AccountProfile
 from app.modules.customers.models import Customer, CustomerAddress
@@ -7,7 +10,9 @@ from app.modules.catalog.models import Product, ProductVariant
 from app.modules.accounts.application.account_customer_area_queries import (
     account_customer_area_queries,
 )
-from app.modules.orders.models import Order, OrderStatusHistory
+from app.modules.checkout.models import CheckoutSession, CheckoutSessionItem
+from app.modules.orders.models import Order, OrderItem, OrderStatusHistory
+from app.modules.payments.models import PaymentAttempt
 
 
 class CustomerAreaViewTests(TestCase):
@@ -17,14 +22,15 @@ class CustomerAreaViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "pages/templates/orders_page.html")
         self.assertContains(response, "Meus pedidos")
-        self.assertContains(response, "#1048")
+        self.assertContains(response, "Nenhum pedido encontrado")
+        self.assertContains(response, "o catálogo continua disponível para explorar produtos")
 
     def test_account_orders_view_applies_search_filter(self):
         response = self.client.get(reverse("accounts:account-orders"), {"q": "1041"})
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "#1041")
-        self.assertNotContains(response, "#1048")
+        self.assertContains(response, "Nenhum pedido encontrado")
+        self.assertNotContains(response, "#1041")
 
     def test_account_order_detail_view_renders_design_system_template(self):
         response = self.client.get(reverse("accounts:account-order-detail", kwargs={"order_number": "1048"}))
@@ -44,9 +50,11 @@ class CustomerAreaViewTests(TestCase):
         self.assertContains(response, "Pedido gerado com sucesso")
         self.assertContains(response, "agora pode ser acompanhado por aqui")
         self.assertContains(response, "Confirmação inicial do pedido")
-        self.assertContains(response, "Pedido iniciado com sucesso")
-        self.assertContains(response, "Aguardando evolução do pagamento")
-        self.assertContains(response, "Próximas atualizações do pedido")
+        self.assertContains(response, "Pedido recebido com sucesso")
+        self.assertContains(response, "aguardando evolução do pagamento")
+        self.assertContains(response, "Próximos marcos do pedido")
+        self.assertContains(response, "itens, entrega e pagamento já registrados")
+        self.assertContains(response, "pagamento ainda pendente")
 
     def test_account_addresses_view_renders_design_system_template(self):
         response = self.client.get(reverse("accounts:account-addresses"))
@@ -54,7 +62,8 @@ class CustomerAreaViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "pages/templates/addresses_page.html")
         self.assertContains(response, "Meus endereços")
-        self.assertContains(response, "Casa")
+        self.assertContains(response, "Nenhum endereço salvo")
+        self.assertContains(response, "Adicione um endereço para agilizar futuras compras.")
 
     def test_account_address_readiness_routes_redirect_back_to_addresses_page(self):
         create_response = self.client.get(reverse("accounts:account-address-create"))
@@ -84,10 +93,12 @@ class CustomerAreaViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "pages/templates/profile_page.html")
         self.assertContains(response, "Meu perfil")
-        self.assertContains(response, "ana@hubx.market")
+        self.assertNotContains(response, "ana@hubx.market")
+        self.assertContains(response, "Ainda não encontramos um perfil persistido")
 
     def test_account_customer_area_query_service_returns_expected_contract(self):
         orders_payload = account_customer_area_queries.get_orders_page_data()
+        addresses_payload = account_customer_area_queries.get_addresses_page_data()
         order_detail_payload = account_customer_area_queries.get_order_detail_page_data("1048")
         confirmation_payload = account_customer_area_queries.get_order_detail_page_data("1048", confirmation_mode=True)
         profile_payload = account_customer_area_queries.get_profile_page_data()
@@ -95,9 +106,23 @@ class CustomerAreaViewTests(TestCase):
         self.assertEqual(orders_payload["page_title"], "Meus pedidos")
         self.assertEqual(order_detail_payload["order_number"], "#1048")
         self.assertEqual(confirmation_payload["eyebrow"], "Confirmação inicial do pedido")
-        self.assertEqual(confirmation_payload["summary_title"], "Pedido iniciado com sucesso")
-        self.assertEqual(profile_payload["email"], "ana@hubx.market")
-        self.assertEqual(orders_payload["operational_linkage_visibility"]["orders_mode"], "fixture")
+        self.assertEqual(confirmation_payload["summary_title"], "Pedido recebido com sucesso")
+        self.assertIn("itens, entrega e forma de pagamento", confirmation_payload["page_description"].lower())
+        self.assertIn("pagamento ainda pendente", confirmation_payload["page_meta"].lower())
+        self.assertIn("checkout aguardando pagamento", confirmation_payload["page_meta"].lower())
+        self.assertEqual(addresses_payload["addresses"], [])
+        self.assertEqual(addresses_payload["operational_linkage_visibility"]["addresses_mode"], "missing")
+        self.assertIn("adicione um endereço", addresses_payload["page_description"].lower())
+        self.assertEqual(profile_payload["email"], "")
+        self.assertEqual(profile_payload["operational_linkage_mode"], "missing")
+        self.assertIn("ainda não encontramos um perfil persistido", profile_payload["page_description"].lower())
+        self.assertEqual(orders_payload["operational_linkage_visibility"]["orders_mode"], "missing")
+
+    def test_customer_area_active_profile_context_is_missing_without_persisted_profile(self):
+        profile_context = account_customer_area_queries.get_active_profile_context()
+
+        self.assertEqual(profile_context["email"], "")
+        self.assertEqual(profile_context["customer_linkage_mode"], "missing")
 
 
 class CustomerAreaPersistedProfileTests(TestCase):
@@ -108,8 +133,115 @@ class CustomerAreaPersistedProfileTests(TestCase):
 
         self.assertTrue(account_customer_area_queries.using_persisted_profile_source())
         self.assertEqual(profile_payload["email"], "ana.persisted@hubx.market")
-        self.assertEqual(profile_payload["last_name"], "Persistida")
-        self.assertFalse(profile_payload["order_updates_opt_in"])
+
+    @override_settings(HUBX_MARKET_ROOT_DOMAIN="hubx.market", ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver"])
+    def test_customer_area_views_scope_active_profile_by_request_tenant(self):
+        primary_profile = AccountProfile.objects.select_related("tenant", "customer").get(pk=1)
+        secondary_tenant = primary_profile.tenant.__class__.objects.create(
+            name="Hubx Customer Area Secondary Tenant",
+            slug="hubx-customer-area-secondary-tenant",
+            subdomain="hubx-customer-area-secondary-tenant",
+        )
+        secondary_customer = Customer.objects.create(
+            tenant=secondary_tenant,
+            slug="ana-secondary-customer",
+            reference="#7789",
+            full_name="Ana Secondary",
+            email=primary_profile.email,
+            phone="(21) 97777-0000",
+            status="active",
+            account_type="Storefront",
+        )
+        AccountProfile.objects.create(
+            tenant=secondary_tenant,
+            customer=secondary_customer,
+            email=primary_profile.email,
+            first_name="Ana",
+            last_name="Secondary",
+            phone="(21) 97777-0000",
+            newsletter_opt_in=False,
+            order_updates_opt_in=True,
+            is_active=True,
+        )
+        secondary_order = Order.objects.create(
+            tenant=secondary_tenant,
+            customer=secondary_customer,
+            number="9090",
+            status="pending",
+            customer_name=secondary_customer.full_name,
+            customer_email=secondary_customer.email,
+            customer_phone=secondary_customer.phone,
+            payment_status="Pagamento pendente",
+            shipping_status="Aguardando confirmação",
+            fulfillment_status_label="Aguardando pagamento",
+            fulfillment_status_variant="warning",
+            shipping_address_summary="Rua Secondary, 10 · Rio de Janeiro/RJ",
+            notes_content="Pedido de outra loja.",
+            subtotal="90.00",
+            shipping_total="10.00",
+            discount_total="0.00",
+            total="100.00",
+            installments_summary="",
+        )
+        OrderItem.objects.create(
+            order=secondary_order,
+            title="Item Secondary",
+            subtitle="Único",
+            meta="SKU SECONDARY-001",
+            price_snapshot="100.00",
+            quantity=1,
+            sort_order=1,
+        )
+
+        profile_response = self.client.get(
+            reverse("accounts:account-profile"),
+            HTTP_HOST=f"{primary_profile.tenant.subdomain}.hubx.market",
+        )
+        orders_response = self.client.get(
+            reverse("accounts:account-orders"),
+            HTTP_HOST=f"{primary_profile.tenant.subdomain}.hubx.market",
+        )
+        scoped_profile = account_customer_area_queries.get_active_profile_context(tenant_id=primary_profile.tenant_id)
+
+        self.assertContains(profile_response, 'value="Ana"')
+        self.assertContains(profile_response, 'value="Persistida"')
+        self.assertNotContains(profile_response, 'value="Secondary"')
+        self.assertEqual(scoped_profile["tenant_id"], primary_profile.tenant_id)
+        self.assertEqual(scoped_profile["email"], primary_profile.email)
+        self.assertEqual(scoped_profile["last_name"], "Persistida")
+        self.assertFalse(scoped_profile["order_updates_opt_in"])
+        self.assertNotContains(orders_response, "#9090")
+
+    @override_settings(HUBX_MARKET_ROOT_DOMAIN="hubx.market", ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver"])
+    def test_customer_area_tenant_scoped_requests_do_not_fallback_to_fixture_orders_or_addresses(self):
+        from app.modules.tenants.models import Tenant
+
+        empty_tenant = Tenant.objects.create(
+            name="Hubx Empty Account Tenant",
+            slug="hubx-empty-account-tenant",
+            subdomain="hubx-empty-account-tenant",
+        )
+
+        orders_payload = account_customer_area_queries.get_orders_page_data(tenant_id=empty_tenant.id)
+        addresses_payload = account_customer_area_queries.get_addresses_page_data(tenant_id=empty_tenant.id)
+        profile_payload = account_customer_area_queries.get_profile_page_data(tenant_id=empty_tenant.id)
+
+        self.assertEqual(orders_payload["operational_linkage_visibility"]["profile_mode"], "missing")
+        self.assertEqual(orders_payload["operational_linkage_visibility"]["orders_mode"], "missing")
+        self.assertEqual(addresses_payload["operational_linkage_visibility"]["addresses_mode"], "missing")
+        self.assertEqual(profile_payload["email"], "")
+
+        orders_response = self.client.get(
+            reverse("accounts:account-orders"),
+            HTTP_HOST="hubx-empty-account-tenant.hubx.market",
+        )
+        addresses_response = self.client.get(
+            reverse("accounts:account-addresses"),
+            HTTP_HOST="hubx-empty-account-tenant.hubx.market",
+        )
+
+        self.assertNotContains(orders_response, "#1048")
+        self.assertNotContains(addresses_response, "Rua Persistida, 321")
 
     def test_account_profile_view_renders_persisted_profile_when_present(self):
         response = self.client.get(reverse("accounts:account-profile"))
@@ -123,6 +255,20 @@ class CustomerAreaPersistedProfileTests(TestCase):
 class CustomerAreaPersistedReadTests(TestCase):
     fixtures = ["customer_area_minimal_seed.json"]
 
+    def test_account_orders_view_renders_persisted_orders_when_available(self):
+        response = self.client.get(reverse("accounts:account-orders"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "#3051")
+        self.assertContains(response, "Pedido em preparação · pagamento confirmado · entrega preparando envio")
+
+    def test_account_orders_view_applies_search_filter_to_persisted_orders(self):
+        response = self.client.get(reverse("accounts:account-orders"), {"q": "3051"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "#3051")
+        self.assertNotContains(response, "Nenhum pedido encontrado")
+
     def test_customer_area_query_service_uses_persisted_sources_when_available(self):
         orders_payload = account_customer_area_queries.get_orders_page_data()
         order_detail_payload = account_customer_area_queries.get_order_detail_page_data("3051")
@@ -135,7 +281,8 @@ class CustomerAreaPersistedReadTests(TestCase):
 
         self.assertEqual(orders_payload["page_title"], "Meus pedidos")
         self.assertIn("primeiro pedido já está salvo", orders_payload["page_description"].lower())
-        self.assertIn("retomar o acompanhamento", orders_payload["table_description"].lower())
+        self.assertIn("acompanhamento mais claro agora", orders_payload["page_description"].lower())
+        self.assertIn("etapa principal da jornada", orders_payload["table_description"].lower())
         self.assertIn("catálogo segue disponível", orders_payload["table_description"].lower())
         self.assertIn("catálogo segue disponível", orders_payload["empty_description"].lower())
         self.assertEqual(order_detail_payload["order_number"], "#3051")
@@ -151,11 +298,17 @@ class CustomerAreaPersistedReadTests(TestCase):
         self.assertIn("página continua sendo o melhor lugar", order_detail_payload["page_description"].lower())
         self.assertIn("catálogo segue disponível", order_detail_payload["page_description"].lower())
         self.assertIn("pagamento já foi aprovado", order_detail_payload["summary_note"].lower())
+        self.assertIn("confirmação interna", order_detail_payload["summary_note"].lower())
         self.assertIn("Entrega prevista para Rua Persistida, 321", order_detail_payload["summary_note"])
         self.assertIn("próxima compra mais simples", order_detail_payload["summary_note"].lower())
         self.assertIn("confirmação do envio", order_detail_payload["summary_note"].lower())
         self.assertIn("catálogo segue disponível", order_detail_payload["summary_note"].lower())
         self.assertIn("atualizado há", order_detail_payload["page_meta"].lower())
+        self.assertEqual(order_detail_payload["summary_title"], "Pedido em preparação")
+        self.assertEqual(order_detail_payload["status_title"], "Etapa atual do pedido")
+        self.assertEqual(order_detail_payload["activity_title"], "Marcos do pedido")
+        self.assertEqual(order_detail_payload["activity_items"][0]["title"], "Pedido em preparação")
+        self.assertEqual(order_detail_payload["activity_items"][1]["title"], "Andamento de pagamento e entrega")
         self.assertEqual(order_detail_payload["activity_items"][2]["title"], "Próximo passo esperado")
         self.assertIn("confirmação do envio", order_detail_payload["activity_items"][2]["description"].lower())
         self.assertIn("catálogo segue disponível", order_detail_payload["activity_description"].lower())
@@ -207,10 +360,12 @@ class CustomerAreaPersistedReadTests(TestCase):
 
         self.assertEqual(orders_response.status_code, 200)
         self.assertContains(orders_response, "#3051")
-        self.assertContains(orders_response, "Pago · pagamento confirmado · entrega preparando envio")
-        self.assertContains(orders_response, "histórico salvo")
+        self.assertContains(orders_response, "Pedido em preparação · pagamento confirmado · entrega preparando envio")
+        self.assertContains(orders_response, "pedido em preparação")
         self.assertContains(orders_response, "Atualizado em 16/04/2026")
         self.assertContains(orders_response, "primeiro pedido já está salvo")
+        self.assertContains(orders_response, "acompanhamento mais claro agora")
+        self.assertContains(orders_response, "catálogo continua disponível")
 
         self.assertEqual(order_detail_response.status_code, 200)
         self.assertContains(order_detail_response, "Pedido #3051")
@@ -218,13 +373,16 @@ class CustomerAreaPersistedReadTests(TestCase):
         self.assertContains(order_detail_response, "Entrega em Rua Persistida, 321 · São Paulo/SP · última atualização em 16/04/2026")
         self.assertContains(order_detail_response, "atualizado há")
         self.assertContains(order_detail_response, "Entrega prevista para Rua Persistida, 321")
-        self.assertContains(order_detail_response, "Status atual confirmado")
-        self.assertContains(order_detail_response, "Pagamento e entrega acompanhados")
+        self.assertContains(order_detail_response, "Etapa atual do pedido")
+        self.assertContains(order_detail_response, "Pedido em preparação")
+        self.assertContains(order_detail_response, "Andamento de pagamento e entrega")
+        self.assertContains(order_detail_response, "Marcos do pedido")
         self.assertContains(order_detail_response, "Próximo passo esperado")
         self.assertContains(order_detail_response, "confirmação do envio")
         self.assertContains(order_detail_response, "catálogo segue disponível")
         self.assertContains(order_detail_response, "acompanhamento contínuo pela área do cliente")
         self.assertContains(order_detail_response, "Histórico salvo na sua conta")
+        self.assertContains(order_detail_response, "confirmação interna")
 
         self.assertEqual(addresses_response.status_code, 200)
         self.assertContains(addresses_response, "2 endereços salvos")
@@ -255,6 +413,366 @@ class CustomerAreaPersistedReadTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Confirmar pagamento")
         self.assertContains(response, "liberar a preparação")
+
+    def test_account_order_detail_view_shows_payment_retry_action_for_failed_payment(self):
+        Order.objects.filter(pk=2).update(
+            status="pending",
+            payment_status="Pagamento falhou",
+            payment_source_type="external_payment_failed",
+            payment_source_label="Gateway Stripe",
+            fulfillment_status_label="Aguardando novo pagamento",
+            fulfillment_status_variant="warning",
+            shipping_status="Aguardando nova tentativa",
+        )
+
+        response = self.client.get(reverse("accounts:account-order-detail", kwargs={"order_number": "3051"}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Tentar pagamento novamente")
+        self.assertContains(response, "retomar o pagamento com segurança")
+
+    def test_account_order_detail_view_shows_hosted_payment_action_when_pending_attempt_exists(self):
+        order = Order.objects.get(pk=2)
+        Order.objects.filter(pk=2).update(
+            status="pending",
+            payment_status="Pagamento pendente",
+            payment_source_type="checkout_pending",
+            payment_source_label="Checkout aguardando pagamento",
+            fulfillment_status_label="Aguardando pagamento",
+            fulfillment_status_variant="warning",
+            shipping_status="Aguardando confirmação",
+        )
+        attempt = PaymentAttempt.objects.create(
+            tenant=order.tenant,
+            order=order,
+            payment_method_code="credit_card",
+            provider_code="stripe",
+            provider_label="Gateway Stripe",
+            status=PaymentAttempt.Status.PENDING,
+            amount=order.total,
+        )
+
+        response = self.client.get(reverse("accounts:account-order-detail", kwargs={"order_number": "3051"}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Abrir pagamento hospedado")
+        self.assertContains(response, "Continue o pagamento em ambiente seguro")
+        self.assertContains(response, reverse("payments:hosted-redirect", kwargs={"attempt_key": attempt.attempt_key}))
+
+    def test_account_order_detail_view_shows_payment_operational_timeline_when_attempt_exists(self):
+        order = Order.objects.get(pk=2)
+        PaymentAttempt.objects.create(
+            tenant=order.tenant,
+            order=order,
+            payment_method_code="pix",
+            provider_code="pagarme",
+            provider_label="Pagar.me",
+            status=PaymentAttempt.Status.PENDING,
+            amount=order.total,
+            metadata={
+                "timeline": [
+                    {
+                        "code": "attempt_created",
+                        "title": "Tentativa de pagamento criada",
+                        "description": "A trilha foi iniciada a partir do pedido pendente.",
+                        "level": "info",
+                        "at": "2026-04-21T10:00:00-03:00",
+                    },
+                    {
+                        "code": "provider_intent_created",
+                        "title": "Link de pagamento criado",
+                        "description": "O provider devolveu uma URL hospedada para continuar o pagamento.",
+                        "level": "info",
+                        "at": "2026-04-21T10:05:00-03:00",
+                    },
+                ]
+            },
+        )
+
+        response = self.client.get(reverse("accounts:account-order-detail", kwargs={"order_number": "3051"}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Trilha do pagamento")
+        self.assertContains(response, "Pedido confirmado com tentativa ainda pendente")
+        self.assertContains(response, "Tentativa de pagamento criada")
+        self.assertContains(response, "Link de pagamento criado")
+
+    def test_account_order_detail_flags_order_payment_drift_when_order_is_paid_but_attempt_is_pending(self):
+        order = Order.objects.get(pk=2)
+        PaymentAttempt.objects.create(
+            tenant=order.tenant,
+            order=order,
+            payment_method_code="pix",
+            provider_code="pagarme",
+            provider_label="Pagar.me",
+            status=PaymentAttempt.Status.PENDING,
+            amount=order.total,
+            metadata={},
+        )
+
+        response = self.client.get(reverse("accounts:account-order-detail", kwargs={"order_number": "3051"}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Pedido confirmado com tentativa ainda pendente")
+        self.assertContains(response, "a tentativa de pagamento ainda não foi reconciliada")
+
+    def test_account_order_detail_view_flags_long_lived_pending_attempt(self):
+        order = Order.objects.get(pk=2)
+        attempt = PaymentAttempt.objects.create(
+            tenant=order.tenant,
+            order=order,
+            payment_method_code="pix",
+            provider_code="pagarme",
+            provider_label="Pagar.me",
+            status=PaymentAttempt.Status.PENDING,
+            amount=order.total,
+            metadata={},
+        )
+        PaymentAttempt.objects.filter(pk=attempt.pk).update(
+            created_at=timezone.now() - timedelta(hours=7),
+            updated_at=timezone.now() - timedelta(hours=7),
+        )
+
+        response = self.client.get(reverse("accounts:account-order-detail", kwargs={"order_number": "3051"}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Tentativa pendente há tempo demais")
+        self.assertContains(response, "já merece reconciliação operacional")
+        self.assertContains(response, "não tem uma retomada automática clara agora")
+
+    def test_account_order_detail_recommends_hosted_recovery_for_stale_pending_attempt_when_retry_path_exists(self):
+        order = Order.objects.get(pk=2)
+        Order.objects.filter(pk=2).update(
+            status="pending",
+            payment_status="Pagamento pendente",
+            payment_source_type="checkout_pending",
+            payment_source_label="Checkout aguardando pagamento",
+            fulfillment_status_label="Aguardando pagamento",
+            fulfillment_status_variant="warning",
+            shipping_status="Aguardando confirmação",
+        )
+        attempt = PaymentAttempt.objects.create(
+            tenant=order.tenant,
+            order=order,
+            payment_method_code="pix",
+            provider_code="pagarme",
+            provider_label="Pagar.me",
+            status=PaymentAttempt.Status.PENDING,
+            amount=order.total,
+            metadata={},
+        )
+        PaymentAttempt.objects.filter(pk=attempt.pk).update(
+            created_at=timezone.now() - timedelta(hours=7),
+            updated_at=timezone.now() - timedelta(hours=7),
+        )
+
+        response = self.client.get(reverse("accounts:account-order-detail", kwargs={"order_number": "3051"}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "O próximo passo mais seguro agora é reabrir o pagamento hospedado")
+        self.assertContains(response, "Retomar pagamento hospedado")
+
+    def test_account_order_detail_flags_long_lived_pending_order_without_clear_recovery(self):
+        Order.objects.filter(pk=2).update(
+            status="pending",
+            payment_status="Pagamento pendente",
+            payment_source_type="checkout_pending",
+            payment_source_label="Checkout aguardando pagamento",
+            fulfillment_status_label="Aguardando pagamento",
+            fulfillment_status_variant="warning",
+            shipping_status="Aguardando confirmação",
+            updated_at=timezone.now() - timedelta(days=2),
+        )
+
+        response = self.client.get(reverse("accounts:account-order-detail", kwargs={"order_number": "3051"}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Pedido pendente sem avanço recente")
+        self.assertContains(response, "merece revisão operacional antes de qualquer novo passo manual")
+
+    def test_account_order_detail_view_shows_reorder_lite_action_when_items_exist(self):
+        response = self.client.get(reverse("accounts:account-order-detail", kwargs={"order_number": "3051"}))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Comprar novamente")
+        self.assertContains(response, "recriar uma nova sessão")
+
+    def test_account_order_detail_post_bootstraps_reorder_session_from_eligible_items(self):
+        order = Order.objects.get(pk=2)
+        product = Product.objects.create(
+            tenant=order.tenant,
+            name="Tênis Hubx Area Reorder",
+            slug="tenis-hubx-area-reorder",
+            brand_name="Hubx",
+            category_label="Calçados esportivos",
+            status="active",
+            is_active=True,
+        )
+        ProductVariant.objects.create(
+            product=product,
+            sku="AREA-001-WHT-39",
+            price="279.90",
+            compare_price="299.90",
+            stock=8,
+            reserved_stock=0,
+            track_inventory=True,
+            allow_backorder=False,
+            is_default=True,
+        )
+        stale_session = CheckoutSession.objects.create(
+            tenant=order.tenant,
+            status=CheckoutSession.Status.OPEN,
+            subtotal="10.00",
+            shipping_methods=[{"value": "standard", "label": "Entrega padrão", "price": "R$ 24,90"}],
+            shipping_method_selected="standard",
+            payment_methods=[{"value": "credit_card", "label": "Cartão de crédito"}],
+            payment_method_selected="credit_card",
+            shipping_total="24.90",
+            grand_total="34.90",
+        )
+        CheckoutSessionItem.objects.create(
+            checkout_session=stale_session,
+            title="Item antigo",
+            subtitle="Legado",
+            meta="SKU OLD-001",
+            variant_sku="OLD-001",
+            price="10.00",
+            quantity=1,
+            sort_order=1,
+        )
+
+        response = self.client.post(
+            reverse("accounts:account-order-detail", kwargs={"order_number": "3051"}),
+            {"action_type": "reorder_lite"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("checkout:checkout-page"), response["Location"])
+        self.assertIn("result=reorder-lite-ready", response["Location"])
+        self.assertIn("stage=cart", response["Location"])
+        self.assertIn("back_url=%2Faccounts%2Faccount%2Forders%2F3051%2F", response["Location"])
+
+        stale_session.refresh_from_db()
+        self.assertEqual(stale_session.items.count(), 1)
+        item = stale_session.items.first()
+        self.assertEqual(item.variant_sku, "AREA-001-WHT-39")
+        self.assertEqual(item.title, "Tênis Hubx Area Reorder")
+        self.assertEqual(item.subtitle, "Branco · 39")
+        self.assertEqual(str(item.price), "279.90")
+        self.assertEqual(str(stale_session.subtotal), "279.90")
+        self.assertEqual(str(stale_session.shipping_total), "24.90")
+        self.assertEqual(str(stale_session.grand_total), "304.80")
+
+        checkout_response = self.client.get(response["Location"])
+        self.assertContains(checkout_response, "Nova sessão pronta")
+        self.assertContains(checkout_response, "Etapa atual: carrinho")
+        self.assertContains(checkout_response, "Tênis Hubx Area Reorder")
+
+    def test_account_order_detail_post_bootstraps_partial_reorder_when_some_items_are_ineligible(self):
+        order = Order.objects.get(pk=2)
+        product = Product.objects.create(
+            tenant=order.tenant,
+            name="Tênis Hubx Area Reorder",
+            slug="tenis-hubx-area-reorder-partial",
+            brand_name="Hubx",
+            category_label="Calçados esportivos",
+            status="active",
+            is_active=True,
+        )
+        ProductVariant.objects.create(
+            product=product,
+            sku="AREA-001-WHT-39",
+            price="279.90",
+            stock=8,
+            reserved_stock=0,
+            track_inventory=True,
+            allow_backorder=False,
+            is_default=True,
+        )
+        OrderItem.objects.create(
+            order=order,
+            title="Item não elegível",
+            subtitle="Cinza · 40",
+            meta="SKU MISSING-AREA-40",
+            price_snapshot="89.90",
+            quantity=1,
+            quantity_readonly=True,
+            sort_order=2,
+        )
+
+        response = self.client.post(
+            reverse("accounts:account-order-detail", kwargs={"order_number": "3051"}),
+            {"action_type": "reorder_lite"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("result=reorder-lite-partial", response["Location"])
+
+        session = CheckoutSession.objects.get(tenant=order.tenant, status=CheckoutSession.Status.OPEN)
+        self.assertEqual(session.items.count(), 1)
+        self.assertEqual(session.items.first().variant_sku, "AREA-001-WHT-39")
+
+    def test_account_order_detail_post_blocks_reorder_when_no_item_is_eligible(self):
+        response = self.client.post(
+            reverse("accounts:account-order-detail", kwargs={"order_number": "3051"}),
+            {"action_type": "reorder_lite"},
+        )
+
+        self.assertRedirects(
+            response,
+            "/accounts/account/orders/3051/?result=reorder-lite-unavailable",
+            fetch_redirect_response=False,
+        )
+
+    def test_account_order_detail_post_bootstraps_payment_retry_session_from_failed_order(self):
+        Order.objects.filter(pk=2).update(
+            status="pending",
+            payment_status="Pagamento falhou",
+            payment_source_type="external_payment_failed",
+            payment_source_label="Gateway Stripe",
+            payment_reference="pi_fail_001",
+            fulfillment_status_label="Aguardando novo pagamento",
+            fulfillment_status_variant="warning",
+            shipping_status="Aguardando nova tentativa",
+        )
+        order = Order.objects.get(pk=2)
+        product = Product.objects.create(
+            tenant=order.tenant,
+            name="Tênis Hubx Retry",
+            slug="tenis-hubx-retry",
+            brand_name="Hubx",
+            category_label="Calçados esportivos",
+            status="active",
+            is_active=True,
+        )
+        ProductVariant.objects.create(
+            product=product,
+            sku="AREA-001-WHT-39",
+            price="279.90",
+            stock=8,
+            reserved_stock=0,
+            track_inventory=True,
+            allow_backorder=False,
+            is_default=True,
+        )
+
+        response = self.client.post(
+            reverse("accounts:account-order-detail", kwargs={"order_number": "3051"}),
+            {"action_type": "payment_retry"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("checkout:checkout-page"), response["Location"])
+        self.assertIn("result=payment-retry-ready", response["Location"])
+        self.assertIn("stage=payment", response["Location"])
+
+        session = CheckoutSession.objects.get(tenant=order.tenant, status=CheckoutSession.Status.OPEN)
+        self.assertEqual(session.items.count(), 1)
+        self.assertEqual(session.items.first().variant_sku, "AREA-001-WHT-39")
+
+        checkout_response = self.client.get(response["Location"])
+        self.assertContains(checkout_response, "Sessão pronta para nova tentativa")
+        self.assertContains(checkout_response, "Etapa atual: pagamento")
 
     def test_account_order_detail_post_confirms_internal_payment_for_current_customer(self):
         Order.objects.filter(pk=2).update(
@@ -292,6 +810,10 @@ class CustomerAreaPersistedReadTests(TestCase):
         order = Order.objects.get(pk=2)
         self.assertEqual(order.status, "paid")
         self.assertEqual(order.payment_status, "Confirmado internamente")
+        self.assertEqual(order.payment_source_type, "internal_confirmation")
+        self.assertEqual(order.payment_source_label, "Confirmação interna")
+        self.assertEqual(order.payment_reference, "")
+        self.assertIsNotNone(order.payment_confirmed_at)
         self.assertEqual(order.fulfillment_status_label, "Separando itens")
         self.assertEqual(order.shipping_status, "Preparando envio")
         self.assertIsNotNone(order.inventory_reserved_at)
@@ -316,6 +838,7 @@ class CustomerAreaPersistedReadTests(TestCase):
         refreshed = self.client.get(reverse("accounts:account-order-detail", kwargs={"order_number": "3051"}), {"result": "payment-confirmed"})
         self.assertContains(refreshed, "Pagamento confirmado")
         self.assertContains(refreshed, "confirmação interna do pagamento")
+        self.assertContains(refreshed, "Origem atual do pagamento: confirmação interna.")
         self.assertContains(refreshed, "Confirmado internamente")
         self.assertContains(refreshed, "operação em separando itens")
         self.assertNotContains(refreshed, "Confirmar pagamento")
@@ -403,15 +926,18 @@ class CustomerAreaPersistedReadTests(TestCase):
         payload = account_customer_area_queries.get_order_detail_page_data("3051")
 
         self.assertIn("pedido já foi concluído", payload["page_description"].lower())
+        self.assertIn("pronta para voltar ao catálogo", payload["page_meta"].lower())
         self.assertIn("pedido já foi entregue", payload["summary_note"].lower())
-        self.assertIn("pedido concluído", payload["activity_items"][0]["title"].lower())
-        self.assertIn("entrega concluída", payload["activity_items"][1]["title"].lower())
+        self.assertIn("pedido entregue", payload["activity_items"][0]["title"].lower())
+        self.assertIn("jornada concluída", payload["activity_items"][1]["title"].lower())
         self.assertIn("nova compra", payload["activity_items"][2]["description"].lower())
+        self.assertIn("catálogo continua sendo o melhor ponto", payload["activity_description"].lower())
 
         response = self.client.get(reverse("accounts:account-order-detail", kwargs={"order_number": "3051"}))
         self.assertContains(response, "pedido já foi concluído")
-        self.assertContains(response, "Pedido concluído")
-        self.assertContains(response, "Entrega concluída")
+        self.assertContains(response, "Pedido entregue")
+        self.assertContains(response, "Jornada concluída")
+        self.assertContains(response, "Pronta para voltar ao catálogo")
 
     def test_account_overview_uses_retention_messaging_when_persisted_orders_exist(self):
         response = self.client.get(reverse("accounts:account-overview"))
@@ -420,7 +946,9 @@ class CustomerAreaPersistedReadTests(TestCase):
         self.assertContains(response, "histórico já começou")
         self.assertContains(response, "acompanhar seu pedido atual")
 
+    @override_settings(HUBX_MARKET_ROOT_DOMAIN="hubx.market", ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver"])
     def test_account_address_create_persists_customer_address(self):
+        primary_profile = AccountProfile.objects.select_related("tenant").get(pk=2)
         response = self.client.post(
             reverse("accounts:account-address-create"),
             {
@@ -434,15 +962,103 @@ class CustomerAreaPersistedReadTests(TestCase):
                 "postal_code": "01400-000",
                 "is_default": "1",
             },
+            HTTP_HOST=f"{primary_profile.tenant.subdomain}.hubx.market",
         )
 
         self.assertRedirects(response, "/accounts/account/addresses/?result=address-created#address-management", fetch_redirect_response=False)
 
-        refreshed = self.client.get(reverse("accounts:account-addresses"))
+        refreshed = self.client.get(
+            reverse("accounts:account-addresses"),
+            HTTP_HOST=f"{primary_profile.tenant.subdomain}.hubx.market",
+        )
         self.assertContains(refreshed, "Casa nova")
         self.assertContains(refreshed, "Rua Nova, 500")
 
+    def test_account_address_create_requires_tenant_context(self):
+        response = self.client.post(
+            reverse("accounts:account-address-create"),
+            {
+                "label": "Casa sem tenant",
+                "recipient_name": "Ana Área",
+                "line_1": "Rua Sem Tenant, 1",
+                "line_2": "",
+                "district": "Centro",
+                "city": "São Paulo",
+                "state": "SP",
+                "postal_code": "01000-000",
+                "is_default": "1",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            "/accounts/account/addresses/?result=address-create-unavailable#address-management",
+            fetch_redirect_response=False,
+        )
+        self.assertFalse(CustomerAddress.objects.filter(label="Casa sem tenant").exists())
+
+    @override_settings(HUBX_MARKET_ROOT_DOMAIN="hubx.market", ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver"])
+    def test_account_address_create_scopes_command_by_request_tenant(self):
+        primary_profile = (
+            AccountProfile.objects.select_related("tenant", "customer").filter(is_active=True).order_by("id").first()
+        )
+        self.assertIsNotNone(primary_profile)
+        self.assertIsNotNone(primary_profile.customer)
+
+        from app.modules.tenants.models import Tenant
+
+        secondary_tenant = Tenant.objects.create(
+            name="Hubx Address Secondary Tenant",
+            slug="hubx-address-secondary-tenant",
+            subdomain="hubx-address-secondary-tenant",
+        )
+        secondary_customer = Customer.objects.create(
+            tenant=secondary_tenant,
+            slug="secondary-address-customer",
+            reference="#9090",
+            full_name="Ana Área Secundária",
+            email=primary_profile.email,
+            phone="(11) 95555-0000",
+            status="active",
+            account_type="Storefront",
+        )
+        AccountProfile.objects.create(
+            tenant=secondary_tenant,
+            customer=secondary_customer,
+            email=primary_profile.email,
+            first_name="Ana",
+            last_name="Secundária",
+            phone="(11) 95555-0000",
+            is_active=True,
+        )
+
+        response = self.client.post(
+            reverse("accounts:account-address-create"),
+            {
+                "label": "Casa tenant-aware",
+                "recipient_name": "Ana Principal",
+                "line_1": "Rua Tenant, 10",
+                "line_2": "",
+                "district": "Centro",
+                "city": "São Paulo",
+                "state": "SP",
+                "postal_code": "01000-100",
+                "is_default": "1",
+            },
+            HTTP_HOST=f"{primary_profile.tenant.subdomain}.hubx.market",
+        )
+
+        self.assertRedirects(response, "/accounts/account/addresses/?result=address-created#address-management", fetch_redirect_response=False)
+        self.assertTrue(
+            CustomerAddress.objects.filter(customer=primary_profile.customer, label="Casa tenant-aware").exists()
+        )
+        self.assertFalse(
+            CustomerAddress.objects.filter(customer=secondary_customer, label="Casa tenant-aware").exists()
+        )
+
+    @override_settings(HUBX_MARKET_ROOT_DOMAIN="hubx.market", ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver"])
     def test_account_address_edit_updates_customer_address(self):
+        primary_profile = AccountProfile.objects.select_related("tenant").get(pk=2)
         response = self.client.post(
             reverse("accounts:account-address-edit", kwargs={"address_id": 1}),
             {
@@ -456,23 +1072,39 @@ class CustomerAreaPersistedReadTests(TestCase):
                 "postal_code": "01010-100",
                 "is_default": "1",
             },
+            HTTP_HOST=f"{primary_profile.tenant.subdomain}.hubx.market",
         )
 
         self.assertRedirects(response, "/accounts/account/addresses/?result=address-updated#address-management", fetch_redirect_response=False)
 
-        refreshed = self.client.get(reverse("accounts:account-addresses"))
+        refreshed = self.client.get(
+            reverse("accounts:account-addresses"),
+            HTTP_HOST=f"{primary_profile.tenant.subdomain}.hubx.market",
+        )
         self.assertContains(refreshed, "Casa atualizada")
         self.assertContains(refreshed, "Rua Persistida, 999")
 
+    @override_settings(HUBX_MARKET_ROOT_DOMAIN="hubx.market", ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver"])
     def test_account_address_delete_removes_current_customer_address(self):
-        confirmation = self.client.get(reverse("accounts:account-addresses"), {"intent": "delete", "address_id": "1"})
+        primary_profile = AccountProfile.objects.select_related("tenant").get(pk=2)
+        confirmation = self.client.get(
+            reverse("accounts:account-addresses"),
+            {"intent": "delete", "address_id": "1"},
+            HTTP_HOST=f"{primary_profile.tenant.subdomain}.hubx.market",
+        )
         self.assertContains(confirmation, "Remover endereço")
 
-        response = self.client.post(reverse("accounts:account-address-delete", kwargs={"address_id": 1}))
+        response = self.client.post(
+            reverse("accounts:account-address-delete", kwargs={"address_id": 1}),
+            HTTP_HOST=f"{primary_profile.tenant.subdomain}.hubx.market",
+        )
 
         self.assertRedirects(response, "/accounts/account/addresses/?result=address-deleted#address-management", fetch_redirect_response=False)
 
-        refreshed = self.client.get(reverse("accounts:account-addresses"))
+        refreshed = self.client.get(
+            reverse("accounts:account-addresses"),
+            HTTP_HOST=f"{primary_profile.tenant.subdomain}.hubx.market",
+        )
         self.assertNotContains(refreshed, "Rua Persistida, 321")
         self.assertContains(refreshed, "Escritório")
 

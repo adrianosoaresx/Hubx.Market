@@ -4,7 +4,7 @@
 
 {% block content %}
 <section class="space-y-6">
-    {% with eyebrow=eyebrow|default:"Customer Area" title=page_title|default:"Minha conta" description=page_description|default:"Acompanhe seus dados, pedidos recentes e acessos rápidos da área do cliente." %}
+    {% with eyebrow=eyebrow|default:"Customer Area" title=page_title|default:"Minha conta" description=page_description|default:"Acompanhe seus dados, pedidos recentes e acessos rápidos da área do cliente." meta=page_meta %}
         {% include "shared/components/layout/page_header.html" %}
     {% endwith %}
 

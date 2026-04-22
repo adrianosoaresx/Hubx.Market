@@ -5,7 +5,7 @@ from typing import Protocol
 
 
 class ProfileLookupRepository(Protocol):
-    def get_primary_profile(self) -> dict[str, object] | None:
+    def get_primary_profile(self, *, tenant_id: int | None = None) -> dict[str, object] | None:
         ...
 
 
@@ -24,16 +24,14 @@ class DjangoOrmAccountAddressCommandRepository:
         self.customer_model = getattr(customer_models, "Customer", None)
         self.address_model = getattr(customer_models, "CustomerAddress", None)
 
-    def resolve_current_customer(self):
+    def resolve_current_customer(self, *, tenant_id: int | None = None):
         if not all([self.profile_model, self.customer_model]):
             return None
         try:
-            profile = (
-                self.profile_model._default_manager.select_related("customer")
-                .filter(is_active=True)
-                .order_by("-updated_at", "-id")
-                .first()
-            )
+            queryset = self.profile_model._default_manager.select_related("customer").filter(is_active=True)
+            if tenant_id:
+                queryset = queryset.filter(tenant_id=tenant_id)
+            profile = queryset.order_by("-updated_at", "-id").first()
         except Exception:
             return None
         if profile is None or not getattr(profile, "tenant_id", None):
@@ -56,8 +54,8 @@ class DjangoOrmAccountAddressCommandRepository:
         except Exception:
             return None
 
-    def get_address_for_current_customer(self, address_id: int):
-        customer = self.resolve_current_customer()
+    def get_address_for_current_customer(self, address_id: int, *, tenant_id: int | None = None):
+        customer = self.resolve_current_customer(tenant_id=tenant_id)
         if customer is None or self.address_model is None:
             return None
         try:
@@ -65,8 +63,8 @@ class DjangoOrmAccountAddressCommandRepository:
         except Exception:
             return None
 
-    def create_address(self, cleaned_data: dict[str, object]):
-        customer = self.resolve_current_customer()
+    def create_address(self, cleaned_data: dict[str, object], *, tenant_id: int | None = None):
+        customer = self.resolve_current_customer(tenant_id=tenant_id)
         if customer is None or self.address_model is None:
             return None
         self._normalize_defaults(customer=customer, is_default=bool(cleaned_data.get("is_default")))
@@ -83,8 +81,8 @@ class DjangoOrmAccountAddressCommandRepository:
             is_default=bool(cleaned_data.get("is_default")),
         )
 
-    def update_address(self, address_id: int, cleaned_data: dict[str, object]):
-        address = self.get_address_for_current_customer(address_id)
+    def update_address(self, address_id: int, cleaned_data: dict[str, object], *, tenant_id: int | None = None):
+        address = self.get_address_for_current_customer(address_id, tenant_id=tenant_id)
         if address is None:
             return None
         self._normalize_defaults(customer=address.customer, is_default=bool(cleaned_data.get("is_default")), exclude_id=address.pk)
@@ -114,8 +112,14 @@ class DjangoOrmAccountAddressCommandRepository:
 class AccountAddressCommandService:
     repository: DjangoOrmAccountAddressCommandRepository
 
-    def get_address_initial(self, address_id: int) -> dict[str, object] | None:
-        address = self.repository.get_address_for_current_customer(address_id)
+    @staticmethod
+    def _tenant_required(tenant_id: int | None) -> bool:
+        return tenant_id is not None
+
+    def get_address_initial(self, address_id: int, *, tenant_id: int | None = None) -> dict[str, object] | None:
+        if not self._tenant_required(tenant_id):
+            return None
+        address = self.repository.get_address_for_current_customer(address_id, tenant_id=tenant_id)
         if address is None:
             return None
         return {
@@ -130,14 +134,20 @@ class AccountAddressCommandService:
             "is_default": address.is_default,
         }
 
-    def create_address(self, cleaned_data: dict[str, object]):
-        return self.repository.create_address(cleaned_data)
+    def create_address(self, cleaned_data: dict[str, object], *, tenant_id: int | None = None):
+        if not self._tenant_required(tenant_id):
+            return None
+        return self.repository.create_address(cleaned_data, tenant_id=tenant_id)
 
-    def update_address(self, address_id: int, cleaned_data: dict[str, object]):
-        return self.repository.update_address(address_id, cleaned_data)
+    def update_address(self, address_id: int, cleaned_data: dict[str, object], *, tenant_id: int | None = None):
+        if not self._tenant_required(tenant_id):
+            return None
+        return self.repository.update_address(address_id, cleaned_data, tenant_id=tenant_id)
 
-    def get_address_summary(self, address_id: int) -> dict[str, object] | None:
-        address = self.repository.get_address_for_current_customer(address_id)
+    def get_address_summary(self, address_id: int, *, tenant_id: int | None = None) -> dict[str, object] | None:
+        if not self._tenant_required(tenant_id):
+            return None
+        address = self.repository.get_address_for_current_customer(address_id, tenant_id=tenant_id)
         if address is None:
             return None
         content_parts = [
@@ -154,8 +164,10 @@ class AccountAddressCommandService:
             "footer": f"CEP {address.postal_code}" if address.postal_code else "",
         }
 
-    def delete_address(self, address_id: int) -> bool:
-        address = self.repository.get_address_for_current_customer(address_id)
+    def delete_address(self, address_id: int, *, tenant_id: int | None = None) -> bool:
+        if not self._tenant_required(tenant_id):
+            return False
+        address = self.repository.get_address_for_current_customer(address_id, tenant_id=tenant_id)
         if address is None:
             return False
         address.delete()

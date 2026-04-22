@@ -104,6 +104,15 @@ def _empty_state_for_quick_filter(*, quick_filter_value: str, active_filter_labe
     )
 
 
+def _tenant_missing_empty_state(*, tenant_id: int | None, quick_filter_value: str, search_value: str) -> tuple[str, str] | None:
+    if not tenant_id or quick_filter_value or search_value:
+        return None
+    return (
+        "Nenhum cliente persistido nesta loja",
+        "A loja atual ainda não possui clientes persistidos disponíveis para esta visão administrativa.",
+    )
+
+
 def _append_result_param(target_url: str, result: str) -> str:
     split_target = urlsplit(target_url)
     query_items = [(key, value) for key, value in parse_qsl(split_target.query, keep_blank_values=True) if key != "result"]
@@ -317,13 +326,14 @@ class AdminCustomersListView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        tenant_id = getattr(getattr(self.request, "tenant", None), "id", None)
         search_value = self.request.GET.get("q", "").strip()
         quick_filter_selected = self.request.GET.get("quick_filter", "").strip()
         active_filter_label = _quick_filter_label(quick_filter_selected)
         feedback = _build_action_feedback(self.request.GET.get("result", "").strip())
         page_number = int(self.request.GET.get("page", "1") or "1")
 
-        customers = admin_customer_queries.list_customers(quick_filter=quick_filter_selected)
+        customers = admin_customer_queries.list_customers(quick_filter=quick_filter_selected, tenant_id=tenant_id)
         customers = _apply_search(customers, search_value)
 
         paginator = Paginator(customers, 2)
@@ -333,6 +343,13 @@ class AdminCustomersListView(TemplateView):
             quick_filter_value=quick_filter_selected,
             active_filter_label=active_filter_label,
         )
+        tenant_missing_empty_state = _tenant_missing_empty_state(
+            tenant_id=tenant_id,
+            quick_filter_value=quick_filter_selected,
+            search_value=search_value,
+        )
+        if tenant_missing_empty_state and not customers:
+            empty_title, empty_description = tenant_missing_empty_state
 
         query_params = []
         if search_value:
@@ -446,7 +463,8 @@ class AdminCustomerDetailView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        customer = admin_customer_queries.get_customer(kwargs["customer_slug"])
+        tenant_id = getattr(getattr(self.request, "tenant", None), "id", None)
+        customer = admin_customer_queries.get_customer(kwargs["customer_slug"], tenant_id=tenant_id)
         back_href = reverse("customers:admin-customers-list")
         feedback = _build_action_feedback(self.request.GET.get("result", "").strip())
         context.update(
@@ -486,19 +504,20 @@ class AdminCustomerDetailView(TemplateView):
 class AdminCustomerActionView(View):
     def post(self, request, *args, **kwargs):
         customer_slug = kwargs["customer_slug"]
+        tenant_id = getattr(getattr(request, "tenant", None), "id", None)
         action_type = str(request.POST.get("action_type", "") or "").strip()
         if action_type == "mark_for_followup":
-            _, result = admin_customer_commands.mark_for_followup(customer_slug=customer_slug)
+            _, result = admin_customer_commands.mark_for_followup(customer_slug=customer_slug, tenant_id=tenant_id)
         elif action_type == "clear_followup":
-            _, result = admin_customer_commands.clear_followup(customer_slug=customer_slug)
+            _, result = admin_customer_commands.clear_followup(customer_slug=customer_slug, tenant_id=tenant_id)
         elif action_type == "mark_for_reengagement":
-            _, result = admin_customer_commands.mark_for_reengagement(customer_slug=customer_slug)
+            _, result = admin_customer_commands.mark_for_reengagement(customer_slug=customer_slug, tenant_id=tenant_id)
         elif action_type == "clear_reengagement":
-            _, result = admin_customer_commands.clear_reengagement(customer_slug=customer_slug)
+            _, result = admin_customer_commands.clear_reengagement(customer_slug=customer_slug, tenant_id=tenant_id)
         elif action_type == "mark_priority":
-            _, result = admin_customer_commands.mark_priority(customer_slug=customer_slug)
+            _, result = admin_customer_commands.mark_priority(customer_slug=customer_slug, tenant_id=tenant_id)
         elif action_type == "clear_priority":
-            _, result = admin_customer_commands.clear_priority(customer_slug=customer_slug)
+            _, result = admin_customer_commands.clear_priority(customer_slug=customer_slug, tenant_id=tenant_id)
         elif action_type in {
             "bulk_mark_for_followup",
             "bulk_clear_followup",
@@ -509,21 +528,21 @@ class AdminCustomerActionView(View):
         }:
             next_target = str(request.POST.get("next", "") or "").strip()
             quick_filter_selected, search_value = _filters_from_next(next_target)
-            customers = admin_customer_queries.list_customers(quick_filter=quick_filter_selected)
+            customers = admin_customer_queries.list_customers(quick_filter=quick_filter_selected, tenant_id=tenant_id)
             customers = _apply_search(customers, search_value)
             customer_slugs = [str(customer["slug"]) for customer in customers]
             if action_type == "bulk_mark_for_followup":
-                _, result = admin_customer_commands.bulk_mark_for_followup(customer_slugs=customer_slugs)
+                _, result = admin_customer_commands.bulk_mark_for_followup(customer_slugs=customer_slugs, tenant_id=tenant_id)
             elif action_type == "bulk_clear_followup":
-                _, result = admin_customer_commands.bulk_clear_followup(customer_slugs=customer_slugs)
+                _, result = admin_customer_commands.bulk_clear_followup(customer_slugs=customer_slugs, tenant_id=tenant_id)
             elif action_type == "bulk_mark_reengagement":
-                _, result = admin_customer_commands.bulk_mark_reengagement(customer_slugs=customer_slugs)
+                _, result = admin_customer_commands.bulk_mark_reengagement(customer_slugs=customer_slugs, tenant_id=tenant_id)
             elif action_type == "bulk_clear_reengagement":
-                _, result = admin_customer_commands.bulk_clear_reengagement(customer_slugs=customer_slugs)
+                _, result = admin_customer_commands.bulk_clear_reengagement(customer_slugs=customer_slugs, tenant_id=tenant_id)
             elif action_type == "bulk_mark_priority":
-                _, result = admin_customer_commands.bulk_mark_priority(customer_slugs=customer_slugs)
+                _, result = admin_customer_commands.bulk_mark_priority(customer_slugs=customer_slugs, tenant_id=tenant_id)
             else:
-                _, result = admin_customer_commands.bulk_clear_priority(customer_slugs=customer_slugs)
+                _, result = admin_customer_commands.bulk_clear_priority(customer_slugs=customer_slugs, tenant_id=tenant_id)
             return HttpResponseRedirect(_resolve_bulk_next_target(request=request, result=result))
         else:
             result = "customer-action-invalid"

@@ -39,6 +39,13 @@
                     {% with state=stock_state|default:"in_stock" label=stock_label helper=stock_helper %}
                         {% include "shared/components/commerce/stock_indicator.html" %}
                     {% endwith %}
+
+                    {% if effective_variant_summary %}
+                        {% include "shared/components/forms/field_help.html" with text=effective_variant_summary %}
+                    {% endif %}
+                    {% if availability_note %}
+                        {% include "shared/components/forms/field_help.html" with text=availability_note %}
+                    {% endif %}
                 </div>
             </header>
 
@@ -97,6 +104,9 @@
                             {% with label=secondary_action_label variant=secondary_action_variant|default:"secondary" href=secondary_action_href type=secondary_action_type|default:"button" full_width=True disabled=secondary_action_disabled %}
                                 {% include "shared/components/actions/button.html" %}
                             {% endwith %}
+                        {% endif %}
+                        {% if cta_helper %}
+                            {% include "shared/components/forms/field_help.html" with text=cta_helper %}
                         {% endif %}
                     </div>
                 </div>

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from urllib.parse import urlencode
+
 from django.core.paginator import Paginator
 from django.http import HttpResponseRedirect
 from django.middleware.csrf import get_token
@@ -13,6 +15,12 @@ from app.modules.accounts.application.account_page_queries import account_page_q
 from app.modules.accounts.application.account_customer_area_queries import (
     account_customer_area_queries,
 )
+from app.modules.checkout.application.checkout_reorder_commands import (
+    checkout_reorder_commands,
+)
+from app.modules.checkout.application.checkout_payment_retry_commands import (
+    checkout_payment_retry_commands,
+)
 from app.modules.orders.application.customer_order_payment_commands import (
     customer_order_payment_commands,
 )
@@ -22,9 +30,14 @@ from .forms import AccountAddressForm
 def _quick_links() -> list[dict[str, str]]:
     return [
         {"href": reverse("accounts:account-orders"), "label": "Ver pedidos", "description": "Acompanhe status, entrega e histórico."},
+        {"href": reverse("storefront:catalog-list"), "label": "Voltar ao catálogo", "description": "Retome a navegação e inicie a próxima compra."},
         {"href": reverse("accounts:account-addresses"), "label": "Gerenciar endereços", "description": "Atualize entregas e cobrança."},
         {"href": reverse("accounts:account-profile"), "label": "Editar perfil", "description": "Revise dados pessoais e preferências."},
     ]
+
+
+def _request_tenant_id(request) -> int | None:
+    return getattr(getattr(request, "tenant", None), "id", None)
 
 def _build_page_items(page_number: int, total_pages: int, base_url: str, query_params: list[str]) -> list[dict[str, object]]:
     suffix = "&".join(query_params)
@@ -122,7 +135,10 @@ def _build_address_form_context(request, *, form: AccountAddressForm | None = No
     if form is None:
         initial = {}
         if resolved_intent == "edit" and resolved_address_id is not None:
-            initial = account_address_commands.get_address_initial(resolved_address_id) or {}
+            initial = account_address_commands.get_address_initial(
+                resolved_address_id,
+                tenant_id=_request_tenant_id(request),
+            ) or {}
         form = AccountAddressForm(initial=initial)
 
     form_action = (
@@ -158,7 +174,7 @@ def _build_address_delete_context(request) -> dict[str, object]:
     if intent != "delete" or not raw_address_id.isdigit():
         return {}
     address_id = int(raw_address_id)
-    summary = account_address_commands.get_address_summary(address_id)
+    summary = account_address_commands.get_address_summary(address_id, tenant_id=_request_tenant_id(request))
     if summary is None:
         return {}
     return {
@@ -194,6 +210,18 @@ def _build_address_feedback_context(request) -> dict[str, object]:
             "icon": "ℹ️",
             "title": "Endereço não removido",
             "description": "Só é possível remover endereços vinculados à conta atual.",
+        },
+        "address-create-unavailable": {
+            "variant": "warning",
+            "icon": "ℹ️",
+            "title": "Não foi possível salvar o endereço",
+            "description": "A operação exige uma loja válida vinculada à conta atual antes de salvar um endereço.",
+        },
+        "address-update-unavailable": {
+            "variant": "warning",
+            "icon": "ℹ️",
+            "title": "Não foi possível atualizar o endereço",
+            "description": "A operação exige uma loja válida vinculada à conta atual antes de atualizar um endereço.",
         },
     }
     if result not in mapping:
@@ -252,31 +280,166 @@ def _build_order_detail_feedback_context(request) -> dict[str, object]:
             "title": "Estoque insuficiente para confirmar",
             "description": "O saldo livre atual da variante não é suficiente para aplicar a reserva operacional deste pedido.",
         },
+        "reorder-lite-ready": {
+            "variant": "success",
+            "icon": "🛒",
+            "title": "Nova sessão pronta",
+            "description": "Recriamos uma nova sessão com os itens elegíveis deste pedido para você revisar e seguir comprando.",
+        },
+        "reorder-lite-partial": {
+            "variant": "info",
+            "icon": "🧺",
+            "title": "Nova sessão criada parcialmente",
+            "description": "Alguns itens deste pedido não puderam voltar, mas os elegíveis já foram recriados em uma nova sessão para revisão.",
+        },
+        "reorder-lite-unavailable": {
+            "variant": "warning",
+            "icon": "ℹ️",
+            "title": "Não foi possível recriar este pedido",
+            "description": "Nenhum item elegível pôde ser usado para uma nova compra agora. Revise o catálogo para montar uma nova sessão.",
+        },
+        "payment-retry-unavailable": {
+            "variant": "warning",
+            "icon": "ℹ️",
+            "title": "Não foi possível retomar o pagamento",
+            "description": "Não encontramos um pedido elegível para nova tentativa agora. Recarregue a página ou tente novamente mais tarde.",
+        },
+        "payment-retry-blocked": {
+            "variant": "warning",
+            "icon": "🧾",
+            "title": "Nova tentativa não disponível",
+            "description": "Só pedidos pendentes com falha de pagamento podem abrir uma nova sessão segura nesta etapa.",
+        },
+        "hosted-payment-unavailable": {
+            "variant": "warning",
+            "icon": "ℹ️",
+            "title": "Pagamento hospedado indisponível",
+            "description": "Não foi possível abrir o ambiente externo de pagamento agora. Recarregue a página ou tente novamente em instantes.",
+        },
+        "hosted-payment-returned": {
+            "variant": "info",
+            "icon": "↩️",
+            "title": "Retorno de pagamento recebido",
+            "description": "Recebemos seu retorno do ambiente de pagamento. Agora seguimos aguardando a confirmação segura do provider.",
+        },
+        "hosted-payment-return-pending-verification": {
+            "variant": "info",
+            "icon": "🧾",
+            "title": "Pagamento em verificação",
+            "description": "O provider indicou sucesso no retorno, mas o pedido só avança depois da confirmação segura do evento de pagamento.",
+        },
+        "hosted-payment-return-failed": {
+            "variant": "warning",
+            "icon": "⚠️",
+            "title": "Tentativa de pagamento não concluída",
+            "description": "O retorno hospedado indicou falha ou cancelamento. Você pode revisar o pedido e tentar novamente com segurança.",
+        },
     }
     if result not in mapping:
         return {}
     return {"page_feedback": mapping[result]}
 
 
-def _build_order_detail_actions(request, context: dict[str, object], *, order_number: str) -> dict[str, object]:
-    if not context.get("payment_progression_available"):
-        return {}
-    csrf_token = get_token(request)
-    action_html = format_html(
-        '<div class="flex flex-col items-stretch gap-2 md:items-end">'
-        '  <form method="post" action="{}" class="inline-flex">'
-        '    <input type="hidden" name="csrfmiddlewaretoken" value="{}">'
-        '    <input type="hidden" name="action_type" value="confirm_payment">'
-        '    <button type="submit" class="ds-btn-primary">{}</button>'
-        "  </form>"
-        '  <p class="text-right text-xs text-[var(--color-text-secondary)]">{}</p>'
-        "</div>",
-        reverse("accounts:account-order-detail", kwargs={"order_number": order_number}),
-        csrf_token,
-        str(context.get("payment_progression_label") or "Confirmar pagamento"),
-        str(context.get("payment_progression_helper") or ""),
+def _build_order_detail_action_items(request, context: dict[str, object], *, order_number: str) -> list[dict[str, str]]:
+    detail_action = reverse("accounts:account-order-detail", kwargs={"order_number": order_number})
+    detail_back_url = reverse("accounts:account-order-detail", kwargs={"order_number": order_number})
+    items: list[dict[str, str]] = []
+
+    if context.get("reorder_lite_available"):
+        items.append(
+            {
+                "kind": "form",
+                "action": detail_action,
+                "action_type": "reorder_lite",
+                "button_class": "ds-btn-secondary",
+                "label": str(context.get("reorder_lite_label") or "Comprar novamente"),
+                "helper": str(context.get("reorder_lite_helper") or ""),
+            }
+        )
+
+    if context.get("payment_progression_available"):
+        items.append(
+            {
+                "kind": "form",
+                "action": detail_action,
+                "action_type": "confirm_payment",
+                "button_class": "ds-btn-primary",
+                "label": str(context.get("payment_progression_label") or "Confirmar pagamento"),
+                "helper": str(context.get("payment_progression_helper") or ""),
+            }
+        )
+
+    if context.get("payment_retry_available"):
+        items.append(
+            {
+                "kind": "form",
+                "action": detail_action,
+                "action_type": "payment_retry",
+                "button_class": "ds-btn-secondary",
+                "label": str(context.get("payment_retry_label") or "Tentar pagamento novamente"),
+                "helper": str(context.get("payment_retry_helper") or ""),
+            }
+        )
+
+    if context.get("hosted_payment_available") and context.get("hosted_payment_attempt_key"):
+        items.append(
+            {
+                "kind": "link",
+                "href": (
+                    f'{reverse("payments:hosted-redirect", kwargs={"attempt_key": context.get("hosted_payment_attempt_key")})}'
+                    f'?{urlencode({"back_url": detail_back_url})}'
+                ),
+                "button_class": "ds-btn-secondary",
+                "label": str(context.get("hosted_payment_label") or "Abrir pagamento hospedado"),
+                "helper": str(context.get("hosted_payment_helper") or ""),
+            }
+        )
+
+    return items
+
+
+def _render_order_detail_action_item(request, item: dict[str, str]) -> str:
+    helper = str(item.get("helper") or "")
+    if item.get("kind") == "form":
+        csrf_token = get_token(request)
+        return str(
+            format_html(
+                '<div class="flex flex-col items-stretch gap-2 md:items-end">'
+                '  <form method="post" action="{}" class="inline-flex">'
+                '    <input type="hidden" name="csrfmiddlewaretoken" value="{}">'
+                '    <input type="hidden" name="action_type" value="{}">'
+                '    <button type="submit" class="{}">{}</button>'
+                "  </form>"
+                '  <p class="text-right text-xs text-[var(--color-text-secondary)]">{}</p>'
+                "</div>",
+                str(item.get("action") or ""),
+                csrf_token,
+                str(item.get("action_type") or ""),
+                str(item.get("button_class") or "ds-btn-secondary"),
+                str(item.get("label") or ""),
+                helper,
+            )
+        )
+    return str(
+        format_html(
+            '<div class="flex flex-col items-stretch gap-2 md:items-end">'
+            '  <a href="{}" class="{}">{}</a>'
+            '  <p class="text-right text-xs text-[var(--color-text-secondary)]">{}</p>'
+            "</div>",
+            str(item.get("href") or ""),
+            str(item.get("button_class") or "ds-btn-secondary"),
+            str(item.get("label") or ""),
+            helper,
+        )
     )
-    return {"page_actions": mark_safe(action_html)}
+
+
+def _build_order_detail_actions(request, context: dict[str, object], *, order_number: str) -> dict[str, object]:
+    action_items = _build_order_detail_action_items(request, context, order_number=order_number)
+    action_blocks = [_render_order_detail_action_item(request, item) for item in action_items]
+    if not action_blocks:
+        return {}
+    return {"page_actions": mark_safe("".join(str(block) for block in action_blocks))}
 
 
 class LoginView(TemplateView):
@@ -284,7 +447,8 @@ class LoginView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context.update(account_page_queries.get_login_page_data())
+        tenant_id = getattr(getattr(self.request, "tenant", None), "id", None)
+        context.update(account_page_queries.get_login_page_data(tenant_id=tenant_id))
         context["form_action"] = self.request.path
         context["register_href"] = reverse("accounts:register")
         context["forgot_password_href"] = reverse("accounts:forgot-password")
@@ -296,7 +460,8 @@ class RegisterView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context.update(account_page_queries.get_register_page_data())
+        tenant_id = getattr(getattr(self.request, "tenant", None), "id", None)
+        context.update(account_page_queries.get_register_page_data(tenant_id=tenant_id))
         context["form_action"] = self.request.path
         context["login_href"] = reverse("accounts:login")
         return context
@@ -307,7 +472,8 @@ class ForgotPasswordView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context.update(account_page_queries.get_forgot_password_page_data())
+        tenant_id = getattr(getattr(self.request, "tenant", None), "id", None)
+        context.update(account_page_queries.get_forgot_password_page_data(tenant_id=tenant_id))
         context["form_action"] = self.request.path
         context["login_href"] = reverse("accounts:login")
         return context
@@ -318,7 +484,8 @@ class ResetPasswordView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context.update(account_page_queries.get_reset_password_page_data())
+        tenant_id = getattr(getattr(self.request, "tenant", None), "id", None)
+        context.update(account_page_queries.get_reset_password_page_data(tenant_id=tenant_id))
         context["form_action"] = self.request.path
         context["login_href"] = reverse("accounts:login")
         return context
@@ -329,7 +496,8 @@ class AccountOverviewView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context.update(account_page_queries.get_account_overview_data())
+        tenant_id = getattr(getattr(self.request, "tenant", None), "id", None)
+        context.update(account_page_queries.get_account_overview_data(tenant_id=tenant_id))
         context["quick_links"] = _quick_links()
         return context
 
@@ -339,12 +507,16 @@ class AccountOrdersView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        tenant_id = _request_tenant_id(self.request)
         search_value = self.request.GET.get("q", "").strip()
         status_selected = self.request.GET.get("status", "").strip()
         page_number = int(self.request.GET.get("page", "1") or "1")
 
-        base_payload = account_customer_area_queries.get_orders_page_data()
-        orders = account_customer_area_queries.list_orders()
+        base_payload = account_customer_area_queries.get_orders_page_data(tenant_id=tenant_id)
+        orders = account_customer_area_queries.list_orders(
+            tenant_id=tenant_id,
+            allow_fixture_fallback=False,
+        )
         if search_value:
             lowered = search_value.lower()
             orders = [
@@ -414,11 +586,41 @@ class AccountOrderDetailView(TemplateView):
     template_name = "pages/templates/order_detail_page.html"
 
     def post(self, request, *args, **kwargs):
-        if request.POST.get("action_type", "").strip() != "confirm_payment":
+        tenant_id = _request_tenant_id(request)
+        action_type = request.POST.get("action_type", "").strip()
+        if action_type == "reorder_lite":
+            profile = account_customer_area_queries.get_active_profile_context(tenant_id=tenant_id)
+            result, session_key = checkout_reorder_commands.bootstrap_from_order(
+                tenant_id=profile.get("tenant_id"),
+                customer_id=profile.get("customer_id"),
+                email=str(profile.get("email") or ""),
+                order_number=kwargs["order_number"],
+            )
+            if session_key:
+                checkout_url = f'{reverse("checkout:checkout-page")}?{urlencode({"result": result, "stage": "cart", "session_key": session_key, "back_url": reverse("accounts:account-order-detail", kwargs={"order_number": kwargs["order_number"]})})}'
+                return HttpResponseRedirect(checkout_url)
+            return HttpResponseRedirect(
+                f'{reverse("accounts:account-order-detail", kwargs={"order_number": kwargs["order_number"]})}?result={result}'
+            )
+        if action_type == "payment_retry":
+            profile = account_customer_area_queries.get_active_profile_context(tenant_id=tenant_id)
+            result, session_key = checkout_payment_retry_commands.bootstrap_from_failed_order(
+                tenant_id=profile.get("tenant_id"),
+                customer_id=profile.get("customer_id"),
+                email=str(profile.get("email") or ""),
+                order_number=kwargs["order_number"],
+            )
+            if session_key:
+                checkout_url = f'{reverse("checkout:checkout-page")}?{urlencode({"result": result, "stage": "payment", "session_key": session_key, "back_url": reverse("accounts:account-order-detail", kwargs={"order_number": kwargs["order_number"]})})}'
+                return HttpResponseRedirect(checkout_url)
+            return HttpResponseRedirect(
+                f'{reverse("accounts:account-order-detail", kwargs={"order_number": kwargs["order_number"]})}?result={result}'
+            )
+        if action_type != "confirm_payment":
             return HttpResponseRedirect(
                 reverse("accounts:account-order-detail", kwargs={"order_number": kwargs["order_number"]})
             )
-        profile = account_customer_area_queries.get_active_profile_context()
+        profile = account_customer_area_queries.get_active_profile_context(tenant_id=tenant_id)
         result = customer_order_payment_commands.confirm_internal_payment(
             tenant_id=profile.get("tenant_id"),
             customer_id=profile.get("customer_id"),
@@ -431,11 +633,13 @@ class AccountOrderDetailView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        tenant_id = _request_tenant_id(self.request)
         confirmation_mode = self.request.GET.get("result", "").strip() == "checkout-completed"
         context.update(
             account_customer_area_queries.get_order_detail_page_data(
                 kwargs["order_number"],
                 confirmation_mode=confirmation_mode,
+                tenant_id=tenant_id,
             )
         )
         context.update(_build_order_detail_actions(self.request, context, order_number=kwargs["order_number"]))
@@ -448,7 +652,7 @@ class AccountAddressesView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        base_payload = account_customer_area_queries.get_addresses_page_data()
+        base_payload = account_customer_area_queries.get_addresses_page_data(tenant_id=_request_tenant_id(self.request))
         base_url = reverse("accounts:account-addresses")
         addresses = []
         for address in base_payload["addresses"]:
@@ -495,7 +699,7 @@ class AccountProfileView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context.update(account_customer_area_queries.get_profile_page_data())
+        context.update(account_customer_area_queries.get_profile_page_data(tenant_id=_request_tenant_id(self.request)))
         context["form_action"] = self.request.path
         context["secondary_href"] = reverse("accounts:account-overview")
         return context
@@ -529,8 +733,9 @@ class AccountAddressCreateReadyView(_AccountAddressReadyRedirectView):
         form = AccountAddressForm(request.POST)
         if not form.is_valid():
             return self._render_form_page(request, form=form)
-        account_address_commands.create_address(form.cleaned_data)
-        return HttpResponseRedirect(f'{reverse("accounts:account-addresses")}?result=address-created#address-management')
+        address = account_address_commands.create_address(form.cleaned_data, tenant_id=_request_tenant_id(request))
+        result = "address-created" if address is not None else "address-create-unavailable"
+        return HttpResponseRedirect(f'{reverse("accounts:account-addresses")}?result={result}#address-management')
 
 
 class AccountAddressEditReadyView(_AccountAddressReadyRedirectView):
@@ -541,8 +746,9 @@ class AccountAddressEditReadyView(_AccountAddressReadyRedirectView):
         form = AccountAddressForm(request.POST)
         if not form.is_valid():
             return self._render_form_page(request, form=form, address_id=address_id)
-        account_address_commands.update_address(address_id, form.cleaned_data)
-        return HttpResponseRedirect(f'{reverse("accounts:account-addresses")}?result=address-updated#address-management')
+        address = account_address_commands.update_address(address_id, form.cleaned_data, tenant_id=_request_tenant_id(request))
+        result = "address-updated" if address is not None else "address-update-unavailable"
+        return HttpResponseRedirect(f'{reverse("accounts:account-addresses")}?result={result}#address-management')
 
 
 class AccountAddressDeleteReadyView(_AccountAddressReadyRedirectView):
@@ -550,6 +756,6 @@ class AccountAddressDeleteReadyView(_AccountAddressReadyRedirectView):
 
     def post(self, request, *args, **kwargs):
         address_id = int(kwargs["address_id"])
-        deleted = account_address_commands.delete_address(address_id)
+        deleted = account_address_commands.delete_address(address_id, tenant_id=_request_tenant_id(request))
         result = "address-deleted" if deleted else "address-delete-blocked"
         return HttpResponseRedirect(f'{reverse("accounts:account-addresses")}?result={result}#address-management')

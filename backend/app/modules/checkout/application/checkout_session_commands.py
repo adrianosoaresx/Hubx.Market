@@ -25,6 +25,9 @@ class CheckoutSessionCommandRepository(Protocol):
     def update_session(self, *, session_key: str, payload: dict[str, object]) -> str:
         ...
 
+    def mutate_item(self, *, session_key: str, item_id: int, operation: str) -> str:
+        ...
+
 
 class DjangoOrmCheckoutSessionCommandRepository:
     def __init__(self) -> None:
@@ -32,8 +35,10 @@ class DjangoOrmCheckoutSessionCommandRepository:
             from app.modules.checkout import models as checkout_models
         except Exception:
             self.session_model = None
+            self.item_model = None
             return
         self.session_model = getattr(checkout_models, "CheckoutSession", None)
+        self.item_model = getattr(checkout_models, "CheckoutSessionItem", None)
 
     def is_ready(self) -> bool:
         try:
@@ -125,6 +130,111 @@ class DjangoOrmCheckoutSessionCommandRepository:
             )
         return "checkout-saved"
 
+    def _recalculate_session_totals(self, *, session) -> None:
+        items = list(
+            self.item_model._default_manager.filter(checkout_session=session).order_by("sort_order", "id")
+        )
+        subtotal = sum(
+            (
+                _safe_decimal(getattr(item, "price", Decimal("0.00")))
+                * int(getattr(item, "quantity", 1) or 1)
+                for item in items
+            ),
+            Decimal("0.00"),
+        )
+        discount_total = _safe_decimal(getattr(session, "discount_total", Decimal("0.00")))
+
+        if items:
+            shipping_methods = list(getattr(session, "shipping_methods", []) or [])
+            selected_shipping = _selected_method(
+                shipping_methods,
+                str(getattr(session, "shipping_method_selected", "") or ""),
+            )
+            shipping_total = (
+                _shipping_total_from_method(selected_shipping)
+                if selected_shipping
+                else _safe_decimal(getattr(session, "shipping_total", Decimal("0.00")))
+            )
+            grand_total = subtotal + shipping_total - discount_total
+            installments_summary, installments_selected, installments_options = _installments_summary(grand_total)
+            requested_installments = str(getattr(session, "installments_selected", "") or "")
+            session.shipping_total = shipping_total
+            session.installments_summary = installments_summary
+            session.installments_options = installments_options
+            session.installments_selected = (
+                requested_installments
+                if any(option["value"] == requested_installments for option in installments_options)
+                else installments_selected
+            )
+            session.grand_total = grand_total
+        else:
+            session.shipping_total = Decimal("0.00")
+            session.grand_total = Decimal("0.00")
+            session.installments_summary = ""
+            session.installments_options = []
+            session.installments_selected = ""
+
+        session.subtotal = subtotal
+
+    def mutate_item(self, *, session_key: str, item_id: int, operation: str) -> str:
+        if not self.is_ready() or not session_key or not item_id or operation not in {"increment", "decrement", "remove"}:
+            return "checkout-item-mutation-unavailable"
+
+        try:
+            with transaction.atomic():
+                session = (
+                    self.session_model._default_manager.select_for_update()
+                    .filter(session_key=session_key, status="open")
+                    .first()
+                )
+                if session is None:
+                    return "checkout-item-mutation-unavailable"
+
+                item = (
+                    self.item_model._default_manager.select_for_update()
+                    .filter(checkout_session=session, pk=item_id)
+                    .first()
+                )
+                if item is None:
+                    return "checkout-item-mutation-unavailable"
+
+                if operation == "increment":
+                    item.quantity = int(getattr(item, "quantity", 1) or 1) + 1
+                    item.save(update_fields=["quantity", "updated_at"])
+                    result = "checkout-item-updated"
+                elif operation == "decrement":
+                    current_quantity = int(getattr(item, "quantity", 1) or 1)
+                    if current_quantity > 1:
+                        item.quantity = current_quantity - 1
+                        item.save(update_fields=["quantity", "updated_at"])
+                        result = "checkout-item-updated"
+                    else:
+                        item.delete()
+                        result = "checkout-item-removed"
+                else:
+                    item.delete()
+                    result = "checkout-item-removed"
+
+                self._recalculate_session_totals(session=session)
+                session.save(
+                    update_fields=[
+                        "subtotal",
+                        "shipping_total",
+                        "grand_total",
+                        "installments_summary",
+                        "installments_selected",
+                        "installments_options",
+                        "updated_at",
+                    ]
+                )
+
+                has_items = self.item_model._default_manager.filter(checkout_session=session).exists()
+                if not has_items:
+                    return "checkout-item-session-empty"
+                return result
+        except Exception:
+            return "checkout-item-mutation-unavailable"
+
 
 @dataclass
 class CheckoutSessionCommandService:
@@ -132,6 +242,9 @@ class CheckoutSessionCommandService:
 
     def update_session(self, *, session_key: str, payload: dict[str, object]) -> str:
         return self.repository.update_session(session_key=session_key, payload=payload)
+
+    def mutate_item(self, *, session_key: str, item_id: int, operation: str) -> str:
+        return self.repository.mutate_item(session_key=session_key, item_id=item_id, operation=operation)
 
 
 checkout_session_commands = CheckoutSessionCommandService(

@@ -1,8 +1,9 @@
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from app.modules.catalog.application.admin_product_queries import admin_product_queries
 from app.modules.orders.models import Order, OrderItem
+from app.modules.tenants.models import Tenant
 
 
 class AdminProductViewTests(TestCase):
@@ -62,6 +63,39 @@ class AdminProductViewTests(TestCase):
 
 class AdminProductPersistedReadTests(TestCase):
     fixtures = ["catalog_minimal_seed.json"]
+
+    @override_settings(HUBX_MARKET_ROOT_DOMAIN="hubx.market", ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver"])
+    def test_admin_product_views_do_not_fallback_to_fixture_data_when_tenant_is_resolved(self):
+        empty_tenant = Tenant.objects.create(
+            name="Hubx Empty Admin Product Tenant",
+            slug="hubx-empty-admin-product-tenant",
+            subdomain="hubx-empty-admin-product-tenant",
+        )
+
+        products = admin_product_queries.list_products(tenant_id=empty_tenant.id)
+        missing_product = admin_product_queries.get_product("tenis-hubx-runner", tenant_id=empty_tenant.id)
+        form_initial = admin_product_queries.get_form_initial("tenis-hubx-runner", tenant_id=empty_tenant.id)
+
+        self.assertEqual(products, [])
+        self.assertIn("não encontrado no tenant atual", missing_product["summary_content"].lower())
+        self.assertIn("tenant atual", missing_product["inventory_content"].lower())
+        self.assertEqual(form_initial["name"], "Tenis Hubx Runner")
+
+        list_response = self.client.get(
+            reverse("catalog:admin-products-list"),
+            HTTP_HOST=f"{empty_tenant.subdomain}.hubx.market",
+        )
+        detail_response = self.client.get(
+            reverse("catalog:admin-products-detail", kwargs={"product_slug": "tenis-hubx-runner"}),
+            HTTP_HOST=f"{empty_tenant.subdomain}.hubx.market",
+        )
+
+        self.assertEqual(list_response.status_code, 200)
+        self.assertNotContains(list_response, "Tênis Hubx Runner")
+        self.assertEqual(list_response.context["empty_title"], "Nenhum produto persistido nesta loja")
+        self.assertEqual(detail_response.status_code, 200)
+        self.assertContains(detail_response, "Produto não encontrado no tenant atual")
+        self.assertNotContains(detail_response, "fallback seguro de apresentação")
 
     def _create_inventory_recovery(self) -> None:
         order = Order.objects.create(

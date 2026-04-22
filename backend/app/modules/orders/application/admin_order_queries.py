@@ -159,10 +159,10 @@ FALLBACK_ORDER_FIXTURES = [
 
 
 class OrderReadRepository(Protocol):
-    def list_orders(self) -> list[dict[str, object]]:
+    def list_orders(self, *, tenant_id: int | None = None) -> list[dict[str, object]]:
         ...
 
-    def get_order(self, order_number: str) -> dict[str, object] | None:
+    def get_order(self, order_number: str, *, tenant_id: int | None = None) -> dict[str, object] | None:
         ...
 
 
@@ -175,12 +175,12 @@ def _clone_order(order: dict[str, object]) -> dict[str, object]:
 
 
 class FallbackOrderRepository:
-    def list_orders(self) -> list[dict[str, object]]:
+    def list_orders(self, *, tenant_id: int | None = None) -> list[dict[str, object]]:
         return [_clone_order(order) for order in FALLBACK_ORDER_FIXTURES]
 
-    def get_order(self, order_number: str) -> dict[str, object] | None:
+    def get_order(self, order_number: str, *, tenant_id: int | None = None) -> dict[str, object] | None:
         normalized = order_number.lstrip("#")
-        for order in self.list_orders():
+        for order in self.list_orders(tenant_id=tenant_id):
             if str(order["order_number"]) == normalized:
                 return order
         return None
@@ -233,31 +233,28 @@ class DjangoOrmOrderRepository:
         except Exception:
             return None
 
-    def list_orders(self) -> list[dict[str, object]]:
+    def list_orders(self, *, tenant_id: int | None = None) -> list[dict[str, object]]:
         if not self.is_ready():
             return []
 
         try:
-            queryset = (
-                self.order_model._default_manager.all()
-                .prefetch_related("items", "status_history")
-                .order_by("-updated_at", "-id")
-            )
+            queryset = self.order_model._default_manager.prefetch_related("items", "status_history").order_by("-updated_at", "-id")
+            if tenant_id:
+                queryset = queryset.filter(tenant_id=tenant_id)
         except Exception:
             return []
 
         return [self._serialize_order(order) for order in queryset]
 
-    def get_order(self, order_number: str) -> dict[str, object] | None:
+    def get_order(self, order_number: str, *, tenant_id: int | None = None) -> dict[str, object] | None:
         if not self.is_ready():
             return None
 
         try:
-            order = (
-                self.order_model._default_manager.filter(number=order_number.lstrip("#"))
-                .prefetch_related("items", "status_history")
-                .first()
-            )
+            queryset = self.order_model._default_manager.filter(number=order_number.lstrip("#")).prefetch_related("items", "status_history")
+            if tenant_id:
+                queryset = queryset.filter(tenant_id=tenant_id)
+            order = queryset.first()
         except Exception:
             return None
 
@@ -822,8 +819,26 @@ class DjangoOrmOrderRepository:
         return f"{base_description} {' '.join(extras)}"
 
 
-def _fallback_order(order_number: str) -> dict[str, object]:
+def _placeholder_order(order_number: str, *, mode: str = "fallback") -> dict[str, object]:
     normalized = order_number.lstrip("#")
+    if mode == "missing":
+        summary_content = "Pedido não encontrado no tenant atual; exibindo estado explícito de ausência em vez de fallback de demonstração."
+        customer_content = "Sem dados persistidos do cliente para este pedido no tenant atual."
+        payment_content = "Sem trilha de pagamento persistida disponível para este pedido no tenant atual."
+        shipping_content = "Sem trilha de envio persistida disponível para este pedido no tenant atual."
+        notes_content = "Revise o número do pedido, o tenant resolvido e o vínculo persistido antes de qualquer ação operacional."
+        next_step_label = "Revisar vínculo do pedido"
+        next_step_helper = "Enquanto o pedido não for resolvido no tenant atual, mantenha qualquer atualização como revisão manual."
+        blocked_action_guidance = "Sem trilha persistida suficiente no tenant atual para orientar ações operacionais automáticas."
+    else:
+        summary_content = "Pedido ainda sem integração com dados reais; usando fallback seguro de apresentação."
+        customer_content = "Sem dados do cliente disponíveis no adapter inicial."
+        payment_content = "Pagamento ainda não conectado ao fluxo real."
+        shipping_content = "Entrega ainda não conectada ao fluxo real."
+        notes_content = "Registro temporário para estabelecer o padrão de migração real com page templates oficiais."
+        next_step_label = "Revisar integração do pedido"
+        next_step_helper = "Enquanto o pedido estiver em fallback, confirme manualmente pagamento, envio e operação antes de qualquer ação."
+        blocked_action_guidance = "Sem trilha persistida suficiente para orientar bloqueios reais; mantenha revisão operacional manual."
     return {
         "order_number": normalized,
         "customer": "Cliente não encontrado",
@@ -834,21 +849,22 @@ def _fallback_order(order_number: str) -> dict[str, object]:
         "payment_status": "Indisponível",
         "shipping_status": "Indisponível",
         "updated_at": "agora",
-        "summary_content": "Pedido ainda sem integração com dados reais; usando fallback seguro de apresentação.",
-        "customer_content": "Sem dados do cliente disponíveis no adapter inicial.",
-        "payment_content": "Pagamento ainda não conectado ao fluxo real.",
-        "shipping_content": "Entrega ainda não conectada ao fluxo real.",
-        "notes_content": "Registro temporário para estabelecer o padrão de migração real com page templates oficiais.",
+        "summary_content": summary_content,
+        "customer_content": customer_content,
+        "payment_content": payment_content,
+        "shipping_content": shipping_content,
+        "notes_content": notes_content,
         "subtotal": "R$ 0,00",
         "shipping": "R$ 0,00",
         "discount": "",
         "installments": "",
         "total": "R$ 0,00",
-        "next_step_label": "Revisar integração do pedido",
-        "next_step_helper": "Enquanto o pedido estiver em fallback, confirme manualmente pagamento, envio e operação antes de qualquer ação.",
-        "blocked_action_guidance": "Sem trilha persistida suficiente para orientar bloqueios reais; mantenha revisão operacional manual.",
+        "next_step_label": next_step_label,
+        "next_step_helper": next_step_helper,
+        "blocked_action_guidance": blocked_action_guidance,
         "order_items": [],
         "activity_items": [],
+        "customer_linkage_mode": "missing" if mode == "missing" else "fallback",
     }
 
 
@@ -856,6 +872,10 @@ def _fallback_order(order_number: str) -> dict[str, object]:
 class AdminOrderQueryService:
     orm_repository: OrderReadRepository
     fallback_repository: OrderReadRepository
+
+    @staticmethod
+    def _allow_fixture_fallback(*, tenant_id: int | None) -> bool:
+        return not bool(tenant_id)
 
     @staticmethod
     def _inventory_exception_sort_key(
@@ -966,9 +986,9 @@ class AdminOrderQueryService:
             owner_aged_counts[owner_label] = owner_aged_counts.get(owner_label, 0) + 1
         return owner_aged_counts
 
-    def using_persisted_source(self) -> bool:
+    def using_persisted_source(self, *, tenant_id: int | None = None) -> bool:
         try:
-            return bool(self.orm_repository.list_orders())
+            return bool(self.orm_repository.list_orders(tenant_id=tenant_id))
         except Exception:
             return False
 
@@ -1202,8 +1222,8 @@ class AdminOrderQueryService:
             "Ajuste os filtros para localizar pedidos ou aguarde novas compras." + search_hint,
         )
 
-    def get_order_operational_visibility(self, order_number: str) -> str:
-        order = self.get_order(order_number)
+    def get_order_operational_visibility(self, order_number: str, *, tenant_id: int | None = None) -> str:
+        order = self.get_order(order_number, tenant_id=tenant_id)
         mode = order.get("customer_linkage_mode")
         inventory_note = str(order.get("inventory_visibility_content", "") or "")
         inventory_exception_note = str(order.get("inventory_exception_content", "") or "")
@@ -1220,26 +1240,32 @@ class AdminOrderQueryService:
             )
         return f"Visibilidade operacional: pedido ainda fora da trilha persistida principal. {inventory_note} {inventory_exception_note} {inventory_exception_marker}"
 
-    def list_orders(self) -> list[dict[str, object]]:
-        real_orders = self.orm_repository.list_orders()
+    def list_orders(self, *, tenant_id: int | None = None) -> list[dict[str, object]]:
+        real_orders = self.orm_repository.list_orders(tenant_id=tenant_id)
         if real_orders:
             return self._attach_inventory_exception_owner_workload(
                 self._sort_orders_for_inventory_exception_queue(real_orders)
             )
-        return self._attach_inventory_exception_owner_workload(
-            self._sort_orders_for_inventory_exception_queue(self.fallback_repository.list_orders())
-        )
+        if self._allow_fixture_fallback(tenant_id=tenant_id):
+            return self._attach_inventory_exception_owner_workload(
+                self._sort_orders_for_inventory_exception_queue(self.fallback_repository.list_orders(tenant_id=tenant_id))
+            )
+        return []
 
-    def get_order(self, order_number: str) -> dict[str, object]:
-        real_order = self.orm_repository.get_order(order_number)
+    def get_order(self, order_number: str, *, tenant_id: int | None = None) -> dict[str, object]:
+        real_order = self.orm_repository.get_order(order_number, tenant_id=tenant_id)
         if real_order:
             return real_order
 
-        fallback_order = self.fallback_repository.get_order(order_number)
-        if fallback_order:
-            return fallback_order
+        if self._allow_fixture_fallback(tenant_id=tenant_id):
+            fallback_order = self.fallback_repository.get_order(order_number, tenant_id=tenant_id)
+            if fallback_order:
+                return fallback_order
 
-        return _fallback_order(order_number)
+        return _placeholder_order(
+            order_number,
+            mode="fallback" if self._allow_fixture_fallback(tenant_id=tenant_id) else "missing",
+        )
 
 
 admin_order_queries = AdminOrderQueryService(

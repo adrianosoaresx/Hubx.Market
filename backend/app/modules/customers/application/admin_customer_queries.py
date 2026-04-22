@@ -305,10 +305,10 @@ FALLBACK_CUSTOMER_FIXTURES = [
 
 
 class CustomerReadRepository(Protocol):
-    def list_customers(self) -> list[dict[str, object]]:
+    def list_customers(self, *, tenant_id: int | None = None) -> list[dict[str, object]]:
         ...
 
-    def get_customer(self, customer_slug: str) -> dict[str, object] | None:
+    def get_customer(self, customer_slug: str, *, tenant_id: int | None = None) -> dict[str, object] | None:
         ...
 
 
@@ -320,11 +320,11 @@ def _clone_customer(customer: dict[str, object]) -> dict[str, object]:
 
 
 class FallbackCustomerRepository:
-    def list_customers(self) -> list[dict[str, object]]:
+    def list_customers(self, *, tenant_id: int | None = None) -> list[dict[str, object]]:
         return [_clone_customer(customer) for customer in FALLBACK_CUSTOMER_FIXTURES]
 
-    def get_customer(self, customer_slug: str) -> dict[str, object] | None:
-        for customer in self.list_customers():
+    def get_customer(self, customer_slug: str, *, tenant_id: int | None = None) -> dict[str, object] | None:
+        for customer in self.list_customers(tenant_id=tenant_id):
             if customer["slug"] == customer_slug:
                 return customer
         return None
@@ -377,23 +377,28 @@ class DjangoOrmCustomerRepository:
             return False
         return table_names.issubset(set(tables))
 
-    def list_customers(self) -> list[dict[str, object]]:
+    def list_customers(self, *, tenant_id: int | None = None) -> list[dict[str, object]]:
         if not self.is_ready():
             return []
 
         try:
-            queryset = self.customer_model._default_manager.all().order_by("-updated_at", "-id")
+            queryset = self.customer_model._default_manager.order_by("-updated_at", "-id")
+            if tenant_id:
+                queryset = queryset.filter(tenant_id=tenant_id)
         except Exception:
             return []
 
         return [self._serialize_customer(customer) for customer in queryset]
 
-    def get_customer(self, customer_slug: str) -> dict[str, object] | None:
+    def get_customer(self, customer_slug: str, *, tenant_id: int | None = None) -> dict[str, object] | None:
         if not self.is_ready():
             return None
 
         try:
-            customer = self.customer_model._default_manager.filter(slug=customer_slug).first()
+            queryset = self.customer_model._default_manager.filter(slug=customer_slug)
+            if tenant_id:
+                queryset = queryset.filter(tenant_id=tenant_id)
+            customer = queryset.first()
         except Exception:
             return None
 
@@ -815,7 +820,19 @@ class DjangoOrmCustomerRepository:
         return activity_items[:3]
 
 
-def _fallback_customer(customer_slug: str) -> dict[str, object]:
+def _placeholder_customer(customer_slug: str, *, mode: str = "fallback") -> dict[str, object]:
+    if mode == "missing":
+        summary_content = "Cliente não encontrado no tenant atual; exibindo estado explícito de ausência em vez de fallback de demonstração."
+        contact_content = "Sem dados de contato persistidos para este cliente no tenant atual."
+        profile_content = "Nenhum perfil persistido foi localizado para este slug dentro da loja atual."
+        orders_summary_content = "Sem histórico consolidado disponível para este cliente neste tenant."
+        account_notes_content = "Revise o vínculo do slug, o tenant resolvido e o estado real do cadastro antes de qualquer ação operacional."
+    else:
+        summary_content = "Conta ainda sem integração com dados reais; usando fallback seguro de apresentação."
+        contact_content = "Sem dados de contato disponíveis no adapter inicial."
+        profile_content = "Perfil ainda não conectado ao fluxo real."
+        orders_summary_content = "Sem histórico consolidado disponível no adapter inicial."
+        account_notes_content = "Registro temporário para estabelecer o padrão de migração real com page templates oficiais."
     return {
         "slug": customer_slug,
         "name": customer_slug.replace("-", " ").title(),
@@ -828,11 +845,11 @@ def _fallback_customer(customer_slug: str) -> dict[str, object]:
         "customer_reference": "#0000",
         "customer_since": "indisponível",
         "last_seen": "indisponível",
-        "summary_content": "Conta ainda sem integração com dados reais; usando fallback seguro de apresentação.",
-        "contact_content": "Sem dados de contato disponíveis no adapter inicial.",
-        "profile_content": "Perfil ainda não conectado ao fluxo real.",
-        "orders_summary_content": "Sem histórico consolidado disponível no adapter inicial.",
-        "account_notes_content": "Registro temporário para estabelecer o padrão de migração real com page templates oficiais.",
+        "summary_content": summary_content,
+        "contact_content": contact_content,
+        "profile_content": profile_content,
+        "orders_summary_content": orders_summary_content,
+        "account_notes_content": account_notes_content,
         "activity_items": [],
     }
 
@@ -841,6 +858,10 @@ def _fallback_customer(customer_slug: str) -> dict[str, object]:
 class AdminCustomerQueryService:
     orm_repository: CustomerReadRepository
     fallback_repository: CustomerReadRepository
+
+    @staticmethod
+    def _allow_fixture_fallback(*, tenant_id: int | None) -> bool:
+        return not bool(tenant_id)
 
     @staticmethod
     def _priority_rank(priority_label: object) -> int:
@@ -899,15 +920,20 @@ class AdminCustomerQueryService:
             return str(customer.get("lifecycle_stage_label", "")).strip() == "Novo"
         return True
 
-    def using_persisted_source(self) -> bool:
+    def using_persisted_source(self, *, tenant_id: int | None = None) -> bool:
         try:
-            return bool(self.orm_repository.list_customers())
+            return bool(self.orm_repository.list_customers(tenant_id=tenant_id))
         except Exception:
             return False
 
-    def list_customers(self, quick_filter: str | None = None) -> list[dict[str, object]]:
-        real_customers = self.orm_repository.list_customers()
-        customers = real_customers or self.fallback_repository.list_customers()
+    def list_customers(self, quick_filter: str | None = None, *, tenant_id: int | None = None) -> list[dict[str, object]]:
+        real_customers = self.orm_repository.list_customers(tenant_id=tenant_id)
+        if real_customers:
+            customers = real_customers
+        elif self._allow_fixture_fallback(tenant_id=tenant_id):
+            customers = self.fallback_repository.list_customers(tenant_id=tenant_id)
+        else:
+            customers = []
         normalized_quick_filter = str(quick_filter or "").strip().lower()
         if normalized_quick_filter in {option["value"] for option in QUICK_FILTER_OPTIONS}:
             customers = [
@@ -917,16 +943,20 @@ class AdminCustomerQueryService:
             ]
         return sorted(customers, key=self._sort_key)
 
-    def get_customer(self, customer_slug: str) -> dict[str, object]:
-        real_customer = self.orm_repository.get_customer(customer_slug)
+    def get_customer(self, customer_slug: str, *, tenant_id: int | None = None) -> dict[str, object]:
+        real_customer = self.orm_repository.get_customer(customer_slug, tenant_id=tenant_id)
         if real_customer:
             return real_customer
 
-        fallback_customer = self.fallback_repository.get_customer(customer_slug)
-        if fallback_customer:
-            return fallback_customer
+        if self._allow_fixture_fallback(tenant_id=tenant_id):
+            fallback_customer = self.fallback_repository.get_customer(customer_slug, tenant_id=tenant_id)
+            if fallback_customer:
+                return fallback_customer
 
-        return _fallback_customer(customer_slug)
+        return _placeholder_customer(
+            customer_slug,
+            mode="fallback" if self._allow_fixture_fallback(tenant_id=tenant_id) else "missing",
+        )
 
 
 admin_customer_queries = AdminCustomerQueryService(

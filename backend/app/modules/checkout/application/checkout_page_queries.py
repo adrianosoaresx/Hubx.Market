@@ -9,8 +9,8 @@ from django.db import connection
 
 def _fallback_checkout_steps() -> list[dict[str, object]]:
     return [
-        {"label": "Carrinho", "state": "complete"},
-        {"label": "Entrega", "state": "current"},
+        {"label": "Carrinho", "state": "current"},
+        {"label": "Entrega", "state": "upcoming"},
         {"label": "Pagamento", "state": "upcoming"},
         {"label": "Confirmação", "state": "upcoming"},
     ]
@@ -18,6 +18,7 @@ def _fallback_checkout_steps() -> list[dict[str, object]]:
 
 def _build_checkout_steps_from_session(
     *,
+    current_stage: str,
     has_items: bool,
     has_shipping_address: bool,
     has_shipping_method: bool,
@@ -37,14 +38,29 @@ def _build_checkout_steps_from_session(
     payment_complete = delivery_complete and has_payment_method and accepted_terms
 
     return [
-        {"label": "Carrinho", "state": "complete" if has_items else "current"},
+        {
+            "label": "Carrinho",
+            "state": (
+                "current"
+                if current_stage == "cart" or not has_items
+                else "complete"
+            ),
+        },
         {
             "label": "Entrega",
-            "state": "complete" if delivery_complete else ("current" if has_items else "upcoming"),
+            "state": (
+                "complete"
+                if delivery_complete
+                else ("current" if current_stage == "delivery" else "upcoming")
+            ),
         },
         {
             "label": "Pagamento",
-            "state": "complete" if payment_complete else ("current" if delivery_complete else "upcoming"),
+            "state": (
+                "complete"
+                if payment_complete
+                else ("current" if current_stage == "payment" else "upcoming")
+            ),
         },
         {"label": "Confirmação", "state": "upcoming"},
     ]
@@ -112,12 +128,13 @@ def _fallback_order_items() -> list[dict[str, object]]:
     ]
 
 
-VALID_CHECKOUT_STAGES = ("delivery", "payment", "review")
+VALID_CHECKOUT_STAGES = ("cart", "delivery", "payment", "review")
 
 
 class CheckoutReadRepository(Protocol):
     def get_checkout_page_data(
         self,
+        tenant_id: int | None = None,
         session_key: str | None = None,
         requested_stage: str | None = None,
     ) -> dict[str, object] | None:
@@ -146,6 +163,8 @@ def _mark_selected(options: list[dict[str, object]], selected_value: str) -> lis
 
 
 def _build_checkout_description(*, item_count: int, shipping_label: str, payment_label: str) -> str:
+    if item_count <= 0:
+        return "Sua sessão de checkout está vazia no momento."
     parts = [f"Revise {item_count} item(ns) antes de concluir o pedido."]
     if shipping_label:
         parts.append(f"Entrega selecionada: {shipping_label}.")
@@ -170,6 +189,8 @@ def _build_stage_context(
     redirected = False
 
     if not has_items:
+        current_stage = "cart"
+    elif requested == "delivery":
         current_stage = "delivery"
     elif requested == "payment" and not delivery_complete:
         current_stage = "delivery"
@@ -179,6 +200,8 @@ def _build_stage_context(
         redirected = True
     elif requested:
         current_stage = requested
+    elif has_items and not delivery_complete:
+        current_stage = "cart"
     elif not delivery_complete:
         current_stage = "delivery"
     elif not payment_complete:
@@ -187,42 +210,74 @@ def _build_stage_context(
         current_stage = "review"
 
     stage_labels = {
+        "cart": "Carrinho",
         "delivery": "Entrega",
         "payment": "Pagamento",
         "review": "Revisão",
     }
     submit_labels = {
+        "cart": "Continuar para entrega",
         "delivery": "Salvar entrega e continuar",
         "payment": "Salvar pagamento e revisar",
-        "review": "Gerar pedido a partir da revisão",
+        "review": "Gerar pedido inicial",
+    }
+    final_action_titles = {
+        "cart": "Próxima ação",
+        "delivery": "Próxima ação",
+        "payment": "Próxima ação",
+        "review": "Ação final desta etapa",
+    }
+    final_action_descriptions = {
+        "cart": "Revise os itens, ajuste quantidades e siga para entrega quando esta sessão estiver do jeito certo.",
+        "delivery": "Salve entrega e frete para liberar o pagamento desta sessão.",
+        "payment": "Salve pagamento e termos para seguir com uma revisão mais confiável do pedido.",
+        "review": (
+            "Ao clicar em “Gerar pedido inicial”, criaremos um pedido persistido na sua conta e você seguirá para a confirmação inicial do pedido."
+        ),
+    }
+    final_action_helpers = {
+        "cart": "Nenhum pedido é criado nesta etapa; aqui você só prepara a sessão para seguir.",
+        "delivery": "O pedido ainda não é criado nesta etapa.",
+        "payment": "O pedido ainda não é criado nesta etapa.",
+        "review": "Itens, entrega e pagamento revisados ficam registrados. O pagamento real continua pendente.",
     }
     stage_titles = {
+        "cart": "Etapa atual: carrinho",
         "delivery": "Etapa atual: entrega",
         "payment": "Etapa atual: pagamento",
         "review": "Etapa atual: revisão",
     }
     stage_descriptions = {
+        "cart": "Revise os itens da sessão, ajuste quantidades e siga para entrega quando estiver pronto.",
         "delivery": "Confirme contato, endereço e frete antes de avançar para o pagamento.",
         "payment": "Agora confirme a forma de pagamento e os termos para revisar o pedido com segurança.",
-        "review": "Tudo principal já foi salvo. Revise o pedido e gere uma confirmação persistida sem depender de pagamento real neste momento.",
+        "review": (
+            "Tudo principal já foi salvo. Ao concluir agora, criaremos um pedido inicial na sua conta "
+            "com itens, entrega e pagamento registrados. O pagamento ainda segue pendente até a próxima etapa."
+        ),
     }
     shipping_descriptions = {
+        "cart": "A entrega fica disponível logo depois que você confirmar os itens desta sessão.",
         "delivery": "Preencha as informações de envio do pedido para liberar a próxima etapa.",
         "payment": "As informações de entrega já podem ser revisadas e ajustadas antes da confirmação final.",
         "review": "Entrega salva na sessão atual. Ajuste algo aqui apenas se precisar revisar os dados de envio.",
     }
     payment_descriptions = {
+        "cart": "O pagamento fica disponível depois que você passar pela entrega com esta sessão pronta.",
         "delivery": "Esta etapa fica mais útil depois que entrega e frete estiverem definidos na sessão.",
         "payment": "Selecione a forma de pagamento e confirme os dados finais desta sessão.",
         "review": "Pagamento salvo na sessão atual. Revise a forma escolhida e mantenha os dados consistentes antes do próximo passo.",
     }
     review_descriptions = {
+        "cart": "Use esta superfície leve para conferir itens e totais antes de abrir entrega, pagamento e revisão.",
         "delivery": "Os itens ficam aqui para orientar esta etapa enquanto você prepara entrega e frete.",
         "payment": "Com a entrega definida, use os itens e totais para revisar a compra enquanto escolhe o pagamento.",
-        "review": "Revise itens, totais e parcelamento salvos antes de seguir para uma evolução futura do fluxo.",
+        "review": "Revise itens, totais e parcelamento antes de gerar o pedido inicial que ficará disponível na sua conta.",
     }
 
-    if current_stage == "delivery":
+    if current_stage == "cart":
+        next_stage = "delivery" if has_items else "cart"
+    elif current_stage == "delivery":
         next_stage = "payment" if delivery_complete else "delivery"
     elif current_stage == "payment":
         next_stage = "review" if payment_complete else "payment"
@@ -243,6 +298,9 @@ def _build_stage_context(
         "current_stage_label": stage_labels[current_stage],
         "next_stage": next_stage,
         "submit_label": submit_labels[current_stage],
+        "final_action_title": final_action_titles[current_stage],
+        "final_action_description": final_action_descriptions[current_stage],
+        "final_action_helper": final_action_helpers[current_stage],
         "stage_feedback": stage_feedback,
         "stage_title": stage_titles[current_stage],
         "stage_description": stage_descriptions[current_stage],
@@ -264,6 +322,16 @@ def _build_completion_hints(
     delivery_ready = has_items and has_shipping_address and has_shipping_method
     payment_ready = delivery_ready and has_payment_method and accepted_terms
 
+    cart_hint = {
+        "variant": "success" if has_items else "warning",
+        "icon": "🛒" if has_items else "🧺",
+        "title": "Carrinho pronto para seguir" if has_items else "Carrinho vazio",
+        "description": (
+            "Os itens e totais desta sessão já estão prontos para abrir a etapa de entrega."
+            if has_items
+            else "Adicione um item válido para liberar entrega, pagamento e revisão nesta sessão."
+        ),
+    }
     delivery_hint = {
         "variant": "success" if delivery_ready else "warning",
         "icon": "✅" if delivery_ready else "📝",
@@ -291,32 +359,90 @@ def _build_completion_hints(
     review_hint = {
         "variant": "success" if payment_ready else "info",
         "icon": "🧾" if payment_ready else "👀",
-        "title": "Revisão pronta" if payment_ready else "Revisão ainda parcial",
+        "title": "Revisão pronta para gerar pedido" if payment_ready else "Revisão ainda parcial",
         "description": (
-            "Itens, totais e parcelamento já podem ser revisados com o estado atual salvo."
+            "Ao concluir agora, um pedido inicial será criado na sua conta com itens, entrega e pagamento já salvos. O pagamento ainda seguirá pendente."
             if payment_ready
             else "Os totais já aparecem aqui, mas a revisão fica mais confiável depois de concluir entrega e pagamento."
         ),
     }
 
     current_hint = {
+        "cart": cart_hint,
         "delivery": delivery_hint,
         "payment": payment_hint,
         "review": review_hint,
     }[current_stage]
 
     return {
+        "cart_completion_hint": cart_hint,
         "delivery_completion_hint": delivery_hint,
         "payment_completion_hint": payment_hint,
         "review_completion_hint": review_hint,
         "current_stage_completion_hint": current_hint,
-        "completion_hints": [delivery_hint, payment_hint, review_hint],
+        "completion_hints": [cart_hint, delivery_hint, payment_hint, review_hint],
+    }
+
+
+def _build_review_readiness(
+    *,
+    has_items: bool,
+    delivery_complete: bool,
+    has_payment_method: bool,
+    accepted_terms: bool,
+    grand_total: object,
+    current_stage: str,
+) -> dict[str, object]:
+    try:
+        total_value = Decimal(str(grand_total or "0.00"))
+    except Exception:
+        total_value = Decimal("0.00")
+
+    totals_ready = has_items and total_value > 0
+    review_ready = has_items and delivery_complete and has_payment_method and accepted_terms and totals_ready
+    items = [
+        {
+            "label": "Itens confirmados na sessão",
+            "ready": has_items,
+            "description": "Os itens atuais já serão levados para o pedido inicial." if has_items else "Adicione itens válidos antes de concluir.",
+        },
+        {
+            "label": "Entrega e frete salvos",
+            "ready": delivery_complete,
+            "description": "Contato, endereço e frete já estão consistentes nesta sessão."
+            if delivery_complete
+            else "Conclua contato, endereço e frete para liberar a criação do pedido.",
+        },
+        {
+            "label": "Pagamento e termos revisados",
+            "ready": has_payment_method and accepted_terms,
+            "description": "Forma de pagamento e aceite já estão prontos para seguir."
+            if has_payment_method and accepted_terms
+            else "Confirme a forma de pagamento e o aceite para seguir com segurança.",
+        },
+        {
+            "label": "Totais prontos para gerar o pedido",
+            "ready": totals_ready,
+            "description": "Os totais atuais já podem virar um pedido inicial consistente."
+            if totals_ready
+            else "Revise os itens e o total antes de gerar o pedido inicial.",
+        },
+    ]
+    return {
+        "review_readiness_title": "Pronto para gerar pedido inicial" if review_ready else "Ainda falta para gerar o pedido inicial",
+        "review_readiness_description": (
+            "Esta revisão já está consistente para criar um pedido inicial sem confirmar pagamento real."
+            if review_ready
+            else "Antes de gerar o pedido inicial, confirme os pontos pendentes abaixo."
+        ),
+        "review_readiness_items": items if current_stage == "review" else [],
     }
 
 
 class FallbackCheckoutRepository:
     def get_checkout_page_data(
         self,
+        tenant_id: int | None = None,
         session_key: str | None = None,
         requested_stage: str | None = None,
     ) -> dict[str, object]:
@@ -353,7 +479,7 @@ class FallbackCheckoutRepository:
         }
         payload.update(
             _build_stage_context(
-                requested_stage=requested_stage,
+                requested_stage=requested_stage or "delivery",
                 has_items=bool(payload["order_items"]),
                 delivery_complete=True,
                 payment_complete=True,
@@ -369,8 +495,21 @@ class FallbackCheckoutRepository:
                 current_stage=str(payload["current_stage"]),
             )
         )
+        payload.update(
+            _build_review_readiness(
+                has_items=bool(payload["order_items"]),
+                delivery_complete=True,
+                has_payment_method=True,
+                accepted_terms=True,
+                grand_total=Decimal("364.70"),
+                current_stage=str(payload["current_stage"]),
+            )
+        )
         payload["page_description"] = f'{payload["page_description"]} {payload["stage_description"]}'
         payload["summary_description"] = payload["review_section_description"]
+        payload["show_cart_surface"] = str(payload.get("current_stage")) == "cart"
+        payload["show_delivery_surface"] = str(payload.get("current_stage")) in {"delivery", "payment", "review"}
+        payload["show_payment_surface"] = str(payload.get("current_stage")) in {"delivery", "payment", "review"}
         return payload
 
 
@@ -406,6 +545,7 @@ class DjangoOrmCheckoutRepository:
 
     def get_checkout_page_data(
         self,
+        tenant_id: int | None = None,
         session_key: str | None = None,
         requested_stage: str | None = None,
     ) -> dict[str, object] | None:
@@ -414,6 +554,10 @@ class DjangoOrmCheckoutRepository:
 
         try:
             queryset = self.session_model._default_manager.filter(status="open").prefetch_related("items")
+            if tenant_id:
+                queryset = queryset.filter(tenant_id=tenant_id)
+            elif not session_key:
+                return None
             if session_key:
                 queryset = queryset.filter(session_key=session_key)
             session = queryset.order_by("-updated_at", "-id").first()
@@ -450,7 +594,10 @@ class DjangoOrmCheckoutRepository:
         )
         session_status = str(getattr(session, "status", "open") or "open")
         accepted_terms = bool(getattr(session, "accept_terms", False))
-        serialized_items = [self._serialize_item(item) for item in items]
+        serialized_items = [
+            self._serialize_item(item, mutable=session_status == "open")
+            for item in items
+        ]
         delivery_complete = bool(serialized_items) and has_shipping_address and bool(shipping_selected)
         payment_complete = delivery_complete and bool(payment_selected) and accepted_terms
         stage_context = _build_stage_context(
@@ -467,6 +614,14 @@ class DjangoOrmCheckoutRepository:
             accepted_terms=accepted_terms,
             current_stage=str(stage_context["current_stage"]),
         )
+        review_readiness = _build_review_readiness(
+            has_items=bool(serialized_items),
+            delivery_complete=delivery_complete,
+            has_payment_method=bool(payment_selected),
+            accepted_terms=accepted_terms,
+            grand_total=getattr(session, "grand_total", Decimal("0.00")),
+            current_stage=str(stage_context["current_stage"]),
+        )
         page_description = _build_checkout_description(
             item_count=len(serialized_items),
             shipping_label=str(selected_shipping.get("label", "") or ""),
@@ -476,7 +631,13 @@ class DjangoOrmCheckoutRepository:
         payload = {
             "page_title": "Finalizar compra",
             "page_description": f"{page_description} {stage_context['stage_description']}",
+            "page_meta": (
+                "Ao concluir, você verá a confirmação inicial do pedido na sua conta."
+                if str(stage_context["current_stage"]) == "review"
+                else "O pedido só é gerado quando a etapa atual estiver consistente."
+            ),
             "checkout_steps": _build_checkout_steps_from_session(
+                current_stage=str(stage_context["current_stage"]),
                 has_items=bool(serialized_items),
                 has_shipping_address=has_shipping_address,
                 has_shipping_method=bool(shipping_selected),
@@ -507,15 +668,38 @@ class DjangoOrmCheckoutRepository:
             "installments_options": list(getattr(session, "installments_options", []) or []),
             "accept_terms": accepted_terms,
             "summary_description": stage_context["review_section_description"],
+            "summary_note": (
+                "Adicione itens válidos para retomar entrega, pagamento e revisão desta sessão."
+                if not serialized_items
+                else (
+                    "Conclusão segura: itens, entrega e pagamento revisados serão levados para um pedido inicial na sua conta. "
+                    "Nenhuma confirmação real de pagamento acontece nesta etapa."
+                    if str(stage_context["current_stage"]) == "review"
+                    else "Os totais desta sessão refletem apenas o que já foi salvo até aqui."
+                )
+            ),
+            "show_cart_surface": str(stage_context["current_stage"]) == "cart",
+            "show_delivery_surface": str(stage_context["current_stage"]) in {"delivery", "payment", "review"},
+            "show_payment_surface": str(stage_context["current_stage"]) in {"delivery", "payment", "review"},
         }
         payload.update(stage_context)
         payload.update(completion_hints)
+        payload.update(review_readiness)
         return payload
 
     @staticmethod
-    def _serialize_item(item: object) -> dict[str, object]:
+    def _serialize_item(item: object, *, mutable: bool = False) -> dict[str, object]:
         compare_price = getattr(item, "compare_price", None)
+        item_id = int(getattr(item, "id", 0) or 0)
+        quantity = int(getattr(item, "quantity", 1) or 1)
+        mutation_actions = []
+        if mutable and item_id:
+            mutation_actions.append({"label": "Adicionar 1", "value": f"increment:{item_id}", "variant": "secondary"})
+            if quantity > 1:
+                mutation_actions.append({"label": "Diminuir 1", "value": f"decrement:{item_id}", "variant": "secondary"})
+            mutation_actions.append({"label": "Remover", "value": f"remove:{item_id}", "variant": "secondary"})
         return {
+            "id": item_id,
             "image_url": str(getattr(item, "image_url", "") or ""),
             "image_alt": str(getattr(item, "image_alt", "") or ""),
             "title": str(getattr(item, "title", "") or ""),
@@ -523,8 +707,9 @@ class DjangoOrmCheckoutRepository:
             "meta": str(getattr(item, "meta", "") or ""),
             "price": _format_currency(getattr(item, "price", Decimal("0.00"))),
             "compare_price": _format_currency(compare_price) if compare_price else "",
-            "quantity": int(getattr(item, "quantity", 1) or 1),
+            "quantity": quantity,
             "quantity_readonly": bool(getattr(item, "quantity_readonly", True)),
+            "mutation_actions": mutation_actions,
         }
 
 
@@ -533,22 +718,29 @@ class CheckoutPageQueryService:
     orm_repository: CheckoutReadRepository
     fallback_repository: CheckoutReadRepository
 
-    def using_persisted_source(self) -> bool:
+    def using_persisted_source(self, *, tenant_id: int | None = None) -> bool:
         try:
-            return self.orm_repository.get_checkout_page_data() is not None
+            if tenant_id:
+                return self.orm_repository.get_checkout_page_data(tenant_id=tenant_id) is not None
+            return self.orm_repository.get_checkout_page_data(session_key="11111111-1111-1111-1111-111111111111") is not None
         except Exception:
             return False
 
     def get_checkout_page_data(
         self,
+        tenant_id: int | None = None,
         session_key: str | None = None,
         requested_stage: str | None = None,
     ) -> dict[str, object]:
         real_payload = self.orm_repository.get_checkout_page_data(
+            tenant_id=tenant_id,
             session_key=session_key,
             requested_stage=requested_stage,
         )
+        if not tenant_id and not session_key:
+            return real_payload or {}
         return real_payload or self.fallback_repository.get_checkout_page_data(
+            tenant_id=tenant_id,
             session_key=session_key,
             requested_stage=requested_stage,
         )

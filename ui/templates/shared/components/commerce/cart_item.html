@@ -26,7 +26,20 @@
                 {% include "shared/components/commerce/quantity_selector.html" with value=quantity disabled=quantity_readonly|default:True %}
             {% endif %}
 
-            {% if actions %}
+            {% if mutation_actions %}
+                <div class="flex flex-wrap gap-2">
+                    {% for action in mutation_actions %}
+                        <button
+                            type="submit"
+                            name="item_action"
+                            value="{{ action.value }}"
+                            class="ds-btn {% if action.variant == 'primary' %}ds-btn-primary{% else %}ds-btn-secondary{% endif %} ds-btn-sm"
+                        >
+                            <span>{{ action.label }}</span>
+                        </button>
+                    {% endfor %}
+                </div>
+            {% elif actions %}
                 <div class="flex flex-wrap gap-2">
                     {{ actions }}
                 </div>

@@ -58,6 +58,15 @@ Gerenciar pedidos e histórico de status.
   - ou snapshot/fallback via `customer_email`
 - isso ajuda a identificar rapidamente o estágio real da integração sem alterar fluxos de usuário final
 
+## Escopo administrativo por tenant
+- a query layer de `Admin Orders` agora também aceita `tenant_id` explícito para listagem, detalhe e visibilidade operacional
+- quando a superfície administrativa já estiver dentro de um tenant resolvido, esse contexto passa a limitar as leituras internas do módulo
+- quando não houver tenant resolvido, a leitura global atual continua existindo como compatibilidade operacional temporária
+- quando houver tenant resolvido e nenhum pedido persistido correspondente, a surface administrativa passa a expor ausência real em vez de reutilizar fixtures de demonstração
+- na listagem administrativa tenant-scoped, esse caso também aparece com empty state explícito de loja sem base persistida, em vez de parecer apenas uma visão vazia por filtro
+- a command layer de `Admin Orders` agora segue o mesmo contrato quando houver tenant resolvido na request
+- nesse caso, ações administrativas passam a resolver o pedido por `tenant_id + order_number`, reduzindo o risco de atuar sobre outro tenant em cenários com números repetidos
+
 ## Ações operacionais iniciais
 - `Admin Orders` agora já aceita ações reais de baixa complexidade no detalhe do pedido:
   - atualização de `order.status`
@@ -222,6 +231,50 @@ Gerenciar pedidos e histórico de status.
   - pedido pendente já criado
   - confirmação de pagamento
   - baixa/reserva operacional efetiva
+
+## External payment flow readiness
+- `Order` agora também pode guardar `payment_confirmed_at`
+- `Order` agora também pode guardar `payment_failed_at`
+- isso ajuda a separar com mais clareza:
+  - pedido criado no checkout
+  - pagamento ainda pendente
+  - pagamento confirmado por fluxo interno
+  - pagamento confirmado por evento externo
+  - pagamento falho por evento externo
+- o módulo `orders` agora expõe um command path leve para confirmação externa por contrato claro:
+  - resolve o pedido por `tenant_id + order_number`
+  - atualiza:
+    - `status`
+    - `payment_status`
+    - `payment_source_type`
+    - `payment_source_label`
+    - `payment_reference`
+    - `payment_confirmed_at`
+  - reaproveita os mesmos guardrails de estoque e reserva pós-pagamento
+- os commands de confirmação agora também exigem `tenant_id` explícito:
+  - não confirmam pagamento por lookup global de `order_number`
+  - sem tenant resolvido, falham fechado como indisponíveis
+- isso prepara o caminho para um futuro `payment.paid` sem acoplar `orders` diretamente ao gateway
+- com a readiness atual de `payments`, esse fluxo agora também pode ser reconciliado com uma `PaymentAttempt` persistida sem mover a posse do lifecycle para fora de `orders`
+
+## Negative payment event readiness
+- o módulo `orders` agora também expõe um command path leve para falha externa de pagamento
+- esse fluxo é propositalmente conservador:
+  - não cancela o pedido
+  - não toca estoque
+  - não abre refund/chargeback
+- quando recebe uma falha externa elegível:
+  - mantém o pedido em `pending`
+  - atualiza `payment_status` para `Pagamento falhou`
+  - grava `payment_source_type = external_payment_failed`
+  - grava `payment_source_label`
+  - grava `payment_reference`
+  - grava `payment_failed_at`
+  - registra `payment_failed_external` em `OrderStatusHistory`
+- esse path de falha também exige `tenant_id` explícito:
+  - não marca falha por lookup global de `order_number`
+  - sem tenant resolvido, responde como indisponível
+- a intenção é deixar o pedido pronto para nova tentativa futura sem abrir um workflow complexo cedo demais
 
 ## Inventory exception visibility
 - `Admin Orders` agora também expõe sinais leves de exceção de estoque quando o pedido ainda não conseguiu chegar à reserva operacional
@@ -418,7 +471,27 @@ Gerenciar pedidos e histórico de status.
   - a mesma trilha de history
   - a mesma visibilidade já existente na fila e no detalhe
 - o reassignment continua intencionalmente simples:
-  - sem workflow de aprovação
-  - sem permissões complexas
-  - sem fila nova
+- sem workflow de aprovação
+- sem permissões complexas
+- sem fila nova
 - a ideia é só permitir handoff operacional explícito quando outro responsável assume o caso
+
+## Reorder lite continuity
+- `OrderItem` agora também serve como ponto de reentrada leve para uma nova compra na área do cliente
+- o fluxo de reorder usa o snapshot anterior apenas para localizar:
+  - `variant_sku`
+  - título/subtítulo visíveis
+  - quantidade
+- a nova sessão não reaproveita o `price_snapshot` como verdade comercial:
+  - o checkout volta com o preço atual da variante elegível
+  - itens sem variante elegível ficam de fora com feedback explícito
+
+## Real payment readiness signals
+- `Order` agora também guarda sinais mínimos para distinguir melhor o estado de pagamento atual:
+  - `payment_source_type`
+  - `payment_source_label`
+  - `payment_reference`
+- isso não integra gateway ainda, mas prepara o contrato para separar com clareza:
+  - pedido criado no checkout e ainda pendente
+  - confirmação interna usada nas waves atuais
+  - futura confirmação externa por provider/gateway

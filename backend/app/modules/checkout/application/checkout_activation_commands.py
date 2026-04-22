@@ -61,6 +61,16 @@ def _installments_summary(total: Decimal) -> tuple[str, str, list[dict[str, str]
     )
 
 
+def _shipping_total_from_selected_method(session) -> Decimal:
+    selected_value = str(getattr(session, "shipping_method_selected", "") or "").strip()
+    methods = list(getattr(session, "shipping_methods", []) or [])
+    selected = next((method for method in methods if str(method.get("value", "") or "").strip() == selected_value), None)
+    if not selected:
+        return _safe_decimal(getattr(session, "shipping_total", Decimal("0.00")))
+    raw_price = str(selected.get("price", "") or "").replace("R$", "").replace(" ", "").replace(".", "").replace(",", ".")
+    return _safe_decimal(raw_price, default="0.00")
+
+
 class CheckoutActivationRepository(Protocol):
     def activate_from_product(self, product: dict[str, object], *, quantity: int = 1) -> str | None:
         ...
@@ -158,6 +168,37 @@ class DjangoOrmCheckoutActivationRepository:
             "zip_code": str(getattr(address, "postal_code", "") or ""),
         }
 
+    def _get_reusable_open_session(self, *, tenant_id: int):
+        try:
+            return (
+                self.session_model._default_manager.filter(
+                    tenant_id=tenant_id,
+                    status=self.session_model.Status.OPEN,
+                )
+                .prefetch_related("items")
+                .order_by("-updated_at", "-id")
+                .first()
+            )
+        except Exception:
+            return None
+
+    def _recalculate_session_totals(self, *, session) -> None:
+        items = list(
+            self.item_model._default_manager.filter(checkout_session=session).order_by("sort_order", "id")
+        )
+        subtotal = sum((_safe_decimal(getattr(item, "price", 0)) * int(getattr(item, "quantity", 1) or 1) for item in items), Decimal("0.00"))
+        shipping_total = _shipping_total_from_selected_method(session)
+        discount_total = _safe_decimal(getattr(session, "discount_total", Decimal("0.00")))
+        grand_total = (subtotal + shipping_total - discount_total).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        installments_summary, installments_selected, installments_options = _installments_summary(grand_total)
+        session.subtotal = subtotal.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        session.shipping_total = shipping_total.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        session.grand_total = grand_total
+        session.installments_summary = installments_summary
+        session.installments_options = installments_options
+        if not any(option["value"] == str(getattr(session, "installments_selected", "") or "") for option in installments_options):
+            session.installments_selected = installments_selected
+
     def activate_from_product(self, product: dict[str, object], *, quantity: int = 1) -> str | None:
         if not self.is_ready():
             return None
@@ -173,51 +214,100 @@ class DjangoOrmCheckoutActivationRepository:
         quantity = max(1, int(quantity or 1))
         price = _safe_decimal(product.get("price"))
         compare_price = _safe_decimal(product.get("compare_price"), default="0.00")
-        shipping_total = Decimal("24.90")
-        subtotal = (price * quantity).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-        grand_total = (subtotal + shipping_total).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-        installments_summary, installments_selected, installments_options = _installments_summary(grand_total)
         prefill = self._profile_and_address_prefill(tenant_id=tenant_id)
+        variant_sku = str(product.get("sku") or "").strip()
 
         with transaction.atomic():
-            session = self.session_model._default_manager.create(
-                tenant=tenant,
-                status=self.session_model.Status.OPEN,
-                first_name=prefill.get("first_name", ""),
-                last_name=prefill.get("last_name", ""),
-                email=prefill.get("email", ""),
-                phone=prefill.get("phone", ""),
-                address_line_1=prefill.get("address_line_1", ""),
-                address_line_2=prefill.get("address_line_2", ""),
-                city=prefill.get("city", ""),
-                state=prefill.get("state", ""),
-                zip_code=prefill.get("zip_code", ""),
-                shipping_methods=_default_shipping_methods(),
-                shipping_method_selected="standard",
-                payment_methods=_default_payment_methods(),
-                payment_method_selected="credit_card",
-                subtotal=subtotal,
-                shipping_total=shipping_total,
-                discount_total=Decimal("0.00"),
-                grand_total=grand_total,
-                installments_summary=installments_summary,
-                installments_selected=installments_selected,
-                installments_options=installments_options,
-                accept_terms=False,
+            session = self._get_reusable_open_session(tenant_id=tenant_id)
+            if session is None:
+                shipping_total = Decimal("24.90")
+                subtotal = (price * quantity).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+                grand_total = (subtotal + shipping_total).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+                installments_summary, installments_selected, installments_options = _installments_summary(grand_total)
+                session = self.session_model._default_manager.create(
+                    tenant=tenant,
+                    status=self.session_model.Status.OPEN,
+                    first_name=prefill.get("first_name", ""),
+                    last_name=prefill.get("last_name", ""),
+                    email=prefill.get("email", ""),
+                    phone=prefill.get("phone", ""),
+                    address_line_1=prefill.get("address_line_1", ""),
+                    address_line_2=prefill.get("address_line_2", ""),
+                    city=prefill.get("city", ""),
+                    state=prefill.get("state", ""),
+                    zip_code=prefill.get("zip_code", ""),
+                    shipping_methods=_default_shipping_methods(),
+                    shipping_method_selected="standard",
+                    payment_methods=_default_payment_methods(),
+                    payment_method_selected="credit_card",
+                    subtotal=subtotal,
+                    shipping_total=shipping_total,
+                    discount_total=Decimal("0.00"),
+                    grand_total=grand_total,
+                    installments_summary=installments_summary,
+                    installments_selected=installments_selected,
+                    installments_options=installments_options,
+                    accept_terms=False,
+                )
+
+            existing_item = next(
+                (
+                    item
+                    for item in getattr(session, "items").all()
+                    if str(getattr(item, "variant_sku", "") or "").strip() == variant_sku and variant_sku
+                ),
+                None,
             )
-            self.item_model._default_manager.create(
-                checkout_session=session,
-                title=str(product.get("name") or "Produto"),
-                subtitle=str(product.get("effective_variant_label") or ""),
-                meta=f'SKU {str(product.get("sku") or "").strip()}'.strip(),
-                variant_sku=str(product.get("sku") or "").strip(),
-                image_url=str(product.get("main_image_url") or ""),
-                image_alt=str(product.get("main_image_alt") or product.get("name") or ""),
-                price=price,
-                compare_price=compare_price if compare_price > 0 else None,
-                quantity=quantity,
-                quantity_readonly=True,
-                sort_order=1,
+            if existing_item is not None:
+                existing_item.title = str(product.get("name") or "Produto")
+                existing_item.subtitle = str(product.get("effective_variant_label") or "")
+                existing_item.meta = f"SKU {variant_sku}".strip()
+                existing_item.image_url = str(product.get("main_image_url") or "")
+                existing_item.image_alt = str(product.get("main_image_alt") or product.get("name") or "")
+                existing_item.price = price
+                existing_item.compare_price = compare_price if compare_price > 0 else None
+                existing_item.quantity = int(getattr(existing_item, "quantity", 1) or 1) + quantity
+                existing_item.save(
+                    update_fields=[
+                        "title",
+                        "subtitle",
+                        "meta",
+                        "image_url",
+                        "image_alt",
+                        "price",
+                        "compare_price",
+                        "quantity",
+                        "updated_at",
+                    ]
+                )
+            else:
+                next_sort = max((int(getattr(item, "sort_order", 0) or 0) for item in getattr(session, "items").all()), default=0) + 1
+                self.item_model._default_manager.create(
+                    checkout_session=session,
+                    title=str(product.get("name") or "Produto"),
+                    subtitle=str(product.get("effective_variant_label") or ""),
+                    meta=f"SKU {variant_sku}".strip(),
+                    variant_sku=variant_sku,
+                    image_url=str(product.get("main_image_url") or ""),
+                    image_alt=str(product.get("main_image_alt") or product.get("name") or ""),
+                    price=price,
+                    compare_price=compare_price if compare_price > 0 else None,
+                    quantity=quantity,
+                    quantity_readonly=True,
+                    sort_order=next_sort,
+                )
+
+            self._recalculate_session_totals(session=session)
+            session.save(
+                update_fields=[
+                    "subtotal",
+                    "shipping_total",
+                    "grand_total",
+                    "installments_summary",
+                    "installments_selected",
+                    "installments_options",
+                    "updated_at",
+                ]
             )
         return str(session.session_key)
 

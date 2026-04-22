@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 from django.contrib.auth import get_user_model
@@ -8,6 +8,7 @@ from django.contrib.auth import get_user_model
 from app.modules.catalog.models import Product, ProductVariant
 from app.modules.orders.application.admin_order_queries import DjangoOrmOrderRepository, admin_order_queries
 from app.modules.orders.models import Order, OrderStatusHistory
+from app.modules.tenants.models import Tenant
 
 
 class AdminOrderViewTests(TestCase):
@@ -65,6 +66,76 @@ class AdminOrderViewTests(TestCase):
 
 class AdminOrderPersistedReadTests(TestCase):
     fixtures = ["orders_minimal_seed.json"]
+
+    def test_admin_order_query_service_scopes_records_by_tenant_when_requested(self):
+        primary_order = Order.objects.get(number="2048")
+        secondary_tenant = Tenant.objects.create(
+            name="Hubx Order Secondary Tenant",
+            slug="hubx-order-secondary-tenant",
+            subdomain="hubx-order-secondary-tenant",
+        )
+        secondary_order = Order.objects.create(
+            tenant=secondary_tenant,
+            number="2048",
+            status="pending",
+            customer_name="Cliente Outra Loja",
+            customer_email="outra-loja@hubx.market",
+            payment_status="Pagamento pendente",
+            shipping_status="Aguardando confirmação",
+            fulfillment_status_label="Aguardando pagamento",
+            fulfillment_status_variant="warning",
+            subtotal="10.00",
+            total="10.00",
+        )
+        secondary_order.items.create(
+            title="Item Outra Loja",
+            subtitle="Único",
+            meta="SKU OTHER-001",
+            price_snapshot="10.00",
+            quantity=1,
+            quantity_readonly=True,
+        )
+
+        scoped_order = admin_order_queries.get_order("2048", tenant_id=primary_order.tenant_id)
+        secondary_scoped_order = admin_order_queries.get_order("2048", tenant_id=secondary_tenant.id)
+        scoped_numbers = [order["order_number"] for order in admin_order_queries.list_orders(tenant_id=primary_order.tenant_id)]
+        secondary_scoped_numbers = [order["order_number"] for order in admin_order_queries.list_orders(tenant_id=secondary_tenant.id)]
+
+        self.assertEqual(scoped_order["customer"], "Ana Persistida")
+        self.assertEqual(secondary_scoped_order["customer"], "Cliente Outra Loja")
+        self.assertEqual(scoped_numbers, ["2048"])
+        self.assertEqual(secondary_scoped_numbers, ["2048"])
+
+    @override_settings(HUBX_MARKET_ROOT_DOMAIN="hubx.market", ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver"])
+    def test_admin_order_views_do_not_fallback_to_fixture_data_when_tenant_is_resolved(self):
+        empty_tenant = Tenant.objects.create(
+            name="Hubx Empty Admin Order Tenant",
+            slug="hubx-empty-admin-order-tenant",
+            subdomain="hubx-empty-admin-order-tenant",
+        )
+
+        orders = admin_order_queries.list_orders(tenant_id=empty_tenant.id)
+        missing_order = admin_order_queries.get_order("1048", tenant_id=empty_tenant.id)
+
+        self.assertEqual(orders, [])
+        self.assertIn("não encontrado no tenant atual", missing_order["summary_content"].lower())
+        self.assertEqual(missing_order["customer_linkage_mode"], "missing")
+
+        list_response = self.client.get(
+            reverse("orders:admin-orders-list"),
+            HTTP_HOST=f"{empty_tenant.subdomain}.hubx.market",
+        )
+        detail_response = self.client.get(
+            reverse("orders:admin-orders-detail", kwargs={"order_number": "1048"}),
+            HTTP_HOST=f"{empty_tenant.subdomain}.hubx.market",
+        )
+
+        self.assertEqual(list_response.status_code, 200)
+        self.assertNotContains(list_response, "#1048")
+        self.assertContains(list_response, "Nenhum pedido persistido nesta loja")
+        self.assertEqual(detail_response.status_code, 200)
+        self.assertContains(detail_response, "Pedido não encontrado no tenant atual")
+        self.assertNotContains(detail_response, "fallback seguro de apresentação")
 
     def test_admin_order_query_service_uses_persisted_records_when_available(self):
         Order.objects.filter(number="2048").update(inventory_reserved_at=timezone.now())
@@ -1793,6 +1864,51 @@ class AdminOrderPersistedReadTests(TestCase):
         history = OrderStatusHistory.objects.get(order=order, event_type="order_canceled")
         self.assertEqual(history.source_type, "admin_action")
         self.assertEqual(history.title, "Pedido cancelado")
+
+    @override_settings(HUBX_MARKET_ROOT_DOMAIN="hubx.market", ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver"])
+    def test_admin_order_cancel_action_scopes_command_by_request_tenant(self):
+        primary_order = Order.objects.get(number="2048")
+        secondary_tenant = Tenant.objects.create(
+            name="Hubx Ops Secondary Tenant",
+            slug="hubx-ops-secondary-tenant",
+            subdomain="hubx-ops-secondary-tenant",
+        )
+        secondary_order = Order.objects.create(
+            tenant=secondary_tenant,
+            number="2048",
+            status="pending",
+            customer_name="Cliente Operação Secundária",
+            customer_email="secundaria@hubx.market",
+            payment_status="Pagamento pendente",
+            shipping_status="Aguardando confirmação",
+            fulfillment_status_label="Aguardando pagamento",
+            fulfillment_status_variant="warning",
+            subtotal="10.00",
+            total="10.00",
+        )
+        secondary_order.items.create(
+            title="Item Secundário",
+            subtitle="Único",
+            meta="SKU OTHER-OPS-001",
+            price_snapshot="10.00",
+            quantity=1,
+            quantity_readonly=True,
+        )
+
+        response = self.client.post(
+            reverse("orders:admin-order-update", kwargs={"order_number": "2048"}),
+            {"action_type": "cancel_order"},
+            HTTP_HOST="hubx-ops-secondary-tenant.hubx.market",
+        )
+
+        self.assertRedirects(response, "/ops/orders/2048/?result=order-canceled", fetch_redirect_response=False)
+        primary_order.refresh_from_db()
+        secondary_order.refresh_from_db()
+        self.assertEqual(primary_order.status, "paid")
+        self.assertEqual(secondary_order.status, "canceled")
+        self.assertTrue(
+            OrderStatusHistory.objects.filter(order=secondary_order, event_type="order_canceled").exists()
+        )
 
     def test_admin_order_cancel_recovers_inventory_when_reservation_exists(self):
         order = Order.objects.get(number="2048")

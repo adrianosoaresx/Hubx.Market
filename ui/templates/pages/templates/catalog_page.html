@@ -20,6 +20,9 @@
                 <p class="max-w-3xl text-base text-[var(--color-text-secondary)]">{{ page_description }}</p>
             {% endif %}
         </div>
+        {% if page_meta %}
+            <p class="text-sm text-[var(--color-text-secondary)]">{{ page_meta }}</p>
+        {% endif %}
         {% if results_meta %}
             <p class="text-sm text-[var(--color-text-secondary)]">{{ results_meta }}</p>
         {% endif %}
@@ -33,7 +36,7 @@
         <div {% if hx_target_id %}id="{{ hx_target_id }}"{% endif %} class="space-y-6">
             <div class="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
                 {% for product in products %}
-                    {% with href=product.href image_url=product.image_url image_alt=product.image_alt eyebrow=product.eyebrow title=product.title subtitle=product.subtitle badge_label=product.badge_label badge_variant=product.badge_variant price=product.price compare_price=product.compare_price price_helper=product.price_helper meta=product.meta stock_state=product.stock_state stock_label=product.stock_label stock_helper=product.stock_helper actions=product.actions clickable=product.clickable %}
+{% with href=product.href image_url=product.image_url image_alt=product.image_alt eyebrow=product.eyebrow title=product.title subtitle=product.subtitle badge_label=product.badge_label badge_variant=product.badge_variant price=product.price compare_price=product.compare_price price_helper=product.price_helper meta=product.meta variant_summary=product.variant_summary curation_note=product.curation_note availability_note=product.availability_note click_helper=product.click_helper stock_state=product.stock_state stock_label=product.stock_label stock_helper=product.stock_helper actions=product.actions clickable=product.clickable %}
                         {% include "shared/components/composite/product_card.html" %}
                     {% endwith %}
                 {% endfor %}

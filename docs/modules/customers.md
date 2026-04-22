@@ -85,6 +85,15 @@ Gerenciar compradores, perfis, contato, endereços e visão operacional da conta
   - resumo real de pedidos
   - histórico operacional mais rico
 
+## Escopo administrativo por tenant
+- a query layer de `Admin Customers` agora também aceita `tenant_id` explícito para listagem e detalhe
+- quando o contexto HTTP já resolve um tenant, a camada `interfaces/` repassa esse escopo para evitar leitura cruzada entre lojas
+- quando não houver contexto de tenant na superfície administrativa, o comportamento global atual continua disponível como compatibilidade operacional
+- quando houver tenant resolvido e nenhum dado persistido correspondente, a surface administrativa passa a expor ausência real em vez de reutilizar fixtures de demonstração
+- na listagem administrativa tenant-scoped, esse caso também aparece com empty state explícito de loja sem base persistida, em vez de parecer apenas falta de filtro
+- a command layer de `Admin Customers` agora segue o mesmo contrato para flags operacionais
+- ações como follow-up, reengajamento e prioridade passam a resolver `Customer` por `tenant_id + slug` quando o tenant já estiver resolvido na request
+
 ## Enriquecimento operacional atual
 - `orders_summary_content` agora usa agregados reais de pedidos quando houver histórico persistido
 - `summary_content` também passa a refletir valor do cliente quando existirem pedidos

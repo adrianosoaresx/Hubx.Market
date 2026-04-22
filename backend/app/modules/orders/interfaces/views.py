@@ -121,6 +121,15 @@ def _build_orders_list_updated_cell(order: dict[str, object]) -> str:
     )
 
 
+def _tenant_missing_empty_state(*, tenant_id: int | None, quick_filter_selected: str, search_value: str, status_selected: str) -> tuple[str, str] | None:
+    if not tenant_id or quick_filter_selected or search_value or status_selected:
+        return None
+    return (
+        "Nenhum pedido persistido nesta loja",
+        "A loja atual ainda não possui pedidos persistidos disponíveis para esta visão administrativa.",
+    )
+
+
 def _append_result_to_url(url: str, result: str) -> str:
     if not url:
         return url
@@ -512,13 +521,14 @@ class AdminOrdersListView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        tenant_id = getattr(getattr(self.request, "tenant", None), "id", None)
         search_value = self.request.GET.get("q", "").strip()
         status_selected = self.request.GET.get("status", "").strip()
         quick_filter_selected = self.request.GET.get("quick_filter", "").strip()
         result = self.request.GET.get("result", "").strip()
         page_number = int(self.request.GET.get("page", "1") or "1")
 
-        orders = admin_order_queries.list_orders()
+        orders = admin_order_queries.list_orders(tenant_id=tenant_id)
         orders = admin_order_queries.filter_orders_by_inventory_exception_state(orders, quick_filter_selected)
         if search_value:
             lowered = search_value.lower()
@@ -553,6 +563,14 @@ class AdminOrdersListView(TemplateView):
             quick_filter_selected,
             search_value,
         )
+        tenant_missing_empty_state = _tenant_missing_empty_state(
+            tenant_id=tenant_id,
+            quick_filter_selected=quick_filter_selected,
+            search_value=search_value,
+            status_selected=status_selected,
+        )
+        if tenant_missing_empty_state and filtered_count == 0:
+            empty_title, empty_description = tenant_missing_empty_state
         active_filter_meta = (
             f"Filtro rápido ativo: {quick_filter_label}. {filtered_count} pedido(s) nesta visão. Use Limpar para voltar à lista completa."
             if quick_filter_label
@@ -644,12 +662,13 @@ class AdminOrderDetailView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         order_number = kwargs["order_number"]
-        order = admin_order_queries.get_order(order_number)
+        tenant_id = getattr(getattr(self.request, "tenant", None), "id", None)
+        order = admin_order_queries.get_order(order_number, tenant_id=tenant_id)
         feedback = _build_action_feedback(self.request.GET.get("result", "").strip())
         back_href = reverse("orders:admin-orders-list")
         page_description = (
             "Resumo operacional do pedido, dados do cliente e histórico de movimentações. "
-            + admin_order_queries.get_order_operational_visibility(order_number)
+            + admin_order_queries.get_order_operational_visibility(order_number, tenant_id=tenant_id)
         )
         page_meta = feedback or " ".join(
             part
@@ -743,6 +762,7 @@ class AdminOrderActionView(View):
 
     def post(self, request, *args, **kwargs):
         order_number = kwargs["order_number"]
+        tenant_id = getattr(getattr(request, "tenant", None), "id", None)
         action_type = str(request.POST.get("action_type", "") or "").strip()
         next_url = str(request.POST.get("next", "") or "").strip()
         order_numbers = _parse_bulk_order_numbers(str(request.POST.get("order_numbers", "") or ""))
@@ -751,44 +771,51 @@ class AdminOrderActionView(View):
             _, result = admin_order_commands.update_order_status(
                 order_number=order_number,
                 status=str(request.POST.get("status", "") or "").strip(),
+                tenant_id=tenant_id,
             )
         elif action_type == "fulfillment_status":
             _, result = admin_order_commands.update_fulfillment_status(
                 order_number=order_number,
                 fulfillment_status=str(request.POST.get("fulfillment_status", "") or "").strip(),
+                tenant_id=tenant_id,
             )
         elif action_type == "start_fulfillment":
-            _, result = admin_order_commands.start_fulfillment(order_number=order_number)
+            _, result = admin_order_commands.start_fulfillment(order_number=order_number, tenant_id=tenant_id)
         elif action_type == "start_shipping":
-            _, result = admin_order_commands.start_shipping(order_number=order_number)
+            _, result = admin_order_commands.start_shipping(order_number=order_number, tenant_id=tenant_id)
         elif action_type == "complete_delivery":
-            _, result = admin_order_commands.complete_delivery(order_number=order_number)
+            _, result = admin_order_commands.complete_delivery(order_number=order_number, tenant_id=tenant_id)
         elif action_type == "cancel_order":
-            _, result = admin_order_commands.cancel_order(order_number=order_number)
+            _, result = admin_order_commands.cancel_order(order_number=order_number, tenant_id=tenant_id)
         elif action_type == "mark_inventory_exception_under_review":
             _, result = admin_order_commands.mark_inventory_exception_under_review(
                 order_number=order_number,
                 actor_label=actor_label,
+                tenant_id=tenant_id,
             )
         elif action_type == "mark_inventory_exception_resolved":
             _, result = admin_order_commands.mark_inventory_exception_resolved(
                 order_number=order_number,
                 actor_label=actor_label,
+                tenant_id=tenant_id,
             )
         elif action_type == "reassign_inventory_exception_owner":
             _, result = admin_order_commands.reassign_inventory_exception_owner(
                 order_number=order_number,
                 actor_label=actor_label,
+                tenant_id=tenant_id,
             )
         elif action_type == "bulk_mark_inventory_exception_under_review":
             _, result = admin_order_commands.bulk_mark_inventory_exception_under_review(
                 order_numbers=order_numbers,
                 actor_label=actor_label,
+                tenant_id=tenant_id,
             )
         elif action_type == "bulk_mark_inventory_exception_resolved":
             _, result = admin_order_commands.bulk_mark_inventory_exception_resolved(
                 order_numbers=order_numbers,
                 actor_label=actor_label,
+                tenant_id=tenant_id,
             )
         else:
             result = "order-status-invalid"

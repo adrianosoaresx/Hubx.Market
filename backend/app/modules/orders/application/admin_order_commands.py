@@ -46,11 +46,14 @@ class DjangoOrmAdminOrderCommandRepository:
         self.history_model = getattr(order_models, "OrderStatusHistory", None)
         self.variant_model = getattr(catalog_models, "ProductVariant", None)
 
-    def get_order(self, order_number: str):
+    def get_order(self, order_number: str, *, tenant_id: int | None = None):
         if self.order_model is None:
             return None
         try:
-            return self.order_model._default_manager.filter(number=order_number.lstrip("#")).first()
+            queryset = self.order_model._default_manager.filter(number=order_number.lstrip("#"))
+            if tenant_id:
+                queryset = queryset.filter(tenant_id=tenant_id)
+            return queryset.first()
         except Exception:
             return None
 
@@ -200,8 +203,8 @@ class AdminOrderCommandService:
             order.inventory_recovered_at = timezone.now()
         return recovered_items
 
-    def complete_delivery(self, *, order_number: str) -> tuple[bool, str]:
-        order = self.repository.get_order(order_number)
+    def complete_delivery(self, *, order_number: str, tenant_id: int | None = None) -> tuple[bool, str]:
+        order = self.repository.get_order(order_number, tenant_id=tenant_id)
         if order is None:
             return False, "order-not-found"
         current_status = str(getattr(order, "status", "") or "")
@@ -249,8 +252,8 @@ class AdminOrderCommandService:
             )
         return True, "delivery-completed"
 
-    def start_shipping(self, *, order_number: str) -> tuple[bool, str]:
-        order = self.repository.get_order(order_number)
+    def start_shipping(self, *, order_number: str, tenant_id: int | None = None) -> tuple[bool, str]:
+        order = self.repository.get_order(order_number, tenant_id=tenant_id)
         if order is None:
             return False, "order-not-found"
         current_status = str(getattr(order, "status", "") or "")
@@ -285,8 +288,8 @@ class AdminOrderCommandService:
         )
         return True, "shipping-started"
 
-    def start_fulfillment(self, *, order_number: str) -> tuple[bool, str]:
-        order = self.repository.get_order(order_number)
+    def start_fulfillment(self, *, order_number: str, tenant_id: int | None = None) -> tuple[bool, str]:
+        order = self.repository.get_order(order_number, tenant_id=tenant_id)
         if order is None:
             return False, "order-not-found"
         current_status = str(getattr(order, "status", "") or "")
@@ -318,8 +321,8 @@ class AdminOrderCommandService:
         )
         return True, "fulfillment-started"
 
-    def cancel_order(self, *, order_number: str) -> tuple[bool, str]:
-        order = self.repository.get_order(order_number)
+    def cancel_order(self, *, order_number: str, tenant_id: int | None = None) -> tuple[bool, str]:
+        order = self.repository.get_order(order_number, tenant_id=tenant_id)
         if order is None:
             return False, "order-not-found"
         current_status = str(getattr(order, "status", "") or "")
@@ -358,8 +361,14 @@ class AdminOrderCommandService:
             )
         return True, "order-canceled"
 
-    def mark_inventory_exception_under_review(self, *, order_number: str, actor_label: str = "") -> tuple[bool, str]:
-        order = self.repository.get_order(order_number)
+    def mark_inventory_exception_under_review(
+        self,
+        *,
+        order_number: str,
+        actor_label: str = "",
+        tenant_id: int | None = None,
+    ) -> tuple[bool, str]:
+        order = self.repository.get_order(order_number, tenant_id=tenant_id)
         if order is None:
             return False, "order-not-found"
         normalized_actor = self._normalized_actor_label(actor_label)
@@ -386,8 +395,14 @@ class AdminOrderCommandService:
             )
         return True, "inventory-exception-under-review"
 
-    def mark_inventory_exception_resolved(self, *, order_number: str, actor_label: str = "") -> tuple[bool, str]:
-        order = self.repository.get_order(order_number)
+    def mark_inventory_exception_resolved(
+        self,
+        *,
+        order_number: str,
+        actor_label: str = "",
+        tenant_id: int | None = None,
+    ) -> tuple[bool, str]:
+        order = self.repository.get_order(order_number, tenant_id=tenant_id)
         if order is None:
             return False, "order-not-found"
         normalized_actor = self._normalized_actor_label(actor_label)
@@ -419,8 +434,14 @@ class AdminOrderCommandService:
             )
         return True, "inventory-exception-resolved"
 
-    def reassign_inventory_exception_owner(self, *, order_number: str, actor_label: str = "") -> tuple[bool, str]:
-        order = self.repository.get_order(order_number)
+    def reassign_inventory_exception_owner(
+        self,
+        *,
+        order_number: str,
+        actor_label: str = "",
+        tenant_id: int | None = None,
+    ) -> tuple[bool, str]:
+        order = self.repository.get_order(order_number, tenant_id=tenant_id)
         if order is None:
             return False, "order-not-found"
         normalized_actor = self._normalized_actor_label(actor_label)
@@ -453,30 +474,50 @@ class AdminOrderCommandService:
             )
         return True, "inventory-exception-owner-reassigned"
 
-    def bulk_mark_inventory_exception_under_review(self, *, order_numbers: list[str], actor_label: str = "") -> tuple[bool, str]:
+    def bulk_mark_inventory_exception_under_review(
+        self,
+        *,
+        order_numbers: list[str],
+        actor_label: str = "",
+        tenant_id: int | None = None,
+    ) -> tuple[bool, str]:
         changed = 0
         for order_number in order_numbers:
-            success, result = self.mark_inventory_exception_under_review(order_number=order_number, actor_label=actor_label)
+            success, result = self.mark_inventory_exception_under_review(
+                order_number=order_number,
+                actor_label=actor_label,
+                tenant_id=tenant_id,
+            )
             if success and result == "inventory-exception-under-review":
                 changed += 1
         if changed <= 0:
             return False, "bulk-inventory-exception-under-review-no-change"
         return True, "bulk-inventory-exception-under-review"
 
-    def bulk_mark_inventory_exception_resolved(self, *, order_numbers: list[str], actor_label: str = "") -> tuple[bool, str]:
+    def bulk_mark_inventory_exception_resolved(
+        self,
+        *,
+        order_numbers: list[str],
+        actor_label: str = "",
+        tenant_id: int | None = None,
+    ) -> tuple[bool, str]:
         changed = 0
         for order_number in order_numbers:
-            success, result = self.mark_inventory_exception_resolved(order_number=order_number, actor_label=actor_label)
+            success, result = self.mark_inventory_exception_resolved(
+                order_number=order_number,
+                actor_label=actor_label,
+                tenant_id=tenant_id,
+            )
             if success and result == "inventory-exception-resolved":
                 changed += 1
         if changed <= 0:
             return False, "bulk-inventory-exception-resolved-no-change"
         return True, "bulk-inventory-exception-resolved"
 
-    def update_order_status(self, *, order_number: str, status: str) -> tuple[bool, str]:
+    def update_order_status(self, *, order_number: str, status: str, tenant_id: int | None = None) -> tuple[bool, str]:
         if status not in {option["value"] for option in ORDER_STATUS_OPTIONS}:
             return False, "order-status-invalid"
-        order = self.repository.get_order(order_number)
+        order = self.repository.get_order(order_number, tenant_id=tenant_id)
         if order is None:
             return False, "order-not-found"
         previous_status = str(getattr(order, "status", "") or "")
@@ -505,11 +546,17 @@ class AdminOrderCommandService:
         )
         return True, "order-status-updated"
 
-    def update_fulfillment_status(self, *, order_number: str, fulfillment_status: str) -> tuple[bool, str]:
+    def update_fulfillment_status(
+        self,
+        *,
+        order_number: str,
+        fulfillment_status: str,
+        tenant_id: int | None = None,
+    ) -> tuple[bool, str]:
         option = next((item for item in FULFILLMENT_STATUS_OPTIONS if item["value"] == fulfillment_status), None)
         if option is None:
             return False, "fulfillment-status-invalid"
-        order = self.repository.get_order(order_number)
+        order = self.repository.get_order(order_number, tenant_id=tenant_id)
         if order is None:
             return False, "order-not-found"
         previous_label = str(getattr(order, "fulfillment_status_label", "") or "Indefinido")

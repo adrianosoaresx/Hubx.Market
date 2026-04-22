@@ -121,6 +121,13 @@ Consumidores:
 Descrição:
 Pagamento iniciado.
 
+Readiness atual:
+
+- a criação inicial de `PaymentAttempt` agora pode acontecer quando o checkout materializa o pedido e abre a trilha pendente de pagamento
+- isso ainda não representa captura real no gateway; apenas cria um contrato persistido para futura integração
+- a partir dessa tentativa pendente, `payments` também já pode gerar um contrato idempotente de bootstrap para futura criação real de cobrança/intenção externa
+- com o provider inicial `Pagar.me`, essa tentativa já pode materializar um `payment link` hospedado real quando a chave secreta estiver configurada
+
 ---
 
 ## payment.paid
@@ -139,8 +146,14 @@ Pagamento confirmado pelo gateway.
 Efeitos comuns:
 
 - atualizar pedido para "paid"
+- registrar referência/origem do evento de pagamento
 - reduzir estoque
 - iniciar preparação do pedido
+
+Readiness atual:
+
+- para `Pagar.me`, a confirmação segura continua vindo de webhook
+- a URL de retorno hospedada pode trazer apenas hint de status; ela não substitui `payment.paid`
 
 ---
 
@@ -155,6 +168,17 @@ Consumidores:
 
 Descrição:
 Pagamento falhou.
+
+Efeitos comuns:
+
+- manter pedido em estado pendente
+- registrar origem/referência da falha
+- deixar o pedido pronto para nova tentativa segura
+
+Readiness atual:
+
+- para `Pagar.me`, `payment.failed` também entra por webhook assinado
+- a customer area pode usar esse estado para abrir um retry leve de pagamento sem gerar novo pedido
 
 ---
 

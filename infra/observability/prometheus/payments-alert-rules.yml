@@ -1,0 +1,52 @@
+groups:
+  - name: hubx-payments-alert-signals
+    rules:
+      - alert: HubxPaymentsProviderIntentFailuresHigh
+        expr: increase(hubx_payments_alert_signal_total{signal_code="provider_intent.failed"}[10m]) >= 3
+        for: 5m
+        labels:
+          severity: warning
+          domain: payments
+        annotations:
+          summary: "Falhas recorrentes na criação de intent de pagamento"
+          description: "A trilha de pagamentos registrou 3 ou mais falhas de `provider_intent.failed` nos últimos 10 minutos. Verificar provider, credenciais, rollout e payload enviado."
+
+      - alert: HubxPaymentsHostedRedirectUnavailable
+        expr: increase(hubx_payments_alert_signal_total{signal_code="hosted_redirect.unavailable"}[10m]) >= 3
+        for: 5m
+        labels:
+          severity: warning
+          domain: payments
+        annotations:
+          summary: "Checkout hospedado indisponível com recorrência"
+          description: "O redirect para o checkout hospedado falhou 3 ou mais vezes nos últimos 10 minutos. Revisar tentativas pendentes, criação de intent e disponibilidade do provider."
+
+      - alert: HubxPaymentsWebhookInvalidSignature
+        expr: increase(hubx_payments_alert_signal_total{signal_code="webhook.invalid_signature"}[5m]) >= 1
+        for: 2m
+        labels:
+          severity: critical
+          domain: payments
+        annotations:
+          summary: "Webhook de pagamento com assinatura inválida"
+          description: "Foi detectado pelo menos um webhook de pagamento com assinatura inválida nos últimos 5 minutos. Revisar segredo configurado, origem do tráfego e possível tentativa indevida."
+
+      - alert: HubxPaymentsWebhookTenantUnavailable
+        expr: increase(hubx_payments_alert_signal_total{signal_code="webhook.tenant_unavailable"}[10m]) >= 2
+        for: 5m
+        labels:
+          severity: warning
+          domain: payments
+        annotations:
+          summary: "Webhook de pagamento sem tenant resolvido"
+          description: "O módulo `payments` recebeu 2 ou mais webhooks com tenant indisponível nos últimos 10 minutos. Revisar metadata do provider e resolução de tenant por slug/subdomain."
+
+      - alert: HubxPaymentsStockConflictOnConfirmation
+        expr: increase(hubx_payments_alert_signal_total{signal_code="payment_confirmation.stock_conflict"}[15m]) >= 1
+        for: 5m
+        labels:
+          severity: warning
+          domain: payments
+        annotations:
+          summary: "Conflito de estoque na confirmação do pagamento"
+          description: "A reconciliação do pagamento encontrou conflito de estoque ao confirmar um pedido. Revisar consistência entre orders, inventory e webhooks recebidos."

@@ -36,6 +36,7 @@ class TenantModelTests(TestCase):
 
 @override_settings(
     HUBX_MARKET_ROOT_DOMAIN="hubx.market",
+    ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver", "shop.example.com"],
     ROOT_URLCONF="app.modules.tenants.tests.test_tenant_and_middleware",
 )
 class TenantMiddlewareTests(TestCase):
@@ -81,5 +82,19 @@ class TenantMiddlewareTests(TestCase):
 
     def test_localhost_is_ignored_and_sets_tenant_none(self):
         response = self.client.get("/tenant-probe/", HTTP_HOST="localhost:8000")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content.decode(), "none")
+
+    def test_custom_domain_configured_on_tenant_is_still_ignored_until_supported(self):
+        Tenant.objects.create(
+            name="Loja Custom",
+            slug="loja-custom",
+            subdomain="lojacustom",
+            custom_domain="shop.example.com",
+            is_active=True,
+        )
+
+        response = self.client.get("/tenant-probe/", HTTP_HOST="shop.example.com")
+
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content.decode(), "none")

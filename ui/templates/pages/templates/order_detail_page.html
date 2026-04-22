@@ -43,6 +43,17 @@
         </div>
 
         <aside class="space-y-6">
+            {% if payment_attempt_operational_visible %}
+                {% with title="Trilha do pagamento" description=payment_attempt_operational_description|default:"Acompanhe os marcos operacionais mais recentes da tentativa de pagamento." items=payment_attempt_timeline_items %}
+                    {% include "shared/components/data_display/activity_feed.html" %}
+                {% endwith %}
+            {% endif %}
+            {% if pending_recovery_visible %}
+                {% include "shared/components/feedback/alert.html" with variant=pending_recovery_variant icon="🧭" title=pending_recovery_title description=pending_recovery_description %}
+            {% endif %}
+            {% if order_pending_recovery_visible %}
+                {% include "shared/components/feedback/alert.html" with variant=order_pending_recovery_variant icon="🕒" title=order_pending_recovery_title description=order_pending_recovery_description %}
+            {% endif %}
             {% if activity_items or showcase_mode %}
                 {% with title=activity_title|default:"Linha do tempo" description=activity_description|default:"Acompanhe atualizações importantes do pedido." items=activity_items showcase_mode=showcase_mode %}
                     {% include "shared/components/data_display/activity_feed.html" %}

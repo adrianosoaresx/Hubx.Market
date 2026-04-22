@@ -1,4 +1,4 @@
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 from datetime import timedelta
@@ -100,6 +100,67 @@ class AdminCustomerViewTests(TestCase):
 
 class AdminCustomerPersistedReadTests(TestCase):
     fixtures = ["customers_minimal_seed.json"]
+
+    def test_admin_customer_query_service_scopes_records_by_tenant_when_requested(self):
+        primary_customer = Customer.objects.get(pk=1)
+        secondary_tenant = Tenant.objects.create(
+            name="Hubx Customer Secondary Tenant",
+            slug="hubx-customer-secondary-tenant",
+            subdomain="hubx-customer-secondary-tenant",
+        )
+        secondary_customer = Customer.objects.create(
+            tenant=secondary_tenant,
+            slug="ana-persistida",
+            reference="#9902",
+            full_name="Ana Persistida Outra Loja",
+            email="ana.outra@hubx.market",
+            phone="(21) 90000-0000",
+            status="inactive",
+            account_type="Storefront",
+        )
+
+        scoped_customer = admin_customer_queries.get_customer("ana-persistida", tenant_id=primary_customer.tenant_id)
+        secondary_scoped_customer = admin_customer_queries.get_customer("ana-persistida", tenant_id=secondary_tenant.id)
+        scoped_slugs = [customer["slug"] for customer in admin_customer_queries.list_customers(tenant_id=primary_customer.tenant_id)]
+        secondary_scoped_slugs = [
+            customer["slug"] for customer in admin_customer_queries.list_customers(tenant_id=secondary_tenant.id)
+        ]
+
+        self.assertEqual(scoped_customer["customer_reference"], "#9901")
+        self.assertEqual(secondary_scoped_customer["customer_reference"], "#9902")
+        self.assertEqual(scoped_slugs, ["ana-persistida"])
+        self.assertEqual(secondary_scoped_slugs, ["ana-persistida"])
+
+    @override_settings(HUBX_MARKET_ROOT_DOMAIN="hubx.market", ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver"])
+    def test_admin_customer_views_do_not_fallback_to_fixture_data_when_tenant_is_resolved(self):
+        empty_tenant = Tenant.objects.create(
+            name="Hubx Empty Admin Customer Tenant",
+            slug="hubx-empty-admin-customer-tenant",
+            subdomain="hubx-empty-admin-customer-tenant",
+        )
+
+        customers = admin_customer_queries.list_customers(tenant_id=empty_tenant.id)
+        missing_customer = admin_customer_queries.get_customer("ana-souza", tenant_id=empty_tenant.id)
+
+        self.assertEqual(customers, [])
+        self.assertIn("não encontrado no tenant atual", missing_customer["summary_content"].lower())
+        self.assertIn("tenant atual", missing_customer["contact_content"].lower())
+
+        list_response = self.client.get(
+            reverse("customers:admin-customers-list"),
+            HTTP_HOST=f"{empty_tenant.subdomain}.hubx.market",
+        )
+        detail_response = self.client.get(
+            reverse("customers:admin-customers-detail", kwargs={"customer_slug": "ana-souza"}),
+            HTTP_HOST=f"{empty_tenant.subdomain}.hubx.market",
+        )
+
+        self.assertEqual(list_response.status_code, 200)
+        self.assertNotContains(list_response, "Ana Souza")
+        self.assertEqual(list_response.context["empty_title"], "Nenhum cliente persistido nesta loja")
+        self.assertEqual(detail_response.status_code, 200)
+        self.assertContains(detail_response, "Cliente não encontrado no tenant atual")
+        self.assertNotContains(detail_response, "fallback seguro de apresentação")
 
     def test_admin_customer_query_service_uses_persisted_records_when_available(self):
         customer = Customer.objects.get(pk=1)
@@ -288,6 +349,41 @@ class AdminCustomerPersistedReadTests(TestCase):
         plain_detail = self.client.get(reverse("customers:admin-customers-detail", kwargs={"customer_slug": "ana-persistida"}))
         self.assertContains(plain_detail, "follow-up")
         self.assertTrue(Customer.objects.get(pk=1).marked_for_followup)
+
+    @override_settings(HUBX_MARKET_ROOT_DOMAIN="hubx.market", ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver"])
+    def test_admin_customer_mark_for_followup_scopes_command_by_request_tenant(self):
+        primary_customer = Customer.objects.get(pk=1)
+        secondary_tenant = Tenant.objects.create(
+            name="Hubx Customer Action Secondary Tenant",
+            slug="hubx-customer-action-secondary-tenant",
+            subdomain="hubx-customer-action-secondary-tenant",
+        )
+        secondary_customer = Customer.objects.create(
+            tenant=secondary_tenant,
+            slug="ana-persistida",
+            reference="#9910",
+            full_name="Ana Persistida Ação Outra Loja",
+            email="ana.acao.outra@hubx.market",
+            phone="(21) 91111-0000",
+            status="active",
+            account_type="Storefront",
+        )
+
+        response = self.client.post(
+            reverse("customers:admin-customer-update", kwargs={"customer_slug": "ana-persistida"}),
+            {"action_type": "mark_for_followup"},
+            HTTP_HOST="hubx-customer-action-secondary-tenant.hubx.market",
+        )
+
+        self.assertRedirects(
+            response,
+            "/ops/customers/ana-persistida/?result=customer-followup-marked",
+            fetch_redirect_response=False,
+        )
+        primary_customer.refresh_from_db()
+        secondary_customer.refresh_from_db()
+        self.assertFalse(primary_customer.marked_for_followup)
+        self.assertTrue(secondary_customer.marked_for_followup)
 
     def test_admin_customer_mark_for_reengagement_updates_flag_and_feedback(self):
         response = self.client.post(

@@ -4,7 +4,7 @@
 
 {% block content %}
 <section class="space-y-6">
-    {% with eyebrow=eyebrow|default:"Customer Area" title=page_title|default:"Meus pedidos" description=page_description|default:"Acompanhe o histórico de compras, status e próximos passos dos seus pedidos." %}
+    {% with eyebrow=eyebrow|default:"Customer Area" title=page_title|default:"Meus pedidos" description=page_description|default:"Acompanhe o histórico de compras, status e próximos passos dos seus pedidos." meta=page_meta %}
         {% include "shared/components/layout/page_header.html" %}
     {% endwith %}
 
