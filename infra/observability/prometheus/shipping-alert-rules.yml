@@ -1,0 +1,62 @@
+groups:
+  - name: hubx-shipping-polling
+    rules:
+      - alert: HubxShippingCreatedBacklogHigh
+        expr: sum(hubx_shipping_shipment_total{status="created"}) > 100
+        for: 30m
+        labels:
+          severity: warning
+          domain: shipping
+        annotations:
+          summary: "Backlog alto de shipments criados"
+          description: "Existem mais de 100 shipments em status created por 30 minutos. Verificar Celery beat/cron, worker de tracking e provider por tenant."
+
+      - alert: HubxShippingCanceledShipmentsPresent
+        expr: sum(hubx_shipping_shipment_total{status="canceled"}) > 0
+        for: 10m
+        labels:
+          severity: warning
+          domain: shipping
+        annotations:
+          summary: "Shipments cancelados presentes"
+          description: "Há shipments cancelados no módulo de shipping. Revisar tracking provider, histórico por tenant e impacto nos pedidos afetados."
+
+      - alert: HubxShippingNoTrackingSyncActivity
+        expr: sum(increase(hubx_shipping_history_event_total{event_type="shipment_tracking_synced"}[30m])) == 0 and sum(hubx_shipping_shipment_total{status=~"created|sent"}) > 0
+        for: 30m
+        labels:
+          severity: warning
+          domain: shipping
+        annotations:
+          summary: "Sem atividade recente de sync de tracking"
+          description: "Existem shipments não terminais, mas nenhum evento shipment_tracking_synced nos últimos 30 minutos. Verificar task shipping.sync_pending_shipments_tracking, scheduler e provider."
+
+      - alert: HubxShippingProviderFailuresPresent
+        expr: sum(increase(hubx_shipping_history_event_total{event_type="shipment_tracking_provider_failed"}[15m])) > 0
+        for: 5m
+        labels:
+          severity: warning
+          domain: shipping
+        annotations:
+          summary: "Falhas recentes no provider de tracking"
+          description: "O sync de shipping registrou falhas recentes no provider de tracking. Revisar token, base URL, timeout e disponibilidade do provider por tenant."
+
+      - alert: HubxShippingProviderHttp5xxPresent
+        expr: sum(increase(hubx_shipping_provider_http_status_total{http_status=~"5.."}[15m])) > 0
+        for: 5m
+        labels:
+          severity: warning
+          domain: shipping
+        annotations:
+          summary: "Provider de tracking retornando HTTP 5xx"
+          description: "O provider de shipping retornou respostas 5xx recentemente. Revisar disponibilidade externa, timeout e impacto por tenant."
+
+      - alert: HubxShippingProviderLatencyHigh
+        expr: avg(hubx_shipping_provider_latency_ms_avg) > 5000
+        for: 10m
+        labels:
+          severity: warning
+          domain: shipping
+        annotations:
+          summary: "Latência alta no provider de tracking"
+          description: "A latência média observada do provider de shipping ficou acima de 5s. Revisar provider, rede e configuração de timeout."

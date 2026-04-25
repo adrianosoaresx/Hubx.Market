@@ -1,0 +1,31 @@
+route:
+  receiver: notifications-default
+  group_by:
+    - alertname
+    - domain
+    - severity
+  routes:
+    - matchers:
+        - domain="notifications"
+        - severity="critical"
+      receiver: notifications-critical
+      continue: false
+
+    - matchers:
+        - domain="notifications"
+        - severity="warning"
+      receiver: notifications-warning
+      continue: false
+
+receivers:
+  - name: notifications-default
+    webhook_configs:
+      - url: https://alert-router.internal.example/hubx/default
+
+  - name: notifications-warning
+    webhook_configs:
+      - url: https://alert-router.internal.example/hubx/notifications-warning
+
+  - name: notifications-critical
+    webhook_configs:
+      - url: https://alert-router.internal.example/hubx/notifications-critical

@@ -1,0 +1,32 @@
+groups:
+  - name: hubx-customers-data
+    rules:
+      - alert: HubxCustomerMissingAddressPresent
+        expr: sum by (tenant_id) (hubx_customer_data_issue_total{issue="missing_address"}) > 0
+        for: 30m
+        labels:
+          severity: warning
+          domain: customers
+        annotations:
+          summary: "Clientes sem endereço persistido"
+          description: "Tenant {{ $labels.tenant_id }} possui clientes sem endereço persistido para customer area/checkout."
+
+      - alert: HubxCustomerOrderEmailFallbackPresent
+        expr: sum by (tenant_id) (hubx_customer_data_issue_total{issue="order_email_fallback"}) > 0
+        for: 30m
+        labels:
+          severity: warning
+          domain: customers
+        annotations:
+          summary: "Pedidos ainda vinculados por fallback de e-mail"
+          description: "Tenant {{ $labels.tenant_id }} possui pedidos sem vínculo explícito com Customer."
+
+      - alert: HubxCustomerDefaultAddressInvalid
+        expr: sum by (tenant_id) (hubx_customer_data_issue_total{issue=~"missing_default_address|incomplete_default_address"}) > 0
+        for: 30m
+        labels:
+          severity: warning
+          domain: customers
+        annotations:
+          summary: "Endereço default de cliente ausente ou incompleto"
+          description: "Tenant {{ $labels.tenant_id }} possui clientes com endereço default ausente ou incompleto."

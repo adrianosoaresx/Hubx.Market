@@ -1,0 +1,42 @@
+groups:
+  - name: hubx-checkout-sessions
+    rules:
+      - alert: HubxCheckoutOpenStaleSessionsPresent
+        expr: sum by (tenant_id) (hubx_checkout_session_issue_total{issue="open_stale"}) > 0
+        for: 30m
+        labels:
+          severity: warning
+          domain: checkout
+        annotations:
+          summary: "Sessões abertas antigas no checkout"
+          description: "Tenant {{ $labels.tenant_id }} possui sessões abertas expiradas ou sem atualização há mais de 24 horas."
+
+      - alert: HubxCheckoutCompletedOrderMissing
+        expr: sum by (tenant_id) (hubx_checkout_session_issue_total{issue="completed_order_missing"}) > 0
+        for: 15m
+        labels:
+          severity: critical
+          domain: checkout
+        annotations:
+          summary: "Sessão concluída sem pedido correspondente"
+          description: "Tenant {{ $labels.tenant_id }} possui checkout concluído sem vínculo íntegro com pedido."
+
+      - alert: HubxCheckoutTotalMismatch
+        expr: sum by (tenant_id) (hubx_checkout_session_issue_total{issue="total_mismatch"}) > 0
+        for: 15m
+        labels:
+          severity: critical
+          domain: checkout
+        annotations:
+          summary: "Inconsistência de total em sessão de checkout"
+          description: "Tenant {{ $labels.tenant_id }} possui sessão com subtotal/total divergente do snapshot de itens."
+
+      - alert: HubxCheckoutExpiredSessionsRetained
+        expr: sum by (tenant_id) (hubx_checkout_session_status_total{status="expired"}) > 100
+        for: 6h
+        labels:
+          severity: info
+          domain: checkout
+        annotations:
+          summary: "Sessões expiradas retidas no checkout"
+          description: "Tenant {{ $labels.tenant_id }} possui mais de 100 sessões expiradas retidas; revisar política futura de retenção/arquivamento."

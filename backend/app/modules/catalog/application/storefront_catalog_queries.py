@@ -170,12 +170,12 @@ def _catalog_card_click_helper(product: dict[str, object]) -> str:
     state = _stock_state(product)
     variant = _variant_emphasis_copy(product)
     if state == "low_stock":
-        return f"Abra o produto para confirmar {variant} antes de seguir para checkout."
+        return f"Abra o produto para confirmar {variant} enquanto esta combinação ainda aparece como uma das mais fortes da vitrine para seguir ao checkout."
     if state == "backorder":
-        return f"Abra o produto para revisar {variant} e confirmar o prazo da reserva."
+        return f"Abra o produto para revisar {variant} e confirmar o prazo da reserva antes de decidir se esta combinação faz sentido para você agora."
     if state == "out_of_stock":
-        return f"Abra o produto para revisar {variant} e acompanhar a reposição."
-    return f"Abra o produto para revisar {variant} e seguir para checkout com confiança."
+        return f"Abra o produto para revisar {variant} e acompanhar a reposição se esta ainda for uma das combinações mais interessantes para você nesta vitrine."
+    return f"Abra o produto para revisar {variant} com mais contexto e decidir com confiança se esta é a combinação certa para seguir agora."
 
 
 def _catalog_card_curation_note(product: dict[str, object]) -> str:
@@ -184,18 +184,39 @@ def _catalog_card_curation_note(product: dict[str, object]) -> str:
     is_featured = bool(product.get("is_featured"))
     quick_buy = state in {"in_stock", "low_stock"}
     if is_featured and has_offer and quick_buy:
-        return "Destaque atual com oferta ativa e compra rápida disponível."
+        return "Escolha editorial da vitrine com oferta ativa e caminho rápido para compra."
     if is_featured and quick_buy:
-        return "Destaque atual da vitrine com compra rápida disponível."
+        return "Escolha editorial da vitrine com compra rápida disponível."
     if has_offer and quick_buy:
-        return "Oferta pronta para compra rápida nesta vitrine."
+        return "Oferta em evidência nesta vitrine, pronta para uma decisão rápida."
     if is_featured:
-        return "Destaque atual da vitrine para explorar no detalhe."
+        return "Destaque editorial atual da vitrine para explorar com mais calma no detalhe."
     if quick_buy:
-        return "Compra rápida disponível nesta combinação."
+        return "Combinação em evidência para quem quer decidir e avançar mais rápido."
     if has_offer:
-        return "Oferta ativa com revisão completa no detalhe do produto."
+        return "Oferta ativa em evidência, com contexto completo no detalhe do produto."
     return ""
+
+
+def _catalog_card_decision_signal(product: dict[str, object]) -> str:
+    state = _stock_state(product)
+    has_offer = bool(str(product.get("compare_price", "") or "").strip())
+    is_featured = bool(product.get("is_featured"))
+    if state == "out_of_stock":
+        return "acompanhar_reposicao"
+    if state == "backorder":
+        return "reserva_planejada"
+    if state == "low_stock" and has_offer:
+        return "decisao_rapida_com_oferta"
+    if state == "low_stock":
+        return "decisao_rapida"
+    if has_offer and is_featured:
+        return "oferta_editorial"
+    if has_offer:
+        return "oferta_para_comparar"
+    if is_featured:
+        return "destaque_editorial"
+    return "compra_pronta"
 
 
 def _catalog_initial_order_key(product: dict[str, object]) -> tuple[int, int, int, str, str]:
@@ -248,26 +269,45 @@ def _catalog_to_pdp_continuity_note(product: dict[str, object]) -> str:
     return f"A combinação destacada no catálogo continua sendo {variant}, com preço, mídia e disponibilidade alinhados aqui também."
 
 
+def _pdp_commercial_note(product: dict[str, object]) -> str:
+    state = _stock_state(product)
+    variant = _variant_emphasis_copy(product)
+    compare_price = bool(str(product.get("compare_price", "") or "").strip())
+    if state == "low_stock":
+        return f"{variant} segue como uma escolha forte para decisão rápida, com contexto claro de saída acelerada."
+    if state == "backorder":
+        return f"{variant} continua sendo uma combinação comprável, agora com reserva clara e previsível."
+    if state == "out_of_stock":
+        return f"{variant} continua relevante para comparação e acompanhamento, mesmo sem disponibilidade imediata."
+    if compare_price:
+        return f"{variant} reforça um cenário de valor percebido mais alto, com oferta ativa e decisão segura."
+    if product.get("is_featured"):
+        return f"{variant} segue como a combinação mais forte para explorar esta vitrine com confiança."
+    return f"{variant} ajuda a manter a decisão de compra clara, segura e pronta para avançar."
+
+
 def _pdp_subtitle(product: dict[str, object]) -> str:
     description = str(product.get("description", "") or "").strip()
+    commercial_note = _pdp_commercial_note(product)
     continuity_note = _catalog_to_pdp_continuity_note(product)
     if description:
-        return f"{description} {continuity_note}"
-    return continuity_note
+        return f"{description} {commercial_note} {continuity_note}"
+    return f"{commercial_note} {continuity_note}".strip()
 
 
 def _pdp_short_description(product: dict[str, object]) -> str:
     base = str(product.get("description", "") or "").strip()
+    commercial_note = _pdp_commercial_note(product)
     continuity_note = _catalog_to_pdp_continuity_note(product)
-    if base and continuity_note not in base:
-        return f"{base} {continuity_note}"
-    return continuity_note or base
+    parts = [part for part in [base, commercial_note, continuity_note] if part]
+    return " ".join(parts).strip()
 
 
 def _pdp_purchase_note(product: dict[str, object]) -> str:
     purchase_note = _purchase_note(product)
+    commercial_note = _pdp_commercial_note(product)
     continuity_note = _catalog_to_pdp_continuity_note(product)
-    return f"{purchase_note} {continuity_note}".strip()
+    return f"{purchase_note} {commercial_note} {continuity_note}".strip()
 
 
 def _effective_variant_summary(product: dict[str, object]) -> str:
@@ -295,12 +335,12 @@ def _cta_helper(product: dict[str, object]) -> str:
     state = _stock_state(product)
     variant_label = _variant_emphasis_copy(product)
     if state == "out_of_stock":
-        return f"Esta combinação ({variant_label}) não segue para checkout agora; o caminho mais seguro é revisar o catálogo ou acompanhar a reposição."
+        return f"Se esta for a combinação certa para você, vale acompanhar a reposição com tranquilidade. Esta combinação ({variant_label}) não segue para checkout agora; o caminho mais seguro é revisar o catálogo ou acompanhar a reposição."
     if state == "backorder":
-        return f"Esta combinação ({variant_label}) já pode seguir para checkout como reserva, com prazo confirmado antes do pagamento."
+        return f"Esta combinação já sustenta uma decisão de compra previsível. Esta combinação ({variant_label}) já pode seguir para checkout como reserva, com prazo confirmado antes do pagamento."
     if state == "low_stock":
-        return f"Esta combinação ({variant_label}) já pode seguir para checkout agora, com poucas unidades restantes."
-    return f"Esta combinação ({variant_label}) já pode seguir para checkout com o mesmo preço e disponibilidade exibidos nesta página."
+        return f"Esta combinação já reúne preço, contexto e disponibilidade para avançar agora. Esta combinação ({variant_label}) já pode seguir para checkout agora, com poucas unidades restantes."
+    return f"Esta combinação já reúne preço, contexto e disponibilidade para uma decisão segura. Esta combinação ({variant_label}) já pode seguir para checkout com o mesmo preço e disponibilidade exibidos nesta página."
 
 
 def _checkout_continuity_note(product: dict[str, object]) -> str:
@@ -678,6 +718,7 @@ def _enrich_product(product: dict[str, object]) -> dict[str, object]:
             "catalog_card_availability_note": _catalog_card_availability_note(enriched),
             "catalog_card_click_helper": _catalog_card_click_helper(enriched),
             "catalog_card_curation_note": _catalog_card_curation_note(enriched),
+            "catalog_card_decision_signal": _catalog_card_decision_signal(enriched),
             "product_gallery_items": gallery_items,
             "main_image_url": gallery_items[0]["url"],
             "main_image_alt": gallery_items[0]["alt"],

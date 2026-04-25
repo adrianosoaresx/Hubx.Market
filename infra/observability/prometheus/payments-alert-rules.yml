@@ -50,3 +50,13 @@ groups:
         annotations:
           summary: "Conflito de estoque na confirmação do pagamento"
           description: "A reconciliação do pagamento encontrou conflito de estoque ao confirmar um pedido. Revisar consistência entre orders, inventory e webhooks recebidos."
+
+      - alert: HubxPaymentsPendingAttemptsHigh
+        expr: sum(hubx_payments_attempt_total{status="pending"}) > 100
+        for: 30m
+        labels:
+          severity: warning
+          domain: payments
+        annotations:
+          summary: "Backlog alto de tentativas de pagamento pendentes"
+          description: "Existem mais de 100 PaymentAttempts pendentes por 30 minutos. Revisar checkout, redirect hospedado, webhooks e triagem com `list_payment_attempts --status=pending`."

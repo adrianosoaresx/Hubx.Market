@@ -248,3 +248,52 @@ Gerenciar compradores, perfis, contato, endereços e visão operacional da conta
   - `AccountProfile.customer`
   - `Order.customer`
 - o vínculo só é aplicado quando o match por `tenant + email` é inequívoco
+
+## Wave FU — Customer Data Operational Readiness Review
+- módulo responsável: `customers`, com leitura auxiliar de `orders` apenas para detectar pedidos ainda sem vínculo explícito
+- documentação existente: este módulo já define `Customer`, `CustomerAddress`, vínculo preferencial com `Order.customer` e fallback legado por `tenant + email`
+- multi-tenant: toda triagem operacional exige `tenant_id` explícito no comando e expõe métricas com label `tenant_id`
+- fronteira de módulo: `customers.application` detecta o sinal `order_email_fallback`, mas não altera pedidos nem duplica regras de orders
+- eventos: sem novo evento; a wave é observacional
+- ciclo de requisição: adiciona endpoint ops protegido por token, fora do fluxo storefront/admin regular
+- documentação: runbook operacional e observability foram adicionados
+
+## Wave FV — Customer Data Issue CLI Execution
+- novo comando tenant-scoped:
+  - `list_customer_data_issues --tenant-id <tenant_id>`
+- filtros suportados:
+  - `missing_name`
+  - `missing_email`
+  - `duplicate_email_case`
+  - `missing_address`
+  - `missing_default_address`
+  - `incomplete_default_address`
+  - `order_email_fallback`
+- o comando é diagnóstico e não corrige registros automaticamente
+
+## Wave FW — Customer Data Metrics Execution
+- novo endpoint interno:
+  - `/ops/customers/metrics/data-issues/`
+- token obrigatório:
+  - `CUSTOMERS_OBSERVABILITY_TOKEN`
+- métrica exportada:
+  - `hubx_customer_data_issue_total{tenant_id,issue}`
+- quando o token não está configurado, o endpoint responde `404` para evitar exposição acidental
+
+## Wave FX — Customers Observability Pack Execution
+- artefatos adicionados:
+  - `infra/observability/prometheus/customers-alert-rules.yml`
+  - `infra/observability/prometheus/customers-scrape.example.yml`
+  - `infra/observability/grafana/customers-data-issues-dashboard.json`
+  - `infra/observability/alertmanager/customers-routing.example.yml`
+- alertas iniciais cobrem:
+  - cliente sem endereço
+  - endereço default ausente/incompleto
+  - pedido ainda vinculado por fallback de e-mail
+
+## Wave FY — Customer Data Operational Wrap-Up Review
+- decisão objetiva:
+  - produção real pode conviver com dados legados, desde que `order_email_fallback` e endereços incompletos estejam visíveis por tenant
+  - customer area/pós-compra não deve assumir endereço default ou vínculo explícito sem checar esses sinais
+- próximo passo natural:
+  - `Customer Area Post-Purchase Activation Review`, para cruzar esses sinais com a experiência logada real

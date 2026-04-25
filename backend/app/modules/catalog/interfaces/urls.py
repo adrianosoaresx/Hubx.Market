@@ -4,6 +4,7 @@ from .views import (
     AdminProductDetailView,
     AdminProductFormView,
     AdminProductsListView,
+    CatalogMetricsView,
 )
 
 
@@ -11,6 +12,7 @@ app_name = "catalog"
 
 
 urlpatterns = [
+    path("metrics/publication-issues/", CatalogMetricsView.as_view(), name="catalog-metrics"),
     path("products/", AdminProductsListView.as_view(), name="admin-products-list"),
     path("products/new/", AdminProductFormView.as_view(), name="admin-products-create"),
     path("products/<slug:product_slug>/", AdminProductDetailView.as_view(), name="admin-products-detail"),

@@ -14,6 +14,7 @@ from app.modules.payments.domain.webhook_normalization import (
 )
 from app.modules.payments.domain.webhook_security import is_valid_hmac_sha1_signature
 from app.modules.payments.infrastructure.alert_signal_metrics import record_payment_alert_signal
+from app.modules.notifications.application.notification_event_handlers import notification_event_handlers
 
 
 logger = logging.getLogger(__name__)
@@ -145,6 +146,12 @@ class PaymentWebhookCommandService:
                     external_reference=normalized.payment_reference,
                     provider_label=normalized.payment_source_label,
                 )
+                if result == "payment-confirmed":
+                    notification_event_handlers.record_customer_order_event_email_logs(
+                        tenant_id=tenant_id,
+                        source_event=normalized.event_type,
+                        order_number=normalized.order_number,
+                    )
         else:
             result = customer_order_payment_commands.fail_external_payment(
                 tenant_id=tenant_id,
@@ -159,6 +166,16 @@ class PaymentWebhookCommandService:
                     event_type=normalized.event_type,
                     external_reference=normalized.payment_reference,
                     provider_label=normalized.payment_source_label,
+                )
+                notification_event_handlers.record_customer_order_event_email_logs(
+                    tenant_id=tenant_id,
+                    source_event=normalized.event_type,
+                    order_number=normalized.order_number,
+                )
+                notification_event_handlers.record_owner_order_event_email_logs(
+                    tenant_id=tenant_id,
+                    source_event=normalized.event_type,
+                    order_number=normalized.order_number,
                 )
         if result == "payment-confirmation-stock-conflict":
             record_payment_alert_signal(

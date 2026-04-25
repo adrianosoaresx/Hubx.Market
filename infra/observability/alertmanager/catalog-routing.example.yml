@@ -1,0 +1,31 @@
+route:
+  receiver: catalog-default
+  group_by:
+    - alertname
+    - domain
+    - severity
+  routes:
+    - matchers:
+        - domain="catalog"
+        - severity="critical"
+      receiver: catalog-critical
+      continue: false
+
+    - matchers:
+        - domain="catalog"
+        - severity="warning"
+      receiver: catalog-warning
+      continue: false
+
+receivers:
+  - name: catalog-default
+    webhook_configs:
+      - url: https://alert-router.internal.example/hubx/default
+
+  - name: catalog-warning
+    webhook_configs:
+      - url: https://alert-router.internal.example/hubx/catalog-warning
+
+  - name: catalog-critical
+    webhook_configs:
+      - url: https://alert-router.internal.example/hubx/catalog-critical

@@ -1,0 +1,10 @@
+scrape_configs:
+  - job_name: hubx-inventory-exceptions
+    metrics_path: /ops/orders/metrics/inventory-exceptions/
+    scheme: https
+    authorization:
+      type: Bearer
+      credentials: ${INVENTORY_OBSERVABILITY_TOKEN}
+    static_configs:
+      - targets:
+          - app.hubx.market

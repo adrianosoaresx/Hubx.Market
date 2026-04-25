@@ -2,13 +2,20 @@ from __future__ import annotations
 
 from urllib.parse import urlencode
 
+from django.conf import settings
 from django.http import Http404
+from django.http import HttpResponse
+from django.http import HttpResponseNotFound
 from django.http import HttpResponseRedirect
 from django.urls import reverse
+from django.views import View
 from django.views.generic import TemplateView
 
 from app.modules.checkout.application.checkout_completion_commands import checkout_completion_commands
+from app.modules.checkout.application.checkout_metrics_queries import checkout_metrics_queries
 from app.modules.checkout.application.checkout_page_queries import checkout_page_queries
+from app.modules.checkout.application.checkout_recovery_event_commands import record_checkout_recovery_event
+from app.modules.checkout.application.checkout_result_taxonomy import classify_checkout_result
 from app.modules.checkout.application.checkout_session_commands import checkout_session_commands
 
 
@@ -34,48 +41,48 @@ def _build_checkout_recovery_context(*, request, result: str, back_url: str, ses
         },
         "checkout-completion-unavailable": {
             "title": "Como retomar com segurança",
-            "description": "Tente reabrir esta sessão primeiro. Se ela continuar indisponível, retome o checkout a partir do produto.",
-            "helper": "Isso evita seguir com uma sessão incompleta ou desatualizada.",
-            "primary_label": "Reabrir checkout",
-            "primary_href": retry_href,
-            "secondary_label": "Voltar ao produto",
-            "secondary_href": back_url,
+            "description": "Volte ao produto para iniciar uma nova sessão de checkout com itens, frete e totais atuais.",
+            "helper": "Isso evita seguir com uma sessão incompleta, expirada ou desatualizada.",
+            "primary_label": "Voltar ao produto",
+            "primary_href": back_url,
+            "secondary_label": "",
+            "secondary_href": "",
         },
         "checkout-completion-session-drift": {
             "title": "Como retomar com segurança",
-            "description": "Esta sessão já apontava para um pedido anterior, mas esse vínculo não está mais íntegro. Reabra o checkout com uma sessão nova antes de seguir.",
+            "description": "Esta sessão já apontava para um pedido anterior, mas esse vínculo não está mais íntegro. Volte ao produto para criar uma sessão nova antes de seguir.",
             "helper": "Isso evita reutilizar uma sessão concluída que já não representa com segurança o pedido persistido.",
-            "primary_label": "Reabrir checkout",
-            "primary_href": retry_href,
-            "secondary_label": "Voltar ao produto",
-            "secondary_href": back_url,
+            "primary_label": "Voltar ao produto",
+            "primary_href": back_url,
+            "secondary_label": "",
+            "secondary_href": "",
         },
         "checkout-completion-inventory-link-missing": {
             "title": "Como retomar com segurança",
-            "description": "Volte ao produto para reconstruir o checkout a partir de uma variante vendável válida.",
+            "description": "Volte ao produto para recriar o checkout a partir de uma variante vendável válida.",
             "helper": "A sessão atual não mantém um vínculo seguro para concluir este pedido inicial.",
-            "primary_label": "Revisar produto",
+            "primary_label": "Voltar ao produto",
             "primary_href": back_url,
-            "secondary_label": "Reabrir checkout",
-            "secondary_href": retry_href,
+            "secondary_label": "",
+            "secondary_href": "",
         },
         "checkout-completion-inventory-unavailable": {
             "title": "Como retomar com segurança",
-            "description": "Revise a disponibilidade no produto antes de tentar gerar o pedido inicial novamente.",
-            "helper": "Se a variante não estiver mais disponível, a melhor retomada é recomeçar pelo produto.",
-            "primary_label": "Revisar produto",
+            "description": "Volte ao produto para conferir disponibilidade atual antes de tentar gerar o pedido inicial novamente.",
+            "helper": "Se a variante não estiver mais disponível, a retomada segura é recomeçar pelo produto.",
+            "primary_label": "Voltar ao produto",
             "primary_href": back_url,
-            "secondary_label": "Reabrir checkout",
-            "secondary_href": retry_href,
+            "secondary_label": "",
+            "secondary_href": "",
         },
         "checkout-completion-stock-conflict": {
             "title": "Como retomar com segurança",
-            "description": "Revise o produto para confirmar estoque e só depois tente gerar o pedido inicial novamente.",
-            "helper": "O saldo livre mudou durante o checkout; reabrir a sessão ajuda a conferir o estado atual antes de seguir.",
-            "primary_label": "Revisar produto",
+            "description": "Volte ao produto para confirmar estoque atual e só depois tente gerar o pedido inicial novamente.",
+            "helper": "O saldo livre mudou durante o checkout; recriar a sessão pelo produto ajuda a evitar totais ou itens desatualizados.",
+            "primary_label": "Voltar ao produto",
             "primary_href": back_url,
-            "secondary_label": "Reabrir checkout",
-            "secondary_href": retry_href,
+            "secondary_label": "",
+            "secondary_href": "",
         },
         "checkout-completion-snapshot-conflict": {
             "title": "Como retomar com segurança",
@@ -91,6 +98,29 @@ def _build_checkout_recovery_context(*, request, result: str, back_url: str, ses
     if not payload:
         return {}
     return {"checkout_recovery": payload}
+
+
+class CheckoutMetricsView(View):
+    http_method_names = ["get"]
+
+    def get(self, request, *args, **kwargs):
+        configured_token = str(getattr(settings, "CHECKOUT_OBSERVABILITY_TOKEN", "") or "").strip()
+        if not configured_token:
+            return HttpResponseNotFound("Métricas de checkout indisponíveis.")
+
+        provided_token = str(request.headers.get("X-Hubx-Observability-Token", "") or "").strip()
+        if not provided_token:
+            authorization_header = str(request.headers.get("Authorization", "") or "").strip()
+            if authorization_header.lower().startswith("bearer "):
+                provided_token = authorization_header[7:].strip()
+        if provided_token != configured_token:
+            return HttpResponse("Forbidden", status=403, content_type="text/plain; charset=utf-8")
+
+        return HttpResponse(
+            checkout_metrics_queries.export_prometheus_metrics(),
+            status=200,
+            content_type="text/plain; version=0.0.4; charset=utf-8",
+        )
 
 
 class CheckoutPageView(TemplateView):
@@ -208,6 +238,9 @@ class CheckoutPageView(TemplateView):
             )
         )
         context["back_url"] = back_url
+        checkout_recovery = context.get("checkout_recovery")
+        if isinstance(checkout_recovery, dict) and checkout_recovery.get("primary_label") and not checkout_recovery.get("primary_href"):
+            checkout_recovery["primary_href"] = back_url
         form_params = {"back_url": back_url}
         if session_key:
             form_params["session_key"] = session_key
@@ -217,6 +250,14 @@ class CheckoutPageView(TemplateView):
         if session_key:
             context["session_key"] = session_key
         result = self.request.GET.get("result", "").strip()
+        if result:
+            context["checkout_result_taxonomy"] = classify_checkout_result(result)
+            record_checkout_recovery_event(
+                tenant_id=tenant_id,
+                result=result,
+                session_key=session_key,
+                stage=stage,
+            )
         if result == "checkout-saved":
             context["checkout_feedback"] = {
                 "variant": "success",

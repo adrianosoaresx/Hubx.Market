@@ -599,3 +599,465 @@ Integrar pagamentos de pedidos.
   - responsável claro por rollback
   - checklist de validação pós-incidente
   - tenant piloto com acompanhamento manual próximo
+
+## Wave AR — Payment Product Experience Review
+- a revisão do eixo `payments` como produto mostra que a base transacional e operacional já está bem mais forte do que a experiência percebida pelo cliente
+- o módulo já cobre bem:
+  - criação de `PaymentAttempt`
+  - checkout hospedado
+  - retorno hospedado
+  - webhook
+  - rollout controlado por tenant
+  - sinais para alerta e runbook operacional
+- a próxima evolução não deve reabrir provider/gateway agora
+- o ganho mais claro está em transformar estado técnico de pagamento em leitura de produto mais óbvia para o cliente
+
+### O que já está forte
+- **fronteira transacional**
+  - `payments` segue responsável por tentativa, provider, webhook, redirect/return e métricas
+  - `checkout`, `orders` e `accounts` consomem sinais sem assumir regra interna do gateway
+- **multi-tenant**
+  - redirect/return e consultas usam `tenant_id`
+  - rollout real continua controlado por tenant
+  - métricas e alertas preservam contexto de tenant
+- **recuperação**
+  - pedidos pendentes já conseguem expor retomada de pagamento hospedado
+  - tentativas antigas/presas já geram sinais operacionais e superfície de recovery
+- **observabilidade**
+  - falhas de intent, redirect, assinatura, tenant e pending preso já têm sinais documentados
+
+### Gaps de experiência percebida
+- **estado do pagamento**
+  - a operação sabe diferenciar `pending`, `paid`, `failed`, stale e drift
+  - mas o cliente ainda pode perceber isso como “pagamento pendente/falhou” sem contexto suficiente do que fazer agora
+- **retorno do provider**
+  - o retorno hospedado registra hint e volta para o produto
+  - mas a narrativa de “voltamos, ainda estamos verificando” pode ficar mais explícita na superfície do pedido
+- **falha e retry**
+  - a retomada existe
+  - mas ainda vale revisar a microcopy para separar melhor:
+    - tentativa falhou
+    - pedido continua salvo
+    - próximo clique seguro
+- **pendência longa**
+  - stale state já existe
+  - mas a mensagem pode ficar menos operacional e mais orientada à ação do cliente
+
+### Decisão prática
+- considerar o motor de pagamentos suficientemente preparado para esta fase de produto
+- priorizar agora uma revisão curta de mensagens e estados customer-facing
+- manter fora de escopo por enquanto:
+  - novo provider
+  - parcelamento avançado
+  - conciliação financeira
+  - mudanças em webhook
+  - mudanças em rollout/alertas
+
+### Próxima wave
+- **Wave AS — Payment State Messaging Review**
+- foco:
+  - revisar a copy de estado, retorno, falha e retomada que aparece no detalhe do pedido
+  - decidir o menor recorte seguro antes de qualquer execução
+
+## Wave AS — Payment State Messaging Review
+- a revisão das mensagens customer-facing mostra que o sistema já expõe sinais suficientes para orientar o cliente
+- o principal ajuste agora é reduzir termos operacionais demais e deixar cada estado responder:
+  - o que aconteceu
+  - se o pedido continua salvo
+  - qual é o próximo passo seguro
+  - se ainda existe verificação externa em andamento
+
+### Superfícies revisadas
+- **`payments.application.payment_attempt_queries`**
+  - monta `status_label`, `operational_title`, `operational_description` e timeline da tentativa
+  - ainda usa linguagem útil para operação, mas um pouco pesada para cliente final
+- **`payments.application.hosted_return_commands`**
+  - registra o retorno hospedado e diferencia retorno genérico, sucesso pendente de verificação e falha
+  - a semântica técnica está correta, mas a experiência precisa ser traduzida no detalhe do pedido
+- **`accounts.application.account_customer_area_queries`**
+  - transforma estado de pedido/pagamento em copy da área do cliente
+  - concentra o melhor ponto de ajuste porque é a superfície final que o cliente lê
+- **`order_detail_page`**
+  - apenas renderiza os blocos recebidos
+  - não precisa mudar para este recorte
+
+### Estados prioritários
+- **pagamento pendente normal**
+  - mensagem deve explicar que o pedido foi registrado e aguarda evolução do pagamento
+  - evitar parecer erro
+- **retorno hospedado recebido**
+  - mensagem deve explicar que a pessoa voltou do ambiente de pagamento e que a confirmação pode depender de verificação/webhook
+  - evitar prometer pagamento aprovado antes da reconciliação
+- **tentativa falhou**
+  - mensagem deve separar falha da tentativa de perda do pedido
+  - reforçar que o pedido continua salvo para retomada
+- **pendência longa**
+  - mensagem deve ser menos operacional e mais orientada à ação
+  - ainda pode preservar “revisão operacional” quando não houver ação automática segura
+- **retomada hospedada**
+  - CTA/helper deve reforçar continuidade segura, não “conserto manual”
+
+### Menor recorte seguro
+- ajustar primeiro somente a copy gerada por:
+  - `_pending_recovery_guidance`
+  - `_order_pending_recovery_guidance`
+  - `_current_state_helper`
+  - `_build_order_detail_actions_payload`
+  - `_apply_order_detail_payment_attempt_enrichment`
+- preservar sem mudança:
+  - templates
+  - `PaymentAttempt`
+  - webhook
+  - hosted redirect/return
+  - criação de nova sessão de retry
+  - regras de tenant
+
+### Decisão prática
+- a próxima execução deve ser uma mudança pequena de copy em `accounts.application.account_customer_area_queries`
+- `payments` continua como fonte técnica dos sinais
+- `accounts` continua responsável por traduzir esses sinais para a experiência do cliente
+- isso respeita a fronteira entre módulos e evita transformar o módulo de pagamentos em camada de apresentação
+
+### Próxima wave
+- **Wave AT — Payment State Messaging Copy Execution**
+- foco:
+  - executar o menor ajuste de linguagem no detalhe do pedido
+  - tornar pendência, retorno, falha e retomada mais claros sem alterar comportamento transacional
+
+## Wave AT — Payment State Messaging Copy Execution
+- o primeiro ajuste customer-facing de pagamentos foi executado no detalhe do pedido
+- a mudança ficou concentrada em `accounts.application.account_customer_area_queries`
+- `payments` segue como fonte técnica dos sinais; `accounts` traduz esses sinais para linguagem de produto
+
+### Escopo executado
+- **estado atual do pedido**
+  - pagamento pendente agora explica que o pedido já foi registrado e aguarda evolução/verificação externa
+  - falha deixa mais claro que a tentativa não avançou, mas o pedido continua salvo
+- **recovery de tentativa pendente**
+  - pendência longa agora fala em confirmação ausente e retomada segura
+  - quando existe hosted payment, o texto orienta reabrir o ambiente seguro antes de iniciar outra tentativa
+  - quando existe retry, o texto explica que uma nova sessão cria um caminho limpo
+- **pedido pendente antigo**
+  - mensagens ficaram menos operacionais e mais orientadas a suporte/continuidade
+  - o pedido salvo é reforçado como garantia de continuidade
+- **ações**
+  - hosted payment passa a usar “pagamento seguro” em vez de linguagem excessivamente técnica de “hospedado”
+  - retry reforça que o pedido continua salvo
+  - confirmação manual ficou mais explícita como ação para pagamento confirmado fora do fluxo automático
+- **enriquecimento narrativo da tentativa**
+  - resumo deixa de dizer apenas “tentativa atual”
+  - passa a dizer “pagamento em acompanhamento” e traduz último evento como atualização registrada
+
+### O que não mudou
+- template do detalhe do pedido
+- `PaymentAttempt`
+- webhook
+- hosted redirect/return
+- criação de sessão de retry
+- tenant scope
+- regras transacionais de pedido/estoque
+
+### Leitura prática
+- a experiência de pagamento fica menos técnica para o cliente
+- estados delicados agora respondem melhor:
+  - o pedido está salvo?
+  - devo esperar verificação?
+  - devo retomar?
+  - devo iniciar uma nova tentativa?
+  - preciso de suporte?
+
+### Próxima wave
+- **Wave AU — Payment Return Result UX Review**
+- foco:
+  - revisar como os `result` de retorno hospedado e indisponibilidade aparecem depois do redirect
+  - decidir se falta uma mensagem explícita na página do pedido para “voltamos do provider, estamos verificando”
+
+## Wave AU — Payment Return Result UX Review
+- a revisão do retorno do provider mostra que o fluxo já tem uma superfície explícita no topo do detalhe do pedido
+- `payments` redireciona para `back_url` com `result`
+- `accounts.interfaces.views._build_order_detail_feedback_context` traduz esse `result` em `page_feedback`
+- `order_detail_page` renderiza o feedback antes do grid principal do pedido
+
+### Results cobertos hoje
+- **`hosted-payment-unavailable`**
+  - aparece quando o redirect/return não consegue operar com segurança
+  - hoje comunica indisponibilidade, mas ainda usa “pagamento hospedado”
+- **`hosted-payment-returned`**
+  - aparece quando a pessoa voltou do ambiente externo sem hint conclusivo
+  - hoje explica que seguimos aguardando confirmação do provider
+- **`hosted-payment-return-pending-verification`**
+  - aparece quando o provider retornou hint positivo
+  - hoje evita prometer confirmação final antes do webhook/evento seguro
+- **`hosted-payment-return-failed`**
+  - aparece quando o retorno indica falha/cancelamento
+  - hoje orienta revisar o pedido e tentar novamente
+
+### O que está correto
+- o fluxo respeita tenant pelo request host antes de registrar retorno
+- o retorno não confirma pagamento sozinho
+- a mensagem fica na página certa: detalhe do pedido
+- a área do cliente continua sendo a camada de apresentação
+- `payments` continua responsável apenas por registrar retorno e devolver o `result`
+
+### Gaps de UX
+- **linguagem técnica**
+  - ainda há termos como “provider” e “pagamento hospedado”
+  - depois da Wave AT, isso destoou da linguagem mais clara de “pagamento seguro”
+- **verificação pendente**
+  - o caso positivo deveria reforçar melhor:
+    - você voltou do ambiente seguro
+    - ainda estamos verificando
+    - o pedido continua salvo
+    - nenhuma ação extra é necessária imediatamente
+- **falha/cancelamento**
+  - pode separar melhor:
+    - a tentativa não concluiu
+    - o pedido continua salvo
+    - a pessoa pode retomar quando quiser
+- **teste de feedback**
+  - há testes bons para redirect/return em `payments`
+  - falta uma âncora mais direta em `accounts` garantindo que cada `result` renderiza a mensagem customer-facing esperada
+
+### Decisão prática
+- não é necessário alterar o fluxo de redirect/return agora
+- o menor próximo recorte seguro é ajustar apenas o mapping de `page_feedback` em `accounts.interfaces.views`
+- adicionar testes de renderização para os `result` de retorno hospedado
+- preservar sem mudança:
+  - `HostedPaymentReturnView`
+  - `HostedPaymentRedirectView`
+  - `PaymentAttempt`
+  - webhook
+  - templates
+  - tenant scope
+
+### Próxima wave
+- **Wave AV — Payment Return Result Copy Execution**
+- foco:
+  - trocar linguagem técnica por linguagem de pagamento seguro/verificação
+  - cobrir os results principais com testes na área do cliente
+
+## Wave AV — Payment Return Result Copy Execution
+- a copy dos resultados de retorno hospedado foi ajustada na área do cliente
+- o fluxo técnico permaneceu inalterado
+- a execução ficou restrita ao mapping de `page_feedback` em `accounts.interfaces.views`
+
+### Escopo executado
+- **`hosted-payment-unavailable`**
+  - passa a falar em “pagamento seguro indisponível”
+  - reforça que o pedido continua salvo
+- **`hosted-payment-returned`**
+  - passa a explicar que a pessoa voltou do pagamento seguro
+  - reforça que a confirmação segura ainda está sendo aguardada
+- **`hosted-payment-return-pending-verification`**
+  - mantém o cuidado de não prometer pagamento aprovado antes da reconciliação
+  - informa que nenhuma ação extra é necessária imediatamente
+- **`hosted-payment-return-failed`**
+  - comunica que a tentativa não concluiu ou foi cancelada
+  - reforça que o pedido continua salvo para revisão e nova tentativa
+
+### Testes
+- a área do cliente agora cobre diretamente os principais `result` de retorno hospedado
+- isso protege a camada customer-facing sem depender apenas dos testes de redirect/return em `payments`
+
+### O que não mudou
+- `HostedPaymentReturnView`
+- `HostedPaymentRedirectView`
+- `PaymentAttempt`
+- webhook
+- templates
+- tenant scope
+- regras de confirmação de pagamento
+
+### Leitura prática
+- depois de voltar do ambiente seguro, o cliente recebe uma mensagem mais clara sobre:
+  - continuidade do pedido
+  - verificação pendente
+  - ausência de ação imediata quando aplicável
+  - possibilidade de tentar novamente quando houve falha
+
+### Próxima wave
+- **Wave AW — Payment Product Experience Wrap-Up Review**
+- foco:
+  - revisar se o eixo de experiência de pagamentos já pode ser encerrado nesta fase
+  - separar o que ficou para roadmap futuro de métodos reais, parcelamento e conciliação
+
+## Wave AW — Payment Product Experience Wrap-Up Review
+- o eixo de experiência de pagamentos pode ser considerado encerrado nesta fase
+- a trilha saiu de uma base operacional forte para uma experiência customer-facing mais clara
+- não há neste momento um próximo recorte pequeno e urgente dentro do mesmo eixo sem abrir temas maiores de produto/financeiro
+
+### O que ficou pronto nesta fase
+- **motor operacional**
+  - `PaymentAttempt`
+  - hosted redirect
+  - hosted return
+  - webhook
+  - rollout por tenant
+  - alert signals e runbook operacional
+- **estado customer-facing**
+  - pagamento pendente comunica pedido salvo e verificação externa possível
+  - falha comunica tentativa não concluída sem sugerir perda do pedido
+  - pendência longa orienta retomada segura ou suporte
+- **retomada**
+  - hosted payment comunica ambiente seguro
+  - retry comunica nova sessão limpa
+  - pedido salvo permanece explícito
+- **retorno do ambiente seguro**
+  - indisponibilidade, retorno genérico, verificação pendente e falha/cancelamento têm feedback próprio
+  - retorno positivo não promete confirmação antes da reconciliação segura
+- **fronteiras**
+  - `payments` continua responsável por sinais técnicos e integração
+  - `accounts` traduz esses sinais para a experiência do cliente
+  - `orders` permanece dono do estado do pedido
+
+### O que ficou fora de escopo intencionalmente
+- novos métodos reais de pagamento
+- parcelamento avançado por provider
+- conciliação financeira/backoffice
+- estorno/cancelamento/refund como produto
+- tela administrativa financeira
+- automações de suporte para pagamento preso
+- expansão visual do painel de pagamento no detalhe do pedido
+
+### Leitura objetiva
+- a experiência atual já responde melhor:
+  - “meu pedido está salvo?”
+  - “o pagamento confirmou?”
+  - “voltei do pagamento, e agora?”
+  - “falhou, perdi o pedido?”
+  - “posso tentar de novo?”
+- o que sobra já não parece ajuste de copy ou boundary
+- sobra roadmap funcional maior de pagamentos/financeiro
+
+### Decisão prática
+- encerrar o eixo de **Payment Product Experience** nesta fase
+- não continuar insistindo em micro-ajustes de pagamento agora
+- o próximo passo deve voltar ao roadmap funcional mais amplo do produto
+
+### Próxima wave
+- **Wave AX — Shipping Product Experience Review**
+- foco:
+  - revisar frete/entrega como experiência de produto
+  - mapear clareza de prazo, custo, estado de envio e pós-compra sem mexer ainda em integração de frete
+
+## Wave FD — Payments Operational Parity Review
+- a revisão de paridade operacional mostrou que `payments` já tinha bons artefatos técnicos:
+  - métricas Prometheus
+  - alert rules
+  - dashboard Grafana
+  - routing Alertmanager
+  - readiness sandbox
+  - validação de webhook sandbox
+- a lacuna principal era a ausência de um runbook dedicado consolidando ativação, diagnóstico e observabilidade.
+
+### Escopo executado
+- `docs/modules/payments-operational-runbook.md`
+- consolidação de:
+  - variáveis de ambiente críticas
+  - readiness sandbox
+  - validação de webhook
+  - endpoint de métricas
+  - alertas iniciais
+  - diagnóstico rápido
+
+### Leitura operacional
+- não houve mudança em regra transacional.
+- não houve mudança em webhook, hosted redirect ou confirmação de pagamento.
+- o ganho foi tornar a operação de payments tão explícita quanto shipping.
+
+### Próxima macro-abordagem recomendada
+- **Payments Retention/Reconciliation Review**
+- motivo:
+  - o runbook existe; a próxima lacuna operacional provável é revisar retenção/consulta de tentativas e sinais para suporte/conciliação.
+
+## Wave FE — Payments Attempt Triage Execution
+- foi criado comando operacional de listagem de `PaymentAttempt`.
+- a decisão foi não implementar pruning de tentativas financeiras neste momento.
+
+### Escopo executado
+- management command `list_payment_attempts`
+- filtros:
+  - `--tenant-id`
+  - `--status`
+  - `--stale-hours`
+  - `--limit`
+- runbook atualizado com triagem de tentativas
+- testes de:
+  - filtro por tenant/status
+  - filtro de pendências antigas
+
+### Leitura operacional
+- `PaymentAttempt` é registro sensível para suporte, conciliação e rastreabilidade financeira.
+- apagar tentativas exige política mais clara de retenção/legal/financeiro.
+- por enquanto, o ganho seguro é facilitar investigação de:
+  - pendências longas
+  - tentativas falhas
+  - divergências entre pedido e tentativa
+
+### Próxima macro-abordagem recomendada
+- **Payments Attempt Metrics Review**
+- motivo:
+  - agora há triagem CLI; o próximo passo natural é expor volume de tentativas por status/tenant para observabilidade operacional.
+
+## Wave FF — Payments Attempt Metrics Execution
+- o exporter Prometheus de payments passou a incluir volume de `PaymentAttempt` por tenant/status.
+- a métrica complementa os alert signals, que continuam focados em falhas críticas/eventos.
+
+### Escopo executado
+- métrica:
+  - `hubx_payments_attempt_total{tenant_id,status}`
+- alerta:
+  - `HubxPaymentsPendingAttemptsHigh`
+- dashboard:
+  - painel “PaymentAttempts por status”
+- runbook/observability atualizados
+- teste do endpoint de métricas ampliado
+
+### Leitura operacional
+- agora é possível acompanhar backlog de tentativas pendentes sem depender só de CLI.
+- a métrica mantém `tenant_id`, preservando investigação por loja.
+- não houve mudança em confirmação de pagamento, webhook ou criação de tentativa.
+
+### Próxima macro-abordagem recomendada
+- **Payments Operational Wrap-Up Review**
+- motivo:
+  - payments já tem runbook, triagem CLI e métrica de tentativas; vale revisar se o pacote operacional desta fase está completo.
+
+## Wave FG — Payments Operational Wrap-Up Review
+- o pacote operacional de payments pode ser considerado completo para esta fase.
+- a abordagem não mexeu no fluxo financeiro/transacional; fortaleceu operação, suporte e observabilidade.
+
+### O que ficou pronto
+- runbook dedicado:
+  - `docs/modules/payments-operational-runbook.md`
+- readiness sandbox:
+  - `payment_sandbox_readiness`
+- validação de webhook:
+  - `payment_sandbox_validate_webhook`
+- triagem de tentativas:
+  - `list_payment_attempts`
+- métricas:
+  - `hubx_payments_alert_signal_total`
+  - `hubx_payments_alert_signal_last_timestamp_seconds`
+  - `hubx_payments_attempt_total`
+- observabilidade:
+  - scrape Prometheus
+  - alert rules
+  - dashboard Grafana
+  - routing Alertmanager
+
+### O que fica fora de escopo
+- pruning de `PaymentAttempt`
+- conciliação financeira/backoffice completa
+- refund/estorno
+- relatórios contábeis
+- retenção legal/financeira formal
+
+### Leitura objetiva
+- payments agora tem paridade operacional razoável com shipping.
+- o próximo domínio crítico para o mesmo tratamento é `notifications`, porque entrega de comunicação também já tem métricas/artefatos e tende a precisar de runbook/triagem operacional clara.
+
+### Próxima macro-abordagem recomendada
+- **Notifications Operational Parity Review**
+- motivo:
+  - notifications já possui pipeline e observabilidade; falta confirmar se tem runbook e comandos suficientes para operar incidentes de entrega.

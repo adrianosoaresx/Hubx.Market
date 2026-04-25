@@ -92,6 +92,13 @@ Payload exemplo:
   "total_amount": "..."
 }
 
+Readiness atual:
+
+- o pedido ainda é materializado pela orquestração de checkout
+- existe publisher interno em `orders.application.order_event_publisher`
+- checkout publica `order.created` por essa boundary após materializar novo pedido
+- notifications consome o evento por subscriber, sem checkout conhecer detalhes de notificação
+
 ---
 
 ## order.status_changed
@@ -154,6 +161,8 @@ Readiness atual:
 
 - para `Pagar.me`, a confirmação segura continua vindo de webhook
 - a URL de retorno hospedada pode trazer apenas hint de status; ela não substitui `payment.paid`
+- notifications agora cria `EmailLog` planejado customer-facing após `payment.paid` confirmado pela primeira vez
+- replay/idempotência do webhook não deve gerar nova unidade de delivery para o mesmo recipient
 
 ---
 
@@ -179,6 +188,9 @@ Readiness atual:
 
 - para `Pagar.me`, `payment.failed` também entra por webhook assinado
 - a customer area pode usar esse estado para abrir um retry leve de pagamento sem gerar novo pedido
+- notifications agora possui piloto idempotente para criar `EmailLog` planejado customer-facing após `payment.failed`
+- esse piloto ainda não envia e-mail nem aciona worker/provider
+- junto com `payment.paid`, forma o primeiro recorte real de integração notifications por eventos de pagamento
 
 ---
 
@@ -222,6 +234,13 @@ Consumidores:
 Descrição:
 Pedido foi enviado.
 
+Readiness atual:
+
+- existe publisher mínimo em `shipping.application.shipping_event_publisher`
+- existe `Shipment` persistido em `shipping.models`
+- `shipment_commands.mark_shipment_sent` aciona o evento a partir da transição real para `sent`
+- notifications registra log customer-facing quando há customer elegível no tenant
+
 ---
 
 ## shipment.delivered
@@ -236,6 +255,13 @@ Consumidores:
 
 Descrição:
 Pedido entregue ao cliente.
+
+Readiness atual:
+
+- existe publisher mínimo em `shipping.application.shipping_event_publisher`
+- existe `Shipment` persistido em `shipping.models`
+- `shipment_commands.mark_shipment_delivered` aciona o evento a partir da transição real de `sent` para `delivered`
+- notifications registra logs customer-facing e owner-facing quando há destinatários elegíveis no tenant
 
 ---
 
@@ -335,6 +361,12 @@ Eventos podem disparar tarefas assíncronas:
 - atualização de estoque
 - integrações externas
 - analytics
+
+Readiness atual:
+
+- existe um publisher mínimo em `notifications.application.notification_event_bus`
+- ele ainda é in-process e serve como contrato de boundary, não como fila distribuída
+- Celery futuro deve substituir/consumir essa boundary sem acoplar módulos diretamente
 
 ---
 

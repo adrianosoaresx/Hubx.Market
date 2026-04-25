@@ -122,6 +122,7 @@ coupons
 - seleção de frete
 - cálculo final
 - criação de pedido
+- analytics leve de recovery exibido ao cliente, sempre tenant-scoped
 
 ### Orders
 - lifecycle do pedido
@@ -259,4 +260,3 @@ Este documento permite:
 - orientar decisões arquiteturais
 - ajudar agentes de IA a localizar responsabilidades
 - manter separação clara entre domínios
-

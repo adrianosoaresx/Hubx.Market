@@ -28,7 +28,7 @@ class StorefrontViewTests(TestCase):
         self.assertTemplateUsed(response, "pages/templates/catalog_page.html")
         self.assertContains(response, "Catálogo")
         self.assertContains(response, "Tênis Hubx Runner")
-        self.assertContains(response, "A vitrine continua pronta para receber sua próxima compra")
+        self.assertContains(response, "curadoria leve")
 
     def test_catalog_list_view_applies_search_filter(self):
         response = self.client.get(reverse("storefront:catalog-list"), {"q": "mochila"}, HTTP_HOST=self.storefront_host)
@@ -38,13 +38,14 @@ class StorefrontViewTests(TestCase):
         self.assertNotContains(response, "Tênis Hubx Runner")
         self.assertContains(response, "busca atual: “mochila”")
         self.assertContains(response, "Resultados para “mochila”")
+        self.assertContains(response, "vale abrir agora")
 
     def test_catalog_list_view_applies_category_context(self):
         response = self.client.get(reverse("storefront:catalog-list"), {"category": "calcados"}, HTTP_HOST=self.storefront_host)
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "categoria atual: Calçados")
-        self.assertContains(response, "Explore calçados com mídia, preço, disponibilidade e combinação em destaque")
+        self.assertContains(response, "Explore calçados com combinações em destaque")
         self.assertContains(response, "Use a categoria atual para refinar a vitrine")
 
     def test_catalog_list_view_shows_search_empty_state_guidance(self):
@@ -195,6 +196,9 @@ class StorefrontPersistedReadTests(TestCase):
         self.assertEqual(product["main_image_alt"], "Tênis Hubx Runner Persistido · imagem principal")
         self.assertEqual(product["variant_groups"][0]["selected"], "42")
         self.assertIn("Combinação em destaque · Preto · 42", product["purchase_note"])
+        self.assertIn("valor percebido mais alto", product["product_subtitle"])
+        self.assertIn("valor percebido mais alto", product["short_description"])
+        self.assertIn("valor percebido mais alto", product["purchase_note"])
         self.assertEqual(product["variant_groups"][0]["label"], "Tamanho disponível")
         self.assertEqual(product["variant_groups"][0]["help_text"], "Preço e estoque exibidos refletem a variante padrão Preto · 42.")
         self.assertEqual([option["value"] for option in product["variant_groups"][0]["options"]], ["42", "43"])
@@ -204,13 +208,15 @@ class StorefrontPersistedReadTests(TestCase):
         self.assertEqual(product["catalog_card_meta"], "SKU RUNNER-PERSIST-BLK-42 · oferta ativa")
         self.assertEqual(product["catalog_card_price_helper"], "oferta ativa para Preto · 42, com parcelamento em até 3x sem juros")
         self.assertEqual(product["catalog_card_variant_summary"], "Combinação em destaque: Preto · 42.")
-        self.assertEqual(product["catalog_card_curation_note"], "Destaque atual com oferta ativa e compra rápida disponível.")
+        self.assertEqual(product["catalog_card_curation_note"], "Escolha editorial da vitrine com oferta ativa e caminho rápido para compra.")
+        self.assertEqual(product["catalog_card_decision_signal"], "oferta_editorial")
         self.assertEqual(product["catalog_card_availability_note"], "Preto · 42 pronta para compra imediata.")
-        self.assertIn("seguir para checkout com confiança", product["catalog_card_click_helper"])
+        self.assertIn("decidir com confiança", product["catalog_card_click_helper"])
         self.assertIn("combinação destacada no catálogo continua sendo Preto · 42", product["product_subtitle"])
         self.assertIn("combinação destacada no catálogo continua sendo Preto · 42", product["short_description"])
         self.assertIn("combinação destacada no catálogo continua sendo Preto · 42", product["purchase_note"])
         self.assertIn("já pode seguir para checkout", product["purchase_note"])
+        self.assertIn("decisão segura", product["cta_helper"])
 
     def test_storefront_query_service_applies_selected_variant_when_valid(self):
         product = storefront_catalog_queries.get_product("tenis-hubx-runner-persistido", tenant_id=self.tenant.id, size="42", color="wht")
@@ -247,10 +253,10 @@ class StorefrontPersistedReadTests(TestCase):
         self.assertContains(list_response, "SKU RUNNER-PERSIST-BLK-42 · oferta ativa")
         self.assertContains(list_response, "Combinação em destaque: Preto · 42.")
         self.assertContains(list_response, "Preto · 42 pronta para compra imediata.")
-        self.assertContains(list_response, "seguir para checkout com confiança")
+        self.assertContains(list_response, "decidir com confiança")
         self.assertContains(list_response, "oferta ativa para Preto · 42, com parcelamento em até 3x sem juros")
-        self.assertContains(list_response, "Explore produtos com mídia, preço, disponibilidade e combinação em destaque atualizados")
-        self.assertContains(list_response, "cards já refletem variante efetiva e disponibilidade atual")
+        self.assertContains(list_response, "Explore produtos com combinações em destaque, disponibilidade atual e uma curadoria leve")
+        self.assertContains(list_response, "cards já refletem variante efetiva, disponibilidade atual e sinais leves de curadoria da vitrine")
         self.assertContains(list_response, "A vitrine continua pronta para receber sua próxima compra")
 
         self.assertEqual(detail_response.status_code, 200)
@@ -263,8 +269,10 @@ class StorefrontPersistedReadTests(TestCase):
         self.assertContains(detail_response, "A disponibilidade desta compra reflete Preto · 42")
         self.assertContains(detail_response, "oferta disponível para Preto · 42, com economia frente ao valor anterior e parcelamento em até 3x sem juros")
         self.assertContains(detail_response, "Combinação em destaque · Preto · 42, com disponibilidade imediata e compra segura no storefront.")
+        self.assertContains(detail_response, "valor percebido mais alto")
         self.assertContains(detail_response, "A combinação destacada no catálogo continua sendo Preto · 42")
         self.assertContains(detail_response, "Ir para checkout")
+        self.assertContains(detail_response, "decisão segura")
         self.assertContains(detail_response, "Esta combinação (Preto · 42) já pode seguir para checkout")
         self.assertContains(
             detail_response,
@@ -283,6 +291,7 @@ class StorefrontPersistedReadTests(TestCase):
         self.assertContains(response, "Restam 5 unidades para envio imediato · Branco · 42")
         self.assertContains(response, "Variante em destaque agora: Branco · 42 · SKU RUNNER-PERSIST-WHT-42.")
         self.assertContains(response, "A disponibilidade desta compra reflete Branco · 42")
+        self.assertContains(response, "decisão rápida")
         self.assertContains(response, "Esta combinação (Branco · 42) já pode seguir para checkout agora")
 
     def test_product_detail_post_creates_checkout_session_and_redirects(self):
@@ -425,8 +434,8 @@ class StorefrontPersistedReadTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Revise 2 item(ns) antes de concluir o pedido.")
-        self.assertContains(response, "Etapa atual: carrinho")
-        self.assertContains(response, "Continuar para entrega")
+        self.assertContains(response, "O pedido só é gerado quando a etapa atual estiver consistente.")
+        self.assertContains(response, "Conferir entrega")
         self.assertContains(response, "Carrinho leve desta sessão")
         self.assertContains(response, "Preto · 42")
         self.assertContains(response, "Branco · 42")
@@ -683,11 +692,14 @@ class StorefrontPersistedReadTests(TestCase):
         self.assertEqual(item["secondary_action_label"], "Ir para checkout")
         self.assertEqual(item["catalog_card_availability_note"], "Marinho · 40 disponível por encomenda.")
         self.assertEqual(item["catalog_card_curation_note"], "")
+        self.assertEqual(item["catalog_card_decision_signal"], "reserva_planejada")
         self.assertIn("confirmar o prazo da reserva", item["catalog_card_click_helper"])
         self.assertIn("Variante disponível por encomenda · Marinho · 40", item["stock_helper"])
         self.assertIn("reflete Marinho · 40", item["availability_note"])
         self.assertIn("já pode seguir para checkout como reserva", item["cta_helper"])
+        self.assertIn("decisão de compra previsível", item["cta_helper"])
         self.assertIn("Produto disponível por encomenda · Marinho · 40", item["purchase_note"])
+        self.assertIn("combinação comprável", item["purchase_note"])
         self.assertIn("já pode seguir para checkout", item["purchase_note"])
 
     def test_storefront_pdp_uses_default_variant_out_of_stock_hints_when_backorder_is_disabled(self):
@@ -723,10 +735,12 @@ class StorefrontPersistedReadTests(TestCase):
         self.assertEqual(item["badge_label"], "Reposição em acompanhamento · Vermelho · 39")
         self.assertEqual(item["catalog_card_availability_note"], "Vermelho · 39 indisponível no momento.")
         self.assertEqual(item["catalog_card_curation_note"], "")
+        self.assertEqual(item["catalog_card_decision_signal"], "acompanhar_reposicao")
         self.assertIn("acompanhar a reposição", item["catalog_card_click_helper"])
         self.assertIn("Variante indisponível no momento · Vermelho · 39", item["stock_helper"])
         self.assertIn("está sem estoque no momento", item["availability_note"])
         self.assertIn("não segue para checkout agora", item["cta_helper"])
+        self.assertIn("acompanhar a reposição com tranquilidade", item["cta_helper"])
         self.assertIn("próximo passo mais seguro é acompanhar a reposição ou voltar ao catálogo", item["purchase_note"])
 
     def test_storefront_pdp_uses_low_stock_commercial_messaging_when_variant_is_scarce(self):
@@ -758,8 +772,9 @@ class StorefrontPersistedReadTests(TestCase):
         self.assertEqual(item["badge_label"], "Últimas unidades · Preto · 38")
         self.assertEqual(item["badge_variant"], "warning")
         self.assertEqual(item["catalog_card_availability_note"], "Preto · 38 com 2 unidade(s) pronta(s) para envio.")
-        self.assertEqual(item["catalog_card_curation_note"], "Oferta pronta para compra rápida nesta vitrine.")
-        self.assertIn("antes de seguir para checkout", item["catalog_card_click_helper"])
+        self.assertEqual(item["catalog_card_curation_note"], "Oferta em evidência nesta vitrine, pronta para uma decisão rápida.")
+        self.assertEqual(item["catalog_card_decision_signal"], "decisao_rapida_com_oferta")
+        self.assertIn("uma das mais fortes da vitrine", item["catalog_card_click_helper"])
         self.assertIn("2 unidade(s) pronta(s) para envio imediato", item["availability_note"])
         self.assertIn("poucas unidades restantes", item["cta_helper"])
         self.assertIn("Poucas unidades disponíveis · Preto · 38", item["purchase_note"])

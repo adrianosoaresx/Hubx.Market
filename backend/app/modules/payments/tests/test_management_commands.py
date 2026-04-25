@@ -1,7 +1,9 @@
+from datetime import timedelta
 from io import StringIO
 
 from django.core.management import call_command
 from django.test import SimpleTestCase, TestCase, override_settings
+from django.utils import timezone
 
 from app.modules.catalog.models import Product, ProductVariant
 from app.modules.customers.models import Customer
@@ -63,6 +65,57 @@ class PaymentSandboxReadinessCommandTests(SimpleTestCase):
         self.assertIn("[BLOCKED] Pagar.me secret key", output)
         self.assertIn("[BLOCKED] Public webhook URL", output)
         self.assertIn("payment_sandbox_readiness=blocked", output)
+
+
+class ListPaymentAttemptsCommandTests(TestCase):
+    def setUp(self):
+        self.tenant = Tenant.objects.create(name="List Attempts Tenant", slug="list-attempts", subdomain="list-attempts")
+        self.other_tenant = Tenant.objects.create(name="Other Attempts Tenant", slug="other-attempts", subdomain="other-attempts")
+        self.order = Order.objects.create(tenant=self.tenant, number="9301", customer_email="list@example.com")
+        self.other_order = Order.objects.create(tenant=self.other_tenant, number="9302", customer_email="other-list@example.com")
+        self.pending_attempt = PaymentAttempt.objects.create(
+            tenant=self.tenant,
+            order=self.order,
+            payment_method_code="pix",
+            provider_code="pagarme",
+            provider_label="Pagar.me",
+            status=PaymentAttempt.Status.PENDING,
+            amount="10.00",
+        )
+        self.failed_attempt = PaymentAttempt.objects.create(
+            tenant=self.other_tenant,
+            order=self.other_order,
+            payment_method_code="pix",
+            provider_code="pagarme",
+            provider_label="Pagar.me",
+            status=PaymentAttempt.Status.FAILED,
+            amount="10.00",
+        )
+        PaymentAttempt.objects.filter(id=self.pending_attempt.id).update(updated_at=timezone.now() - timedelta(hours=8))
+
+    def test_list_payment_attempts_filters_by_tenant_and_status(self):
+        stdout = StringIO()
+
+        call_command(
+            "list_payment_attempts",
+            tenant_id=str(self.tenant.id),
+            status="pending",
+            stdout=stdout,
+        )
+
+        output = stdout.getvalue()
+        self.assertIn("order_number=9301", output)
+        self.assertNotIn("order_number=9302", output)
+        self.assertIn("payment_attempts=1", output)
+
+    def test_list_payment_attempts_filters_stale_pending_attempts(self):
+        stdout = StringIO()
+
+        call_command("list_payment_attempts", stale_hours=6, stdout=stdout)
+
+        output = stdout.getvalue()
+        self.assertIn("order_number=9301", output)
+        self.assertNotIn("order_number=9302", output)
 
 
 @override_settings(

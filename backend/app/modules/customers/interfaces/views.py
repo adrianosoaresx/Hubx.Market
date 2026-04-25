@@ -2,8 +2,11 @@ from __future__ import annotations
 
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-from django.http import HttpResponseRedirect
+from django.conf import settings
 from django.core.paginator import Paginator
+from django.http import HttpResponse
+from django.http import HttpResponseNotFound
+from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -15,6 +18,7 @@ from app.modules.customers.application.admin_customer_queries import (
     QUICK_FILTER_OPTIONS,
     admin_customer_queries,
 )
+from app.modules.customers.application.customer_metrics_queries import customer_metrics_queries
 
 
 def _build_page_items(page_number: int, total_pages: int, base_url: str, query_params: list[str]) -> list[dict[str, object]]:
@@ -319,6 +323,29 @@ def _build_customer_bulk_actions(*, next_url: str, selection_count: int) -> str:
         action_url,
         next_url,
     )
+
+
+class CustomerMetricsView(View):
+    http_method_names = ["get"]
+
+    def get(self, request, *args, **kwargs):
+        configured_token = str(getattr(settings, "CUSTOMERS_OBSERVABILITY_TOKEN", "") or "").strip()
+        if not configured_token:
+            return HttpResponseNotFound("Métricas de clientes indisponíveis.")
+
+        provided_token = str(request.headers.get("X-Hubx-Observability-Token", "") or "").strip()
+        if not provided_token:
+            authorization_header = str(request.headers.get("Authorization", "") or "").strip()
+            if authorization_header.lower().startswith("bearer "):
+                provided_token = authorization_header[7:].strip()
+        if provided_token != configured_token:
+            return HttpResponse("Forbidden", status=403, content_type="text/plain; charset=utf-8")
+
+        return HttpResponse(
+            customer_metrics_queries.export_prometheus_metrics(),
+            status=200,
+            content_type="text/plain; version=0.0.4; charset=utf-8",
+        )
 
 
 class AdminCustomersListView(TemplateView):

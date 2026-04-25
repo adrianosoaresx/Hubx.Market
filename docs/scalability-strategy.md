@@ -117,6 +117,19 @@ Filas típicas:
 - atualização de estoque
 - notificações
 
+Readiness atual:
+
+- notificações já possuem comando operacional `process_email_logs` para dry-run/batch tenant-scoped
+- Celery deve chamar a mesma boundary de application quando for habilitado
+- envio real permanece atrás de configuração explícita de provider/backend e `NOTIFICATIONS_EMAIL_DRY_RUN=0`
+- notifications agora também expõe tasks Celery finas:
+  - `notifications.process_email_log`
+  - `notifications.process_planned_email_logs`
+- ambas reaproveitam commands application e preservam tenant scope
+- notifications expõe métricas Prometheus protegidas por token em:
+  - `/notifications/metrics/email-logs/`
+  - métrica `hubx_notifications_email_log_total`
+
 Escalabilidade:
 
 mais workers → maior throughput.

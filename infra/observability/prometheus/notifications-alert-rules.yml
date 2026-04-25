@@ -1,0 +1,32 @@
+groups:
+  - name: hubx-notifications-email-logs
+    rules:
+      - alert: HubxNotificationsFailedLogsPresent
+        expr: sum(hubx_notifications_email_log_total{status="failed"}) > 0
+        for: 5m
+        labels:
+          severity: warning
+          domain: notifications
+        annotations:
+          summary: "Falhas de notificação presentes"
+          description: "Existem EmailLogs em status failed. Revisar `list_email_logs --status failed` por tenant e investigar provider, recipient ou configuração."
+
+      - alert: HubxNotificationsBacklogHigh
+        expr: sum(hubx_notifications_email_log_total{status="planned"}) > 100
+        for: 10m
+        labels:
+          severity: warning
+          domain: notifications
+        annotations:
+          summary: "Backlog alto de notificações planejadas"
+          description: "Há mais de 100 EmailLogs planejados aguardando processamento. Verificar worker Celery, management command, dry-run e throughput do provider."
+
+      - alert: HubxNotificationsRequestedStuck
+        expr: sum(hubx_notifications_email_log_total{status="requested"}) > 0
+        for: 15m
+        labels:
+          severity: warning
+          domain: notifications
+        annotations:
+          summary: "Notificações solicitadas parecem travadas"
+          description: "Existem EmailLogs em status requested por mais de 15 minutos. Revisar worker/provider e reconciliar status manualmente se necessário."

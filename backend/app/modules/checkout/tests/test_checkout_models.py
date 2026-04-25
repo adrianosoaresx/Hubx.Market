@@ -1,6 +1,6 @@
 from django.test import TestCase
 
-from app.modules.checkout.models import CheckoutSession, CheckoutSessionItem
+from app.modules.checkout.models import CheckoutRecoveryEvent, CheckoutSession, CheckoutSessionItem
 from app.modules.tenants.models import Tenant
 
 
@@ -53,3 +53,28 @@ class CheckoutReadinessModelTests(TestCase):
         self.assertEqual(stored.payment_method_selected, "credit_card")
         self.assertEqual(stored.items.count(), 1)
         self.assertEqual(stored.items.first().title, "Tênis Hubx Runner")
+
+    def test_checkout_recovery_event_persists_tenant_scope_and_taxonomy(self):
+        tenant = Tenant.objects.create(
+            name="Hubx Recovery Store",
+            slug="hubx-recovery-checkout",
+            subdomain="hubx-recovery-checkout",
+        )
+        session = CheckoutSession.objects.create(tenant=tenant)
+
+        event = CheckoutRecoveryEvent.objects.create(
+            tenant=tenant,
+            checkout_session=session,
+            result_code="checkout-completion-stock-conflict",
+            family="inventory",
+            severity="warning",
+            recovery_action="restart_from_product",
+            stage="review",
+        )
+
+        stored = CheckoutRecoveryEvent.objects.get(pk=event.pk)
+
+        self.assertEqual(stored.tenant, tenant)
+        self.assertEqual(stored.checkout_session, session)
+        self.assertEqual(stored.family, "inventory")
+        self.assertEqual(stored.recovery_action, "restart_from_product")

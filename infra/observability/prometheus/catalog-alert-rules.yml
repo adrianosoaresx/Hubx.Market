@@ -1,0 +1,32 @@
+groups:
+  - name: hubx-catalog-publication
+    rules:
+      - alert: HubxCatalogStatusMismatchPresent
+        expr: sum(hubx_catalog_publication_issue_total{issue="status_mismatch"}) > 0
+        for: 15m
+        labels:
+          severity: warning
+          domain: catalog
+        annotations:
+          summary: "Produtos com status de publicação inconsistente"
+          description: "Existem produtos com divergência entre status e is_active. Revisar `list_catalog_publication_issues --issue=status_mismatch --tenant-id=<id>`."
+
+      - alert: HubxCatalogMissingVariantPresent
+        expr: sum(hubx_catalog_publication_issue_total{issue=~"missing_variant|missing_default_variant"}) > 0
+        for: 15m
+        labels:
+          severity: warning
+          domain: catalog
+        annotations:
+          summary: "Produtos com variante ausente ou sem default"
+          description: "Existem produtos sem variante operacional ou sem variante default. Corrigir antes de publicar ou destacar no storefront."
+
+      - alert: HubxCatalogUnavailablePublishedStockPresent
+        expr: sum(hubx_catalog_publication_issue_total{issue=~"missing_price|stock_unavailable"}) > 0
+        for: 15m
+        labels:
+          severity: warning
+          domain: catalog
+        annotations:
+          summary: "Produtos com preço/estoque inválido para publicação"
+          description: "Existem produtos com preço ausente ou estoque indisponível sem backorder. Revisar catálogo antes de campanhas ou publicação."

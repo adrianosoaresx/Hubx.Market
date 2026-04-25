@@ -203,6 +203,34 @@ class AdminOrderCommandService:
             order.inventory_recovered_at = timezone.now()
         return recovered_items
 
+    def _mark_shipment_sent(self, *, order) -> str:
+        try:
+            from app.modules.shipping.application.shipment_commands import shipment_commands
+        except Exception:
+            return "shipment-command-unavailable"
+        return shipment_commands.mark_shipment_sent(
+            tenant_id=getattr(order, "tenant_id", None),
+            order_number=str(getattr(order, "number", "") or ""),
+        )
+
+    def _mark_shipment_delivered(self, *, order) -> str:
+        try:
+            from app.modules.shipping.application.shipment_commands import shipment_commands
+        except Exception:
+            return "shipment-command-unavailable"
+        delivery_result = shipment_commands.mark_shipment_delivered(
+            tenant_id=getattr(order, "tenant_id", None),
+            order_number=str(getattr(order, "number", "") or ""),
+        )
+        if delivery_result in {"shipment-not-found", "shipment-delivery-blocked"}:
+            sent_result = self._mark_shipment_sent(order=order)
+            if sent_result in {"shipment-sent", "shipment-sent-already-recorded"}:
+                delivery_result = shipment_commands.mark_shipment_delivered(
+                    tenant_id=getattr(order, "tenant_id", None),
+                    order_number=str(getattr(order, "number", "") or ""),
+                )
+        return delivery_result
+
     def complete_delivery(self, *, order_number: str, tenant_id: int | None = None) -> tuple[bool, str]:
         order = self.repository.get_order(order_number, tenant_id=tenant_id)
         if order is None:
@@ -250,6 +278,7 @@ class AdminOrderCommandService:
                 badge_label="Entrega",
                 badge_variant="success",
             )
+            self._mark_shipment_delivered(order=order)
         return True, "delivery-completed"
 
     def start_shipping(self, *, order_number: str, tenant_id: int | None = None) -> tuple[bool, str]:
@@ -286,6 +315,7 @@ class AdminOrderCommandService:
             badge_label="Transporte",
             badge_variant="shipped",
         )
+        self._mark_shipment_sent(order=order)
         return True, "shipping-started"
 
     def start_fulfillment(self, *, order_number: str, tenant_id: int | None = None) -> tuple[bool, str]:

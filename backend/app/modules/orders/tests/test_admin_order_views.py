@@ -8,6 +8,7 @@ from django.contrib.auth import get_user_model
 from app.modules.catalog.models import Product, ProductVariant
 from app.modules.orders.application.admin_order_queries import DjangoOrmOrderRepository, admin_order_queries
 from app.modules.orders.models import Order, OrderStatusHistory
+from app.modules.shipping.models import Shipment
 from app.modules.tenants.models import Tenant
 
 
@@ -2200,6 +2201,7 @@ class AdminOrderPersistedReadTests(TestCase):
         self.assertEqual(order.fulfillment_status_label, "Em trânsito")
         self.assertEqual(order.fulfillment_status_variant, "shipped")
         self.assertEqual(order.shipping_status, "Em trânsito")
+        self.assertEqual(order.shipment.status, Shipment.Status.SENT)
         history = OrderStatusHistory.objects.get(order=order, event_type="shipping_started")
         self.assertEqual(history.source_type, "admin_action")
         self.assertEqual(history.title, "Envio iniciado")
@@ -2266,6 +2268,7 @@ class AdminOrderPersistedReadTests(TestCase):
         self.assertEqual(order.fulfillment_status_label, "Concluído")
         self.assertEqual(order.fulfillment_status_variant, "success")
         self.assertEqual(order.shipping_status, "Entregue")
+        self.assertEqual(order.shipment.status, Shipment.Status.DELIVERED)
         history = OrderStatusHistory.objects.get(order=order, event_type="delivery_completed")
         self.assertEqual(history.source_type, "admin_action")
         self.assertEqual(history.title, "Entrega confirmada")

@@ -1,0 +1,11 @@
+scrape_configs:
+  - job_name: hubx-checkout-session-issues
+    metrics_path: /ops/checkout/metrics/session-issues/
+    scheme: https
+    scrape_interval: 60s
+    static_configs:
+      - targets:
+          - app.hubx.market
+    authorization:
+      type: Bearer
+      credentials: ${CHECKOUT_OBSERVABILITY_TOKEN}

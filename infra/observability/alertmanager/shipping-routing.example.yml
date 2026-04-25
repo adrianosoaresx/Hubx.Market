@@ -1,0 +1,31 @@
+route:
+  receiver: shipping-default
+  group_by:
+    - alertname
+    - domain
+    - severity
+  routes:
+    - matchers:
+        - domain="shipping"
+        - severity="critical"
+      receiver: shipping-critical
+      continue: false
+
+    - matchers:
+        - domain="shipping"
+        - severity="warning"
+      receiver: shipping-warning
+      continue: false
+
+receivers:
+  - name: shipping-default
+    webhook_configs:
+      - url: https://alert-router.internal.example/hubx/default
+
+  - name: shipping-warning
+    webhook_configs:
+      - url: https://alert-router.internal.example/hubx/shipping-warning
+
+  - name: shipping-critical
+    webhook_configs:
+      - url: https://alert-router.internal.example/hubx/shipping-critical

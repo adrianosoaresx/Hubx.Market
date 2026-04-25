@@ -35,6 +35,7 @@
 - CartItem
 - CheckoutSession
 - CheckoutSessionItem
+- CheckoutRecoveryEvent
 
 ### Pedidos / Pagamentos
 - Order
@@ -45,12 +46,18 @@
 
 ### Logística
 - Shipment
+- ShipmentStatusHistory
+- ShippingProviderSettings
+- ShippingProviderSettingsHistory
 
 ### Marketing
 - Coupon
 - ProductReview
 - NewsletterSubscriber
 - Page
+
+### Notificações
+- EmailLog
 
 ### Assinatura SaaS
 - Subscription
@@ -70,12 +77,18 @@
 - Customer 1:N CustomerAddress
 - Tenant 1:N CheckoutSession
 - CheckoutSession 1:N CheckoutSessionItem
+- Tenant 1:N CheckoutRecoveryEvent
+- CheckoutSession 1:N CheckoutRecoveryEvent (opcional; eventos podem existir sem sessão vinculada)
 - Customer 1:N Order (opcional e preferencial para integrações da área logada)
 - Order 1:N OrderItem
 - Order 1:N OrderStatusHistory
 - Order 1:1 Payment
 - Order 1:1 Shipment
+- Shipment 1:N ShipmentStatusHistory
+- Tenant 1:1 ShippingProviderSettings
+- ShippingProviderSettings 1:N ShippingProviderSettingsHistory
 - Tenant 1:N Coupon
+- Tenant 1:N EmailLog
 - Product 1:N Review
 - Tenant 1:1 Subscription
 
@@ -100,4 +113,5 @@
 - `ProductImage` fornece mídia mínima persistida via URL, sem introduzir pipeline de upload/CDN
 - owner e customer são entidades diferentes
 - `AccountProfile` serve como base de experiência de conta, não como substituto de `Customer`
+- `EmailLog` é tenant-scoped e usa `recipient_delivery_key` para deduplicar uma unidade de entrega por destinatário/canal
 

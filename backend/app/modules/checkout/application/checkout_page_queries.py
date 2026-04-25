@@ -71,14 +71,14 @@ def _fallback_shipping_methods() -> list[dict[str, object]]:
         {
             "value": "standard",
             "label": "Entrega padrão",
-            "description": "Receba em até 5 dias úteis.",
+            "description": "Estimativa da modalidade: até 5 dias úteis após pagamento confirmado e preparo do pedido.",
             "price": "R$ 24,90",
             "checked": True,
         },
         {
             "value": "express",
             "label": "Entrega expressa",
-            "description": "Receba em até 2 dias úteis.",
+            "description": "Estimativa da modalidade: até 2 dias úteis após pagamento confirmado e preparo do pedido.",
             "price": "R$ 39,90",
         },
     ]
@@ -216,10 +216,10 @@ def _build_stage_context(
         "review": "Revisão",
     }
     submit_labels = {
-        "cart": "Continuar para entrega",
-        "delivery": "Salvar entrega e continuar",
+        "cart": "Conferir entrega",
+        "delivery": "Salvar entrega e seguir",
         "payment": "Salvar pagamento e revisar",
-        "review": "Gerar pedido inicial",
+        "review": "Criar pedido inicial",
     }
     final_action_titles = {
         "cart": "Próxima ação",
@@ -228,39 +228,39 @@ def _build_stage_context(
         "review": "Ação final desta etapa",
     }
     final_action_descriptions = {
-        "cart": "Revise os itens, ajuste quantidades e siga para entrega quando esta sessão estiver do jeito certo.",
-        "delivery": "Salve entrega e frete para liberar o pagamento desta sessão.",
-        "payment": "Salve pagamento e termos para seguir com uma revisão mais confiável do pedido.",
+        "cart": "Confira os itens e siga para informar entrega quando a sessão representar o que você quer comprar.",
+        "delivery": "Salve endereço e modalidade de frete estimada para liberar a escolha de pagamento desta sessão.",
+        "payment": "Salve a forma de pagamento e o aceite para abrir uma revisão completa antes de criar o pedido.",
         "review": (
-            "Ao clicar em “Gerar pedido inicial”, criaremos um pedido persistido na sua conta e você seguirá para a confirmação inicial do pedido."
+            "Ao clicar em “Criar pedido inicial”, salvaremos este pedido na sua conta e abriremos a confirmação inicial."
         ),
     }
     final_action_helpers = {
-        "cart": "Nenhum pedido é criado nesta etapa; aqui você só prepara a sessão para seguir.",
-        "delivery": "O pedido ainda não é criado nesta etapa.",
-        "payment": "O pedido ainda não é criado nesta etapa.",
-        "review": "Itens, entrega e pagamento revisados ficam registrados. O pagamento real continua pendente.",
+        "cart": "Nenhum pedido é criado aqui; esta etapa só organiza itens e totais.",
+        "delivery": "O pedido ainda não nasce aqui; frete e prazo seguem como referência da sessão até o pagamento e o preparo avançarem.",
+        "payment": "O pedido ainda não nasce aqui; esta etapa só prepara a revisão final.",
+        "review": "Itens, entrega e pagamento revisados ficam registrados. O pagamento real continua pendente depois disso.",
     }
     stage_titles = {
-        "cart": "Etapa atual: carrinho",
-        "delivery": "Etapa atual: entrega",
-        "payment": "Etapa atual: pagamento",
-        "review": "Etapa atual: revisão",
+        "cart": "Confira seu carrinho",
+        "delivery": "Informe a entrega",
+        "payment": "Escolha o pagamento",
+        "review": "Revise antes de criar o pedido",
     }
     stage_descriptions = {
-        "cart": "Revise os itens da sessão, ajuste quantidades e siga para entrega quando estiver pronto.",
-        "delivery": "Confirme contato, endereço e frete antes de avançar para o pagamento.",
-        "payment": "Agora confirme a forma de pagamento e os termos para revisar o pedido com segurança.",
+        "cart": "Ajuste itens e quantidades antes de seguir. O pedido ainda não será criado nesta etapa.",
+        "delivery": "Confirme contato, endereço e frete estimado para liberar a escolha de pagamento.",
+        "payment": "Escolha a forma de pagamento e aceite os termos para abrir a revisão final.",
         "review": (
-            "Tudo principal já foi salvo. Ao concluir agora, criaremos um pedido inicial na sua conta "
-            "com itens, entrega e pagamento registrados. O pagamento ainda segue pendente até a próxima etapa."
+            "Tudo principal já foi salvo. Ao criar o pedido inicial, itens, entrega e pagamento ficam registrados "
+            "na sua conta. A confirmação real do pagamento acontece depois."
         ),
     }
     shipping_descriptions = {
         "cart": "A entrega fica disponível logo depois que você confirmar os itens desta sessão.",
-        "delivery": "Preencha as informações de envio do pedido para liberar a próxima etapa.",
-        "payment": "As informações de entrega já podem ser revisadas e ajustadas antes da confirmação final.",
-        "review": "Entrega salva na sessão atual. Ajuste algo aqui apenas se precisar revisar os dados de envio.",
+        "delivery": "Preencha os dados de entrega e escolha uma modalidade de frete estimada para esta sessão.",
+        "payment": "Entrega e frete estimado já podem ser revisados antes da confirmação final.",
+        "review": "Entrega salva na sessão atual. O prazo continua condicionado ao pagamento confirmado e ao preparo do pedido.",
     }
     payment_descriptions = {
         "cart": "O pagamento fica disponível depois que você passar pela entrega com esta sessão pronta.",
@@ -337,9 +337,9 @@ def _build_completion_hints(
         "icon": "✅" if delivery_ready else "📝",
         "title": "Entrega salva" if delivery_ready else "Entrega ainda incompleta",
         "description": (
-            "Contato, endereço e frete já estão salvos nesta sessão."
+            "Contato, endereço e frete estimado já estão salvos nesta sessão."
             if delivery_ready
-            else "Preencha contato, endereço e selecione um frete para liberar a próxima etapa."
+            else "Preencha contato, endereço e selecione uma modalidade de frete estimada para liberar a próxima etapa."
         ),
     }
     payment_hint = {
@@ -439,6 +439,94 @@ def _build_review_readiness(
     }
 
 
+def _build_summary_confidence_copy(*, current_stage: str, has_items: bool) -> dict[str, str]:
+    if not has_items:
+        return {
+            "summary_description": "O resumo ficará mais útil assim que houver itens válidos nesta sessão.",
+            "summary_note": "Adicione itens para retomar entrega, pagamento e revisão com totais consistentes.",
+        }
+
+    descriptions = {
+        "cart": "Confira itens, quantidades e totais antes de informar a entrega.",
+        "delivery": "Use estes totais como referência enquanto define endereço e frete estimado.",
+        "payment": "Revise total, frete estimado e parcelamento enquanto escolhe a forma de pagamento.",
+        "review": "Confira o total que será levado para o pedido inicial salvo na sua conta.",
+    }
+    notes = {
+        "cart": "Este resumo ainda representa uma sessão em preparação; nenhum pedido foi criado.",
+        "delivery": "Frete e total podem mudar conforme endereço e modalidade escolhidos nesta etapa.",
+        "payment": "O total já considera a entrega salva; prazo e envio ainda dependem de pagamento confirmado e preparo do pedido.",
+        "review": (
+            "Conclusão segura: itens, entrega e pagamento revisados serão levados para um pedido inicial. "
+            "A confirmação real de pagamento acontece depois."
+        ),
+    }
+    return {
+        "summary_description": descriptions.get(current_stage, descriptions["cart"]),
+        "summary_note": notes.get(current_stage, notes["cart"]),
+    }
+
+
+def _build_unavailable_session_payload(*, reason: str) -> dict[str, object]:
+    expired = reason == "expired"
+    title = "Sessão de checkout expirada" if expired else "Sessão de checkout indisponível"
+    description = (
+        "Esta sessão expirou por segurança. Retome a compra a partir do produto para recriar itens, entrega e pagamento."
+        if expired
+        else "Não encontramos uma sessão de checkout segura para este link. Retome a compra a partir do produto."
+    )
+    return {
+        "page_title": title,
+        "page_description": description,
+        "page_meta": "Nenhum pedido foi criado a partir desta tela.",
+        "checkout_steps": [
+            {"label": "Carrinho", "state": "current"},
+            {"label": "Entrega", "state": "upcoming"},
+            {"label": "Pagamento", "state": "upcoming"},
+            {"label": "Confirmação", "state": "upcoming"},
+        ],
+        "checkout_feedback": {
+            "variant": "warning",
+            "icon": "⏳" if expired else "ℹ️",
+            "title": title,
+            "description": description,
+        },
+        "checkout_recovery": {
+            "title": "Como retomar com segurança",
+            "description": "Volte ao produto para iniciar uma nova sessão de checkout com dados atuais.",
+            "helper": "Isso evita reutilizar itens, frete ou totais que já não representam uma sessão ativa.",
+            "primary_label": "Voltar ao produto",
+            "primary_href": "",
+            "secondary_label": "",
+            "secondary_href": "",
+        },
+        "order_items": [],
+        "subtotal": "R$ 0,00",
+        "shipping_total": "R$ 0,00",
+        "discount_total": "R$ 0,00",
+        "grand_total": "R$ 0,00",
+        "installments_summary": "",
+        "installments_options": [],
+        "summary_description": "Esta sessão não está disponível para edição.",
+        "summary_note": "Retome pelo produto para gerar uma sessão nova e segura.",
+        "current_stage": "cart",
+        "current_stage_label": "Carrinho",
+        "next_stage": "cart",
+        "stage_title": title,
+        "stage_description": description,
+        "submit_label": "",
+        "final_action_title": "Sessão bloqueada para edição",
+        "final_action_description": "Não é possível salvar entrega, pagamento ou gerar pedido a partir desta sessão.",
+        "final_action_helper": "Retome a compra a partir do produto para continuar.",
+        "checkout_session_state": reason,
+        "checkout_session_readonly": True,
+        "show_cart_surface": False,
+        "show_delivery_surface": False,
+        "show_payment_surface": False,
+        "show_order_items_surface": False,
+    }
+
+
 class FallbackCheckoutRepository:
     def get_checkout_page_data(
         self,
@@ -505,8 +593,13 @@ class FallbackCheckoutRepository:
                 current_stage=str(payload["current_stage"]),
             )
         )
+        payload.update(
+            _build_summary_confidence_copy(
+                current_stage=str(payload["current_stage"]),
+                has_items=bool(payload["order_items"]),
+            )
+        )
         payload["page_description"] = f'{payload["page_description"]} {payload["stage_description"]}'
-        payload["summary_description"] = payload["review_section_description"]
         payload["show_cart_surface"] = str(payload.get("current_stage")) == "cart"
         payload["show_delivery_surface"] = str(payload.get("current_stage")) in {"delivery", "payment", "review"}
         payload["show_payment_surface"] = str(payload.get("current_stage")) in {"delivery", "payment", "review"}
@@ -553,13 +646,15 @@ class DjangoOrmCheckoutRepository:
             return None
 
         try:
-            queryset = self.session_model._default_manager.filter(status="open").prefetch_related("items")
+            queryset = self.session_model._default_manager.prefetch_related("items")
             if tenant_id:
                 queryset = queryset.filter(tenant_id=tenant_id)
             elif not session_key:
                 return None
             if session_key:
                 queryset = queryset.filter(session_key=session_key)
+            else:
+                queryset = queryset.filter(status="open")
             session = queryset.order_by("-updated_at", "-id").first()
         except Exception:
             return None
@@ -622,6 +717,10 @@ class DjangoOrmCheckoutRepository:
             grand_total=getattr(session, "grand_total", Decimal("0.00")),
             current_stage=str(stage_context["current_stage"]),
         )
+        summary_confidence = _build_summary_confidence_copy(
+            current_stage=str(stage_context["current_stage"]),
+            has_items=bool(serialized_items),
+        )
         page_description = _build_checkout_description(
             item_count=len(serialized_items),
             shipping_label=str(selected_shipping.get("label", "") or ""),
@@ -667,24 +766,55 @@ class DjangoOrmCheckoutRepository:
             "installments_selected": str(getattr(session, "installments_selected", "") or ""),
             "installments_options": list(getattr(session, "installments_options", []) or []),
             "accept_terms": accepted_terms,
-            "summary_description": stage_context["review_section_description"],
-            "summary_note": (
-                "Adicione itens válidos para retomar entrega, pagamento e revisão desta sessão."
-                if not serialized_items
-                else (
-                    "Conclusão segura: itens, entrega e pagamento revisados serão levados para um pedido inicial na sua conta. "
-                    "Nenhuma confirmação real de pagamento acontece nesta etapa."
-                    if str(stage_context["current_stage"]) == "review"
-                    else "Os totais desta sessão refletem apenas o que já foi salvo até aqui."
-                )
-            ),
+            "summary_description": summary_confidence["summary_description"],
+            "summary_note": summary_confidence["summary_note"],
             "show_cart_surface": str(stage_context["current_stage"]) == "cart",
             "show_delivery_surface": str(stage_context["current_stage"]) in {"delivery", "payment", "review"},
             "show_payment_surface": str(stage_context["current_stage"]) in {"delivery", "payment", "review"},
+            "show_order_items_surface": True,
+            "checkout_session_state": session_status,
+            "checkout_session_readonly": session_status != "open",
         }
         payload.update(stage_context)
         payload.update(completion_hints)
         payload.update(review_readiness)
+        if session_status == "expired":
+            payload.update(
+                {
+                    "page_title": "Sessão de checkout expirada",
+                    "page_description": (
+                        "Esta sessão expirou por segurança. Retome a compra a partir do produto para recriar itens, entrega e pagamento."
+                    ),
+                    "page_meta": "Nenhum pedido novo será criado a partir desta sessão expirada.",
+                    "checkout_feedback": {
+                        "variant": "warning",
+                        "icon": "⏳",
+                        "title": "Sessão de checkout expirada",
+                        "description": (
+                            "Esta sessão não aceita mais alterações. Inicie uma nova compra para revisar dados e totais atuais."
+                        ),
+                    },
+                    "checkout_recovery": {
+                        "title": "Como retomar com segurança",
+                        "description": "Volte ao produto para iniciar uma nova sessão com disponibilidade, frete e totais atualizados.",
+                        "helper": "Mantemos esta sessão apenas como referência; ela não pode mais gerar pedido.",
+                        "primary_label": "Voltar ao produto",
+                        "primary_href": "",
+                        "secondary_label": "",
+                        "secondary_href": "",
+                    },
+                    "stage_title": "Sessão expirada",
+                    "stage_description": "Os dados abaixo são apenas referência e não podem mais ser editados.",
+                    "submit_label": "",
+                    "final_action_title": "Sessão bloqueada para edição",
+                    "final_action_description": "Não é possível salvar entrega, pagamento ou gerar pedido a partir desta sessão.",
+                    "final_action_helper": "Retome a compra a partir do produto para continuar com dados atuais.",
+                    "show_cart_surface": False,
+                    "show_delivery_surface": False,
+                    "show_payment_surface": False,
+                    "checkout_session_readonly": True,
+                }
+            )
         return payload
 
     @staticmethod
@@ -739,6 +869,8 @@ class CheckoutPageQueryService:
         )
         if not tenant_id and not session_key:
             return real_payload or {}
+        if session_key and not real_payload:
+            return _build_unavailable_session_payload(reason="missing")
         return real_payload or self.fallback_repository.get_checkout_page_data(
             tenant_id=tenant_id,
             session_key=session_key,

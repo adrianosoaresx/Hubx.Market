@@ -313,26 +313,26 @@ def _build_order_detail_feedback_context(request) -> dict[str, object]:
         "hosted-payment-unavailable": {
             "variant": "warning",
             "icon": "ℹ️",
-            "title": "Pagamento hospedado indisponível",
-            "description": "Não foi possível abrir o ambiente externo de pagamento agora. Recarregue a página ou tente novamente em instantes.",
+            "title": "Pagamento seguro indisponível",
+            "description": "Não conseguimos abrir o ambiente seguro de pagamento agora. Seu pedido continua salvo; tente novamente em instantes.",
         },
         "hosted-payment-returned": {
             "variant": "info",
             "icon": "↩️",
-            "title": "Retorno de pagamento recebido",
-            "description": "Recebemos seu retorno do ambiente de pagamento. Agora seguimos aguardando a confirmação segura do provider.",
+            "title": "Você voltou do pagamento seguro",
+            "description": "Recebemos seu retorno do ambiente de pagamento. O pedido continua salvo enquanto aguardamos a confirmação segura.",
         },
         "hosted-payment-return-pending-verification": {
             "variant": "info",
             "icon": "🧾",
             "title": "Pagamento em verificação",
-            "description": "O provider indicou sucesso no retorno, mas o pedido só avança depois da confirmação segura do evento de pagamento.",
+            "description": "O ambiente de pagamento indicou avanço, mas o pedido só muda de etapa depois da confirmação segura. Nenhuma ação extra é necessária agora.",
         },
         "hosted-payment-return-failed": {
             "variant": "warning",
             "icon": "⚠️",
             "title": "Tentativa de pagamento não concluída",
-            "description": "O retorno hospedado indicou falha ou cancelamento. Você pode revisar o pedido e tentar novamente com segurança.",
+            "description": "A tentativa não foi concluída ou foi cancelada. Seu pedido continua salvo para você revisar e tentar novamente com segurança.",
         },
     }
     if result not in mapping:

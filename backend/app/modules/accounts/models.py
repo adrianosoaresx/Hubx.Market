@@ -54,3 +54,23 @@ class AccountProfile(models.Model):
 
     def __str__(self) -> str:  # pragma: no cover
         return f"{self.tenant_id}:{self.email}"
+
+
+class OwnerUser(models.Model):
+    tenant = models.ForeignKey("tenants.Tenant", on_delete=models.CASCADE, related_name="owner_users")
+    email = models.EmailField()
+    full_name = models.CharField(max_length=150, blank=True)
+    role = models.CharField(max_length=64, default="owner")
+    is_active = models.BooleanField(default=True)
+    receives_notifications = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("tenant_id", "email")
+        constraints = [
+            models.UniqueConstraint(fields=("tenant", "email"), name="accounts_owner_unique_email_per_tenant"),
+        ]
+
+    def __str__(self) -> str:  # pragma: no cover
+        return f"{self.tenant_id}:{self.email}"

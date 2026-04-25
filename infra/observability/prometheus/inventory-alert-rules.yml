@@ -1,0 +1,32 @@
+groups:
+  - name: hubx-inventory-exceptions
+    rules:
+      - alert: HubxInventoryActiveExceptionsPresent
+        expr: sum(hubx_inventory_exception_total{state="excecao_ativa"}) > 0
+        for: 10m
+        labels:
+          severity: warning
+          domain: inventory
+        annotations:
+          summary: "Exceções ativas de estoque presentes"
+          description: "Existem pedidos com exceção ativa de estoque. Revisar a fila com `list_inventory_exceptions --quick-filter=active --tenant-id=<id>`."
+
+      - alert: HubxInventoryHighPriorityExceptionsPresent
+        expr: sum(hubx_inventory_exception_priority_total{priority="alta_prioridade"}) > 0
+        for: 5m
+        labels:
+          severity: warning
+          domain: inventory
+        annotations:
+          summary: "Exceções de estoque em alta prioridade"
+          description: "Há exceções de estoque em alta prioridade operacional. Revisar saldo livre, variante vinculada e disponibilidade do produto."
+
+      - alert: HubxInventoryUnassignedExceptionsPresent
+        expr: sum(hubx_inventory_exception_owner_total{owner_state="unassigned"}) > 0
+        for: 30m
+        labels:
+          severity: warning
+          domain: inventory
+        annotations:
+          summary: "Exceções de estoque sem responsável"
+          description: "Existem exceções abertas sem responsável operacional. Assumir ou reatribuir pela fila de Admin Orders."

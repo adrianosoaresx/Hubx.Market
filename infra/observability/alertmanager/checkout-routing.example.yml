@@ -1,0 +1,16 @@
+route:
+  receiver: checkout-ops
+  group_by:
+    - alertname
+    - tenant_id
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  matchers:
+    - domain="checkout"
+
+receivers:
+  - name: checkout-ops
+    webhook_configs:
+      - url: https://example.invalid/alertmanager/checkout
+        send_resolved: true

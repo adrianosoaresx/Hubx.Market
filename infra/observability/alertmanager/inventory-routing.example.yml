@@ -1,0 +1,31 @@
+route:
+  receiver: inventory-default
+  group_by:
+    - alertname
+    - domain
+    - severity
+  routes:
+    - matchers:
+        - domain="inventory"
+        - severity="critical"
+      receiver: inventory-critical
+      continue: false
+
+    - matchers:
+        - domain="inventory"
+        - severity="warning"
+      receiver: inventory-warning
+      continue: false
+
+receivers:
+  - name: inventory-default
+    webhook_configs:
+      - url: https://alert-router.internal.example/hubx/default
+
+  - name: inventory-warning
+    webhook_configs:
+      - url: https://alert-router.internal.example/hubx/inventory-warning
+
+  - name: inventory-critical
+    webhook_configs:
+      - url: https://alert-router.internal.example/hubx/inventory-critical

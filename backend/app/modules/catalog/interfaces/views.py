@@ -3,18 +3,22 @@ from __future__ import annotations
 from math import ceil
 from urllib.parse import urlencode
 
+from django.conf import settings
 from django.core.paginator import Paginator
 from django.http import Http404
+from django.http import HttpResponse
+from django.http import HttpResponseNotFound
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.utils.html import format_html, format_html_join
 from django.utils.text import slugify
-from django.views.generic import TemplateView
+from django.views.generic import TemplateView, View
 
 from app.modules.catalog.application.admin_product_queries import (
     STATUS_OPTIONS,
     admin_product_queries,
 )
+from app.modules.catalog.application.catalog_metrics_queries import catalog_metrics_queries
 from app.modules.catalog.application.storefront_catalog_queries import (
     storefront_catalog_queries,
 )
@@ -292,12 +296,12 @@ def _catalog_reentry_meta(*, category_label: str, search_value: str, quick_filte
     if quick_filter_label:
         return f"Este recorte rápido mantém a vitrine pronta para sua próxima compra enquanto você revisa {quick_filter_label.lower()}."
     if category_label and search_value:
-        return "A vitrine continua pronta para sua próxima compra enquanto você refina a busca e aprofunda no detalhe a mesma combinação mostrada aqui."
+        return "A vitrine continua pronta para sua próxima compra enquanto você refina a busca e aprofunda no detalhe as combinações mais promissoras mostradas aqui."
     if category_label:
-        return f"A vitrine de {category_label.lower()} continua pronta para sua próxima compra com continuidade clara entre card e detalhe."
+        return f"A vitrine de {category_label.lower()} continua pronta para sua próxima compra, com continuidade clara entre card, curadoria leve e detalhe."
     if search_value:
-        return "Use esta busca para retomar a navegação com mais foco; o detalhe continua aprofundando a mesma base comercial mostrada na vitrine."
-    return "A vitrine continua pronta para receber sua próxima compra, com cards e detalhe alinhados pela mesma base comercial."
+        return "Use esta busca para retomar a navegação com mais foco; o detalhe continua aprofundando a mesma base comercial e editorial mostrada na vitrine."
+    return "A vitrine continua pronta para receber sua próxima compra, com cards e detalhe alinhados pela mesma base comercial e por uma curadoria leve."
 
 
 def _build_catalog_quick_filter_select(*, selected: str) -> str:
@@ -322,17 +326,17 @@ def _build_catalog_quick_filter_select(*, selected: str) -> str:
 def _catalog_page_description(*, category_label: str, search_value: str) -> str:
     if search_value and category_label:
         return (
-            f'Explore {category_label.lower()} com busca, disponibilidade e combinação em destaque já alinhadas para “{search_value}”, com curadoria comercial leve.'
+            f'Explore {category_label.lower()} com busca ativa para “{search_value}”, combinando disponibilidade real, combinação em destaque e uma curadoria leve para ajudar a escolher o próximo produto que vale abrir.'
         )
     if category_label:
         return (
-            f"Explore {category_label.lower()} com mídia, preço, disponibilidade e combinação em destaque atualizados para decidir com mais confiança, agora também com curadoria comercial leve."
+            f"Explore {category_label.lower()} com combinações em destaque, disponibilidade atual e uma curadoria leve para descobrir os produtos mais interessantes desta vitrine com mais confiança."
         )
     if search_value:
         return (
-            f'Explore resultados para “{search_value}” com mídia, preço, disponibilidade e combinação em destaque atualizados, com curadoria comercial leve.'
+            f'Explore resultados para “{search_value}” com disponibilidade atual, combinações em destaque e uma curadoria leve para encontrar mais rápido o produto que vale abrir agora.'
         )
-    return "Explore produtos com mídia, preço, disponibilidade e combinação em destaque atualizados para encontrar sua próxima compra com mais confiança, agora também com curadoria comercial leve."
+    return "Explore produtos com combinações em destaque, disponibilidade atual e uma curadoria leve para encontrar com mais confiança o próximo item que vale sua atenção nesta vitrine."
 
 
 def _catalog_filter_description(*, category_label: str, search_value: str) -> str:
@@ -353,7 +357,7 @@ def _catalog_results_meta(*, total_count: int, category_label: str, search_value
         meta = f'{meta} · busca atual: “{search_value}”'
     if category_label:
         meta = f"{meta} · categoria atual: {category_label}"
-    return f"{meta} · cards já refletem variante efetiva e disponibilidade atual, agora também com curadoria comercial leve"
+    return f"{meta} · cards já refletem variante efetiva, disponibilidade atual e sinais leves de curadoria da vitrine"
 
 
 def _catalog_empty_state(*, category_label: str, search_value: str) -> tuple[str, str]:
@@ -541,6 +545,29 @@ class AdminProductsListView(TemplateView):
             }
         )
         return context
+
+
+class CatalogMetricsView(View):
+    http_method_names = ["get"]
+
+    def get(self, request, *args, **kwargs):
+        configured_token = str(getattr(settings, "CATALOG_OBSERVABILITY_TOKEN", "") or "").strip()
+        if not configured_token:
+            return HttpResponseNotFound("Métricas de catálogo indisponíveis.")
+
+        provided_token = str(request.headers.get("X-Hubx-Observability-Token", "") or "").strip()
+        if not provided_token:
+            authorization_header = str(request.headers.get("Authorization", "") or "").strip()
+            if authorization_header.lower().startswith("bearer "):
+                provided_token = authorization_header[7:].strip()
+        if provided_token != configured_token:
+            return HttpResponse("Forbidden", status=403, content_type="text/plain; charset=utf-8")
+
+        return HttpResponse(
+            catalog_metrics_queries.export_prometheus_metrics(),
+            status=200,
+            content_type="text/plain; version=0.0.4; charset=utf-8",
+        )
 
 
 class AdminProductDetailView(TemplateView):

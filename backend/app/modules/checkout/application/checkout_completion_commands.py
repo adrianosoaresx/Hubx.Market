@@ -7,6 +7,7 @@ from typing import Protocol
 from django.db import IntegrityError, connection, transaction
 
 from app.modules.checkout.application.checkout_activation_commands import _safe_decimal
+from app.modules.orders.application.order_event_publisher import order_event_publisher
 from app.modules.payments.application.payment_attempt_commands import payment_attempt_commands
 
 
@@ -291,6 +292,10 @@ class DjangoOrmCheckoutCompletionRepository:
                     order_number=str(getattr(order, "number", "") or ""),
                     payment_method_code=str(getattr(session, "payment_method_selected", "") or ""),
                     source_session_key=str(getattr(session, "session_key", "") or ""),
+                )
+                order_event_publisher.publish_order_created(
+                    tenant_id=int(session.tenant_id),
+                    order_number=str(getattr(order, "number", "") or ""),
                 )
                 return "checkout-completed", str(getattr(order, "number", "") or "")
         except Exception:

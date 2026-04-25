@@ -1,6 +1,6 @@
 from django.test import TestCase
 
-from app.modules.accounts.models import AccountProfile
+from app.modules.accounts.models import AccountProfile, OwnerUser
 from app.modules.customers.models import Customer
 from app.modules.tenants.models import Tenant
 
@@ -91,3 +91,22 @@ class AccountReadinessModelTests(TestCase):
 
         profile.refresh_from_db()
         self.assertIsNone(profile.customer)
+
+    def test_owner_user_is_separate_from_account_profile_and_customer(self):
+        tenant = Tenant.objects.create(
+            name="Hubx Owner Accounts",
+            slug="hubx-owner-accounts",
+            subdomain="hubx-owner-accounts",
+        )
+
+        owner = OwnerUser.objects.create(
+            tenant=tenant,
+            email="owner@hubx.market",
+            full_name="Owner Hubx",
+        )
+
+        self.assertEqual(owner.tenant, tenant)
+        self.assertEqual(owner.email, "owner@hubx.market")
+        self.assertEqual(owner.role, "owner")
+        self.assertTrue(owner.is_active)
+        self.assertTrue(owner.receives_notifications)

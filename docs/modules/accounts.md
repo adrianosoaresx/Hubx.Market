@@ -1872,3 +1872,540 @@ Gerenciar autenticação e contas administrativas.
     - `recent_orders_title`
     - composição textual da célula `Status`
   - sem mudar ainda a tabela, as colunas ou a navegação
+
+## Wave R — Account Overview Recent Orders Copy Execution
+- aplicamos a primeira passada real de copy no bloco `recent_orders` do `account overview`
+- a execução ficou restrita ao recorte mais seguro:
+  - `recent_orders_title`
+  - composição textual da célula `Status`
+
+### O que mudou
+- o bloco agora usa um título mais orientado à continuidade:
+  - `Pedidos para acompanhar`
+- a célula `Status` agora prioriza melhor a ordem de leitura:
+  1. milestone/hint principal
+  2. atualização recente
+  3. estado factual
+
+### O que continua igual
+- colunas
+- estrutura da tabela
+- navegação para o detalhe
+- ordenação
+- payload transacional do pedido
+
+### Leitura prática
+- o bloco recente agora ajuda mais o cliente a responder:
+  - qual pedido merece atenção
+  - em que etapa ele está
+  - qual é o contexto mais útil antes de abrir o detalhe
+- tudo isso sem mudar a tabela nem a interação principal
+
+### Validação
+- suíte de `accounts` cobre o novo framing
+- checks e schema sem impacto
+
+### Próxima wave
+- **Wave S — Account Overview Activity Card Retention Review**
+- foco:
+  - revisar se o `activity card` já merece a próxima passada funcional
+  - mantendo a evolução do overview incremental e segura
+
+## Wave S — Account Overview Activity Card Retention Review
+- a revisão do `activity card` mostra que ele já está cumprindo um papel útil no `account overview`
+- hoje ele funciona como:
+  - resumo curto do pedido mais recente
+  - apoio de continuidade
+  - reforço do próximo passo
+
+### O que já funciona bem
+- o card já reúne numa única superfície:
+  - estado atual do pedido mais recente
+  - atualização recente
+  - próximo passo esperado
+  - contexto de continuidade
+- isso ajuda a conta a terminar com uma leitura de:
+  - “o que aconteceu”
+  - “o que acontece agora”
+
+### Gap principal
+- o card ainda comunica melhor:
+  - **resumo operacional recente**
+- do que:
+  - **motivo claro para voltar depois**
+- a copy já está boa, mas ainda pode ficar mais orientada a:
+  - retorno natural
+  - acompanhamento futuro
+  - utilidade prática do próximo acesso
+
+### Leitura objetiva
+- o `activity card` não parece pedir:
+  - mudança estrutural
+  - novo bloco
+  - nova interação
+- o próximo ganho aqui parece ser:
+  - **copy de retenção do próprio card**
+
+### Próxima wave
+- **Wave T — Account Overview Activity Card Copy Plan**
+- foco:
+  - decidir o menor recorte seguro para melhorar:
+    - `activity_title`
+    - `activity_subtitle`
+    - framing de `activity_content`
+  - sem mudar ainda a estrutura do card
+
+## Wave T — Account Overview Activity Card Copy Plan
+- o plano do `activity card` deve continuar pequeno, seguro e totalmente compatível com o overview atual
+- a direção não é mudar o card
+- é **reposicionar a leitura do card como motivo de retorno**
+
+### Recorte seguro definido
+1. **framing do card**
+   - revisar primeiro:
+     - `activity_title`
+     - `activity_subtitle`
+   - objetivo:
+     - deixar mais explícito que o card ajuda a entender
+       - o que vale acompanhar
+       - quando voltar
+       - por que a conta segue útil
+2. **framing de `activity_content`**
+   - manter a base factual
+   - mas decidir ordem mais clara entre:
+     - estado mais relevante
+     - próximo passo
+     - contexto de continuidade
+3. **prioridade da leitura**
+   - o card deve ser lido primeiro como:
+     - próximo ponto de retorno
+   - e depois como:
+     - resumo recente do pedido
+
+### O que fica fora desta etapa
+- sem alterar:
+  - estrutura do card
+  - ordem da página
+  - origem dos dados
+  - lógica de continuidade
+  - navegação
+
+### Leitura objetiva
+- isso mantém o `activity card` no mesmo padrão usado no restante do overview:
+  - primeiro framing
+  - depois execução de copy
+  - só mais tarde ajustes de profundidade, se ainda fizer sentido
+
+### Próxima wave
+- **Wave U — Account Overview Activity Card Copy Review**
+- foco:
+  - revisar o melhor primeiro corte real de copy no `activity card`
+  - sem mudar ainda a estrutura do card
+
+## Wave U — Account Overview Activity Card Copy Review
+- a revisão de copy do `activity card` mostra que já existe um **primeiro corte seguro de execução**
+- o melhor ponto de entrada não é mexer na estrutura do card
+- é melhorar a linguagem da superfície para reforçar:
+  - motivo de retorno
+  - próximo acompanhamento
+  - utilidade do próximo acesso
+
+### Candidatos mais seguros para a primeira passada
+- **`activity_title`**
+  - hoje é funcional
+  - mas ainda pode comunicar melhor a ideia de:
+    - acompanhamento
+    - próximo retorno
+    - continuidade recente
+- **`activity_subtitle`**
+  - já aponta o valor do card
+  - mas ainda pode ficar mais claro em torno de:
+    - o que vale acompanhar
+    - por que voltar depois
+- **framing de `activity_content`**
+  - a melhor primeira passada parece ser:
+    - manter a base factual
+    - mas aproximar a abertura do texto de:
+      - próximo ponto de atenção
+      - retorno natural
+      - acompanhamento útil
+
+### O que fica fora desta etapa
+- sem alterar ainda:
+  - estrutura do card
+  - ordem da página
+  - origem dos dados
+  - lógica de continuidade
+  - demais blocos do overview
+
+### Leitura objetiva
+- o `activity card` já está pronto para uma wave pequena de **copy execution**
+- sem mexer cedo demais em estrutura, dados ou fluxo
+
+### Próxima wave
+- **Wave V — Account Overview Activity Card Copy Execution**
+- foco:
+  - aplicar a primeira passada real em:
+    - `activity_title`
+    - `activity_subtitle`
+    - framing de `activity_content`
+  - sem mudar ainda a estrutura do card
+
+## Wave V — Account Overview Activity Card Copy Execution
+- aplicamos a primeira passada real de copy no `activity card` do `account overview`
+- a execução ficou restrita ao recorte mais seguro:
+  - `activity_title`
+  - `activity_subtitle`
+  - framing de `activity_content`
+
+### O que mudou
+- o card agora usa um título mais orientado à continuidade:
+  - `O que acompanhar agora`
+- o subtítulo passa a reforçar:
+  - melhor próximo retorno
+  - utilidade do próximo acesso
+- o conteúdo abre menos como resumo operacional puro
+- e mais como:
+  - melhor acompanhamento atual
+  - próximo contexto útil da conta
+
+### O que continua igual
+- estrutura do card
+- ordem da página
+- origem dos dados
+- lógica de continuidade
+
+### Leitura prática
+- o `activity card` agora ajuda mais o cliente a responder:
+  - por que vale voltar
+  - o que acompanhar agora
+  - qual é o melhor próximo retorno dentro da conta
+- tudo isso sem mudar a estrutura do overview
+
+### Validação
+- suíte de `accounts` cobre o novo framing
+- checks e schema sem impacto
+
+### Próxima wave
+- **Wave W — Account Overview Retention Wrap-Up Review**
+- foco:
+  - revisar o overview como um todo depois dessas waves
+  - decidir se ainda existe algum ajuste funcional pequeno antes de sair desse eixo
+
+## Wave W — Account Overview Retention Wrap-Up Review
+- a revisão final do `account overview` mostra que a superfície já avançou bem nesse eixo de produto
+- hoje o overview já comunica melhor:
+  - por que vale voltar
+  - qual pedido merece atenção
+  - qual é o melhor próximo retorno dentro da conta
+
+### O que ficou mais forte
+- **summary**
+  - agora enquadra a conta como ponto de retorno, não só como readiness
+- **recent orders**
+  - agora ajuda a localizar mais rápido o pedido certo e a etapa principal
+- **quick links**
+  - agora reforçam melhor a utilidade prática da conta
+- **activity card**
+  - agora fecha a página como superfície de acompanhamento, não só de histórico recente
+
+### O que ainda pode evoluir no futuro
+- pequenos refinamentos de:
+  - profundidade do `activity_content`
+  - subtítulo contextual do bloco de pedidos recentes
+  - eventual hierarquia visual mais forte entre blocos
+- mas isso já não parece urgente neste momento
+
+### Leitura objetiva
+- eu não vejo mais um gap funcional pequeno e óbvio que justifique continuar insistindo neste mesmo eixo agora
+- o `account overview` parece:
+  - coerente
+  - mais útil
+  - mais orientado a retenção
+- sem ter perdido estabilidade estrutural
+
+### Decisão prática
+- este eixo do `account overview` pode ser considerado **encerrado com sucesso nesta fase**
+- o próximo passo mais honesto agora é sair do overview e voltar ao roadmap funcional mais amplo
+
+### Próxima wave
+- **Wave X — Customer Area Product Value Review**
+- foco:
+  - revisar a área do cliente como produto de retenção como um todo
+  - depois do ganho já consolidado em:
+    - `order detail`
+    - `orders list`
+    - `account overview`
+
+## Wave X — Customer Area Product Value Review
+- a revisão ampla da `customer area` mostra que ela já deixou de ser só uma área “funcional”
+- hoje ela já atua melhor como:
+  - superfície de acompanhamento
+  - ponto de continuidade
+  - mecanismo leve de retenção
+
+### O que ficou mais forte como produto
+- **`order detail`**
+  - agora funciona como a superfície mais rica de pós-compra
+  - combina:
+    - marco atual
+    - próximos passos
+    - continuidade de pagamento
+    - recompra leve
+- **`orders list`**
+  - agora ajuda melhor a localizar:
+    - pedido certo
+    - etapa atual
+    - continuidade mais relevante
+- **`account overview`**
+  - agora amarra a experiência:
+    - retorno útil
+    - quick access
+    - pedido que merece atenção
+    - melhor próximo acompanhamento
+
+### Valor percebido atual
+- a `customer area` já consegue responder melhor:
+  - “onde eu acompanho meu pedido?”
+  - “o que acontece agora?”
+  - “por que vale voltar aqui depois?”
+- isso é um salto importante de produto, não só de copy
+
+### Gaps restantes
+- eu não vejo agora um gap pequeno e óbvio no mesmo eixo de retenção imediata
+- o que sobra parece mais futuro do que urgente:
+  - recomendações de recompra mais fortes
+  - sinais mais ricos de valor no perfil/endereços
+  - integração mais forte entre histórico e descoberta
+
+### Leitura objetiva
+- a `customer area` nesta fase já está:
+  - mais clara
+  - mais útil
+  - mais coerente como produto de retenção
+- sem ter perdido previsibilidade estrutural
+
+### Decisão prática
+- este eixo de **pós-compra + retenção leve da customer area** pode ser considerado **encerrado com sucesso nesta fase**
+- o próximo passo mais honesto agora é voltar ao roadmap funcional mais amplo
+
+### Próxima wave
+- **Wave Y — Catalog Conversion Review**
+- foco:
+  - sair do pós-compra e revisar o próximo eixo de valor percebido no produto:
+    - descoberta
+    - merchandising
+    - clareza comercial
+    - apoio à conversão no catálogo/PDP
+
+## Wave Y — Catalog Conversion Review
+- a revisão do eixo `catalog` / `PDP` mostra que a base comercial já está bem mais madura do que no início do projeto
+- hoje o storefront já comunica melhor:
+  - variante efetiva
+  - preço real
+  - disponibilidade
+  - confiança para avançar ao checkout
+
+### O que já está forte
+- **vitrine**
+  - os cards já carregam:
+    - contexto comercial da combinação em destaque
+    - disponibilidade curta
+    - helper de clique
+    - curadoria leve
+- **PDP**
+  - o detalhe já aprofunda bem:
+    - variante efetiva
+    - preço e compare price
+    - disponibilidade
+    - CTA e próximo passo
+    - continuidade até checkout/cart
+- **discovery**
+  - quick filters, recortes e estados vazios já ajudam mais a descoberta do que antes
+
+### Gaps mais relevantes agora
+- **1. merchandising ainda é leve**
+  - a vitrine já é honesta e coerente
+  - mas ainda pode ficar mais forte em:
+    - destaque comercial
+    - storytelling curto por coleção/categoria
+    - razão clara para abrir determinado produto agora
+- **2. PDP ainda é mais seguro do que persuasivo**
+  - ele comunica bem disponibilidade e checkout
+  - mas ainda pode evoluir em:
+    - desejo
+    - contexto de uso
+    - reforço comercial da variante escolhida
+- **3. descoberta ainda parece mais funcional do que orientada a decisão**
+  - quick filters ajudam
+  - porém a vitrine ainda pode reforçar melhor:
+    - caminhos de entrada
+    - diferenciação entre recortes
+    - priorização de decisão
+
+### Leitura objetiva
+- eu não vejo agora um gap crítico de arquitetura ou fluxo neste eixo
+- o próximo ganho aqui parece claramente de:
+  - **valor percebido**
+  - **clareza comercial**
+  - **apoio à conversão**
+
+### Decisão prática
+- o próximo passo mais valioso não parece ser mexer em checkout nem payment agora
+- parece ser aprofundar o `catalog` / `PDP` como superfície de conversão
+
+### Próxima wave
+- **Wave Z — PDP Conversion Confidence Review**
+- foco:
+  - revisar o detalhe do produto como principal superfície de conversão antes da compra
+  - decidir qual é o menor próximo passo funcional com maior retorno
+
+## Wave ZA — Customer Area Post-Purchase Activation Review
+- depois do pacote operacional de `customers`, a customer area passa a ter um sinal interno melhor para decidir se a experiência pós-compra está apoiada em dados reais suficientemente confiáveis
+- o módulo responsável continua sendo `accounts`, mas o sinal vem de `customers.application.customer_data_issues`
+- a fronteira fica preservada:
+  - `customers` detecta issues de dados
+  - `accounts` apenas consome a leitura como visibility operacional
+  - nenhuma correção automática é feita na customer area
+
+### Contrato multi-tenant
+- a leitura usa o `tenant_id` já resolvido na request
+- quando existe `AccountProfile.customer`, a visibility avalia apenas issues daquele customer no tenant atual
+- quando não existe customer explícito, o modo permanece `missing`
+
+### Sinais adicionados
+- `customer_data_mode`
+  - `ready`
+  - `needs_attention`
+  - `missing`
+- `customer_data_issue_codes`
+  - lista compacta dos códigos operacionais já emitidos por `customers`
+
+### Leitura prática
+- a customer area agora consegue distinguir:
+  - perfil/customer explícito e saudável
+  - perfil/customer explícito, mas com dados que ainda exigem atenção
+  - ausência de vínculo explícito
+- isso prepara ativações futuras de pós-compra sem depender só de presença visual de pedidos/endereço
+
+### Próxima wave
+- **Wave ZB — Customer Area Activation Wrap-Up Review**
+- foco:
+  - confirmar se o eixo de activation já tem sinais suficientes
+  - decidir se o próximo ciclo deve voltar para conversão de catálogo/PDP ou seguir para backfill operacional
+
+## Wave ZB — Customer Area Activation Wrap-Up Review
+- a customer area já possui sinais suficientes para separar experiência visual de readiness operacional
+- agora a área consegue distinguir:
+  - profile/customer ausente
+  - vínculo explícito pronto
+  - dados do customer que ainda exigem atenção
+  - pedidos ainda dependentes de fallback por e-mail
+- decisão objetiva:
+  - não bloquear a experiência pós-compra por esses sinais nesta fase
+  - usar os sinais para orientar backfill e triagem por tenant
+- o próximo ciclo natural deve seguir para **backfill operacional**, porque `order_email_fallback` agora é mensurável e já existe comando de correção segura
+
+## Wave ZC — Customer Link Backfill Operational Hardening
+- o comando `backfill_customer_links` foi endurecido para operar com recortes menores e mais auditáveis
+- novo escopo:
+  - `--tenant-id <tenant_id>`
+  - mantém compatibilidade global quando omitido, mas o uso operacional recomendado passa a ser tenant-scoped
+- novo recorte:
+  - `--only all`
+  - `--only profiles`
+  - `--only orders`
+- novo resumo residual:
+  - `order_email_fallback_remaining`
+- isso conecta o comando ao sinal operacional de `customers`, permitindo medir se o backfill reduziu o problema que aparece em `hubx_customer_data_issue_total{issue="order_email_fallback"}`
+
+### Leitura prática
+- o fluxo seguro agora fica:
+  1. rodar `list_customer_data_issues --tenant-id <tenant_id> --issue order_email_fallback`
+  2. rodar `backfill_customer_links --tenant-id <tenant_id> --only orders --dry-run`
+  3. aplicar `backfill_customer_links --tenant-id <tenant_id> --only orders`
+  4. validar `order_email_fallback_remaining=0` ou revisar os casos que permanecerem
+
+### Próxima wave
+- **Wave ZD — Customer Backfill Operational Wrap-Up Review**
+- foco:
+  - decidir se o backfill operacional já está seguro o suficiente para virar runbook de ativação por tenant
+  - ou se ainda falta relatório mais detalhado de casos skipped
+
+## Wave ZD — Customer Backfill Operational Wrap-Up Review
+- a revisão mostrou que o backfill já estava seguro no critério de match:
+  - mesmo tenant
+  - e-mail case-insensitive
+  - exatamente um `Customer`
+- porém o resumo ainda era agregado demais para operação por tenant
+- decisão objetiva:
+  - antes de promover isso como rotina operacional, vale separar os motivos de skip
+  - assim suporte/ops sabe se precisa criar customer, corrigir e-mail ou resolver duplicidade
+
+## Wave ZE — Customer Backfill Skipped Reason Execution
+- o comando `backfill_customer_links` agora detalha skips por motivo
+- novos campos de resumo:
+  - `profiles_skipped_missing_email`
+  - `profiles_skipped_no_match`
+  - `profiles_skipped_ambiguous`
+  - `orders_skipped_missing_email`
+  - `orders_skipped_no_match`
+  - `orders_skipped_ambiguous`
+- o contador agregado `profiles_skipped` e `orders_skipped` continua existindo para compatibilidade
+- isso transforma o comando em uma ferramenta melhor de triagem, não apenas de aplicação
+
+### Decisão prática
+- o backfill operacional tenant-scoped está pronto para runbook nesta fase
+- o fluxo recomendado passa a ser:
+  - dry-run por tenant
+  - revisar skipped reasons
+  - aplicar recorte `--only` apropriado
+  - validar `order_email_fallback_remaining`
+
+### Próxima abordagem eleita
+- **Catalog Merchandising Operational Review**
+- motivo:
+  - o eixo pós-compra/customer data/backfill ficou observável e operável
+  - o próximo ganho funcional natural volta para antes da compra: catálogo, vitrine e decisão comercial
+## Owner/Admin Identity Implementation
+- `OwnerUser` passa a existir como identidade administrativa explícita por tenant
+- a entidade é separada de `Customer` e de `AccountProfile`
+- esse contrato desbloqueia notificações owner-facing sem reaproveitar perfil de conta/customer como fallback
+
+### Regras
+- e-mail único por tenant
+- owner deve estar ativo para usos operacionais futuros
+- `receives_notifications` controla elegibilidade inicial para notificações administrativas
+
+## Wave DG — Owner Admin Services Execution
+- foram criados services administrativos mínimos para owners.
+- a leitura e a ação são tenant-scoped.
+
+### Escopo
+- `admin_owner_queries`
+- `admin_owner_commands`
+- listagem de owners por tenant
+- toggle de `receives_notifications`
+
+## Wave DH — Owner Admin Views Execution
+- foi criada surface operacional mínima para owners administrativos.
+- a rota `/ops/owners/` lista owners do tenant atual.
+- cada owner pode ter notificações administrativas ativadas/desativadas.
+
+### Escopo
+- `accounts.interfaces.owner_urls`
+- `accounts.interfaces.owner_views`
+- rota `ops/owners`
+- testes de listagem e toggle
+## Wave EL — Customer Tracking Surface Execution
+- o detalhe do pedido na área do cliente agora consome tracking normalizado do módulo `shipping`.
+- quando há shipment com rastreio, a copy customer-facing mostra transportadora e código.
+- quando não há shipment, o fallback textual existente permanece seguro.
+
+### Boundary
+- accounts não lê provider externo diretamente.
+- accounts usa o gateway manual de shipping como contrato inicial de tracking.
+
+## Wave EM — Customer Tracking Link UX Execution
+- quando `tracking_url` existe, o detalhe do pedido exibe CTA `Acompanhar entrega`.
+- o link externo abre em nova aba com `noopener noreferrer`.

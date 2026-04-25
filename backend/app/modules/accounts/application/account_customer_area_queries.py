@@ -8,7 +8,9 @@ from typing import Protocol
 from django.db import connection
 from django.utils import timezone
 
+from app.modules.customers.application.customer_data_issues import customer_data_issues
 from app.modules.payments.application.payment_attempt_queries import payment_attempt_queries
+from app.modules.shipping.application.shipping_provider_contracts import manual_shipment_provider_gateway
 
 def _customer_order_status_options() -> list[dict[str, str]]:
     return [
@@ -290,7 +292,9 @@ def _current_state_helper(*, status_label: str, payment_status: str, shipping_st
     if "prepar" in lowered_shipping or "separ" in lowered_fulfillment:
         return "Seu pagamento já foi aprovado e nosso time está preparando o pacote para envio."
     if "falhou" in lowered_payment:
-        return "Recebemos uma falha na tentativa de pagamento, mas o pedido continua salvo para uma retomada segura."
+        return "A última tentativa de pagamento não avançou, mas o pedido continua salvo para você retomar com segurança."
+    if "pendente" in lowered_payment or "aguard" in lowered_payment:
+        return "Seu pedido já foi registrado e aguarda a evolução do pagamento. Se o pagamento já foi iniciado, a confirmação pode aparecer após a verificação externa."
     if "confirm" in lowered_payment or "pago" in lowered_status:
         return "Seu pedido está confirmado e aguardando a próxima atualização operacional."
     return "Estamos acompanhando o pedido e avisaremos assim que houver uma nova atualização importante."
@@ -340,13 +344,13 @@ def _pending_recovery_guidance(
             "variant": variant,
             "title": stale_title or "Tentativa pendente sem atualização recente",
             "description": (
-                f"A tentativa continua aberta há mais tempo do que o esperado. "
-                f"O próximo passo mais seguro agora é reabrir o pagamento hospedado em {provider_copy} "
-                "antes de criar outra retomada."
+                f"O pagamento continua sem uma confirmação recente. "
+                f"Antes de iniciar outra tentativa, vale reabrir o ambiente seguro de {provider_copy} "
+                "para verificar se esta cobrança ainda pode ser concluída."
             ),
-            "action_label": "Retomar pagamento hospedado",
+            "action_label": "Retomar pagamento seguro",
             "action_helper": (
-                f"Reabra o checkout hospedado de {provider_copy} para confirmar se esta tentativa ainda pode avançar com segurança."
+                f"Você será levado novamente ao ambiente de {provider_copy}; o pedido permanece salvo enquanto a confirmação não chega."
             ),
         }
     if payment_retry_available:
@@ -354,18 +358,18 @@ def _pending_recovery_guidance(
             "variant": variant,
             "title": stale_title or "Tentativa pendente sem atualização recente",
             "description": (
-                "A tentativa atual já ficou tempo demais sem evolução. "
-                "O próximo passo mais seguro agora é iniciar uma nova tentativa de pagamento."
+                "O pagamento ficou tempo demais sem confirmação. "
+                "O pedido continua salvo e a retomada mais clara agora é iniciar uma nova tentativa."
             ),
             "action_label": "Tentar pagamento novamente",
-            "action_helper": "Abra uma nova tentativa para seguir com um fluxo limpo e evitar retomar um estado possivelmente órfão.",
+            "action_helper": "Vamos abrir uma nova sessão para revisar o pedido e voltar ao pagamento com um caminho limpo.",
         }
     return {
         "variant": variant,
         "title": stale_title or "Tentativa pendente sem atualização recente",
         "description": (
-            "A tentativa atual ficou aberta por tempo demais e não tem uma retomada automática clara agora. "
-            "O pedido continua salvo, mas este estado já merece revisão operacional antes de qualquer novo passo."
+            "O pagamento ficou aberto por tempo demais e ainda não há uma retomada automática segura. "
+            "O pedido continua salvo; antes de qualquer novo passo, vale revisar esse estado com suporte."
         ),
         "action_label": "",
         "action_helper": "",
@@ -400,8 +404,8 @@ def _order_pending_recovery_guidance(
             "variant": "warning",
             "title": "Pedido pendente sem avanço recente",
             "description": (
-                f"Este pedido continua pendente {age_label} e ainda pode ser retomado pelo pagamento hospedado. "
-                "Vale tentar essa retomada antes de tratar o caso como abandono."
+                f"Este pedido continua pendente {age_label}, mas ainda pode ser retomado pelo ambiente seguro de pagamento. "
+                "O pedido segue salvo enquanto a confirmação não chega."
             ),
         }
     if payment_retry_available:
@@ -409,16 +413,95 @@ def _order_pending_recovery_guidance(
             "variant": "warning",
             "title": "Pedido pendente sem avanço recente",
             "description": (
-                f"Este pedido continua pendente {age_label} e a retomada mais segura agora é abrir uma nova tentativa de pagamento."
+                f"Este pedido continua pendente {age_label}. A forma mais clara de seguir agora é abrir uma nova tentativa de pagamento."
             ),
         }
     return {
         "variant": "warning",
         "title": "Pedido pendente sem avanço recente",
         "description": (
-            f"Este pedido continua pendente {age_label} sem evolução clara de pagamento ou entrega. "
-            "O caso já merece revisão operacional antes de qualquer novo passo manual."
+            f"Este pedido continua pendente {age_label} sem confirmação clara de pagamento ou entrega. "
+            "O pedido segue salvo, mas vale revisar esse estado com suporte antes de qualquer novo passo."
         ),
+    }
+
+
+def _delivery_tracking_guidance(
+    *,
+    status_label: str,
+    payment_status: str,
+    shipping_status: str,
+    fulfillment_status_label: str,
+    tracking_status: str = "",
+    tracking_code: str = "",
+    tracking_url: str = "",
+    carrier_name: str = "",
+) -> dict[str, object]:
+    lowered_status = status_label.lower()
+    lowered_payment = payment_status.lower()
+    lowered_shipping = shipping_status.lower()
+    lowered_fulfillment = fulfillment_status_label.lower()
+    tracking_parts = []
+    if carrier_name:
+        tracking_parts.append(f"transportadora: {carrier_name}")
+    if tracking_code:
+        tracking_parts.append(f"código: {tracking_code}")
+    tracking_suffix = f" Dados de rastreio disponíveis ({'; '.join(tracking_parts)})." if tracking_parts else ""
+
+    if "cancel" in lowered_status:
+        return {
+            "visible": True,
+            "variant": "warning",
+            "icon": "⏸️",
+            "title": "Entrega sem novas movimentações",
+            "description": "Este pedido foi cancelado e não deve avançar para preparo, envio ou entrega.",
+        }
+    if "falhou" in lowered_payment or "pendente" in lowered_payment or "aguard" in lowered_payment:
+        return {
+            "visible": False,
+            "variant": "",
+            "icon": "",
+            "title": "",
+            "description": "",
+        }
+    if "entreg" in lowered_shipping or "conclu" in lowered_fulfillment:
+        return {
+            "visible": True,
+            "variant": "success",
+            "icon": "✅",
+            "title": "Entrega concluída",
+            "description": f"Seu pedido foi entregue e agora fica salvo no histórico da conta para consulta futura.{tracking_suffix}",
+        }
+    if tracking_status == "in_transit" or "trânsito" in lowered_shipping or "enviado" in lowered_status:
+        return {
+            "visible": True,
+            "variant": "info",
+            "icon": "🚚",
+            "title": "Pedido a caminho",
+            "description": f"A entrega já avançou para transporte. As próximas atualizações importantes aparecerão nesta página.{tracking_suffix}",
+        }
+    if "prepar" in lowered_shipping or "separ" in lowered_fulfillment:
+        return {
+            "visible": True,
+            "variant": "info",
+            "icon": "📦",
+            "title": "Preparando seu pedido",
+            "description": "Os itens estão em preparação para envio. O próximo marco esperado é a saída do pedido para transporte.",
+        }
+    if "confirm" in lowered_payment or "pago" in lowered_status:
+        return {
+            "visible": True,
+            "variant": "info",
+            "icon": "🧭",
+            "title": "Entrega ainda em preparação",
+            "description": "O pedido já está confirmado e a próxima atualização deve indicar preparo ou envio.",
+        }
+    return {
+        "visible": False,
+        "variant": "",
+        "icon": "",
+        "title": "",
+        "description": "",
     }
 
 
@@ -844,13 +927,28 @@ class DjangoOrmCustomerAreaRepository:
             shipping_status=shipping_status,
             fulfillment_status_label=fulfillment_status_label,
         )
+        order_number = self._string_value(getattr(order, "number", None), default="0000")
+        tracking_snapshot = manual_shipment_provider_gateway.get_tracking_snapshot(
+            tenant_id=getattr(order, "tenant_id", None),
+            order_number=order_number,
+        )
+        delivery_tracking = _delivery_tracking_guidance(
+            status_label=order_status_label,
+            payment_status=payment_status,
+            shipping_status=shipping_status,
+            fulfillment_status_label=fulfillment_status_label,
+            tracking_status=tracking_snapshot.normalized_status,
+            tracking_code=tracking_snapshot.tracking_code,
+            tracking_url=tracking_snapshot.tracking_url,
+            carrier_name=tracking_snapshot.carrier_name,
+        )
         recent_update_hint = _recency_hint(getattr(order, "updated_at", None))
         page_meta = f"Entrega em {shipping_address_summary} · última atualização em {updated_at}"
         if recent_update_hint:
             page_meta = f"{page_meta} · {recent_update_hint.lower()}"
 
         return {
-            "order_number": self._string_value(getattr(order, "number", None), default="0000"),
+            "order_number": order_number,
             "customer_linkage_mode": "explicit" if getattr(order, "customer_id", None) else "fallback",
             "status": "processing" if status == "pending" else status,
             "order_status_label": order_status_label,
@@ -863,6 +961,15 @@ class DjangoOrmCustomerAreaRepository:
             "payment_reference": payment_reference,
             "shipping_status": shipping_status,
             "fulfillment_status_label": fulfillment_status_label,
+            "delivery_tracking_visible": bool(delivery_tracking.get("visible")),
+            "delivery_tracking_variant": str(delivery_tracking.get("variant") or ""),
+            "delivery_tracking_icon": str(delivery_tracking.get("icon") or ""),
+            "delivery_tracking_title": str(delivery_tracking.get("title") or ""),
+            "delivery_tracking_description": str(delivery_tracking.get("description") or ""),
+            "delivery_tracking_status": tracking_snapshot.normalized_status,
+            "delivery_tracking_code": tracking_snapshot.tracking_code,
+            "delivery_tracking_url": tracking_snapshot.tracking_url,
+            "delivery_tracking_carrier": tracking_snapshot.carrier_name,
             "updated_at": updated_at,
             "updated_at_value": updated_at_value,
             "summary_content": summary_content,
@@ -1034,11 +1141,30 @@ class AccountCustomerAreaQueryService:
             addresses_mode = "explicit" if profile_mode == "explicit" else "fallback"
         elif self.using_persisted_addresses_source(tenant_id=tenant_id):
             addresses_mode = "fallback"
+        customer_issue_codes = self._customer_data_issue_codes(profile)
+        customer_data_mode = "missing"
+        if profile.get("customer_id"):
+            customer_data_mode = "needs_attention" if customer_issue_codes else "ready"
         return {
             "profile_mode": profile_mode,
             "orders_mode": orders_mode,
             "addresses_mode": addresses_mode,
+            "customer_data_mode": customer_data_mode,
+            "customer_data_issue_codes": ",".join(customer_issue_codes),
         }
+
+    @staticmethod
+    def _customer_data_issue_codes(profile: dict[str, object]) -> list[str]:
+        tenant_id = profile.get("tenant_id")
+        customer_id = profile.get("customer_id")
+        if not tenant_id or not customer_id:
+            return []
+        try:
+            normalized_customer_id = int(customer_id)
+        except (TypeError, ValueError):
+            return []
+        issues = customer_data_issues.list_issues(tenant_id=tenant_id, limit=1000)
+        return sorted({issue.issue_code for issue in issues if issue.customer_id == normalized_customer_id})
 
     def _profile(self, *, tenant_id: int | None = None) -> dict[str, object]:
         persisted_profile = self.profile_repository.get_primary_profile(tenant_id=tenant_id)
@@ -1260,28 +1386,28 @@ class AccountCustomerAreaQueryService:
             "payment_progression_available": payment_progression_available,
             "payment_progression_label": "Confirmar pagamento" if payment_progression_available else "",
             "payment_progression_helper": (
-                "Finalize a evolução inicial deste pedido para liberar a preparação e as próximas atualizações de envio."
+                "Use esta ação apenas quando o pagamento já foi confirmado fora do fluxo automático; ela libera a preparação e as próximas atualizações."
                 if payment_progression_available
                 else ""
             ),
             "payment_retry_available": payment_retry_available,
             "payment_retry_label": "Tentar pagamento novamente" if payment_retry_available else "",
             "payment_retry_helper": (
-                "Recriamos uma nova sessão com este pedido para você revisar entrega e retomar o pagamento com segurança."
+                "O pedido continua salvo. Vamos abrir uma nova sessão para revisar entrega e retomar o pagamento com segurança."
                 if payment_retry_available
                 else ""
             ),
             "hosted_payment_available": hosted_payment_available,
             "hosted_payment_attempt_key": str((hosted_payment or {}).get("attempt_key") or ""),
             "hosted_payment_label": (
-                str(pending_recovery.get("action_label") or "Abrir pagamento hospedado")
+                str(pending_recovery.get("action_label") or "Abrir pagamento seguro")
                 if hosted_payment_available
                 else ""
             ),
             "hosted_payment_helper": (
                 str(
                     pending_recovery.get("action_helper")
-                    or f"Continue o pagamento em ambiente seguro de {provider_label}."
+                    or f"Você será levado ao ambiente seguro de {provider_label}; o pedido continua salvo enquanto a confirmação não chega."
                 )
                 if hosted_payment_available
                 else ""
@@ -1354,17 +1480,18 @@ class AccountCustomerAreaQueryService:
         if not payment_attempt_status:
             return payload
 
-        attempt_copy = f"Tentativa atual: {payment_attempt_status.lower()}"
+        payment_attempt_status_label = str((payment_attempt_summary or {}).get("status_label") or payment_attempt_status)
+        attempt_copy = f"Pagamento em acompanhamento: tentativa {payment_attempt_status_label.lower()}"
         if payment_attempt_provider:
-            attempt_copy = f"{attempt_copy} via {payment_attempt_provider.lower()}"
+            attempt_copy = f"{attempt_copy} processada por {payment_attempt_provider.lower()}"
         if payment_attempt_reference:
             attempt_copy = f"{attempt_copy}. Referência da tentativa: {payment_attempt_reference}."
         else:
             attempt_copy = f"{attempt_copy}."
         if payment_attempt_session_key:
-            attempt_copy = f"{attempt_copy} Sessão de origem: {payment_attempt_session_key}."
+            attempt_copy = f"{attempt_copy} Sessão de origem registrada para suporte: {payment_attempt_session_key}."
         if payment_attempt_event:
-            attempt_copy = f"{attempt_copy} Último evento: {payment_attempt_event.lower()}."
+            attempt_copy = f"{attempt_copy} Última atualização registrada: {payment_attempt_event.lower()}."
 
         payload["summary_note"] = f'{payload.get("summary_note", "").strip()} {attempt_copy}'.strip()
         existing_meta = str(payload.get("page_meta", "") or "").strip()
@@ -1395,6 +1522,16 @@ class AccountCustomerAreaQueryService:
             "payment_source_label": str(order.get("payment_source_label") or ""),
             "payment_reference": str(order.get("payment_reference") or ""),
             "shipping_status": order["shipping_status"],
+            "delivery_tracking_visible": bool(order.get("delivery_tracking_visible")),
+            "delivery_tracking_variant": str(order.get("delivery_tracking_variant") or ""),
+            "delivery_tracking_icon": str(order.get("delivery_tracking_icon") or ""),
+            "delivery_tracking_title": str(order.get("delivery_tracking_title") or ""),
+            "delivery_tracking_description": str(order.get("delivery_tracking_description") or ""),
+            "delivery_tracking_status": str(order.get("delivery_tracking_status") or ""),
+            "delivery_tracking_code": str(order.get("delivery_tracking_code") or ""),
+            "delivery_tracking_url": str(order.get("delivery_tracking_url") or ""),
+            "delivery_tracking_carrier": str(order.get("delivery_tracking_carrier") or ""),
+            "delivery_tracking_action_label": "Acompanhar entrega" if str(order.get("delivery_tracking_url") or "") else "",
             "summary_content": order["summary_content"],
             "order_items": order["order_items"],
             "subtotal": order["subtotal"],

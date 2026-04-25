@@ -78,3 +78,31 @@ class CheckoutSessionItem(models.Model):
 
     def __str__(self) -> str:  # pragma: no cover
         return f"{self.checkout_session_id}:{self.title}"
+
+
+class CheckoutRecoveryEvent(models.Model):
+    tenant = models.ForeignKey("tenants.Tenant", on_delete=models.CASCADE, related_name="checkout_recovery_events")
+    checkout_session = models.ForeignKey(
+        CheckoutSession,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="recovery_events",
+    )
+    result_code = models.CharField(max_length=80)
+    family = models.CharField(max_length=40)
+    severity = models.CharField(max_length=24, blank=True)
+    recovery_action = models.CharField(max_length=64, blank=True)
+    stage = models.CharField(max_length=32, blank=True)
+    source = models.CharField(max_length=64, default="checkout_page")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("tenant_id", "-created_at", "-id")
+        indexes = [
+            models.Index(fields=("tenant", "result_code", "created_at")),
+            models.Index(fields=("tenant", "family", "recovery_action")),
+        ]
+
+    def __str__(self) -> str:  # pragma: no cover
+        return f"{self.tenant_id}:{self.result_code}"

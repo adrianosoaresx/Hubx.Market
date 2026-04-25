@@ -95,7 +95,7 @@ def _format_account_activity(profile: dict[str, object]) -> str:
     if last_login:
         local_login = timezone.localtime(last_login)
         return f"Último login registrado em {local_login.strftime('%d/%m/%Y às %H:%M')}."
-    return "Sua conta fica pronta para retomar pedidos, endereços e próximos passos assim que você voltar."
+    return "Sua conta continua útil para retomar pedidos, revisar endereços e acompanhar os próximos passos quando você voltar."
 
 
 def _display_name(profile: dict[str, object]) -> str:
@@ -226,23 +226,27 @@ def _overview_orders_context(*, tenant_id: int | None = None) -> dict[str, objec
         else f"Seu primeiro pedido já aparece aqui com status {latest_status.lower()} para facilitar o retorno certo à sua conta desde agora."
     )
 
-    recent_orders = [
-        {
-            "cells": [
-                f'#{order["order_number"]}',
-                (
-                    f'{order["order_status_label"]}'
-                    + (f' · {order["recent_update_hint"].lower()}' if order.get("recent_update_hint") else "")
-                    + (f' · {order["reengagement_hint"]}' if order.get("reengagement_hint") else "")
-                ),
-                order["total"],
-                f'Atualizado em {order["updated_at"]}',
-            ]
-        }
-        for order in orders[:2]
-    ]
+    recent_orders = []
+    for order in orders[:2]:
+        status_parts = []
+        if order.get("reengagement_hint"):
+            status_parts.append(str(order["reengagement_hint"]).capitalize())
+        if order.get("recent_update_hint"):
+            status_parts.append(str(order["recent_update_hint"]).lower())
+        if order.get("order_status_label"):
+            status_parts.append(str(order["order_status_label"]).lower())
+        recent_orders.append(
+            {
+                "cells": [
+                    f'#{order["order_number"]}',
+                    " · ".join(part for part in status_parts if part),
+                    order["total"],
+                    f'Atualizado em {order["updated_at"]}',
+                ]
+            }
+        )
     activity_content = (
-        f"Pedido mais recente {latest_status.lower()}."
+        f"O melhor acompanhamento agora está no pedido mais recente, que está {latest_status.lower()}."
         + (f" {latest_hint}." if latest_hint else "")
         + (f" {next_step_hint}" if next_step_hint else "")
         + (f" Contexto atual: {continuity_hint}." if continuity_hint else "")
@@ -349,11 +353,11 @@ class AccountPageQueryService:
             ),
             "summary_content": f'{_profile_trust_summary(profile)}{reengagement_copy["summary_suffix"]}',
             "quick_links_content": reengagement_copy["quick_links_content"],
-            "recent_orders_title": "Pedidos recentes",
+            "recent_orders_title": "Pedidos para acompanhar",
             "quick_links_title": "Ações rápidas",
             "quick_links_subtitle": orders_context["quick_links_subtitle"],
-            "activity_title": "Atividade recente",
-            "activity_subtitle": "Sinais simples para mostrar o que vale retomar agora na sua conta.",
+            "activity_title": "O que acompanhar agora",
+            "activity_subtitle": "Um resumo curto para mostrar o melhor próximo retorno dentro da sua conta.",
             "recent_order_columns": [
                 {"label": "Pedido"},
                 {"label": "Status"},

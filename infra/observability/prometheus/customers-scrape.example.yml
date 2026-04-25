@@ -1,0 +1,11 @@
+scrape_configs:
+  - job_name: hubx-customers-data-issues
+    metrics_path: /ops/customers/metrics/data-issues/
+    scheme: https
+    scrape_interval: 60s
+    static_configs:
+      - targets:
+          - app.hubx.market
+    authorization:
+      type: Bearer
+      credentials: ${CUSTOMERS_OBSERVABILITY_TOKEN}

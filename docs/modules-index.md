@@ -166,6 +166,7 @@ Orquestrar fluxo de finalização da compra.
 Entidades principais:
 CheckoutSession
 CheckoutSessionItem
+CheckoutRecoveryEvent
 
 Dependências:
 cart  
@@ -328,6 +329,7 @@ Antes de implementar qualquer funcionalidade:
 2. Verifique entidades e eventos do módulo.
 3. Consulte docs/module-boundaries.md.
 4. Consulte docs/events-map.md.
+5. Para operação/produção, consulte docs/operational-runbooks.md.
 
 ---
 

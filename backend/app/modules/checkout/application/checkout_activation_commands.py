@@ -5,6 +5,10 @@ from decimal import Decimal, ROUND_HALF_UP
 from typing import Protocol
 
 from django.db import connection, transaction
+from django.utils import timezone
+
+
+CHECKOUT_OPEN_SESSION_REUSE_WINDOW_HOURS = 24
 
 
 def _safe_decimal(value: object, default: str = "0.00") -> Decimal:
@@ -170,15 +174,33 @@ class DjangoOrmCheckoutActivationRepository:
 
     def _get_reusable_open_session(self, *, tenant_id: int):
         try:
-            return (
+            open_sessions = list(
                 self.session_model._default_manager.filter(
                     tenant_id=tenant_id,
                     status=self.session_model.Status.OPEN,
                 )
                 .prefetch_related("items")
                 .order_by("-updated_at", "-id")
-                .first()
             )
+            now = timezone.now()
+            stale_cutoff = now - timezone.timedelta(hours=CHECKOUT_OPEN_SESSION_REUSE_WINDOW_HOURS)
+            stale_ids: list[int] = []
+            for session in open_sessions:
+                expires_at = getattr(session, "expires_at", None)
+                updated_at = getattr(session, "updated_at", None)
+                if expires_at and expires_at <= now:
+                    stale_ids.append(int(session.id))
+                    continue
+                if updated_at and updated_at <= stale_cutoff:
+                    stale_ids.append(int(session.id))
+                    continue
+                return session
+            if stale_ids:
+                self.session_model._default_manager.filter(id__in=stale_ids, status=self.session_model.Status.OPEN).update(
+                    status=self.session_model.Status.EXPIRED,
+                    updated_at=now,
+                )
+            return None
         except Exception:
             return None
 

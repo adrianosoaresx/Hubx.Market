@@ -1,0 +1,64 @@
+{
+  "title": "Hubx Customers — Data Issues",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "1m",
+  "tags": ["hubx", "customers", "data-quality"],
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Customer data issues by tenant",
+      "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum by (tenant_id, issue) (hubx_customer_data_issue_total)",
+          "legendFormat": "{{tenant_id}} · {{issue}}"
+        }
+      ]
+    },
+    {
+      "type": "bargauge",
+      "title": "Order email fallback",
+      "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum by (tenant_id) (hubx_customer_data_issue_total{issue=\"order_email_fallback\"})",
+          "legendFormat": "{{tenant_id}}"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Missing addresses",
+      "gridPos": {"x": 0, "y": 8, "w": 8, "h": 6},
+      "targets": [
+        {
+          "expr": "sum(hubx_customer_data_issue_total{issue=\"missing_address\"})",
+          "legendFormat": "missing_address"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Default address issues",
+      "gridPos": {"x": 8, "y": 8, "w": 8, "h": 6},
+      "targets": [
+        {
+          "expr": "sum(hubx_customer_data_issue_total{issue=~\"missing_default_address|incomplete_default_address\"})",
+          "legendFormat": "default_address"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Case duplicate e-mails",
+      "gridPos": {"x": 16, "y": 8, "w": 8, "h": 6},
+      "targets": [
+        {
+          "expr": "sum(hubx_customer_data_issue_total{issue=\"duplicate_email_case\"})",
+          "legendFormat": "duplicate_email_case"
+        }
+      ]
+    }
+  ]
+}

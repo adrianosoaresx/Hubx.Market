@@ -8,6 +8,8 @@ from django.urls import reverse
 from app.modules.catalog.models import Product, ProductVariant
 from app.modules.customers.models import Customer
 from app.modules.orders.models import Order, OrderItem, OrderStatusHistory
+from app.modules.notifications.models import EmailLog
+from app.modules.accounts.models import OwnerUser
 from app.modules.payments.infrastructure.alert_signal_metrics import (
     get_payment_alert_signal_snapshot,
     reset_payment_alert_signal,
@@ -98,6 +100,11 @@ class PaymentWebhookViewTests(TestCase):
             status=PaymentAttempt.Status.PENDING,
             amount="239.90",
         )
+        self.owner = OwnerUser.objects.create(
+            tenant=self.tenant,
+            email="owner.webhook@hubx.market",
+            full_name="Owner Webhook",
+        )
 
     def _post(self, payload: dict[str, object], *, token: str = "test-webhook-token"):
         body = json.dumps(payload)
@@ -158,6 +165,15 @@ class PaymentWebhookViewTests(TestCase):
                 source_type="payment_event",
             ).exists()
         )
+        self.assertTrue(
+            EmailLog.objects.filter(
+                tenant=self.tenant,
+                source_event="payment.paid",
+                intent_key="customer.payment.confirmed",
+                recipient_type="customer",
+                recipient_id=str(self.customer.id),
+            ).exists()
+        )
 
     def test_payment_webhook_is_idempotent_safe(self):
         first_response = self._post(
@@ -185,6 +201,14 @@ class PaymentWebhookViewTests(TestCase):
         self.assertEqual(second_response.json()["result"], "payment-already-confirmed")
         self.assertEqual(
             OrderStatusHistory.objects.filter(order=self.order, event_type="payment_paid_external").count(),
+            1,
+        )
+        self.assertEqual(
+            EmailLog.objects.filter(
+                tenant=self.tenant,
+                source_event="payment.paid",
+                intent_key="customer.payment.confirmed",
+            ).count(),
             1,
         )
 
@@ -247,6 +271,24 @@ class PaymentWebhookViewTests(TestCase):
                 order=self.order,
                 event_type="payment_failed_external",
                 source_type="payment_event",
+            ).exists()
+        )
+        self.assertTrue(
+            EmailLog.objects.filter(
+                tenant=self.tenant,
+                source_event="payment.failed",
+                intent_key="customer.payment.failed",
+                recipient_type="customer",
+                recipient_id=str(self.customer.id),
+            ).exists()
+        )
+        self.assertTrue(
+            EmailLog.objects.filter(
+                tenant=self.tenant,
+                source_event="payment.failed",
+                intent_key="owner.payment.failed",
+                recipient_type="owner_user",
+                recipient_id=str(self.owner.id),
             ).exists()
         )
 
@@ -487,6 +529,8 @@ class PaymentWebhookViewTests(TestCase):
             'hubx_payments_alert_signal_last_timestamp_seconds{signal_code="webhook.invalid_signature"}',
             body,
         )
+        self.assertIn("# TYPE hubx_payments_attempt_total gauge", body)
+        self.assertIn(f'hubx_payments_attempt_total{{tenant_id="{self.tenant.id}",status="pending"}}', body)
 
     def test_payment_alert_metrics_accepts_bearer_authorization_token(self):
         self._post_pagarme(

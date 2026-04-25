@@ -13,6 +13,7 @@ from app.modules.accounts.application.account_customer_area_queries import (
 from app.modules.checkout.models import CheckoutSession, CheckoutSessionItem
 from app.modules.orders.models import Order, OrderItem, OrderStatusHistory
 from app.modules.payments.models import PaymentAttempt
+from app.modules.shipping.models import Shipment
 
 
 class CustomerAreaViewTests(TestCase):
@@ -328,9 +329,37 @@ class CustomerAreaPersistedReadTests(TestCase):
         self.assertIn("acompanhar o andamento do pedido atual", profile_payload["preferences_description"].lower())
         self.assertEqual(orders_payload["operational_linkage_visibility"]["profile_mode"], "explicit")
         self.assertEqual(orders_payload["operational_linkage_visibility"]["orders_mode"], "explicit")
+        self.assertEqual(orders_payload["operational_linkage_visibility"]["customer_data_mode"], "ready")
+        self.assertEqual(orders_payload["operational_linkage_visibility"]["customer_data_issue_codes"], "")
         self.assertEqual(addresses_payload["operational_linkage_visibility"]["addresses_mode"], "explicit")
         self.assertEqual(order_detail_payload["operational_linkage_mode"], "explicit")
         self.assertEqual(profile_payload["operational_linkage_mode"], "explicit")
+
+    def test_customer_area_linkage_visibility_surfaces_customer_data_issues(self):
+        profile = AccountProfile.objects.select_related("tenant", "customer").get(pk=2)
+        Order.objects.create(
+            tenant=profile.tenant,
+            customer=None,
+            number="3099",
+            status="paid",
+            customer_name="Ana Área",
+            customer_email=profile.email,
+            customer_phone=profile.phone,
+            payment_status="Confirmado",
+            shipping_status="Entregue",
+            fulfillment_status_label="Concluído",
+            fulfillment_status_variant="success",
+            subtotal="100.00",
+            shipping_total="0.00",
+            discount_total="0.00",
+            total="100.00",
+        )
+        Order.objects.filter(number="3099").update(customer=None)
+
+        visibility = account_customer_area_queries.get_linkage_visibility(tenant_id=profile.tenant_id)
+
+        self.assertEqual(visibility["customer_data_mode"], "needs_attention")
+        self.assertIn("order_email_fallback", visibility["customer_data_issue_codes"])
 
     def test_customer_area_query_service_prefers_explicit_links_when_available(self):
         order_detail_payload = account_customer_area_queries.get_order_detail_page_data("3051")
@@ -412,7 +441,7 @@ class CustomerAreaPersistedReadTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Confirmar pagamento")
-        self.assertContains(response, "liberar a preparação")
+        self.assertContains(response, "confirmado fora do fluxo automático")
 
     def test_account_order_detail_view_shows_payment_retry_action_for_failed_payment(self):
         Order.objects.filter(pk=2).update(
@@ -455,9 +484,40 @@ class CustomerAreaPersistedReadTests(TestCase):
         response = self.client.get(reverse("accounts:account-order-detail", kwargs={"order_number": "3051"}))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Abrir pagamento hospedado")
-        self.assertContains(response, "Continue o pagamento em ambiente seguro")
+        self.assertContains(response, "Abrir pagamento seguro")
+        self.assertContains(response, "o pedido continua salvo enquanto a confirmação não chega")
         self.assertContains(response, reverse("payments:hosted-redirect", kwargs={"attempt_key": attempt.attempt_key}))
+
+    def test_account_order_detail_view_shows_hosted_payment_return_feedback(self):
+        expectations = {
+            "hosted-payment-unavailable": (
+                "Pagamento seguro indisponível",
+                "Seu pedido continua salvo; tente novamente em instantes.",
+            ),
+            "hosted-payment-returned": (
+                "Você voltou do pagamento seguro",
+                "O pedido continua salvo enquanto aguardamos a confirmação segura.",
+            ),
+            "hosted-payment-return-pending-verification": (
+                "Pagamento em verificação",
+                "Nenhuma ação extra é necessária agora.",
+            ),
+            "hosted-payment-return-failed": (
+                "Tentativa de pagamento não concluída",
+                "Seu pedido continua salvo para você revisar e tentar novamente com segurança.",
+            ),
+        }
+
+        for result, expected_parts in expectations.items():
+            with self.subTest(result=result):
+                response = self.client.get(
+                    reverse("accounts:account-order-detail", kwargs={"order_number": "3051"}),
+                    {"result": result},
+                )
+
+                self.assertEqual(response.status_code, 200)
+                for expected in expected_parts:
+                    self.assertContains(response, expected)
 
     def test_account_order_detail_view_shows_payment_operational_timeline_when_attempt_exists(self):
         order = Order.objects.get(pk=2)
@@ -538,7 +598,7 @@ class CustomerAreaPersistedReadTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Tentativa pendente há tempo demais")
         self.assertContains(response, "já merece reconciliação operacional")
-        self.assertContains(response, "não tem uma retomada automática clara agora")
+        self.assertContains(response, "não há uma retomada automática segura")
 
     def test_account_order_detail_recommends_hosted_recovery_for_stale_pending_attempt_when_retry_path_exists(self):
         order = Order.objects.get(pk=2)
@@ -569,8 +629,8 @@ class CustomerAreaPersistedReadTests(TestCase):
         response = self.client.get(reverse("accounts:account-order-detail", kwargs={"order_number": "3051"}))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "O próximo passo mais seguro agora é reabrir o pagamento hospedado")
-        self.assertContains(response, "Retomar pagamento hospedado")
+        self.assertContains(response, "vale reabrir o ambiente seguro")
+        self.assertContains(response, "Retomar pagamento seguro")
 
     def test_account_order_detail_flags_long_lived_pending_order_without_clear_recovery(self):
         Order.objects.filter(pk=2).update(
@@ -588,7 +648,7 @@ class CustomerAreaPersistedReadTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Pedido pendente sem avanço recente")
-        self.assertContains(response, "merece revisão operacional antes de qualquer novo passo manual")
+        self.assertContains(response, "vale revisar esse estado com suporte")
 
     def test_account_order_detail_view_shows_reorder_lite_action_when_items_exist(self):
         response = self.client.get(reverse("accounts:account-order-detail", kwargs={"order_number": "3051"}))
@@ -665,7 +725,7 @@ class CustomerAreaPersistedReadTests(TestCase):
 
         checkout_response = self.client.get(response["Location"])
         self.assertContains(checkout_response, "Nova sessão pronta")
-        self.assertContains(checkout_response, "Etapa atual: carrinho")
+        self.assertContains(checkout_response, "Confira seu carrinho")
         self.assertContains(checkout_response, "Tênis Hubx Area Reorder")
 
     def test_account_order_detail_post_bootstraps_partial_reorder_when_some_items_are_ineligible(self):
@@ -772,7 +832,7 @@ class CustomerAreaPersistedReadTests(TestCase):
 
         checkout_response = self.client.get(response["Location"])
         self.assertContains(checkout_response, "Sessão pronta para nova tentativa")
-        self.assertContains(checkout_response, "Etapa atual: pagamento")
+        self.assertContains(checkout_response, "Escolha o pagamento")
 
     def test_account_order_detail_post_confirms_internal_payment_for_current_customer(self):
         Order.objects.filter(pk=2).update(
@@ -938,6 +998,91 @@ class CustomerAreaPersistedReadTests(TestCase):
         self.assertContains(response, "Pedido entregue")
         self.assertContains(response, "Jornada concluída")
         self.assertContains(response, "Pronta para voltar ao catálogo")
+        self.assertContains(response, "Entrega concluída")
+
+    def test_account_order_detail_shows_delivery_tracking_for_preparation(self):
+        payload = account_customer_area_queries.get_order_detail_page_data("3051")
+
+        self.assertTrue(payload["delivery_tracking_visible"])
+        self.assertEqual(payload["delivery_tracking_title"], "Preparando seu pedido")
+        self.assertIn("próximo marco esperado", payload["delivery_tracking_description"].lower())
+
+        response = self.client.get(reverse("accounts:account-order-detail", kwargs={"order_number": "3051"}))
+
+        self.assertContains(response, "Preparando seu pedido")
+        self.assertContains(response, "saída do pedido para transporte")
+
+    def test_account_order_detail_shows_delivery_tracking_for_shipped_order(self):
+        Order.objects.filter(pk=2).update(
+            status="shipped",
+            payment_status="Confirmado internamente",
+            fulfillment_status_label="Em trânsito",
+            fulfillment_status_variant="shipped",
+            shipping_status="Em trânsito",
+        )
+
+        payload = account_customer_area_queries.get_order_detail_page_data("3051")
+
+        self.assertTrue(payload["delivery_tracking_visible"])
+        self.assertEqual(payload["delivery_tracking_title"], "Pedido a caminho")
+        self.assertIn("transporte", payload["delivery_tracking_description"].lower())
+
+        response = self.client.get(reverse("accounts:account-order-detail", kwargs={"order_number": "3051"}))
+
+        self.assertContains(response, "Pedido a caminho")
+        self.assertContains(response, "As próximas atualizações importantes aparecerão nesta página.")
+
+    def test_account_order_detail_shows_normalized_tracking_snapshot_when_available(self):
+        order = Order.objects.get(pk=2)
+        order.status = "shipped"
+        order.payment_status = "Confirmado internamente"
+        order.fulfillment_status_label = "Em trânsito"
+        order.fulfillment_status_variant = "shipped"
+        order.shipping_status = "Em trânsito"
+        order.save()
+        Shipment.objects.create(
+            tenant=order.tenant,
+            order=order,
+            status=Shipment.Status.SENT,
+            tracking_code="BR3051",
+            tracking_url="https://tracking.example/BR3051",
+            carrier_name="Correios",
+        )
+
+        payload = account_customer_area_queries.get_order_detail_page_data("3051")
+
+        self.assertEqual(payload["delivery_tracking_status"], "in_transit")
+        self.assertEqual(payload["delivery_tracking_code"], "BR3051")
+        self.assertEqual(payload["delivery_tracking_url"], "https://tracking.example/BR3051")
+        self.assertEqual(payload["delivery_tracking_carrier"], "Correios")
+        self.assertEqual(payload["delivery_tracking_action_label"], "Acompanhar entrega")
+        self.assertIn("transportadora: Correios", payload["delivery_tracking_description"])
+        self.assertIn("código: BR3051", payload["delivery_tracking_description"])
+
+        response = self.client.get(reverse("accounts:account-order-detail", kwargs={"order_number": "3051"}))
+
+        self.assertContains(response, "transportadora: Correios")
+        self.assertContains(response, "código: BR3051")
+        self.assertContains(response, 'href="https://tracking.example/BR3051"')
+        self.assertContains(response, "Acompanhar entrega")
+
+    def test_account_order_detail_hides_delivery_tracking_for_pending_payment(self):
+        Order.objects.filter(pk=2).update(
+            status="pending",
+            payment_status="Pagamento pendente",
+            fulfillment_status_label="Aguardando pagamento",
+            fulfillment_status_variant="warning",
+            shipping_status="Aguardando confirmação",
+        )
+
+        payload = account_customer_area_queries.get_order_detail_page_data("3051")
+
+        self.assertFalse(payload["delivery_tracking_visible"])
+
+        response = self.client.get(reverse("accounts:account-order-detail", kwargs={"order_number": "3051"}))
+
+        self.assertNotContains(response, "Preparando seu pedido")
+        self.assertNotContains(response, "Pedido a caminho")
 
     def test_account_overview_uses_retention_messaging_when_persisted_orders_exist(self):
         response = self.client.get(reverse("accounts:account-overview"))

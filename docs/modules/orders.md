@@ -495,3 +495,118 @@ Gerenciar pedidos e histórico de status.
   - pedido criado no checkout e ainda pendente
   - confirmação interna usada nas waves atuais
   - futura confirmação externa por provider/gateway
+
+## Wave FK — Inventory/Stock Operational Readiness Review
+- a revisão confirmou que estoque ainda vive corretamente em `catalog.ProductVariant`.
+- a operação de exceções de estoque, porém, já acontece dentro da fila de `orders`.
+
+### Módulos responsáveis
+- `catalog`
+  - dono de `ProductVariant.stock`
+  - dono de `ProductVariant.reserved_stock`
+  - dono dos flags `track_inventory` e `allow_backorder`
+- `orders`
+  - dono da visibilidade operacional das exceções ligadas ao pedido
+  - dono dos marcadores de revisão, resolução e responsável
+
+### Decisão prática
+- não criar módulo `inventory` separado nesta fase.
+- reforçar a operação no boundary atual:
+  - CLI tenant-scoped
+  - métricas Prometheus
+  - runbook operacional
+
+## Wave FL — Inventory Exception CLI Execution
+- foi criado comando operacional para listar exceções de estoque por tenant.
+
+### Escopo executado
+- `list_inventory_exceptions`
+- filtros:
+  - `--tenant-id`
+  - `--quick-filter`
+  - `--limit`
+- quick filters suportados:
+  - `active`
+  - `review`
+  - `resolved`
+  - `high_priority`
+  - `medium_priority`
+  - `low_priority`
+  - `unassigned`
+  - `assigned`
+- testes de exceção ativa e exceção atribuída
+
+## Wave FM — Inventory Exception Metrics Execution
+- foi criado exporter protegido para métricas de exceções de estoque.
+
+### Escopo executado
+- endpoint:
+  - `/ops/orders/metrics/inventory-exceptions/`
+- tokens aceitos:
+  - `INVENTORY_OBSERVABILITY_TOKEN`
+  - fallback `ORDERS_OBSERVABILITY_TOKEN`
+- métricas:
+  - `hubx_inventory_exception_total{tenant_id,state}`
+  - `hubx_inventory_exception_priority_total{tenant_id,priority}`
+  - `hubx_inventory_exception_owner_total{tenant_id,owner_state}`
+  - `hubx_inventory_exception_aging_total{tenant_id,aging}`
+- testes de:
+  - export Prometheus
+  - token válido
+  - token inválido
+  - endpoint oculto sem token configurado
+
+## Wave FN — Inventory Observability Pack Execution
+- foram criados artefatos de observability para exceções de estoque.
+
+### Escopo executado
+- `infra/observability/prometheus/inventory-scrape.example.yml`
+- `infra/observability/prometheus/inventory-alert-rules.yml`
+- `infra/observability/grafana/inventory-exceptions-dashboard.json`
+- `infra/observability/alertmanager/inventory-routing.example.yml`
+- `docs/modules/inventory-operational-runbook.md`
+- atualização do índice operacional
+
+### Alertas iniciais
+- `HubxInventoryActiveExceptionsPresent`
+- `HubxInventoryHighPriorityExceptionsPresent`
+- `HubxInventoryUnassignedExceptionsPresent`
+
+### Próxima macro-abordagem recomendada
+- **Inventory Operational Wrap-Up Review**
+- motivo:
+  - triagem, métricas, alertas, dashboard e runbook já cobrem o pacote operacional mínimo desta fase.
+
+## Wave FO — Inventory Operational Wrap-Up Review
+- o pacote operacional de estoque/inventory pode ser considerado completo para esta fase.
+- a abordagem reforçou operação e observability sem mover a fronteira de domínio.
+
+### O que ficou pronto
+- CLI tenant-scoped:
+  - `list_inventory_exceptions`
+- endpoint Prometheus:
+  - `/ops/orders/metrics/inventory-exceptions/`
+- métricas:
+  - `hubx_inventory_exception_total`
+  - `hubx_inventory_exception_priority_total`
+  - `hubx_inventory_exception_owner_total`
+  - `hubx_inventory_exception_aging_total`
+- observability:
+  - scrape example
+  - alert rules
+  - dashboard Grafana
+  - routing Alertmanager
+- runbook:
+  - `docs/modules/inventory-operational-runbook.md`
+
+### O que fica fora de escopo
+- módulo `inventory` dedicado
+- ledger de movimentos de estoque
+- reconciliação contábil de estoque
+- SLA engine para aging
+- workflow complexo de assignee
+
+### Próxima macro-abordagem recomendada
+- **Catalog Operational Readiness Review**
+- motivo:
+  - estoque em variante está mais observável; o próximo domínio natural é revisar operação de catálogo/produtos, especialmente produtos inativos, variantes e qualidade de publicação.

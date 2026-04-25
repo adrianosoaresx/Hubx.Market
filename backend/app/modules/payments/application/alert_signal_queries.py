@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol
 
+from django.db.models import Count
+
 from app.modules.payments.infrastructure.alert_signal_metrics import list_payment_alert_signal_snapshots
 
 
@@ -25,10 +27,24 @@ class PaymentAlertSignalQueryRepository(Protocol):
     def list_snapshots(self) -> list[dict[str, object]]:
         ...
 
+    def list_attempt_status_counts(self) -> list[dict[str, object]]:
+        ...
+
 
 class InMemoryPaymentAlertSignalQueryRepository:
     def list_snapshots(self) -> list[dict[str, object]]:
         return list_payment_alert_signal_snapshots()
+
+    def list_attempt_status_counts(self) -> list[dict[str, object]]:
+        try:
+            from app.modules.payments.models import PaymentAttempt
+        except Exception:
+            return []
+        return list(
+            PaymentAttempt.objects.values("tenant_id", "status")
+            .annotate(count=Count("id"))
+            .order_by("tenant_id", "status")
+        )
 
 
 @dataclass
@@ -59,10 +75,21 @@ class PaymentAlertSignalQueryService:
                 f'hubx_payments_alert_signal_last_timestamp_seconds{{signal_code="{signal_code}"}} {last_at:.6f}'
             )
 
+        lines.extend(
+            [
+                "# HELP hubx_payments_attempt_total Total de tentativas de pagamento por tenant e status.",
+                "# TYPE hubx_payments_attempt_total gauge",
+            ]
+        )
+        for row in self.repository.list_attempt_status_counts():
+            tenant_id = _string(row.get("tenant_id"))
+            status = _string(row.get("status"))
+            count = int(row.get("count", 0) or 0)
+            lines.append(f'hubx_payments_attempt_total{{tenant_id="{tenant_id}",status="{status}"}} {count}')
+
         return "\n".join(lines) + "\n"
 
 
 payment_alert_signal_queries = PaymentAlertSignalQueryService(
     repository=InMemoryPaymentAlertSignalQueryRepository(),
 )
-

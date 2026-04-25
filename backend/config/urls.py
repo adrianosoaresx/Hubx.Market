@@ -10,9 +10,13 @@ urlpatterns = [
     path("catalog/", include(("app.modules.catalog.interfaces.storefront_urls", "storefront"), namespace="storefront")),
     path("checkout/", include(("app.modules.checkout.interfaces.urls", "checkout"), namespace="checkout")),
     path("payments/", include(("app.modules.payments.interfaces.urls", "payments"), namespace="payments")),
+    path("notifications/", include(("app.modules.notifications.interfaces.urls", "notifications"), namespace="notifications")),
     path("ops/catalog/", include(("app.modules.catalog.interfaces.urls", "catalog"), namespace="catalog")),
+    path("ops/checkout/", include(("app.modules.checkout.interfaces.ops_urls", "checkout_ops"), namespace="checkout_ops")),
     path("ops/customers/", include(("app.modules.customers.interfaces.urls", "customers"), namespace="customers")),
+    path("ops/owners/", include(("app.modules.accounts.interfaces.owner_urls", "owners"), namespace="owners")),
     path("ops/orders/", include(("app.modules.orders.interfaces.urls", "orders"), namespace="orders")),
+    path("ops/shipping/", include(("app.modules.shipping.interfaces.urls", "shipping"), namespace="shipping")),
 ]
 
 if settings.DEBUG:

@@ -1,0 +1,108 @@
+{
+  "title": "Hubx Checkout — Session Issues",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "1m",
+  "tags": ["hubx", "checkout", "sessions"],
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Checkout session issues by tenant",
+      "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum by (tenant_id, issue) (hubx_checkout_session_issue_total)",
+          "legendFormat": "{{tenant_id}} · {{issue}}"
+        }
+      ]
+    },
+    {
+      "type": "bargauge",
+      "title": "Critical checkout drift",
+      "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum by (tenant_id, issue) (hubx_checkout_session_issue_total{issue=~\"completed_order_missing|total_mismatch\"})",
+          "legendFormat": "{{tenant_id}} · {{issue}}"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Open stale sessions",
+      "gridPos": {"x": 0, "y": 8, "w": 8, "h": 6},
+      "targets": [
+        {
+          "expr": "sum(hubx_checkout_session_issue_total{issue=\"open_stale\"})",
+          "legendFormat": "open_stale"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Completed order missing",
+      "gridPos": {"x": 8, "y": 8, "w": 8, "h": 6},
+      "targets": [
+        {
+          "expr": "sum(hubx_checkout_session_issue_total{issue=\"completed_order_missing\"})",
+          "legendFormat": "completed_order_missing"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Total mismatch",
+      "gridPos": {"x": 16, "y": 8, "w": 8, "h": 6},
+      "targets": [
+        {
+          "expr": "sum(hubx_checkout_session_issue_total{issue=\"total_mismatch\"})",
+          "legendFormat": "total_mismatch"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Checkout sessions by status",
+      "gridPos": {"x": 0, "y": 14, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum by (tenant_id, status) (hubx_checkout_session_status_total)",
+          "legendFormat": "{{tenant_id}} · {{status}}"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Expired sessions retained",
+      "gridPos": {"x": 12, "y": 14, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum(hubx_checkout_session_status_total{status=\"expired\"})",
+          "legendFormat": "expired"
+        }
+      ]
+    },
+    {
+      "type": "bargauge",
+      "title": "Recovery result taxonomy by family",
+      "gridPos": {"x": 0, "y": 22, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum by (family, recovery_action) (hubx_checkout_recovery_result_info)",
+          "legendFormat": "{{family}} · {{recovery_action}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Recovery events by tenant",
+      "gridPos": {"x": 12, "y": 22, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum by (tenant_id, family, recovery_action) (hubx_checkout_recovery_event_total)",
+          "legendFormat": "{{tenant_id}} · {{family}} · {{recovery_action}}"
+        }
+      ]
+    }
+  ]
+}
