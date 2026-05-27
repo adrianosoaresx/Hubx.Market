@@ -1,0 +1,55 @@
+{% extends "layouts/account_shell.html" %}
+
+{% block title %}{{ page_title|default:"Avaliar produto" }}{% endblock %}
+
+{% block content %}
+<section class="space-y-6">
+    {% with eyebrow=page_eyebrow|default:"Minha compra" title=page_title|default:"Avaliar produto" description=page_description|default:"Compartilhe sua experiência com este produto." %}
+        {% include "shared/components/layout/page_header.html" %}
+    {% endwith %}
+
+    <form method="post" action="{{ form_action }}" class="space-y-6">
+        {% csrf_token %}
+
+        <section class="ds-surface space-y-6 p-6">
+            <div class="space-y-1">
+                <h2 class="text-base font-semibold text-[var(--color-text-primary)]">Sua experiência</h2>
+                <p class="text-sm text-[var(--color-text-secondary)]">Sua avaliação será analisada antes de aparecer no produto.</p>
+            </div>
+
+            <div class="grid gap-6 md:grid-cols-2">
+                {% with name="rating" label="Nota" value=rating input_type="number" placeholder="5" required=True help_text="Escolha uma nota entre 1 e 5." %}
+                    {% include "shared/components/forms/input.html" %}
+                {% endwith %}
+
+                {% with name="title" label="Título" value=title placeholder="Gostei muito do produto" %}
+                    {% include "shared/components/forms/input.html" %}
+                {% endwith %}
+            </div>
+
+            {% with name="body" label="Comentário" value=body placeholder="Conte como foi receber e usar este produto." rows="5" help_text="Opcional, mas ajuda outros clientes a entenderem sua experiência." %}
+                {% include "shared/components/forms/textarea.html" %}
+            {% endwith %}
+        </section>
+
+        <section class="ds-surface space-y-6 p-6">
+            <div class="space-y-1">
+                <h2 class="text-base font-semibold text-[var(--color-text-primary)]">Nome público</h2>
+                <p class="text-sm text-[var(--color-text-secondary)]">Você pode enviar sem exibir seu nome publicamente.</p>
+            </div>
+
+            {% with name="author_name" label="Nome de exibição" value=author_name placeholder="Cliente" help_text="Só será usado publicamente se você autorizar abaixo." %}
+                {% include "shared/components/forms/input.html" %}
+            {% endwith %}
+
+            {% with name="consent_display_name" label="Autorizo exibir meu nome nesta avaliação" description="Se desmarcado, a avaliação aparecerá como Cliente após aprovação." checked=consent_display_name %}
+                {% include "shared/components/forms/checkbox.html" %}
+            {% endwith %}
+        </section>
+
+        {% with primary_label="Enviar avaliação" secondary_label="Cancelar" secondary_href=cancel_href %}
+            {% include "shared/components/forms/form_actions.html" %}
+        {% endwith %}
+    </form>
+</section>
+{% endblock %}

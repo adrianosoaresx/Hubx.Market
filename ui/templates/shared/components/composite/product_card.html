@@ -51,6 +51,9 @@
             {% if availability_note %}
                 <p class="text-sm text-[var(--color-text-secondary)]">{{ availability_note }}</p>
             {% endif %}
+            {% if review_summary %}
+                <p class="text-sm font-medium text-[var(--color-text-primary)]">{{ review_summary }}</p>
+            {% endif %}
             {% if click_helper %}
                 <p class="text-sm text-[var(--color-text-secondary)]">{{ click_helper }}</p>
             {% endif %}

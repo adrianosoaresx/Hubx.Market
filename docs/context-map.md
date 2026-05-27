@@ -165,14 +165,18 @@ marketing
 - avaliações de produtos
 
 ### Newsletter
-- inscrição em newsletter
+- inscrição em newsletter tenant-scoped
+- opt-in público com consentimento
+- base inicial para retenção, sem campanhas automáticas no primeiro corte
 
 ### Notifications
 - notificações do sistema
 - emails
 
 ### Pages
-- páginas institucionais
+- páginas institucionais tenant-owned
+- SEO básico do storefront
+- publicação controlada por status
 
 ### Marketing
 - campanhas
@@ -209,7 +213,8 @@ Delivery
 ```
 Platform
    ├─ Tenants
-   └─ Accounts
+   ├─ Accounts
+   └─ Audit
 
 Commerce
    ├─ Catalog

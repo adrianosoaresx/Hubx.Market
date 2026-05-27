@@ -281,6 +281,7 @@ class DjangoOrmOrderRepository:
         discount = self._money_value(getattr(order, "discount_total", None), allow_empty=True)
         total = self._money_value(getattr(order, "total", None))
         installments = self._string_value(getattr(order, "installments_summary", None), default="")
+        coupon_visibility = self._coupon_visibility(order)
         items = self._serialize_items(order)
         inventory_visibility_content = self._build_inventory_visibility_content(order=order, items=items)
         inventory_exception_content = self._build_inventory_exception_content(order=order, items=items)
@@ -332,6 +333,10 @@ class DjangoOrmOrderRepository:
             "subtotal": subtotal,
             "shipping": shipping,
             "discount": discount,
+            "coupon_visible": coupon_visibility["visible"],
+            "coupon_code": coupon_visibility["code"],
+            "coupon_title": coupon_visibility["title"],
+            "coupon_description": coupon_visibility["description"],
             "installments": installments,
             "total": total,
             "inventory_visibility_content": inventory_visibility_content,
@@ -400,6 +405,36 @@ class DjangoOrmOrderRepository:
             return str(value)
         prefix = "-R$ " if allow_empty and numeric > 0 else "R$ "
         return f"{prefix}{numeric:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+    def _coupon_visibility(self, order: object) -> dict[str, object]:
+        code = str(getattr(order, "coupon_code", "") or "").strip().upper()
+        snapshot = getattr(order, "promotion_snapshot", {}) or {}
+        discount_total = self._safe_decimal(getattr(order, "discount_total", None))
+        if not code or not isinstance(snapshot, dict) or not snapshot or discount_total <= 0:
+            return {
+                "visible": False,
+                "code": "",
+                "title": "",
+                "description": "",
+            }
+        source = str(snapshot.get("source") or "snapshot").strip()
+        validation_result = str(snapshot.get("validation_result") or "snapshot-preserved").strip()
+        discount = self._money_value(discount_total, allow_empty=True)
+        return {
+            "visible": True,
+            "code": code,
+            "title": f"Cupom aplicado: {code}",
+            "description": f"{discount} · origem: {source} · validação: {validation_result}",
+        }
+
+    @staticmethod
+    def _safe_decimal(value: object) -> Decimal:
+        if isinstance(value, Decimal):
+            return value
+        try:
+            return Decimal(str(value or "0"))
+        except Exception:
+            return Decimal("0")
 
     @staticmethod
     def _format_timestamp(value: object) -> str:

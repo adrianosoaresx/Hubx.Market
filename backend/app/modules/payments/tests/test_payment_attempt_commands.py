@@ -443,3 +443,61 @@ class PaymentAttemptCommandTests(TestCase):
         attempt.refresh_from_db()
         self.assertEqual(attempt.metadata["provider_intent_failure"]["reason_code"], "pagarme-network-unavailable")
         self.assertEqual(attempt.metadata["timeline"][-1]["code"], "provider_intent_failed")
+
+    @override_settings(
+        PAYMENTS_REAL_PROVIDER_ROLLOUT_MODE="live",
+        PAYMENTS_REAL_PROVIDER_LIVE_GLOBAL_ENABLED=False,
+        PAYMENTS_REAL_PROVIDER_FALLBACK_MODE="block",
+    )
+    def test_provider_adapter_blocks_live_global_without_explicit_flag(self):
+        _result, attempt = payment_attempt_commands.bootstrap_pending_attempt(
+            tenant_id=self.tenant.id,
+            order_number=self.order.number,
+            payment_method_code="pix",
+            provider_code="pagarme",
+            provider_label="Pagar.me",
+        )
+
+        result, response = provider_adapter_commands.create_external_intent(
+            tenant_id=self.tenant.id,
+            attempt_key=str(attempt.attempt_key),
+        )
+
+        attempt.refresh_from_db()
+        self.assertEqual(result, "provider-intent-unavailable")
+        self.assertIsNone(response)
+        self.assertEqual(attempt.metadata["provider_rollout"]["rollout_mode"], "live")
+        self.assertEqual(attempt.metadata["provider_rollout"]["reason_code"], "live-global-not-enabled")
+
+    @override_settings(
+        PAYMENTS_REAL_PROVIDER_ROLLOUT_MODE="live",
+        PAYMENTS_REAL_PROVIDER_LIVE_GLOBAL_ENABLED=True,
+        PAYMENTS_REAL_PROVIDER_FALLBACK_MODE="block",
+    )
+    @patch("app.modules.payments.infrastructure.provider_adapters.urlopen")
+    def test_provider_adapter_allows_live_global_with_explicit_flag(self, mocked_urlopen):
+        _result, attempt = payment_attempt_commands.bootstrap_pending_attempt(
+            tenant_id=self.tenant.id,
+            order_number=self.order.number,
+            payment_method_code="pix",
+            provider_code="pagarme",
+            provider_label="Pagar.me",
+        )
+        mocked_response = mocked_urlopen.return_value.__enter__.return_value
+        mocked_response.read.return_value = json.dumps(
+            {
+                "id": "plink_live_123",
+                "url": "https://checkout.pagar.me/link/plink_live_123",
+            }
+        ).encode("utf-8")
+
+        result, response = provider_adapter_commands.create_external_intent(
+            tenant_id=self.tenant.id,
+            attempt_key=str(attempt.attempt_key),
+        )
+
+        attempt.refresh_from_db()
+        self.assertEqual(result, "provider-intent-ready")
+        self.assertIsNotNone(response)
+        self.assertEqual(attempt.metadata["provider_rollout"]["reason_code"], "live-global-enabled")
+        self.assertTrue(attempt.metadata["provider_rollout"]["real_provider_active"])

@@ -610,3 +610,35 @@ Gerenciar pedidos e histórico de status.
 - **Catalog Operational Readiness Review**
 - motivo:
   - estoque em variante está mais observável; o próximo domínio natural é revisar operação de catálogo/produtos, especialmente produtos inativos, variantes e qualidade de publicação.
+
+## Cart Foundation Wave 20 — Coupon Order Snapshot Review
+- `Order` já guarda `discount_total`.
+- a próxima execução deve adicionar snapshot promocional auditável:
+  - `coupon_code`
+  - `promotion_snapshot`
+- o snapshot deve ser copiado de `CheckoutSession` durante `checkout_completion_commands`.
+- `orders` não deve recalcular promoção nem consultar `coupons`.
+- mudanças futuras no cupom não devem alterar pedidos já criados.
+
+## Cart Foundation Wave 21 — Coupon Order Snapshot Execution
+- `Order` passa a armazenar:
+  - `coupon_code`
+  - `promotion_snapshot`
+- `checkout_completion_commands` copia o snapshot promocional da sessão.
+- pedidos sem cupom aplicado mantêm snapshot vazio.
+- `orders` segue sem recalcular cupom.
+
+## Cart Foundation Wave 22 — Coupon Admin Visibility Review
+- admin orders deve exibir cupom aplicado como snapshot de pedido.
+- origem: `Order.coupon_code`, `Order.discount_total`, `Order.promotion_snapshot`.
+- exibir apenas quando houver cupom e desconto real.
+- `orders` não deve consultar `coupons` para explicar pedidos já criados.
+- notificações ficam fora desta wave.
+
+## Cart Foundation Wave 23 — Coupon Admin Visibility Execution
+- Admin Orders agora expõe o cupom aplicado no detalhe do pedido como snapshot operacional.
+- origem dos dados: `Order.coupon_code`, `Order.discount_total`, `Order.promotion_snapshot`.
+- visibilidade: somente quando existe cupom, desconto real e snapshot promocional não vazio.
+- copy operacional: “Cupom aplicado: CODE” e “-R$ X,XX · origem: cart · validação: coupon-valid”.
+- fronteira preservada: `orders` não chama `coupons` e não recalcula desconto.
+- essa superfície ajuda atendimento/auditoria a entender por que o total final do pedido contém desconto, mantendo o pedido como fonte histórica.

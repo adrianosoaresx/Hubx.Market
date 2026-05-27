@@ -15,6 +15,88 @@ Gerenciar autenticação e contas administrativas.
 
 ## Regras de negócio
 - Owner e Customer são contextos diferentes
+- permissões administrativas usam `OwnerUser.role` como contrato inicial
+- ausência de contexto de role ainda preserva compatibilidade legada das surfaces admin atuais
+
+## Permissões administrativas iniciais
+
+O primeiro gate de governança fica em `accounts.application.admin_permissions`.
+
+Papéis suportados:
+
+- `owner` e `admin`: podem executar ações sensíveis iniciais;
+- `marketing`: pode criar cupons, gerenciar páginas e moderar reviews;
+- `content_editor`: pode gerenciar páginas e moderar reviews;
+- `support`: pode moderar reviews;
+- `viewer`: não pode executar ações mutáveis sensíveis.
+
+Permissões iniciais:
+
+- `coupons.manage`;
+- `owners.manage`;
+- `pages.manage`;
+- `reviews.moderate`.
+
+Contrato:
+
+- commands sensíveis recebem `actor_role` opcional;
+- quando `actor_role` existe, o gate bloqueia papéis sem permissão;
+- quando `actor_role` não existe, o fluxo legado continua permitido até existir autenticação/admin middleware definitivo;
+- views devem preferir `request.owner_user` e só manter fallback por e-mail enquanto a migração de surfaces `/ops/` estiver em andamento;
+- views não decidem permissão localmente.
+
+## Owner context middleware
+
+`accounts.interfaces.middleware.OwnerContextMiddleware` injeta `request.owner_user` nas surfaces `/ops/`.
+
+Contrato:
+
+- roda depois de `TenantSubdomainMiddleware` e `AuthenticationMiddleware`;
+- só resolve contexto em `/ops` e `/ops/...`;
+- exige tenant resolvido e usuário Django autenticado;
+- busca `OwnerUser` ativo por `tenant + user.email`;
+- mantém `request.owner_user = None` quando não há match;
+- não bloqueia a request sozinho.
+
+Esse middleware reduz duplicação nas views, mas o enforcement continua nos commands via `actor_role`.
+
+## Ops authentication gate
+
+`accounts.interfaces.middleware.OpsAuthenticationGateMiddleware` fornece o primeiro gate HTTP para `/ops/`.
+
+Contrato:
+
+- é ativado por `HUBX_OPS_AUTH_GATE_ENFORCED=1`;
+- quando ativo, usuário anônimo em `/ops/` é redirecionado para `/accounts/login/?next=...`;
+- usuário autenticado sem `request.owner_user` ativo recebe `403`;
+- usuário autenticado com `OwnerUser` ativo no tenant segue para a view;
+- o gate depende de `OwnerContextMiddleware`, por isso roda depois dele no pipeline.
+
+Status de rollout:
+
+- implementado e coberto por testes;
+- desligado por padrão até existir login owner/admin real e sessão operacional pronta;
+- pronto para ativação por ambiente quando `/accounts/login/` deixar de ser apenas surface visual.
+
+## Gestão de owners
+
+A surface mínima de gestão fica em `/ops/owners/`.
+
+Escopo atual:
+
+- listar owners por tenant;
+- criar owner;
+- editar e-mail, nome, papel, status ativo e recebimento de notificações;
+- bloquear gestão de owners para papéis sem `owners.manage` quando `actor_role` estiver disponível;
+- registrar `owner.created` e `owner.access_updated` em `AuditLog`.
+
+Fora de escopo atual:
+
+- convite por e-mail;
+- troca de senha/autenticação real;
+- permissões por objeto;
+- remoção física de owner;
+- ativação default obrigatória do gate em todos os ambientes.
 
 ## Integração UI
 - views HTTP devem permanecer finas em `interfaces/`
@@ -2409,3 +2491,1895 @@ Gerenciar autenticação e contas administrativas.
 ## Wave EM — Customer Tracking Link UX Execution
 - quando `tracking_url` existe, o detalhe do pedido exibe CTA `Acompanhar entrega`.
 - o link externo abre em nova aba com `noopener noreferrer`.
+
+## Wave AMO-A — Admin Merchant Operations Review
+- a próxima evolução de produto não deve começar por mais uma micro-otimização de checkout/payments.
+- a lacuna operacional mais transversal é o lojista não ter uma raiz clara em `/ops/` para responder: “onde devo agir agora?”.
+- módulo responsável:
+  - `accounts`, como shell administrativo/owner-facing.
+- módulos consumidos:
+  - `orders`
+  - `catalog`
+  - `customers`
+  - `shipping`
+  - `accounts/owners`
+- decisão:
+  - começar por um cockpit de leitura, sem criar workflow novo e sem escrever dados.
+  - manter cada sinal derivado dos application services já existentes.
+  - preservar o contrato multi-tenant usando `tenant_id` resolvido pela request.
+
+## Wave AMO-B — Merchant Operations Dashboard Execution
+- foi criada a rota `/ops/` como cockpit operacional inicial do lojista.
+- a página consolida:
+  - pedidos pendentes
+  - exceções de estoque abertas/em revisão
+  - produtos ativos e estoque sensível
+  - clientes em atenção
+  - entregas sem rastreio operacional
+  - owners inativos ou com notificações pausadas
+- o dashboard apenas aponta para superfícies existentes:
+  - `/ops/orders/`
+  - `/ops/catalog/products/`
+  - `/ops/customers/`
+  - `/ops/shipping/`
+  - `/ops/owners/`
+- nenhum evento novo foi introduzido nesta wave.
+- nenhum dado customer/store-owned é lido sem `tenant_id` quando o tenant está resolvido.
+
+## Wave AMO-C — Admin Dashboard Template Hardening
+- ao ativar o template `admin_dashboard_page`, foi identificado que alguns includes estavam escritos em formato multilinha não renderizado pelo Django Template Language.
+
+## Coupon Admin Lite Review
+- a próxima surface operacional de cupons deve seguir o padrão `/ops/`.
+- `accounts` continua como shell/cockpit, mas a listagem/criação pertence ao módulo `coupons`.
+- a rota esperada para navegação operacional é `/ops/coupons/`.
+- o dashboard pode adicionar link para cupons quando a surface existir, sem incorporar regra promocional em `accounts`.
+
+## Coupon Admin Lite Execution
+- o cockpit `/ops/` passou a apontar para `/ops/coupons/`.
+- `accounts` apenas fornece navegação; listagem e criação ficam no módulo `coupons`.
+
+## Cart Foundation Wave 22 — Coupon Customer Visibility Review
+- a área do cliente deve mostrar cupom aplicado no detalhe do pedido.
+- origem dos dados: snapshot em `Order`.
+- regra: exibir apenas quando `coupon_code` existe, `discount_total > 0` e `promotion_snapshot` não está vazio.
+- não consultar `coupons` a partir de `accounts`.
+- o template e o componente de tabela foram ajustados para renderizar os includes reais.
+- esse ajuste transforma a página de showcase em superfície reutilizável para dashboards operacionais reais.
+
+## Cart Foundation Wave 23 — Coupon Customer Visibility Execution
+- a área do cliente agora expõe um bloco derivado de cupom aplicado no detalhe do pedido.
+- origem dos dados: `Order.coupon_code`, `Order.discount_total`, `Order.promotion_snapshot`.
+- visibilidade: somente quando existe cupom, desconto real e snapshot promocional não vazio.
+- copy: “Cupom aplicado: CODE” e “Desconto preservado no pedido: -R$ X,XX.”.
+- fronteira preservada: `accounts` não chama `coupons` e não recalcula desconto.
+- essa superfície é tenant-scoped porque reaproveita a resolução de pedido já filtrada pelo tenant/request.
+
+## Platform Owner Login Execution Review
+- `/accounts/login/` passa a autenticar owners/admins reais para superfícies `/ops/`.
+- o login usa autenticação Django e exige `OwnerUser` ativo no tenant resolvido por subdomínio.
+- o identificador aceito é e-mail ou username do `User`; o vínculo administrativo continua sendo `OwnerUser.email`.
+- sucesso cria sessão Django e respeita `next` apenas quando o destino é seguro para o mesmo host.
+- falha retorna mensagem genérica para evitar enumeração de usuário, owner ou tenant.
+- `/accounts/logout/` encerra a sessão e registra saída quando há owner ativo tenant-scoped.
+
+### Boundary
+- `accounts.application.owner_login_commands` contém a regra de autenticação owner.
+- `accounts.interfaces.views.LoginView` permanece adaptador HTTP fino.
+- storefront/customer login continua fora desta execução.
+- nenhuma regra de domínio de catálogo, pedido, pagamento ou customer é alterada.
+
+### Auditoria
+- `owner.login` registra entrada owner/admin.
+- `owner.logout` registra saída quando a sessão está vinculada a owner ativo do tenant.
+
+## Platform Ops Gate Activation Runbook Review
+- a ativação de `HUBX_OPS_AUTH_GATE_ENFORCED=1` agora possui um comando de readiness.
+- o comando valida tenants ativos antes do rollout do gate `/ops/`.
+- a checagem considera bloqueante:
+  - tenant ativo sem owner ativo;
+  - owner ativo sem `User` Django correspondente;
+  - `User` Django inativo;
+  - e-mail de owner com múltiplos `User` Django.
+
+### Comando
+- executar `python manage.py ops_auth_gate_readiness` para relatório informativo.
+- executar `python manage.py ops_auth_gate_readiness --fail-on-blockers` em CI/preflight.
+- usar `--tenant-id=<id>` para validar um tenant específico antes de ativação gradual.
+
+### Rollout
+1. criar/validar pelo menos um `OwnerUser` ativo por tenant operacional;
+2. garantir `User` Django ativo com o mesmo e-mail;
+3. executar o comando de readiness sem blockers;
+4. ativar `HUBX_OPS_AUTH_GATE_ENFORCED=1`;
+5. testar `/accounts/login/?next=/ops/` e acesso a `/ops/`;
+6. em rollback, retornar `HUBX_OPS_AUTH_GATE_ENFORCED=0`.
+
+## Platform Owner Invitation & Password Recovery Review
+- owners administrativos agora têm um caminho mínimo de convite e recuperação de senha.
+- a action `/ops/owners/<id>/actions/invite/` cria ou reaproveita `User` Django ativo para o `OwnerUser`.
+- o convite gera token de reset usando o mecanismo padrão do Django.
+- `/accounts/forgot-password/` solicita reset owner/admin de forma genérica para evitar enumeração.
+- `/accounts/reset-password/<uidb64>/<token>/` conclui a redefinição quando o token é válido e o owner pertence ao tenant atual.
+
+### Segurança e tenant
+- convite exige permissão `owners.manage`.
+- reset exige `OwnerUser` ativo no tenant resolvido por subdomínio.
+- e-mail duplicado em `User` bloqueia convite.
+- usuário Django inativo bloqueia convite e reset.
+- resposta de forgot password não revela se owner/user existe.
+
+### Auditoria
+- `owner.invited` registra geração de convite.
+- `owner.password_reset_requested` registra solicitação válida de reset.
+- `owner.password_reset_completed` registra conclusão de redefinição.
+
+### Fora de escopo
+- envio de e-mail real.
+- template transacional de convite.
+- expiração customizada de token além do padrão Django.
+- MFA/SSO.
+
+## Platform Owner Email Delivery Review
+- convite e reset owner/admin agora registram `EmailLog` planejado via módulo `notifications`.
+- `accounts` continua dono do fluxo de acesso, token e auditoria de owner.
+- `notifications` passa a ser dono da mensagem e do pipeline de entrega.
+- o link de reset é colocado na descrição do `EmailLog`, evitando criar CTA customizado antes da decisão de URL pública/canonical.
+
+### Integração
+- `owner.invited` cria log `owner.access.invite`.
+- `owner.password_reset_requested` cria log `owner.access.password_reset`.
+- os logs permanecem `planned` e seguem o processamento existente:
+  - `process_email_logs`;
+  - Celery `notifications.process_email_log`;
+  - dry-run por `NOTIFICATIONS_EMAIL_DRY_RUN`.
+
+### Boundary
+- `accounts.application.owner_access_recovery_commands` apenas chama `notifications.application.owner_access_email_commands`.
+- `accounts` não usa `send_mail`, SMTP ou provider.
+- `notifications` não decide permissão owner nem valida tenant de reset.
+
+## Platform Owner Access Closure Review
+- o pacote técnico de owner access está completo para ativação controlada por ambiente.
+- o gate `/ops/`, login/logout, owner context, readiness, convite, reset e delivery via `EmailLog` estão integrados.
+- a decisão de produção depende de dados operacionais por tenant, não de nova feature estrutural.
+
+### Status técnico
+- **Go** para staging com tenants preparados.
+- **No-Go** para ambientes/tenants sem `OwnerUser` ativo e `User` Django correspondente.
+
+### Checklist antes de ativar `HUBX_OPS_AUTH_GATE_ENFORCED=1`
+1. criar pelo menos um `OwnerUser` ativo por tenant operacional;
+2. gerar convite em `/ops/owners/` ou criar `User` Django correspondente;
+3. executar `python manage.py ops_auth_gate_readiness --fail-on-blockers`;
+4. confirmar que `EmailLog` de convite/reset foi processado ou entregue;
+5. validar login real em `/accounts/login/?next=/ops/`;
+6. ativar o gate e manter rollback com `HUBX_OPS_AUTH_GATE_ENFORCED=0`.
+
+### Riscos restantes
+- envio real depende de configuração `DEFAULT_FROM_EMAIL` e `NOTIFICATIONS_EMAIL_DRY_RUN=0`.
+- não há MFA/SSO.
+- não há tela específica para reenviar/processar convite individual; operação usa pipeline de notifications.
+- tenants sem owner ativo continuam bloqueando readiness.
+
+## Platform Initial Owner Provisioning Review
+- existe um comando operacional para provisionar o primeiro owner/user administrativo de um tenant.
+- o comando é tenant-scoped, idempotente e auditável.
+- ele não cria cadastro público nem bypass permanente de autenticação.
+
+### Comando
+- dry-run:
+  - `python manage.py provision_initial_owner --tenant-id=<tenant_id> --email=<owner@email> --dry-run`
+- aplicação:
+  - `python manage.py provision_initial_owner --tenant-id=<tenant_id> --email=<owner@email> --full-name="Nome" --role=owner`
+- validação posterior:
+  - `python manage.py ops_auth_gate_readiness --tenant-id=<tenant_id> --fail-on-blockers`
+
+### Regras
+- tenant deve estar ativo.
+- e-mail deve ser válido.
+- role inicial aceita apenas `owner` ou `admin`.
+- se `OwnerUser` já existir, ele é reativado e normalizado para readiness quando seguro.
+- se `User` Django não existir, é criado com senha inutilizável para exigir convite/reset.
+- se houver múltiplos `User` Django com o mesmo e-mail, o comando bloqueia.
+- se `User` Django existente estiver inativo, o comando bloqueia.
+
+### Auditoria
+- registra `owner.initial_provisioned` em `AuditLog`.
+- metadata inclui se owner/user foram criados e o `user_id`.
+
+### Fluxo recomendado
+1. executar dry-run;
+2. aplicar provisionamento;
+3. gerar convite/reset;
+4. processar `EmailLog` se necessário;
+5. rodar readiness;
+6. ativar gate apenas se readiness passar.
+
+## Platform Ops Gate Staging Activation Review
+- existe um preflight operacional para validar ativação do gate `/ops/` em staging.
+- o preflight combina:
+  - readiness de owner/user por tenant;
+  - estado atual de `HUBX_OPS_AUTH_GATE_ENFORCED`;
+  - readiness opcional do provider de e-mail.
+
+### Comando
+- antes de ativar:
+  - `python manage.py ops_gate_activation_preflight --tenant-id=<tenant_id> --expect-gate=disabled --fail-on-blockers`
+- se staging exigir envio real de convite/reset:
+  - `python manage.py ops_gate_activation_preflight --tenant-id=<tenant_id> --expect-gate=disabled --require-email-delivery --fail-on-blockers`
+- depois de ativar:
+  - `python manage.py ops_gate_activation_preflight --tenant-id=<tenant_id> --expect-gate=enabled --fail-on-blockers`
+
+### Runbook staging
+1. provisionar owner inicial com `provision_initial_owner`;
+2. gerar convite/reset para o owner;
+3. processar logs de e-mail se o ambiente não estiver em dry-run;
+4. validar `ops_gate_activation_preflight --expect-gate=disabled`;
+5. configurar `HUBX_OPS_AUTH_GATE_ENFORCED=1`;
+6. reiniciar/redeployar o ambiente;
+7. validar `ops_gate_activation_preflight --expect-gate=enabled`;
+8. testar login em `/accounts/login/?next=/ops/`;
+9. testar acesso negado para usuário autenticado sem owner;
+10. rollback: retornar `HUBX_OPS_AUTH_GATE_ENFORCED=0`.
+
+### Critério de Go/No-Go
+- Go: preflight sem blockers antes e depois da ativação.
+- No-Go: readiness bloqueado, gate em estado inesperado ou provider de e-mail não pronto quando entrega real for exigida.
+
+## Platform Ops Gate Production Rollout Review
+- produção passa a ter comando de evidência Go/No-Go para rollout do gate `/ops/`.
+- o comando não altera env, não executa deploy e não ativa o gate.
+- ele consolida:
+  - estado esperado do gate;
+  - readiness owner/user;
+  - provider de e-mail;
+  - saúde de `EmailLog` por tenant.
+
+### Comando
+- evidência padrão pós-switch:
+  - `python manage.py ops_gate_production_rollout --tenant-id=<tenant_id> --fail-on-blockers`
+- evidência pré-switch:
+  - `python manage.py ops_gate_production_rollout --tenant-id=<tenant_id> --expect-gate=disabled --fail-on-blockers`
+- permitir dry-run de e-mail em rollout técnico:
+  - `python manage.py ops_gate_production_rollout --tenant-id=<tenant_id> --allow-email-dry-run --fail-on-blockers`
+
+### Critérios padrão
+- gate deve estar enabled.
+- owner readiness deve passar.
+- provider de e-mail real deve estar pronto.
+- `EmailLog failed` bloqueia rollout.
+- `EmailLog planned/requested` é informado; pode bloquear com `--block-on-pending-delivery`.
+
+### Runbook produção
+1. escolher tenant e janela de ativação;
+2. provisionar owner inicial, se necessário;
+3. gerar/processar convite ou reset;
+4. rodar evidência pré-switch com `--expect-gate=disabled`;
+5. ativar `HUBX_OPS_AUTH_GATE_ENFORCED=1` no ambiente;
+6. redeploy/restart;
+7. rodar evidência pós-switch padrão;
+8. validar login owner em `/accounts/login/?next=/ops/`;
+9. registrar evidência do comando no change log;
+10. rollback: retornar `HUBX_OPS_AUTH_GATE_ENFORCED=0` e redeploy/restart.
+
+### No-Go
+- tenant sem owner/user ativo;
+- gate em estado diferente do esperado;
+- provider de e-mail não pronto quando exigido;
+- falhas de notification não resolvidas;
+- login owner manual falhando após switch.
+
+## Platform Ops Gate Post-Activation Monitoring Review
+- o acesso owner/admin agora expõe métricas Prometheus específicas.
+- o endpoint fica fora de `/ops/` para não depender do próprio gate monitorado.
+- acesso ao endpoint exige `ACCOUNTS_OBSERVABILITY_TOKEN`.
+
+### Endpoint
+- `/accounts/metrics/owner-access/`
+
+### Métricas
+- `hubx_accounts_owner_access_audit_event_total`
+  - labels: `tenant_id`, `action`
+  - ações monitoradas:
+    - `owner.login_failed`
+    - `owner.login_rate_limited`
+    - `owner.ops_gate_forbidden`
+    - `owner.ops_gate_redirected`
+- `hubx_accounts_owner_access_email_log_total`
+  - labels: `tenant_id`, `intent_key`, `status`
+  - intents:
+    - `owner.access.invite`
+    - `owner.access.password_reset`
+
+### Alertas
+- `HubxAccountsOwnerLoginFailuresHigh`
+- `HubxAccountsOwnerLoginRateLimited`
+- `HubxAccountsOpsGateForbiddenHigh`
+- `HubxAccountsOpsPermissionDenied`
+- `HubxAccountsOpsGateAnonymousRedirectHigh`
+- `HubxAccountsOwnerAccessEmailFailures`
+- `HubxAccountsOwnerAccessEmailBacklog`
+
+### Runbook curto
+1. login failures: verificar owner/user, reset de senha e origem do IP;
+2. 403 no gate: verificar `User.email` e `OwnerUser` ativo no tenant;
+3. redirects anônimos: confirmar se é tráfego esperado pós-switch;
+4. e-mail failed/backlog: usar pipeline de `notifications` e `process_email_logs`;
+5. se o problema bloquear operação, rollback com `HUBX_OPS_AUTH_GATE_ENFORCED=0`.
+
+## Platform Owner Access Security Hardening Review
+- login owner/admin agora possui rate limit leve por tenant + identificador + IP.
+- o bloqueio usa cache Django e não altera `OwnerUser` ou `User`.
+- falhas continuam com mensagem genérica para evitar enumeração.
+- quando bloqueado, o POST de login retorna `429` e header `Retry-After`.
+
+### Configurações
+- `OWNER_LOGIN_RATE_LIMIT_MAX_ATTEMPTS`
+  - padrão: `5`
+- `OWNER_LOGIN_RATE_LIMIT_WINDOW_SECONDS`
+  - padrão: `900`
+- `OWNER_LOGIN_RATE_LIMIT_LOCKOUT_SECONDS`
+  - padrão: `900`
+
+### Auditoria e métricas
+- falhas comuns continuam registrando `owner.login_failed`.
+- bloqueio por rate limit registra `owner.login_rate_limited`.
+- a métrica `hubx_accounts_owner_access_audit_event_total` inclui `owner.login_rate_limited`.
+- alerta: `HubxAccountsOwnerLoginRateLimited`.
+
+### Escopo deliberado
+- sem lockout persistido no banco.
+- sem bloqueio global por tenant.
+- sem captcha.
+- sem MFA/SSO.
+- sem rate limit em customer login.
+
+## Platform Owner Session Policy Review
+- sessões owner/admin agora possuem política explícita aplicada no login.
+- o default é sessão curta, controlada por `OWNER_SESSION_IDLE_SECONDS`.
+- `remember_me` precisa ser marcado explicitamente e usa `OWNER_SESSION_REMEMBER_SECONDS`.
+- o login registra metadados de sessão no `AuditLog owner.login`:
+  - `session_expiry_seconds`;
+  - `session_remembered`.
+- a sessão recebe marcadores internos:
+  - `hubx_owner_session_kind=owner`;
+  - `hubx_owner_session_remembered`;
+  - `hubx_owner_session_expires_at`.
+
+### Configurações
+- `OWNER_SESSION_IDLE_SECONDS`
+  - padrão: `7200`.
+- `OWNER_SESSION_REMEMBER_SECONDS`
+  - padrão: `43200`.
+- baseline global de cookie:
+  - `SESSION_COOKIE_HTTPONLY=True`;
+  - `SESSION_COOKIE_SAMESITE=Lax`;
+  - `SESSION_COOKIE_SECURE` por env;
+  - `CSRF_COOKIE_SECURE` por env.
+
+### Escopo deliberado
+- sem MFA/SSO.
+- sem rotação customizada de sessão além do login Django.
+- sem sessão owner separada da sessão Django.
+- sem revogação centralizada multi-dispositivo.
+- sem idle timeout em middleware próprio além da expiração nativa da sessão.
+
+## Platform Admin RBAC Granularization Review
+- `accounts` continua dono do contrato de roles/permissões administrativas.
+- `accounts.interfaces.admin_rbac` centraliza extração de tenant, role owner/admin e decisão de permissão para surfaces `/ops/`.
+- views de módulos operacionais não devem resolver role manualmente por e-mail.
+- actions visuais agora respeitam permissões:
+  - owners: `owners.manage`;
+  - coupons: `coupons.manage`;
+  - pages: `pages.manage`;
+  - reviews: `reviews.moderate`.
+- writes sensíveis continuam bloqueados nos command services quando a role não possui permissão.
+
+### Roles atuais
+- `owner` e `admin`: acesso total às permissões administrativas atuais.
+- `marketing`: cupons, páginas e reviews.
+- `content_editor`: páginas e reviews.
+- `support`: reviews.
+- `viewer`: leitura sem actions mutáveis.
+
+### Escopo deliberado
+- sem modelo novo de permissões no banco.
+- sem grupos Django.
+- sem RBAC cross-tenant.
+- sem permission matrix editável por UI.
+- sem enforcement em storefront/customer.
+
+## Platform Admin Navigation Personalization Review
+- o cockpit `/ops/` agora personaliza atalhos e filas operacionais pela role do owner/admin ativo.
+- a navegação usa `accounts.interfaces.admin_rbac.request_admin_can(...)`.
+- permissões leves de leitura/navegação foram adicionadas à matriz:
+  - `orders.view`;
+  - `catalog.view`;
+  - `customers.view`;
+  - `shipping.view`;
+  - `newsletter.view`;
+  - `audit.view`;
+  - `payments.view`.
+- filas do cockpit também são filtradas por permissão:
+  - pedidos/estoque exigem `orders.view`;
+  - catálogo exige `catalog.view`;
+  - clientes exige `customers.view`;
+  - entregas exige `shipping.view`;
+  - owners exige `owners.manage`.
+- compatibilidade legada sem role explícita continua preservada enquanto o gate `/ops/` puder estar desligado.
+
+### Escopo deliberado
+- sem mudar as queries de KPI de base.
+- sem bloquear URL por middleware granular.
+- sem menu lateral global personalizado.
+- sem persistência de preferências por operador.
+- sem UI para editar permissões.
+
+## Platform Ops URL Permission Enforcement Review
+- o gate `/ops/` agora aplica enforcement HTTP granular por prefixo quando `HUBX_OPS_AUTH_GATE_ENFORCED=1`.
+- a raiz `/ops/` continua acessível para qualquer owner/admin ativo.
+- prefixos operacionais exigem permissão explícita da matriz de `accounts.application.admin_permissions`:
+  - `/ops/orders/`: `orders.view`;
+  - `/ops/catalog/`: `catalog.view`;
+  - `/ops/checkout/`: `checkout.view`;
+  - `/ops/customers/`: `customers.view`;
+  - `/ops/shipping/`: `shipping.view`;
+  - `/ops/newsletter/`: `newsletter.view`;
+  - `/ops/audit/`: `audit.view`;
+  - `/ops/payments/`: `payments.view`;
+  - `/ops/coupons/`: `coupons.manage`;
+  - `/ops/pages/`: `pages.manage`;
+  - `/ops/reviews/`: `reviews.moderate`;
+  - `/ops/owners/`: `owners.manage`.
+- negação registra `AuditLog owner.ops_permission_denied`.
+- métricas owner access exportam `owner.ops_permission_denied`.
+- alerta Prometheus: `HubxAccountsOpsPermissionDenied`.
+
+### Escopo deliberado
+- enforcement só ocorre com o gate `/ops/` ativo.
+- sem permission middleware fora de `/ops/`.
+- sem matriz persistida em banco.
+- sem granularidade por método HTTP neste primeiro corte.
+- command services continuam sendo a camada final de bloqueio para writes.
+
+## Platform RBAC Production Readiness Review
+- ativação real do RBAC granular agora possui comando próprio de evidência Go/No-Go.
+- comando:
+  - `python manage.py ops_rbac_production_readiness --tenant-id=<tenant_id> --fail-on-blockers`
+- a evidência valida:
+  - estado esperado de `HUBX_OPS_AUTH_GATE_ENFORCED`;
+  - matriz `owner/admin` contendo todas as permissões exigidas pelos prefixos `/ops/`;
+  - tenant ativo com ao menos um `OwnerUser` `owner` ou `admin` ativo;
+  - `User` Django ativo, único e correspondente ao e-mail desse full admin;
+  - ausência de roles desconhecidas em owners ativos.
+
+### Critérios Go/No-Go
+- Go:
+  - gate no estado esperado;
+  - matriz sem permissões faltantes para `owner` e `admin`;
+  - cada tenant alvo possui pelo menos um full admin operacional;
+  - nenhuma role desconhecida ativa.
+- No-Go:
+  - `ops-gate-not-enabled`;
+  - `no_active_full_admin_owner`;
+  - `unknown_owner_role`;
+  - `full_admin_without_django_user`;
+  - `full_admin_with_inactive_django_user`;
+  - `full_admin_email_ambiguous`.
+
+### Runbook curto
+1. rodar `ops_rbac_production_readiness --tenant-id=<tenant_id> --expect-gate=disabled` antes do switch, se o gate ainda estiver desligado;
+2. provisionar ou corrigir owner/admin com `provision_initial_owner` e convite/reset;
+3. ativar `HUBX_OPS_AUTH_GATE_ENFORCED=1` no ambiente;
+4. redeploy/restart;
+5. rodar `ops_rbac_production_readiness --tenant-id=<tenant_id> --fail-on-blockers`;
+6. testar `/ops/`, uma rota permitida e uma rota proibida para role limitada;
+7. monitorar `owner.ops_permission_denied`;
+8. rollback: retornar `HUBX_OPS_AUTH_GATE_ENFORCED=0` e redeploy/restart.
+
+### Escopo deliberado
+- sem ativação automática de env.
+- sem mudança automática de roles.
+- sem criar owners em lote.
+- sem browser E2E obrigatório.
+- sem permission matrix persistida/editável.
+
+## Platform RBAC Staging Activation Evidence Review
+- staging agora possui pacote único de evidência para ativar RBAC granular em `/ops/`.
+- comando:
+  - `python manage.py ops_rbac_staging_activation_evidence --tenant-id=<tenant_id> --fail-on-blockers`
+- a captura compõe:
+  - `ops_gate_activation_preflight`;
+  - `ops_rbac_production_readiness`;
+  - checklist manual mínimo;
+  - passos explícitos de rollback.
+- o comando não altera `HUBX_OPS_AUTH_GATE_ENFORCED`, tenants, owners, roles ou usuários.
+- a saída é textual e deve ser anexada ao change log/janela de staging.
+
+### Evidência mínima
+- saída `[READY]` do pacote agregado;
+- saída dos comandos sugeridos em `command.preflight` e `command.rbac`;
+- teste manual de `/ops/` com owner/admin ativo;
+- teste manual de rota permitida pela role;
+- teste manual de rota proibida com `403` e `owner.ops_permission_denied`;
+- rollback documentado com `HUBX_OPS_AUTH_GATE_ENFORCED=0`.
+
+### Critério Go/No-Go
+- Go:
+  - preflight pronto;
+  - RBAC production readiness pronto para o tenant;
+  - gate no estado esperado;
+  - testes manuais mínimos concluídos.
+- No-Go:
+  - qualquer blocker de `preflight:*`;
+  - qualquer blocker de `rbac:*`;
+  - falha manual em `/ops/`, rota permitida ou rota proibida.
+
+### Escopo deliberado
+- sem executar deploy/restart.
+- sem modificar variável de ambiente.
+- sem criar evidência falsa de staging real quando rodado localmente.
+- sem E2E browser obrigatório.
+- sem alteração automática de roles/users.
+
+## Platform RBAC Production Activation Evidence Review
+- produção agora possui pacote agregado de evidência para manter RBAC granular ativo com segurança.
+- comando:
+  - `python manage.py ops_rbac_production_activation_evidence --tenant-id=<tenant_id> --fail-on-blockers`
+- a captura compõe:
+  - `ops_gate_production_rollout`;
+  - `ops_rbac_production_readiness`;
+  - health de e-mail/notificações owner access;
+  - checklist manual mínimo de produção;
+  - rollback explícito.
+- por padrão, produção exige provider de e-mail real e bloqueia `EmailLog failed`.
+- o comando não altera env, deploy, roles, usuários ou tenants.
+
+### Evidência mínima
+- saída `[READY]` do pacote agregado em `environment=production`;
+- saída reproduzível de `command.rollout`;
+- saída reproduzível de `command.rbac`;
+- login real owner/admin no subdomínio do tenant;
+- rota permitida retornando `200`;
+- rota proibida retornando `403`;
+- métrica/log de `owner.ops_permission_denied` visível;
+- rollback documentado.
+
+### Critério Go/No-Go
+- Go:
+  - rollout do gate pronto;
+  - RBAC production readiness pronto;
+  - provider de e-mail pronto, salvo override explícito;
+  - sem falhas de notification owner access, salvo override explícito;
+  - testes manuais concluídos.
+- No-Go:
+  - qualquer blocker de `rollout:*`;
+  - qualquer blocker de `rbac:*`;
+  - falha manual em dashboard, rota permitida, rota proibida ou métrica.
+
+### Escopo deliberado
+- sem ativação automática de produção.
+- sem restart/deploy automático.
+- sem criar evidência falsa de produção quando rodado localmente.
+- sem batch global obrigatório.
+- sem alteração automática de permission matrix.
+
+## Platform RBAC Post-Production Monitoring Review
+- pós-ativação production agora possui snapshot operacional para decidir `HEALTHY`, `WATCH` ou `ROLLBACK`.
+- comando:
+  - `python manage.py ops_rbac_post_production_monitoring --tenant-id=<tenant_id> --fail-on-rollback`
+- sinais observados:
+  - `owner.ops_permission_denied`;
+  - `owner.ops_gate_forbidden`;
+  - `owner.login_failed`;
+  - `owner.login_rate_limited`;
+  - `EmailLog failed` para owner access.
+- `WATCH` indica ruído que exige triagem sem rollback automático.
+- `ROLLBACK` indica rate limit owner/admin ou falha de e-mail owner access.
+
+### Runbook curto
+1. rodar o comando a cada janela de observação pós-ativação;
+2. se `HEALTHY`, manter gate e seguir monitoramento normal;
+3. se `WATCH`, revisar roles, vínculos owner/user, navegação direta e resets;
+4. se `ROLLBACK`, avaliar retorno de `HUBX_OPS_AUTH_GATE_ENFORCED=0`;
+5. registrar evidência e ação tomada no change log.
+
+### Alertas
+- `HubxAccountsOpsPermissionDenied`: warning para negações granulares recorrentes.
+- `HubxAccountsRBACPostProductionRollbackSignal`: critical para rate limit owner/admin ou falha de e-mail owner access.
+
+### Escopo deliberado
+- sem executar rollback automaticamente.
+- sem criar métrica nova além das existentes de owner access.
+- sem dashboard Grafana novo nesta fase.
+- sem inferir incidente a partir de redirects anônimos isolados.
+
+## Platform RBAC Production Closure Review
+- a trilha de RBAC production agora possui snapshot final de closure.
+- comando:
+  - `python manage.py ops_rbac_production_closure --tenant-id=<tenant_id> --fail-on-blockers`
+- o closure compõe:
+  - evidência de ativação production;
+  - monitoramento pós-produção;
+  - decisões finais;
+  - riscos residuais;
+  - próximas trilhas fora do recorte RBAC atual.
+- status possíveis:
+  - `READY`: ativação pronta e monitoramento saudável;
+  - `WATCH`: ativação pronta, mas sinais recentes exigem triagem;
+  - `BLOCKED`: ativação bloqueada ou sinal rollback presente.
+
+### Decisão de encerramento
+- RBAC granular de `/ops/` está tecnicamente fechado para esta fase.
+- a próxima evolução não deve continuar polindo o mesmo gate, salvo evidência real de produção.
+- riscos remanescentes viram trilhas próprias:
+  - MFA/SSO owner/admin;
+  - permission matrix persistida;
+  - exportação formal de evidências de auditoria.
+
+### Escopo deliberado
+- sem executar ativação, rollback ou deploy.
+- sem transformar matriz de permissões em modelo persistido.
+- sem resolver MFA/SSO nesta trilha.
+- sem substituir change management humano.
+
+## Platform Owner MFA/SSO Review
+- MFA/SSO owner/admin agora possui contrato/readiness read-only.
+- comando:
+  - `python manage.py owner_mfa_sso_readiness --fail-on-blockers`
+- o login atual permanece:
+  - `User` Django;
+  - `OwnerUser` ativo no tenant;
+  - rate limit owner/admin;
+  - sessão owner/admin explícita.
+- MFA futuro deve ocorrer depois da senha e antes da sessão efetiva.
+- SSO futuro deve resolver identidade externa para `User` + `OwnerUser` do mesmo tenant.
+
+### Settings de contrato
+- `OWNER_MFA_REQUIRED`;
+- `OWNER_MFA_PROVIDER`;
+- `OWNER_SSO_ENABLED`;
+- `OWNER_SSO_PROVIDER`;
+- `OWNER_SSO_LOGIN_URL`;
+- `OWNER_SSO_CALLBACK_PATH`.
+
+### Escopo deliberado
+- sem enrollment de fator.
+- sem provider externo real.
+- sem callback SSO.
+- sem break-glass.
+- sem alterar fluxo de login atual.
+
+## Owner MFA Enrollment Model Review
+- enrollment MFA owner/admin agora possui modelo persistido tenant-scoped.
+- entidade:
+  - `OwnerMfaFactor`
+- comando de leitura:
+  - `python manage.py owner_mfa_enrollment_readiness --tenant-id=<tenant_id> --fail-on-blockers`
+- o modelo pertence ao mesmo tenant do `OwnerUser`.
+- fatores são únicos por `(tenant, owner, factor_type, provider_key)`.
+- o readiness considera enrolled apenas owner com fator ativo e verificado.
+
+### Campos principais
+- `factor_type`: `totp`, `recovery_code` ou `external`;
+- `provider_key`;
+- `label`;
+- `secret_reference`;
+- `is_verified`;
+- `is_active`;
+- `verified_at`;
+- `last_challenged_at`.
+
+### Escopo deliberado
+- sem gerar segredo TOTP.
+- sem verificar challenge.
+- sem recovery codes reais.
+- sem enforcement no login.
+- sem provider externo obrigatório.
+
+## Owner MFA Enrollment Command Review
+- enrollment MFA agora possui command service auditável para registrar/verificar/desativar fatores.
+- service:
+  - `accounts.application.owner_mfa_enrollment_commands`
+  - `accounts.application.owner_mfa_challenge_commands`
+- comando:
+  - `python manage.py owner_mfa_factor register --tenant-id=<tenant_id> --owner-id=<owner_id>`
+  - `python manage.py owner_mfa_factor verify --tenant-id=<tenant_id> --factor-id=<factor_id> --challenge=<code>`
+  - `python manage.py owner_mfa_factor deactivate --tenant-id=<tenant_id> --factor-id=<factor_id>`
+- registro cria fator ativo, porém ainda não verificado.
+- verificação valida TOTP interno e marca fator ativo como verificado.
+- desativação não apaga fator, apenas marca `is_active=False`.
+- eventos auditados:
+  - `owner.mfa_factor_registered`;
+  - `owner.mfa_factor_verified`;
+  - `owner.mfa_factor_verification_failed`;
+  - `owner.mfa_factor_deactivated`.
+
+### Escopo deliberado
+- sem enforcement no login.
+- sem UI admin dedicada.
+- sem recovery codes reais.
+- sem provider externo obrigatório.
+- sem apagar fator fisicamente.
+
+## Owner MFA Challenge Verification Review
+- fatores MFA TOTP agora podem sair de `pending/unverified` para `verified` por challenge real.
+- service:
+  - `accounts.application.owner_mfa_challenge_commands`
+- comando:
+  - `python manage.py owner_mfa_factor verify --tenant-id=<tenant_id> --factor-id=<factor_id> --challenge=<code>`
+- a verificação:
+  - exige permissão `owners.manage`;
+  - busca fator ativo pelo `tenant_id`;
+  - valida TOTP com janela curta;
+  - atualiza `is_verified`, `verified_at` e `last_challenged_at`;
+  - audita sucesso e falha sem persistir o código informado.
+
+### Escopo deliberado
+- sem aplicar MFA no login owner/admin.
+- sem gerar segredo TOTP automaticamente.
+- sem QR code ou UI de enrollment.
+- sem recovery codes reais.
+- sem adapter externo/vault obrigatório.
+
+## Owner MFA Enrollment Closure Review
+- a abordagem de enrollment MFA está tecnicamente fechada nesta fase.
+- comando:
+  - `python manage.py owner_mfa_enrollment_closure`
+- status:
+  - modelo pronto;
+  - readiness pronto;
+  - commands auditáveis prontos;
+  - challenge TOTP interno pronto;
+  - enforcement MFA fora de escopo.
+
+### Próximas trilhas sugeridas
+- `Owner MFA Admin Surface Review`;
+- `Owner Break-Glass Access Review`.
+- `Owner MFA Login Enforcement Review`.
+
+## Owner MFA Admin Surface Review
+- `/ops/owners/mfa/` agora possui superfície read/action mínima para fatores MFA owner/admin.
+- rotas:
+  - `GET /ops/owners/mfa/`;
+  - `POST /ops/owners/mfa/<factor_id>/verify/`;
+  - `POST /ops/owners/mfa/<factor_id>/deactivate/`.
+- query service:
+  - `accounts.application.owner_mfa_admin_queries`
+- actions continuam delegadas para:
+  - `accounts.application.owner_mfa_challenge_commands`;
+  - `accounts.application.owner_mfa_enrollment_commands`.
+- a surface lista apenas fatores do tenant resolvido e exige permissão `owners.manage` para ações.
+
+### Escopo deliberado
+- sem registrar fator novo pela UI.
+- sem QR code ou geração automática de segredo.
+- sem enforcement no login.
+- sem recovery codes.
+
+## Owner Break-Glass Access Review
+- break-glass MFA owner/admin agora possui readiness operacional sem alterar login.
+- comando:
+  - `python manage.py owner_mfa_break_glass_readiness --tenant-id=<tenant_id>`
+- settings de contrato:
+  - `OWNER_MFA_BREAK_GLASS_ENABLED`;
+  - `OWNER_MFA_BREAK_GLASS_OWNER_EMAILS`.
+- readiness bloqueia quando break-glass está desligado, sem e-mail configurado ou apontando para owner ausente/inativo no tenant.
+
+### Escopo deliberado
+- sem criar bypass real de MFA.
+- sem alterar sessão ou login.
+- sem senha de emergência persistida.
+
+## Owner MFA Login Enforcement Readiness Review
+- enforcement MFA owner/admin agora possui readiness Go/No-Go sem ativação automática.
+- comando:
+  - `python manage.py owner_mfa_login_enforcement_readiness --tenant-id=<tenant_id>`
+- readiness exige:
+  - `OWNER_MFA_REQUIRED=True`;
+  - todos os owners ativos com fator ativo/verificado;
+  - break-glass pronto.
+- também imprime checklist manual mínimo para ativação futura.
+
+### Escopo deliberado
+- sem bloquear login.
+- sem challenge durante autenticação.
+- sem alterar middleware/session.
+
+## Owner MFA Operational Closure Review
+- pacote operacional de MFA owner/admin agora possui closure agregada.
+- comando:
+  - `python manage.py owner_mfa_operational_closure --tenant-id=<tenant_id>`
+- closure combina:
+  - surface admin;
+  - readiness de break-glass;
+  - readiness de enforcement.
+- próxima execução real deve ser tratada como trilha separada de login enforcement.
+
+### Próximas trilhas sugeridas
+- `Owner MFA Login Enforcement Execution Review`;
+- `Owner MFA Recovery Codes Review`;
+- `Owner MFA Secret Storage Hardening Review`.
+
+## Owner MFA Login Enforcement Execution Review
+- login owner/admin agora aplica MFA quando `OWNER_MFA_REQUIRED=True`.
+- fluxo:
+  - senha válida e `OwnerUser` ativo no tenant;
+  - fator MFA ativo/verificado obrigatório;
+  - criação de sessão pendente curta;
+  - redirect para `/accounts/login/mfa/`;
+  - challenge TOTP válido cria a sessão owner/admin efetiva.
+- rollback operacional:
+  - definir `OWNER_MFA_REQUIRED=0`;
+  - redeploy/restart;
+  - login volta ao fluxo direto pós-senha, preservando rate limit e sessão owner/admin.
+- eventos auditados:
+  - `owner.login_mfa_required`;
+  - `owner.login_mfa_failed`;
+  - `owner.login_mfa_completed`;
+  - `owner.login_mfa_blocked`.
+
+### Settings
+- `OWNER_MFA_REQUIRED`;
+- `OWNER_MFA_CHALLENGE_PENDING_SECONDS`;
+- `OWNER_MFA_BREAK_GLASS_ENABLED`;
+- `OWNER_MFA_BREAK_GLASS_OWNER_EMAILS`.
+
+### Escopo deliberado
+- sem recovery codes reais.
+- sem bypass automático de break-glass.
+- sem provider externo/vault obrigatório.
+- sem enforcement para customer login.
+
+## Owner MFA Recovery Codes Review
+- recovery codes MFA owner/admin agora possuem modelo persistido com hash e uso único.
+- entidade:
+  - `OwnerMfaRecoveryCode`
+- comando:
+  - `python manage.py owner_mfa_recovery_codes generate --tenant-id=<tenant_id> --owner-id=<owner_id> --count=8`
+- geração:
+  - substitui códigos não usados anteriores;
+  - retorna os códigos em texto claro apenas na saída do comando;
+  - persiste somente hashes;
+  - cria/reativa fator `recovery_code` verificado para o owner.
+- login MFA:
+  - challenge TOTP continua preferencial;
+  - recovery code válido pode concluir `/accounts/login/mfa/`;
+  - recovery code usado é marcado com `used_at` e não pode ser reutilizado.
+- readiness:
+  - fator `recovery_code` só conta como enrollment válido enquanto houver código não usado.
+- eventos auditados:
+  - `owner.mfa_recovery_codes_generated`;
+  - `owner.mfa_recovery_code_used`.
+
+### Escopo deliberado
+- sem exibir códigos novamente depois da geração.
+- sem UI admin dedicada para regeneração.
+- sem recovery code por e-mail.
+- sem bypass break-glass automático.
+
+## Owner MFA Secret Storage Hardening Review
+- storage de segredo TOTP owner/admin agora possui contrato explícito e readiness.
+- resolver:
+  - `accounts.application.owner_mfa_secret_storage`
+- comando:
+  - `python manage.py owner_mfa_secret_storage_readiness --tenant-id=<tenant_id>`
+- modos suportados:
+  - `plain:<secret>` ou valor legado sem prefixo: segredo local em texto claro, aceito apenas enquanto `OWNER_MFA_ALLOW_LOCAL_TOTP_SECRET=True`;
+  - `ref:<path>`: referência externa futura, inventariada mas ainda não resolvida sem adapter;
+  - vazio: blocker.
+- login e verificação MFA passam pelo resolver antes de validar TOTP.
+- readiness inventaria fatores TOTP ativos por tenant e emite blockers para:
+  - segredo ausente;
+  - referência externa sem provider;
+  - segredo local quando local plain estiver desabilitado.
+
+### Settings
+- `OWNER_MFA_ALLOW_LOCAL_TOTP_SECRET`
+
+### Escopo deliberado
+- sem migrar segredo automaticamente.
+- sem provider/vault externo real.
+- sem descriptografia ou KMS.
+- sem quebrar fatores legados enquanto local plain estiver permitido.
+
+## Owner MFA External Secret Provider Adapter Review
+- `ref:<path>` agora pode ser resolvido por adapter externo mínimo.
+- provider inicial:
+  - `OWNER_MFA_SECRET_PROVIDER=env`
+- contrato env:
+  - `OWNER_MFA_SECRET_ENV_PREFIX=OWNER_MFA_SECRET_`
+  - `ref:owners/1/totp` resolve `OWNER_MFA_SECRET_OWNERS_1_TOTP`
+- integração:
+  - login MFA e command de challenge continuam usando `owner_mfa_secret_storage`;
+  - resolver delega `ref:<path>` ao registry `accounts.infrastructure.owner_mfa_secret_providers`;
+  - readiness considera referência externa pronta quando provider resolve o segredo.
+
+### Settings
+- `OWNER_MFA_SECRET_PROVIDER`
+- `OWNER_MFA_SECRET_ENV_PREFIX`
+
+### Escopo deliberado
+- sem vault/KMS real ainda.
+- sem cache de segredo.
+- sem migração automática de `plain:` para `ref:`.
+- sem listar valores de segredo em readiness ou audit log.
+
+## Owner MFA TOTP Secret Migration Plan
+- migração de segredos TOTP locais para `ref:<path>` agora possui plano operacional reproduzível.
+- query service:
+  - `accounts.application.owner_mfa_totp_secret_migration_plan_queries`
+- comando:
+  - `python manage.py owner_mfa_totp_secret_migration_plan --tenant-id=<tenant_id> --reference-prefix=owners`
+- o plano classifica fatores TOTP ativos como:
+  - `migrate-local-to-ref`: fator local/legado que deve ser copiado para provider externo;
+  - `already-external`: fator já em `ref:<path>`;
+  - `blocked`: segredo ausente ou referência externa não resolvida.
+- o comando imprime:
+  - `target_ref` sugerido;
+  - runbook;
+  - rollback;
+  - blockers.
+
+### Runbook curto
+1. copiar segredo TOTP atual para provider externo fora do app.
+2. gravar usando o `target_ref` sugerido.
+3. configurar `OWNER_MFA_SECRET_PROVIDER`.
+4. validar `owner_mfa_secret_storage_readiness`.
+5. atualizar `secret_reference` para `ref:<target_ref>` em janela controlada.
+6. testar login MFA.
+7. só então avaliar `OWNER_MFA_ALLOW_LOCAL_TOTP_SECRET=0`.
+
+### Escopo deliberado
+- sem mover segredo automaticamente.
+- sem escrever `secret_reference`.
+- sem ler/imprimir segredo em texto claro.
+- sem remover fallback local antes de evidência real.
+
+## Owner MFA TOTP Secret Migration Execution Review
+- migração de segredo TOTP local para `ref:<path>` agora possui execução controlada.
+- command service:
+  - `accounts.application.owner_mfa_totp_secret_migration_commands`
+- comando:
+  - `python manage.py owner_mfa_totp_secret_migration_execute --tenant-id=<tenant_id> --factor-id=<factor_id>`
+- por padrão o comando roda em `DRY-RUN`; escrita real exige `--execute`.
+- antes de atualizar `OwnerMfaFactor.secret_reference`, o service valida:
+  - tenant explícito;
+  - fator TOTP ativo no tenant informado;
+  - segredo atual em modo `local-plain`;
+  - `target_ref` resolvido pelo provider externo configurado;
+  - valor externo equivalente ao segredo local atual, sem imprimir nenhum segredo.
+- execução grava apenas `ref:<target_ref>` e registra `AuditLog` `owner.mfa_totp_secret_migrated`.
+
+### Runbook curto
+1. rodar `owner_mfa_totp_secret_migration_plan` e copiar o segredo fora do app.
+2. publicar o segredo no provider usando o `target_ref`.
+3. validar readiness de storage.
+4. rodar `owner_mfa_totp_secret_migration_execute` sem `--execute`.
+5. rodar novamente com `--execute`.
+6. testar challenge/login MFA do owner migrado.
+
+### Escopo deliberado
+- sem migração em lote automática.
+- sem criar ou copiar segredo no provider.
+- sem imprimir segredo local ou externo.
+- sem desabilitar `OWNER_MFA_ALLOW_LOCAL_TOTP_SECRET` nesta etapa.
+
+## Owner MFA Local Secret Retirement Review
+- aposentadoria do fallback local/plain de TOTP owner/admin agora possui readiness explícito.
+- query service:
+  - `accounts.application.owner_mfa_local_secret_retirement_queries`
+- comando:
+  - `python manage.py owner_mfa_local_secret_retirement_readiness --tenant-id=<tenant_id>`
+- a revisão decide se já é seguro aplicar:
+  - `OWNER_MFA_ALLOW_LOCAL_TOTP_SECRET=False`
+- critérios para readiness:
+  - nenhum fator TOTP ativo em `local-plain`;
+  - nenhum fator com segredo ausente;
+  - todas as referências externas `ref:<path>` resolvidas pelo provider configurado;
+  - storage readiness sem blockers.
+
+### Runbook curto
+1. executar `owner_mfa_local_secret_retirement_readiness`.
+2. confirmar `local_plain_count=0`.
+3. validar challenge/login MFA amostral com provider externo ativo.
+4. aplicar `OWNER_MFA_ALLOW_LOCAL_TOTP_SECRET=False` no ambiente.
+5. rodar `owner_mfa_secret_storage_readiness`.
+6. monitorar falhas MFA owner/admin.
+
+### Escopo deliberado
+- sem alterar settings/env automaticamente.
+- sem migrar fatores locais restantes.
+- sem remover código de fallback local.
+- sem rollback automático.
+
+## Owner MFA Local Secret Retirement Execution Review
+- ativação da aposentadoria do fallback local/plain agora possui evidência operacional em duas fases.
+- query service:
+  - `accounts.application.owner_mfa_local_secret_retirement_execution_queries`
+- comando:
+  - `python manage.py owner_mfa_local_secret_retirement_execution --tenant-id=<tenant_id> --phase=before`
+  - `python manage.py owner_mfa_local_secret_retirement_execution --tenant-id=<tenant_id> --phase=after`
+- fase `before`:
+  - confirma que o tenant está pronto para o corte;
+  - captura contagens e referências externas resolvidas;
+  - orienta aplicar `OWNER_MFA_ALLOW_LOCAL_TOTP_SECRET=False` fora do app.
+- fase `after`:
+  - exige `OWNER_MFA_ALLOW_LOCAL_TOTP_SECRET=False`;
+  - revalida que não há fator local/plain nem referência externa quebrada;
+  - emite rollback explícito para restaurar o setting.
+
+### Escopo deliberado
+- sem escrever settings/env.
+- sem reiniciar processo, deploy ou worker.
+- sem alterar `OwnerMfaFactor`.
+- sem criar evento de auditoria, pois a evidência é read-only.
+
+## Owner MFA Provider Health Monitoring Review
+- health operacional do provider externo de segredos TOTP owner/admin agora possui snapshot dedicado.
+- query service:
+  - `accounts.application.owner_mfa_provider_health_queries`
+- comando:
+  - `python manage.py owner_mfa_provider_health --tenant-id=<tenant_id>`
+- status:
+  - `HEALTHY`: provider configurado, referências externas resolvidas e sem fallback local;
+  - `WATCH`: ainda há fallback local, nenhum fator externo ou readiness incompleto sem quebra imediata;
+  - `CRITICAL`: referência externa não resolve, provider ausente para `ref:<path>` ou segredo ausente.
+- o snapshot reaproveita storage readiness e nunca imprime o valor do segredo.
+
+### Sinais
+- `provider-not-configured`
+- `external-reference-unresolved`
+- `secret-missing`
+- `local-plain-still-present`
+- `no-external-reference-factors`
+
+### Escopo deliberado
+- sem endpoint Prometheus novo nesta etapa.
+- sem alerta Grafana/Prometheus ainda.
+- sem retry automático ou fallback silencioso.
+- sem ler/imprimir segredo.
+
+## Owner MFA Provider Health Metrics Review
+- health do provider TOTP MFA owner/admin agora possui endpoint Prometheus tenant-aware.
+- metrics query:
+  - `accounts.application.owner_mfa_provider_health_metrics_queries`
+- endpoint:
+  - `/accounts/metrics/owner-mfa-provider-health/`
+- token:
+  - `ACCOUNTS_OBSERVABILITY_TOKEN`
+- métricas:
+  - `hubx_accounts_owner_mfa_provider_health_status`;
+  - `hubx_accounts_owner_mfa_provider_external_reference_total`;
+  - `hubx_accounts_owner_mfa_secret_storage_total`;
+  - `hubx_accounts_owner_mfa_provider_signal_total`.
+- observabilidade:
+  - scrape em `infra/observability/prometheus/accounts-scrape.example.yml`;
+  - alertas em `infra/observability/prometheus/accounts-alert-rules.yml`.
+
+### Escopo deliberado
+- sem label por owner/factor para evitar cardinalidade alta.
+- sem expor segredo ou reference path completo.
+- sem dashboard Grafana dedicado nesta etapa.
+- sem mutação operacional automática.
+
+## Owner MFA Provider Health Dashboard Review
+- health do provider TOTP MFA owner/admin agora possui dashboard Grafana inicial.
+- dashboard:
+  - `infra/observability/grafana/accounts-owner-mfa-provider-health-dashboard.json`
+- painéis:
+  - tenants com provider MFA crítico;
+  - refs TOTP externas não resolvidas;
+  - fatores TOTP ainda em `local-plain`;
+  - tenants MFA saudáveis;
+  - status por tenant/provider;
+  - referências externas por estado;
+  - sinais ativos;
+  - storage TOTP por tenant.
+
+### Escopo deliberado
+- sem drill-down por owner/factor.
+- sem reference path em labels.
+- sem painel de login failures nesta dashboard; isso permanece em owner access.
+- sem provisionamento automático do Grafana.
+
+## Owner MFA Provider Health Closure Review
+- trilha de health do provider TOTP MFA owner/admin agora possui closure read-only.
+- query service:
+  - `accounts.application.owner_mfa_provider_health_closure_queries`
+- comando:
+  - `python manage.py owner_mfa_provider_health_closure --tenant-id=<tenant_id>`
+- o closure agrega:
+  - status atual do provider health;
+  - presença de scrape Prometheus;
+  - presença de alert rules;
+  - presença de dashboard Grafana;
+  - decisões de exposição segura sem owner/factor/segredo/reference path.
+- status:
+  - `ready`: health saudável e artefatos presentes;
+  - `watch`: fallback local ou ausência de fatores externos sem incidente crítico;
+  - `blocked`: health crítico ou artefato de observabilidade ausente.
+
+### Escopo deliberado
+- sem ativar Prometheus/Grafana real.
+- sem alterar provider/env/settings.
+- sem executar rollback automático.
+- sem adicionar drill-down sensível.
+
+## Owner MFA Local Secret Code Retirement Review
+- aposentadoria do código/tolerância `plain:`/legado agora possui readiness explícito.
+- query service:
+  - `accounts.application.owner_mfa_local_secret_code_retirement_queries`
+- comando:
+  - `python manage.py owner_mfa_local_secret_code_retirement_readiness --tenant-id=<tenant_id>`
+- a review só fica `ready` quando:
+  - `OWNER_MFA_ALLOW_LOCAL_TOTP_SECRET=False`;
+  - não há fatores TOTP ativos em `local-plain`;
+  - há fatores TOTP externos resolvidos;
+  - provider health closure não está bloqueado.
+- superfícies de código inventariadas:
+  - `owner_mfa_secret_storage.LOCAL_PREFIX`;
+  - `OwnerMfaSecretStorageResolver.can_accept_local_plain`;
+  - readiness `local-secret-disabled`;
+  - setting `OWNER_MFA_ALLOW_LOCAL_TOTP_SECRET`;
+  - testes de `plain:`/legado.
+
+### Escopo deliberado
+- sem remover suporte `plain:` nesta wave.
+- sem alterar dados ou settings.
+- sem remover rollback operacional.
+- sem varrer todos os tenants globalmente ainda.
+
+## Owner MFA Local Secret Code Retirement Execution Review
+- fallback local/plain de TOTP MFA owner/admin agora fica desligado por default.
+- setting:
+  - `OWNER_MFA_ALLOW_LOCAL_TOTP_SECRET` passa a default `0`;
+  - rollback explícito continua possível com `OWNER_MFA_ALLOW_LOCAL_TOTP_SECRET=1`.
+- evidence query:
+  - `accounts.application.owner_mfa_local_secret_code_retirement_execution_queries`
+- comando:
+  - `python manage.py owner_mfa_local_secret_code_retirement_execute --tenant-id=<tenant_id>`
+- a execução confirma:
+  - default/env atual não aceita local plain;
+  - readiness tenant-scoped está pronto;
+  - provider health closure não bloqueia;
+  - rollback por env está documentado.
+
+### Escopo deliberado
+- sem remover parsing de `plain:` ainda.
+- sem deletar testes legados; eles agora usam override explícito de rollback.
+- sem migrar dados.
+- sem desligar provider externo.
+
+## Owner MFA Legacy Data Global Sweep Review
+- dados legados TOTP MFA owner/admin agora possuem sweep global read-only.
+- query service:
+  - `accounts.application.owner_mfa_legacy_data_global_sweep_queries`
+- comando:
+  - `python manage.py owner_mfa_legacy_data_global_sweep`
+- a sweep percorre tenants com fatores TOTP ativos e agrega:
+  - tenants avaliados;
+  - fatores em `local-plain`;
+  - referências externas;
+  - segredos ausentes;
+  - tenants bloqueados.
+- blockers:
+  - `tenant-<id>:local-plain-factors-present`;
+  - `tenant-<id>:missing-secret-factors-present`;
+  - `tenant-<id>:external-secret-unresolved`.
+
+### Escopo deliberado
+- sem expor segredo, owner/factor ou reference path completo.
+- sem migrar ou alterar dados.
+- sem remover parser local.
+- sem cobrir backups/dumps/fixtures fora do banco atual.
+
+## Owner MFA Local Secret Parser Removal Review
+- remoção do parser `plain:`/legado agora possui review Go/No-Go.
+- query service:
+  - `accounts.application.owner_mfa_local_secret_parser_removal_queries`
+- comando:
+  - `python manage.py owner_mfa_local_secret_parser_removal_review`
+- a review compõe:
+  - sweep global de dados legados;
+  - estado de `OWNER_MFA_ALLOW_LOCAL_TOTP_SECRET`;
+  - superfícies de parser local;
+  - plano de remoção;
+  - rollback por revert de deploy.
+- status `ready` exige:
+  - sweep global `ready`;
+  - nenhum blocker de tenant;
+  - env local/plain desligado.
+
+### Escopo deliberado
+- sem remover parser nesta wave.
+- sem alterar dados/settings.
+- sem reativar rollback por env como mecanismo suficiente.
+- sem varrer arquivos externos ao banco.
+
+## Owner MFA Local Secret Parser Removal Execution Review
+- o resolver TOTP MFA owner/admin não resolve mais valores `plain:` nem valores legados sem `ref:`.
+- query service de evidência:
+  - `accounts.application.owner_mfa_local_secret_parser_removal_execution_queries`
+- comando:
+  - `python manage.py owner_mfa_local_secret_parser_removal_execute`
+- comportamento novo:
+  - `ref:<path>` continua usando provider externo;
+  - valor vazio continua `missing`;
+  - qualquer valor local/legado retorna `unsupported-local`, `ready=False` e segredo vazio.
+- readiness e migration plan passam a reportar blocker `local-secret-unsupported`.
+- rollback pós-execution deixa de ser env-only e passa a exigir revert/deploy do código.
+
+### Escopo deliberado
+- sem migrar dados automaticamente.
+- sem restaurar segredo local em outputs, logs ou comandos.
+- sem remover o inventário/sweep que ainda detecta resíduos legados.
+- sem alterar o contrato de provider externo.
+
+## Owner MFA Vault/KMS Provider Review
+- o provider `env` passa a ser tratado como ponte operacional, não como storage final de produção para segredos TOTP MFA.
+- query service:
+  - `accounts.application.owner_mfa_vault_kms_provider_review_queries`
+- comando:
+  - `python manage.py owner_mfa_vault_kms_provider_review --tenant-id=<tenant_id> --target-provider=<provider>`
+- targets aceitos inicialmente:
+  - `hashicorp-vault`;
+  - `aws-secrets-manager`;
+  - `aws-kms`;
+  - `gcp-secret-manager`;
+  - `azure-key-vault`.
+- a review compõe:
+  - closure de health do provider atual por tenant;
+  - execution de remoção do parser local/plain;
+  - contrato mínimo do adapter Vault/KMS;
+  - plano de rollout e rollback.
+- status `ready` significa pronto para criar adapter/skeleton, não ativação production automática.
+
+### Escopo deliberado
+- sem chamar Vault/KMS real nesta wave.
+- sem alterar `OWNER_MFA_SECRET_PROVIDER`.
+- sem migrar `secret_reference`.
+- sem imprimir segredo, owner/factor ou reference path completo.
+
+## Owner MFA Vault/KMS Provider Adapter Contract Review
+- o contrato técnico do adapter Vault/KMS para TOTP MFA owner/admin agora é explícito antes do skeleton.
+- query service:
+  - `accounts.application.owner_mfa_vault_kms_provider_adapter_contract_queries`
+- comando:
+  - `python manage.py owner_mfa_vault_kms_provider_adapter_contract --tenant-id=<tenant_id> --target-provider=<provider>`
+- o contrato cobre:
+  - settings esperados;
+  - interface de retorno `OwnerMfaSecretProviderResult`;
+  - erros recuperáveis sem exception no login;
+  - controles de segurança para não expor secret material;
+  - contrato mínimo de testes.
+- a primeira versão do adapter deve ser read-path-only:
+  - resolve `ref:<path>`;
+  - não grava segredo;
+  - não migra `OwnerMfaFactor`;
+  - não cacheia segredo.
+
+### Escopo deliberado
+- sem implementar provider real nesta wave.
+- sem alterar settings/env.
+- sem fallback automático para `env` quando Vault/KMS falhar.
+- sem cache de segredo na primeira versão.
+
+## Owner MFA Vault/KMS Provider Adapter Skeleton Execution
+- o registry de segredos MFA agora reconhece os targets Vault/KMS aprovados no contrato.
+- implementação:
+  - `accounts.infrastructure.owner_mfa_secret_providers`
+- evidence query:
+  - `accounts.application.owner_mfa_vault_kms_provider_adapter_skeleton_execution_queries`
+- comando:
+  - `python manage.py owner_mfa_vault_kms_provider_adapter_skeleton_execute --tenant-id=<tenant_id> --target-provider=<provider> --probe-reference=<ref>`
+- settings adicionados:
+  - `OWNER_MFA_SECRET_TIMEOUT_MS`;
+  - `OWNER_MFA_SECRET_RETRY_COUNT`;
+  - `OWNER_MFA_SECRET_NAMESPACE`;
+  - `OWNER_MFA_SECRET_CACHE_SECONDS`;
+  - `OWNER_MFA_SECRET_VAULT_KMS_SKELETON_STATUS`;
+  - `OWNER_MFA_SECRET_VAULT_KMS_SKELETON_SECRETS`.
+- o skeleton é read-path-only e retorna:
+  - `owner-mfa-secret-provider-vault-ready`;
+  - `owner-mfa-secret-provider-vault-missing`;
+  - `owner-mfa-secret-provider-vault-unavailable`;
+  - `owner-mfa-secret-provider-vault-timeout`;
+  - `owner-mfa-secret-provider-vault-permission-denied`;
+  - `owner-mfa-secret-provider-vault-invalid-reference`.
+
+### Escopo deliberado
+- sem SDK/vendor real ainda.
+- sem escrita no provider.
+- sem fallback automático para `env`.
+- sem cache de segredo.
+- sem imprimir o valor do segredo na evidência.
+
+## Owner MFA Vault/KMS Provider Readiness Evidence Review
+- o skeleton Vault/KMS agora possui pacote de evidência tenant-scoped para modo canário.
+- query service:
+  - `accounts.application.owner_mfa_vault_kms_provider_readiness_evidence_queries`
+- comando:
+  - `python manage.py owner_mfa_vault_kms_provider_readiness_evidence --tenant-id=<tenant_id> --target-provider=<provider> --probe-reference=<ref>`
+- a evidência compõe:
+  - skeleton execution;
+  - provider health closure;
+  - provider observado no health;
+  - contagens de refs externas, unresolved, local/plain e missing;
+  - rollback sem reativar parser local/plain.
+- `ready` exige:
+  - skeleton execution ready;
+  - provider health closure ready;
+  - provider observado igual ao target;
+  - tenant explícito.
+
+### Escopo deliberado
+- sem ativar staging real.
+- sem chamar SDK/vendor real.
+- sem alterar settings/env.
+- sem imprimir segredo.
+- sem exportar evidência formal auditável ainda.
+
+## Owner MFA Vault/KMS Provider Staging Canary Review
+- o provider Vault/KMS agora possui checklist de canário staging para login/challenge MFA owner/admin.
+- query service:
+  - `accounts.application.owner_mfa_vault_kms_provider_staging_canary_queries`
+- comando:
+  - `python manage.py owner_mfa_vault_kms_provider_staging_canary_review --tenant-id=<tenant_id> --target-provider=<provider> --probe-reference=<ref> --canary-owner-email=<email>`
+- a review compõe readiness evidence e exige owner canário explícito.
+- entrega:
+  - preflight;
+  - checklist manual de login/challenge;
+  - sinais de sucesso;
+  - rollback;
+  - blockers Go/No-Go.
+
+### Escopo deliberado
+- sem executar login real.
+- sem criar sessão ou autenticar owner.
+- sem alterar settings/env.
+- sem chamar SDK/vendor real.
+- sem coletar segredo, código TOTP ou reference path completo.
+
+## Owner MFA Vault/KMS Provider Staging Canary Evidence Execution
+- o canário staging agora possui captura declarativa de evidência pós-checklist.
+- query service:
+  - `accounts.application.owner_mfa_vault_kms_provider_staging_canary_evidence_queries`
+- comando:
+  - `python manage.py owner_mfa_vault_kms_provider_staging_canary_evidence --tenant-id=<tenant_id> --target-provider=<provider> --probe-reference=<ref> --canary-owner-email=<email> --valid-login-passed --invalid-challenge-blocked --post-health-ready --logs-redacted --rollback-verified`
+- a evidência valida:
+  - review do canário pronta;
+  - login válido reportado como aprovado;
+  - challenge inválido reportado como bloqueado;
+  - health pós-teste reportado como saudável;
+  - logs/comandos reportados como redigidos;
+  - rollback verificado/simulado.
+
+### Escopo deliberado
+- sem automatizar browser/login.
+- sem gravar sessão, AuditLog ou estado de fator.
+- sem coletar segredo, código TOTP ou reference path completo.
+- sem exportar evidência formal assinada.
+
+## Owner MFA Vault/KMS Provider Real Adapter Contract Review
+- o adapter Vault/KMS real agora possui contrato técnico pós-canário.
+- query service:
+  - `accounts.application.owner_mfa_vault_kms_provider_real_adapter_contract_queries`
+- comando:
+  - `python manage.py owner_mfa_vault_kms_provider_real_adapter_contract --tenant-id=<tenant_id> --target-provider=<provider> --probe-reference=<ref> --canary-owner-email=<email> --sdk-dependency-confirmed --credential-strategy-confirmed --network-timeout-confirmed --rollout-owner-confirmed`
+- targets reais suportados nesta etapa:
+  - `hashicorp-vault`;
+  - `aws-secrets-manager`;
+  - `gcp-secret-manager`;
+  - `azure-key-vault`.
+- o contrato exige:
+  - evidência de canário staging pronta;
+  - dependência SDK/vendor confirmada;
+  - estratégia de credencial confirmada;
+  - timeouts/rede confirmados;
+  - responsável de rollout confirmado.
+
+### Escopo deliberado
+- sem implementar SDK/vendor ainda.
+- sem trocar o skeleton.
+- sem migrar segredo.
+- sem cache.
+- sem fallback automático para `env`.
+
+## Owner MFA Vault/KMS Provider Real Adapter Skeleton Execution
+- o registry de segredos MFA agora possui branch real/mocável separado do skeleton configurável.
+- implementação:
+  - `accounts.infrastructure.owner_mfa_secret_providers`
+- evidence query:
+  - `accounts.application.owner_mfa_vault_kms_provider_real_adapter_skeleton_execution_queries`
+- comando:
+  - `python manage.py owner_mfa_vault_kms_provider_real_adapter_skeleton_execute --tenant-id=<tenant_id> --target-provider=<provider> --probe-reference=<ref> --canary-owner-email=<email>`
+- settings adicionados:
+  - `OWNER_MFA_SECRET_VAULT_KMS_REAL_ADAPTER_ENABLED`;
+  - `OWNER_MFA_SECRET_VAULT_KMS_REAL_ADAPTER_STATUS`;
+  - `OWNER_MFA_SECRET_VAULT_KMS_REAL_ADAPTER_SECRETS`.
+- a execução prova:
+  - contrato real ready;
+  - provider atual igual ao target;
+  - branch real/mocável habilitado;
+  - probe resolvido pelo branch real;
+  - rollback sem parser local/plain.
+
+### Escopo deliberado
+- sem SDK/vendor real ainda.
+- sem credenciais reais.
+- sem cache.
+- sem escrita/migração.
+- sem fallback automático para `env`.
+
+## Owner MFA Vault/KMS Provider SDK Dependency Review
+- a dependência SDK/vendor do provider Vault/KMS agora possui review declarativa antes de qualquer instalação.
+- query service:
+  - `accounts.application.owner_mfa_vault_kms_provider_sdk_dependency_review_queries`
+- comando:
+  - `python manage.py owner_mfa_vault_kms_provider_sdk_dependency_review --tenant-id=<tenant_id> --target-provider=<provider> --probe-reference=<ref> --canary-owner-email=<email> --dependency-pinned-confirmed --import-optional-confirmed --deploy-rollback-confirmed --license-review-confirmed`
+- contratos de dependência definidos:
+  - `hashicorp-vault`: pacote/import `hvac`;
+  - `aws-secrets-manager`: pacote/import `boto3`;
+  - `gcp-secret-manager`: pacote `google-cloud-secret-manager`, import `google.cloud.secretmanager`;
+  - `azure-key-vault`: pacotes `azure-identity` e `azure-keyvault-secrets`, imports correspondentes.
+- a review exige:
+  - skeleton real/mocável ready;
+  - dependência com versão fixada confirmada;
+  - import opcional/lazy confirmado;
+  - rollback de deploy confirmado;
+  - licença revisada.
+
+### Escopo deliberado
+- sem instalar pacote.
+- sem importar SDK em module load.
+- sem chamar Vault/KMS real.
+- sem alterar settings/env.
+- sem expor segredo, reference path completo ou credencial.
+
+## Owner MFA Vault/KMS Provider SDK Adapter Execution
+- o provider Vault/KMS agora possui branch SDK lazy atrás de flag própria.
+- implementação:
+  - `accounts.infrastructure.owner_mfa_secret_providers`
+- evidence query:
+  - `accounts.application.owner_mfa_vault_kms_provider_sdk_adapter_execution_queries`
+- comando:
+  - `python manage.py owner_mfa_vault_kms_provider_sdk_adapter_execute --tenant-id=<tenant_id> --target-provider=<provider> --probe-reference=<ref> --canary-owner-email=<email>`
+- settings adicionados:
+  - `OWNER_MFA_SECRET_VAULT_KMS_SDK_ADAPTER_ENABLED`;
+  - `OWNER_MFA_SECRET_VAULT_KMS_SDK_ADAPTER_STATUS`;
+  - `OWNER_MFA_SECRET_VAULT_KMS_SDK_ADAPTER_SECRETS`.
+- o branch SDK:
+  - só roda quando o real adapter e o SDK adapter estão habilitados;
+  - importa SDKs de forma lazy dentro do resolver;
+  - retorna `owner-mfa-secret-provider-vault-unavailable` se a dependência não existir;
+  - preserva os resultados `ready`, `missing`, `timeout`, `permission-denied` e `invalid-reference`;
+  - não imprime valor de segredo na evidência.
+
+### Escopo deliberado
+- sem chamada externa real ao Vault/KMS.
+- sem credenciais reais.
+- sem instalar dependência por conta própria.
+- sem cache.
+- sem escrita/migração.
+- sem fallback automático para `env`.
+
+## Owner MFA Vault/KMS Provider Real Endpoint Review
+- o primeiro endpoint real aprovado para execução futura passa a ser `hashicorp-vault`.
+- query service:
+  - `accounts.application.owner_mfa_vault_kms_provider_real_endpoint_review_queries`
+- comando:
+  - `python manage.py owner_mfa_vault_kms_provider_real_endpoint_review --tenant-id=<tenant_id> --target-provider=hashicorp-vault --probe-reference=<ref> --canary-owner-email=<email> --endpoint-url-confirmed --auth-strategy-confirmed --secret-path-contract-confirmed --timeout-budget-confirmed --rollback-confirmed`
+- contrato inicial de settings:
+  - `OWNER_MFA_HASHICORP_VAULT_ADDR`;
+  - `OWNER_MFA_HASHICORP_VAULT_AUTH_METHOD`;
+  - `OWNER_MFA_HASHICORP_VAULT_SECRET_MOUNT`;
+  - `OWNER_MFA_HASHICORP_VAULT_SECRET_FIELD`.
+- métodos de auth aceitos no contrato:
+  - `token`;
+  - `approle`.
+- a review exige:
+  - branch SDK lazy ready;
+  - endpoint/base URL confirmado;
+  - auth strategy confirmada;
+  - contrato de path/campo de segredo confirmado;
+  - timeout budget confirmado;
+  - rollback confirmado.
+
+### Escopo deliberado
+- sem implementar chamada real com `hvac`.
+- sem credenciais reais.
+- sem criar secret no Vault.
+- sem imprimir path completo, segredo ou token.
+- sem ativar produção.
+
+## Owner MFA Hashicorp Vault Real Endpoint Execution
+- o provider `hashicorp-vault` agora possui execução real via `hvac`, atrás de flag dedicada.
+- implementação:
+  - `accounts.infrastructure.owner_mfa_secret_providers`
+- evidence query:
+  - `accounts.application.owner_mfa_hashicorp_vault_real_endpoint_execution_queries`
+- comando:
+  - `python manage.py owner_mfa_hashicorp_vault_real_endpoint_execute --tenant-id=<tenant_id> --probe-reference=<ref> --canary-owner-email=<email>`
+- settings adicionados:
+  - `OWNER_MFA_HASHICORP_VAULT_ENDPOINT_ENABLED`;
+  - `OWNER_MFA_HASHICORP_VAULT_ADDR`;
+  - `OWNER_MFA_HASHICORP_VAULT_AUTH_METHOD`;
+  - `OWNER_MFA_HASHICORP_VAULT_TOKEN`;
+  - `OWNER_MFA_HASHICORP_VAULT_ROLE_ID`;
+  - `OWNER_MFA_HASHICORP_VAULT_SECRET_ID`;
+  - `OWNER_MFA_HASHICORP_VAULT_SECRET_MOUNT`;
+  - `OWNER_MFA_HASHICORP_VAULT_SECRET_FIELD`.
+- comportamento:
+  - `hvac` é importado de forma lazy;
+  - auth `token` e `approle` são suportados no contrato inicial;
+  - leitura usa KV v2 com `mount_point` e `path` explícitos;
+  - o campo de segredo vem de `OWNER_MFA_HASHICORP_VAULT_SECRET_FIELD`;
+  - `ImportError`, timeout, permission denied e missing são mapeados para result codes seguros.
+
+### Escopo deliberado
+- sem instalar `hvac` automaticamente.
+- sem ativar endpoint por padrão.
+- sem cache.
+- sem criação/migração de secrets no Vault.
+- sem imprimir segredo, token, role secret ou path completo.
+
+## Owner MFA Hashicorp Vault Staging Smoke Evidence
+- o smoke staging do endpoint Hashicorp Vault agora possui evidência declarativa.
+- query service:
+  - `accounts.application.owner_mfa_hashicorp_vault_staging_smoke_evidence_queries`
+- comando:
+  - `python manage.py owner_mfa_hashicorp_vault_staging_smoke_evidence --tenant-id=<tenant_id> --probe-reference=<ref> --canary-owner-email=<email> --staging-probe-passed --invalid-path-blocked --logs-redacted --rollback-verified --post-smoke-health-ready`
+- a evidência exige:
+  - execution real Hashicorp Vault ready;
+  - probe staging reportada como aprovada;
+  - path inválido reportado como bloqueado;
+  - logs/stdout/evidence reportados como redigidos;
+  - rollback verificado;
+  - health pós-smoke reportado como ready.
+
+### Escopo deliberado
+- sem automatizar login/challenge.
+- sem criar secret no Vault.
+- sem alterar fator MFA.
+- sem exportar evidência formal assinada.
+- sem ativar produção.
+- sem imprimir segredo, token, role secret ou path completo.
+
+## Owner MFA Vault/KMS Provider Production Readiness Review
+- o provider Vault/KMS agora possui Go/No-Go consolidado para produção.
+- query service:
+  - `accounts.application.owner_mfa_vault_kms_provider_production_readiness_queries`
+- comando:
+  - `python manage.py owner_mfa_vault_kms_provider_production_readiness --tenant-id=<tenant_id> --probe-reference=<ref> --canary-owner-email=<email> --runbook-reviewed --rollback-owner-confirmed --monitoring-confirmed --change-window-confirmed --credential-rotation-confirmed`
+- a readiness compõe:
+  - smoke staging Hashicorp Vault;
+  - provider health closure;
+  - confirmations operacionais de runbook, monitoramento, rollback owner, janela e rotação de credencial.
+- decisão:
+  - `GO` quando smoke, health e confirmations estão ready;
+  - `NO-GO` quando qualquer blocker permanece.
+
+### Escopo deliberado
+- sem alterar flags/env.
+- sem ativar produção.
+- sem executar rollback.
+- sem exportar evidência formal assinada.
+- sem imprimir segredo, token, role secret ou path completo.
+
+## Owner MFA Hashicorp Vault Production Gate Review
+- o provider Hashicorp Vault agora possui gate operacional de ativação por tenant.
+- query service:
+  - `accounts.application.owner_mfa_hashicorp_vault_production_gate_queries`
+- comando:
+  - `python manage.py owner_mfa_hashicorp_vault_production_gate --tenant-id=<tenant_id> --probe-reference=<ref> --canary-owner-email=<email> --tenant-scope-confirmed --rollout-order-confirmed --feature-flags-confirmed --support-standby-confirmed --rollback-window-confirmed --post-activation-monitoring-confirmed`
+- o gate exige:
+  - production readiness `GO`;
+  - tenant canário confirmado;
+  - ordem de rollout confirmada;
+  - flags de ativação revisadas;
+  - plantão/suporte confirmado;
+  - janela de rollback confirmada;
+  - monitoramento pós-ativação confirmado.
+- saída:
+  - `GO` libera a próxima trilha de activation evidence;
+  - `NO-GO` lista blockers operacionais sem alterar ambiente.
+
+### Escopo deliberado
+- sem alterar flags/env.
+- sem executar deploy/restart.
+- sem ativar produção.
+- sem criar secret no Vault.
+- sem executar rollback.
+- sem imprimir segredo, token, role secret ou path completo.
+
+## Owner MFA Vault/KMS Provider Production Activation Evidence
+- a ativação production do provider Vault/KMS agora possui evidência declarativa pós-gate.
+- query service:
+  - `accounts.application.owner_mfa_vault_kms_provider_production_activation_evidence_queries`
+- comando:
+  - `python manage.py owner_mfa_vault_kms_provider_production_activation_evidence --tenant-id=<tenant_id> --probe-reference=<ref> --canary-owner-email=<email> --deployment-completed --flags-enabled-for-tenant --post-deploy-probe-passed --owner-login-challenge-passed --provider-health-ready --rollback-not-required --evidence-redacted`
+- a evidência exige:
+  - production gate `GO`;
+  - deploy/restart reportado como concluído;
+  - flags reportadas como habilitadas para o tenant;
+  - probe pós-deploy reportada como aprovada;
+  - login/challenge owner reportado como aprovado;
+  - provider health reportado como ready;
+  - rollback reportado como não necessário;
+  - evidência reportada como redigida.
+
+### Escopo deliberado
+- sem executar deploy/restart.
+- sem alterar flags/env.
+- sem chamar rollback.
+- sem criar ou migrar secrets.
+- sem exportar evidência formal assinada.
+- sem imprimir segredo, token, role secret ou path completo.
+
+## Owner MFA Hashicorp Vault Post-Activation Monitoring Review
+- o endpoint Hashicorp Vault agora possui classificação operacional pós-ativação.
+- query service:
+  - `accounts.application.owner_mfa_hashicorp_vault_post_activation_monitoring_queries`
+- comando:
+  - `python manage.py owner_mfa_hashicorp_vault_post_activation_monitoring --tenant-id=<tenant_id> --probe-reference=<ref> --canary-owner-email=<email> --monitoring-window-elapsed --provider-health-stable --owner-login-error-spike-absent --support-incidents-absent --rollback-signal-absent --evidence-redacted`
+- classificações:
+  - `HEALTHY`: janela completa, health estável, sem spike, sem incidentes, sem rollback signal e evidence redigida;
+  - `WATCH`: activation ready, mas algum sinal leve ainda exige observação;
+  - `ROLLBACK`: rollback signal presente;
+  - `BLOCKED`: activation evidence ainda não está pronta.
+
+### Escopo deliberado
+- sem executar rollback automaticamente.
+- sem expandir tenants automaticamente.
+- sem alterar flags/env.
+- sem criar tickets/incidentes.
+- sem imprimir segredo, token, role secret ou path completo.
+
+## Owner MFA Vault/KMS Production Closure Review
+- a trilha production do provider Vault/KMS MFA owner/admin agora possui closure explícito.
+- query service:
+  - `accounts.application.owner_mfa_vault_kms_production_closure_queries`
+- comando:
+  - `python manage.py owner_mfa_vault_kms_production_closure --tenant-id=<tenant_id> --probe-reference=<ref> --canary-owner-email=<email> --monitoring-window-elapsed --provider-health-stable --owner-login-error-spike-absent --support-incidents-absent --rollback-signal-absent --evidence-redacted --rollback-runbook-confirmed --residual-risks-accepted --tenant-expansion-plan-documented`
+- o closure exige:
+  - post-activation monitoring `HEALTHY`;
+  - runbook de rollback confirmado;
+  - riscos residuais aceitos;
+  - plano de expansão por tenant documentado.
+
+### Escopo deliberado
+- sem executar rollback.
+- sem expandir tenants automaticamente.
+- sem alterar flags/env.
+- sem acessar, criar ou migrar secrets.
+- sem imprimir segredo, token, role secret ou path completo.
+
+## Owner MFA Hashicorp Vault Tenant Expansion Review
+- a expansão do provider Hashicorp Vault agora possui review tenant-by-tenant antes de qualquer rollout real.
+- query service:
+  - `accounts.application.owner_mfa_hashicorp_vault_tenant_expansion_queries`
+- comando:
+  - `python manage.py owner_mfa_hashicorp_vault_tenant_expansion_review --canary-tenant-id=<tenant_id> --target-tenant-ids=<tenant_id> --probe-reference=<ref> --canary-owner-email=<email> --monitoring-window-elapsed --provider-health-stable --owner-login-error-spike-absent --support-incidents-absent --rollback-signal-absent --evidence-redacted --rollback-runbook-confirmed --residual-risks-accepted --tenant-expansion-plan-documented --expansion-window-confirmed --per-tenant-evidence-required --support-standby-confirmed --rollback-window-confirmed`
+- a review exige:
+  - closure `READY` do tenant canário;
+  - lista explícita de tenants-alvo ativos e fora de maintenance mode;
+  - janela de expansão confirmada;
+  - evidência obrigatória por tenant;
+  - suporte e rollback window confirmados;
+  - primeira expansão limitada a um tenant por janela.
+
+### Escopo deliberado
+- sem ativar provider para tenants-alvo.
+- sem alterar flags/env.
+- sem executar rollback.
+- sem criar ou migrar secrets.
+- sem tratar evidência do tenant canário como autorização global.
+
+## Owner MFA Hashicorp Vault Tenant Expansion Evidence Execution
+- a primeira expansão para tenant-alvo agora possui evidência declarativa própria.
+- query service:
+  - `accounts.application.owner_mfa_hashicorp_vault_tenant_expansion_evidence_queries`
+- comando:
+  - `python manage.py owner_mfa_hashicorp_vault_tenant_expansion_evidence --canary-tenant-id=<tenant_id> --target-tenant-id=<tenant_id> --probe-reference=<ref> --canary-owner-email=<email> --monitoring-window-elapsed --provider-health-stable --owner-login-error-spike-absent --support-incidents-absent --rollback-signal-absent --canary-evidence-redacted --rollback-runbook-confirmed --residual-risks-accepted --tenant-expansion-plan-documented --expansion-window-confirmed --per-tenant-evidence-required --support-standby-confirmed --rollback-window-confirmed --target-flags-enabled --target-activation-evidence-captured --target-monitoring-scheduled --target-owner-login-challenge-passed --target-provider-health-ready --rollback-not-required --evidence-redacted`
+- a evidência exige:
+  - tenant expansion review `READY`;
+  - flags habilitadas para o target fora do command;
+  - activation evidence capturada para o target;
+  - monitoring pós-expansão agendado para o target;
+  - login/challenge e provider health do target saudáveis;
+  - rollback não requerido;
+  - evidência redigida.
+
+### Escopo deliberado
+- sem ativar flags/env.
+- sem executar rollback.
+- sem chamar expansão global.
+- sem criar ou migrar secrets.
+- sem imprimir segredo, token, role secret ou path completo.
+
+## Owner MFA Hashicorp Vault Target Post-Expansion Monitoring Review
+- o tenant-alvo expandido agora possui classificação própria de monitoring pós-expansão.
+- query service:
+  - `accounts.application.owner_mfa_hashicorp_vault_target_post_expansion_monitoring_queries`
+- comando:
+  - `python manage.py owner_mfa_hashicorp_vault_target_post_expansion_monitoring --canary-tenant-id=<tenant_id> --target-tenant-id=<tenant_id> --probe-reference=<ref> --canary-owner-email=<email> --canary-monitoring-window-elapsed --canary-provider-health-stable --canary-owner-login-error-spike-absent --canary-support-incidents-absent --canary-rollback-signal-absent --canary-evidence-redacted --rollback-runbook-confirmed --residual-risks-accepted --tenant-expansion-plan-documented --expansion-window-confirmed --per-tenant-evidence-required --support-standby-confirmed --rollback-window-confirmed --target-flags-enabled --target-activation-evidence-captured --target-monitoring-scheduled --target-owner-login-challenge-passed --target-provider-health-ready --rollback-not-required --expansion-evidence-redacted --target-monitoring-window-elapsed --target-provider-health-stable --target-owner-login-error-spike-absent --target-support-incidents-absent --target-rollback-signal-absent --evidence-redacted`
+- classificações:
+  - `HEALTHY`: target validado, janela concluída, health estável, sem spike, sem incidentes, sem rollback signal e evidence redigida;
+  - `WATCH`: evidence ready, mas algum sinal do target ainda exige observação;
+  - `ROLLBACK`: rollback signal presente no target;
+  - `BLOCKED`: evidence de expansão ainda não está pronta.
+
+### Escopo deliberado
+- sem liberar próximo tenant automaticamente.
+- sem alterar flags/env.
+- sem executar rollback.
+- sem criar incidentes/tickets.
+- sem imprimir segredo, token, role secret ou path completo.
+
+## Owner MFA Hashicorp Vault Next Tenant Expansion Review
+- a cadência de expansão Hashicorp Vault agora possui decisão explícita entre seguir, pausar ou bloquear.
+- query service:
+  - `accounts.application.owner_mfa_hashicorp_vault_next_tenant_expansion_queries`
+- comando:
+  - `python manage.py owner_mfa_hashicorp_vault_next_tenant_expansion_review --canary-tenant-id=<tenant_id> --current-target-tenant-id=<tenant_id> --next-target-tenant-ids=<tenant_id> --probe-reference=<ref> --canary-owner-email=<email> --canary-monitoring-window-elapsed --canary-provider-health-stable --canary-owner-login-error-spike-absent --canary-support-incidents-absent --canary-rollback-signal-absent --canary-evidence-redacted --rollback-runbook-confirmed --residual-risks-accepted --tenant-expansion-plan-documented --expansion-window-confirmed --per-tenant-evidence-required --support-standby-confirmed --rollback-window-confirmed --target-flags-enabled --target-activation-evidence-captured --target-monitoring-scheduled --target-owner-login-challenge-passed --target-provider-health-ready --rollback-not-required --expansion-evidence-redacted --target-monitoring-window-elapsed --target-provider-health-stable --target-owner-login-error-spike-absent --target-support-incidents-absent --target-rollback-signal-absent --evidence-redacted --next-window-confirmed --operator-capacity-confirmed --previous-target-evidence-archived`
+- status:
+  - `READY`: target atual está `HEALTHY`, próximo target é válido e cadência está confirmada;
+  - `PAUSED`: operador decidiu parar após o target atual;
+  - `BLOCKED`: monitoring atual não está saudável ou próximo target/cadência não passou.
+
+### Escopo deliberado
+- sem ativar próximo tenant.
+- sem alterar flags/env.
+- sem executar rollback.
+- sem criar ou migrar secrets.
+- sem pular tenant expansion review/evidence/monitoring do próximo ciclo.
+
+## Owner MFA Hashicorp Vault Expansion Cadence Closure Review
+- a cadência de expansão Hashicorp Vault agora possui closure operacional explícito.
+- query service:
+  - `accounts.application.owner_mfa_hashicorp_vault_expansion_cadence_closure_queries`
+- comando:
+  - `python manage.py owner_mfa_hashicorp_vault_expansion_cadence_closure --canary-tenant-id=<tenant_id> --current-target-tenant-id=<tenant_id> --next-target-tenant-ids=<tenant_id> --probe-reference=<ref> --canary-owner-email=<email> --canary-monitoring-window-elapsed --canary-provider-health-stable --canary-owner-login-error-spike-absent --canary-support-incidents-absent --canary-rollback-signal-absent --canary-evidence-redacted --rollback-runbook-confirmed --residual-risks-accepted --tenant-expansion-plan-documented --expansion-window-confirmed --per-tenant-evidence-required --support-standby-confirmed --rollback-window-confirmed --target-flags-enabled --target-activation-evidence-captured --target-monitoring-scheduled --target-owner-login-challenge-passed --target-provider-health-ready --rollback-not-required --expansion-evidence-redacted --target-monitoring-window-elapsed --target-provider-health-stable --target-owner-login-error-spike-absent --target-support-incidents-absent --target-rollback-signal-absent --evidence-redacted --next-window-confirmed --operator-capacity-confirmed --previous-target-evidence-archived --cadence-decision-recorded --evidence-archive-complete --residual-risks-reviewed --rotation-runbook-queued --audit-evidence-ready`
+- o closure aceita cadência:
+  - `READY`: próximo ciclo pode ser considerado, mas ainda exige nova review/evidence/monitoring;
+  - `PAUSED`: cadência encerrada sem blocker operacional;
+  - `BLOCKED`: closure bloqueia até resolver cadência anterior.
+- exige decisão registrada, evidência arquivada, riscos revisados, rotação/runbook na fila e evidence auditável pronta.
+
+### Escopo deliberado
+- sem ativar próximo tenant.
+- sem alterar flags/env.
+- sem executar rollback.
+- sem exportar evidência formal.
+- sem imprimir segredo, token, role secret ou path completo.
+
+## Owner MFA Vault/KMS Rotation Runbook Review
+- a rotação Vault/KMS MFA owner/admin agora possui runbook operacional verificável.
+- query service:
+  - `accounts.application.owner_mfa_vault_kms_rotation_runbook_queries`
+- comando:
+  - `python manage.py owner_mfa_vault_kms_rotation_runbook --canary-tenant-id=<tenant_id> --current-target-tenant-id=<tenant_id> --next-target-tenant-ids=<tenant_id> --probe-reference=<ref> --canary-owner-email=<email> --canary-monitoring-window-elapsed --canary-provider-health-stable --canary-owner-login-error-spike-absent --canary-support-incidents-absent --canary-rollback-signal-absent --canary-evidence-redacted --rollback-runbook-confirmed --residual-risks-accepted --tenant-expansion-plan-documented --expansion-window-confirmed --per-tenant-evidence-required --support-standby-confirmed --rollback-window-confirmed --target-flags-enabled --target-activation-evidence-captured --target-monitoring-scheduled --target-owner-login-challenge-passed --target-provider-health-ready --rollback-not-required --expansion-evidence-redacted --target-monitoring-window-elapsed --target-provider-health-stable --target-owner-login-error-spike-absent --target-support-incidents-absent --target-rollback-signal-absent --evidence-redacted --next-window-confirmed --operator-capacity-confirmed --previous-target-evidence-archived --cadence-decision-recorded --evidence-archive-complete --residual-risks-reviewed --rotation-runbook-queued --audit-evidence-ready --rotation-scope-documented --rotation-owner-confirmed --vault-access-validated --rotation-window-confirmed --rollback-credentials-available --post-rotation-probe-defined --affected-tenants-listed --evidence-redaction-confirmed`
+- exige:
+  - expansion cadence closure `READY`;
+  - escopo de rotação documentado;
+  - owner de rotação confirmado;
+  - acesso ao Vault validado;
+  - janela de rotação confirmada;
+  - credenciais de rollback disponíveis;
+  - probe pós-rotação definido;
+  - tenants afetados listados;
+  - redaction de evidência confirmada.
+
+### Escopo deliberado
+- sem gerar token/AppRole.
+- sem atualizar secret/configuração.
+- sem executar rotação ou rollback.
+- sem alterar flags/env.
+- sem imprimir segredo, token, role secret ou path completo.
+
+## Owner MFA Vault/KMS Rotation Evidence Execution
+- a rotação Vault/KMS MFA owner/admin agora possui evidence pack declarativo pós-execução.
+- query service:
+  - `accounts.application.owner_mfa_vault_kms_rotation_evidence_queries`
+- comando:
+  - `python manage.py owner_mfa_vault_kms_rotation_evidence --canary-tenant-id=<tenant_id> --current-target-tenant-id=<tenant_id> --next-target-tenant-ids=<tenant_id> --probe-reference=<ref> --canary-owner-email=<email> --canary-monitoring-window-elapsed --canary-provider-health-stable --canary-owner-login-error-spike-absent --canary-support-incidents-absent --canary-rollback-signal-absent --canary-evidence-redacted --rollback-runbook-confirmed --residual-risks-accepted --tenant-expansion-plan-documented --expansion-window-confirmed --per-tenant-evidence-required --support-standby-confirmed --rollback-window-confirmed --target-flags-enabled --target-activation-evidence-captured --target-monitoring-scheduled --target-owner-login-challenge-passed --target-provider-health-ready --rollback-not-required --expansion-evidence-redacted --target-monitoring-window-elapsed --target-provider-health-stable --target-owner-login-error-spike-absent --target-support-incidents-absent --target-rollback-signal-absent --evidence-redacted --next-window-confirmed --operator-capacity-confirmed --previous-target-evidence-archived --cadence-decision-recorded --evidence-archive-complete --residual-risks-reviewed --rotation-runbook-queued --audit-evidence-ready --rotation-scope-documented --rotation-owner-confirmed --vault-access-validated --rotation-window-confirmed --rollback-credentials-available --post-rotation-probe-defined --affected-tenants-listed --evidence-redaction-confirmed --rotation-executed --new-credential-active --old-credential-revoked-or-scheduled --post-rotation-probe-passed --owner-login-challenge-passed --provider-health-ready --rotation-rollback-not-required --rotation-evidence-redacted`
+- a evidência exige:
+  - rotation runbook `READY`;
+  - rotação executada fora do command;
+  - nova credencial ativa;
+  - credencial antiga revogada ou com revogação agendada;
+  - probe pós-rotação aprovado;
+  - login/challenge owner aprovado;
+  - provider health ready;
+  - rollback não requerido;
+  - evidence redigida.
+
+### Escopo deliberado
+- sem gerar token/AppRole.
+- sem revogar credencial.
+- sem atualizar secret/configuração.
+- sem executar rollback.
+- sem imprimir segredo, token, role secret ou path completo.
+
+## Owner MFA Vault/KMS Post-Rotation Monitoring Review
+- o provider Vault/KMS agora possui classificação operacional pós-rotação.
+- query service:
+  - `accounts.application.owner_mfa_vault_kms_post_rotation_monitoring_queries`
+- comando:
+  - `python manage.py owner_mfa_vault_kms_post_rotation_monitoring --canary-tenant-id=<tenant_id> --current-target-tenant-id=<tenant_id> --next-target-tenant-ids=<tenant_id> --probe-reference=<ref> --canary-owner-email=<email> --canary-monitoring-window-elapsed --canary-provider-health-stable --canary-owner-login-error-spike-absent --canary-support-incidents-absent --canary-rollback-signal-absent --canary-evidence-redacted --rollback-runbook-confirmed --residual-risks-accepted --tenant-expansion-plan-documented --expansion-window-confirmed --per-tenant-evidence-required --support-standby-confirmed --rollback-window-confirmed --target-flags-enabled --target-activation-evidence-captured --target-monitoring-scheduled --target-owner-login-challenge-passed --target-provider-health-ready --rollback-not-required --expansion-evidence-redacted --target-monitoring-window-elapsed --target-provider-health-stable --target-owner-login-error-spike-absent --target-support-incidents-absent --target-rollback-signal-absent --evidence-redacted --next-window-confirmed --operator-capacity-confirmed --previous-target-evidence-archived --cadence-decision-recorded --evidence-archive-complete --residual-risks-reviewed --rotation-runbook-queued --audit-evidence-ready --rotation-scope-documented --rotation-owner-confirmed --vault-access-validated --rotation-window-confirmed --rollback-credentials-available --post-rotation-probe-defined --affected-tenants-listed --evidence-redaction-confirmed --rotation-executed --new-credential-active --old-credential-revoked-or-scheduled --post-rotation-probe-passed --owner-login-challenge-passed --provider-health-ready --rotation-rollback-not-required --rotation-evidence-redacted --post-rotation-window-elapsed --provider-health-stable --owner-login-error-spike-absent --support-incidents-absent --rollback-signal-absent --post-rotation-evidence-redacted`
+- classificações:
+  - `HEALTHY`: rotação validada, janela concluída, health estável, sem spike, sem incidentes, sem rollback signal e evidence redigida;
+  - `WATCH`: rotation evidence ready, mas algum sinal pós-rotação ainda exige observação;
+  - `ROLLBACK`: rollback signal presente após rotação;
+  - `BLOCKED`: rotation evidence ainda não está pronta.
+
+### Escopo deliberado
+- sem retomar expansão automaticamente.
+- sem restaurar credencial.
+- sem alterar flags/env.
+- sem executar rollback.
+- sem imprimir segredo, token, role secret ou path completo.
+
+## Owner MFA Vault/KMS Rotation Closure Review
+- a rotação Vault/KMS MFA owner/admin agora possui closure explícito após monitoramento pós-rotação.
+- query service:
+  - `accounts.application.owner_mfa_vault_kms_rotation_closure_queries`
+- comando:
+  - `python manage.py owner_mfa_vault_kms_rotation_closure --canary-tenant-id=<tenant_id> --current-target-tenant-id=<tenant_id> --next-target-tenant-ids=<tenant_id> --probe-reference=<ref> --canary-owner-email=<email> ... --post-rotation-evidence-redacted --rotation-closure-decision-recorded --rotation-evidence-archived --closure-residual-risks-accepted --expansion-resume-plan-documented --rollback-window-closed-or-extended --closure-audit-evidence-ready`
+- classificações:
+  - `READY`: monitoring pós-rotação `HEALTHY`, decisão registrada, evidência arquivada, riscos aceitos, plano de retomada documentado, rollback window resolvida e audit evidence pronta;
+  - `WATCH`: monitoring pós-rotação ainda exige observação;
+  - `ROLLBACK`: monitoring pós-rotação sinaliza rollback;
+  - `BLOCKED`: closure signals obrigatórios ainda estão ausentes.
+
+### Escopo deliberado
+- sem retomar expansão automaticamente.
+- sem restaurar credencial.
+- sem alterar flags/env.
+- sem executar rollback.
+- sem exportar evidência auditável formal.
+- sem imprimir segredo, token, role secret ou path completo.
+
+## Owner MFA Track Closure Review
+- a trilha MFA owner/admin agora possui closure operacional final após evidência auditável.
+- query service:
+  - `accounts.application.owner_mfa_track_closure_queries`
+- comando:
+  - `python manage.py owner_mfa_track_closure --tenant-id=<tenant_id> --expected-actions-confirmed --export-scope-documented --redaction-reviewed --recipient-approved --artifact-delivered --retention-owner-confirmed --storage-decision-recorded --audit-residual-risks-accepted --mfa-track-decision-recorded --rollout-state-documented --support-handoff-completed --next-roi-decision-recorded --track-residual-risks-accepted`
+- o closure valida:
+  - evidência auditável MFA fechada pelo módulo `audit`;
+  - decisão final da trilha MFA registrada;
+  - estado de rollout/enforcement/rollback documentado;
+  - handoff de suporte concluído;
+  - próxima decisão de ROI registrada;
+  - riscos residuais aceitos.
+
+### Escopo deliberado
+- sem ativar enforcement, provider ou tenant.
+- sem exportar/reimprimir evidência.
+- sem alterar `AuditLog`.
+- sem alterar flags/env.
+- sem executar rollback.
+
+## Security ROI Re-Selection Review
+- segurança agora possui re-seleção objetiva após closure MFA/Vault/Audit.
+- query service:
+  - `accounts.application.security_roi_reselection_queries`
+- comando:
+  - `python manage.py security_roi_reselection --tenant-id=<tenant_id> --expected-actions-confirmed --export-scope-documented --redaction-reviewed --recipient-approved --artifact-delivered --retention-owner-confirmed --storage-decision-recorded --audit-residual-risks-accepted --mfa-track-decision-recorded --rollout-state-documented --support-handoff-completed --next-roi-decision-recorded --track-residual-risks-accepted --api-key-surface-active`
+- candidatos avaliados:
+  - `API Key Governance Foundation Review`;
+  - `Platform Owner Session Policy Hardening Review`;
+  - `Owner MFA Audit Evidence Storage/Signature Review`;
+  - `Owner MFA Hashicorp Vault Next Tenant Expansion Review`;
+  - `System ROI Re-Selection Review`.
+- a recomendação atual prioriza API keys quando a superfície programática está ativa.
+
+### Escopo deliberado
+- sem implementar a trilha escolhida.
+- sem ativar tenant/provider/enforcement.
+- sem alterar flags/env.
+- sem reimprimir evidência auditável.
+- sem criar evento novo.

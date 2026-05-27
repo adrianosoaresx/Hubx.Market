@@ -1,0 +1,32 @@
+groups:
+  - name: hubx-api-keys-public-endpoints
+    rules:
+      - alert: HubxApiKeyPublicAuthFailuresHigh
+        expr: sum by (tenant_id, endpoint, reason) (increase(hubx_api_key_auth_failure_total[10m])) >= 5
+        for: 5m
+        labels:
+          severity: warning
+          domain: api_keys
+        annotations:
+          summary: "Falhas recorrentes de autenticação em endpoint público por API key"
+          description: "Foram observadas 5 ou mais falhas de autenticação nos últimos 10 minutos para tenant {{ $labels.tenant_id }}, endpoint {{ $labels.endpoint }} e reason {{ $labels.reason }}. Revisar dashboard Hubx API Key Public Endpoints, escopo da chave, expiração, revogação e eventos de auditoria sem expor segredo/hash/header."
+
+      - alert: HubxApiKeyPublicRateLimitedHigh
+        expr: sum by (tenant_id, endpoint, prefix) (increase(hubx_api_key_rate_limited_total[10m])) >= 3
+        for: 5m
+        labels:
+          severity: warning
+          domain: api_keys
+        annotations:
+          summary: "Rate limit recorrente em endpoint público por API key"
+          description: "O rate limit foi acionado 3 ou mais vezes nos últimos 10 minutos para tenant {{ $labels.tenant_id }}, endpoint {{ $labels.endpoint }} e prefix {{ $labels.prefix }}. Revisar dashboard Hubx API Key Public Endpoints, limite configurado e padrão de uso do cliente sem solicitar valor claro da API key."
+
+      - alert: HubxApiKeyPublicEndpointDisabled
+        expr: max by (endpoint) (hubx_api_key_public_endpoint_enabled) == 0
+        for: 10m
+        labels:
+          severity: warning
+          domain: api_keys
+        annotations:
+          summary: "Endpoint público por API key desabilitado"
+          description: "O endpoint público {{ $labels.endpoint }} está desabilitado há pelo menos 10 minutos. Validar flag de rollout, scrape /api-keys/metrics/public-endpoints/ e decisão operacional antes de reabilitar tráfego."

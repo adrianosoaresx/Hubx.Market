@@ -77,12 +77,12 @@ def _build_checkout_recovery_context(*, request, result: str, back_url: str, ses
         },
         "checkout-completion-stock-conflict": {
             "title": "Como retomar com segurança",
-            "description": "Volte ao produto para confirmar estoque atual e só depois tente gerar o pedido inicial novamente.",
-            "helper": "O saldo livre mudou durante o checkout; recriar a sessão pelo produto ajuda a evitar totais ou itens desatualizados.",
-            "primary_label": "Voltar ao produto",
-            "primary_href": back_url,
-            "secondary_label": "",
-            "secondary_href": "",
+            "description": "Revise os itens afetados nesta sessão antes de tentar gerar o pedido inicial novamente.",
+            "helper": "O saldo livre mudou durante o checkout; confirme a quantidade desejada sem criar pedido parcial nem ajuste silencioso.",
+            "primary_label": "Reabrir checkout",
+            "primary_href": retry_href,
+            "secondary_label": "Voltar ao produto",
+            "secondary_href": back_url,
         },
         "checkout-completion-snapshot-conflict": {
             "title": "Como retomar com segurança",
@@ -151,10 +151,17 @@ class CheckoutPageView(TemplateView):
                 item_id = int(raw_item_id)
             except (TypeError, ValueError):
                 item_id = 0
+            try:
+                requested_quantity = int(request.POST.get("quantity", "") or 0)
+            except (TypeError, ValueError):
+                requested_quantity = 0
+            inventory_reconciliation = str(request.POST.get("inventory_reconciliation", "") or "").strip() == "1"
             result = checkout_session_commands.mutate_item(
                 session_key=str(session_key or ""),
                 item_id=item_id,
                 operation=operation,
+                quantity=requested_quantity,
+                inventory_reconciliation=inventory_reconciliation,
             )
             fallback_stage = stage or "delivery"
             if session_key:
@@ -272,6 +279,20 @@ class CheckoutPageView(TemplateView):
                 "title": "Sessão indisponível",
                 "description": "Não foi possível salvar esta etapa agora. Tente iniciar o checkout novamente a partir do produto.",
             }
+        elif result == "checkout-shipping-method-invalid":
+            context["checkout_feedback"] = {
+                "variant": "warning",
+                "icon": "🚚",
+                "title": "Escolha uma entrega válida",
+                "description": "Selecione uma modalidade de frete disponível nesta sessão antes de seguir para pagamento ou revisão.",
+            }
+        elif result == "checkout-payment-method-invalid":
+            context["checkout_feedback"] = {
+                "variant": "warning",
+                "icon": "💳",
+                "title": "Escolha um pagamento válido",
+                "description": "Selecione uma forma de pagamento disponível nesta sessão antes de seguir para revisão.",
+            }
         elif result == "checkout-completion-blocked":
             context["checkout_feedback"] = {
                 "variant": "warning",
@@ -308,11 +329,14 @@ class CheckoutPageView(TemplateView):
                 "description": "Uma das variantes desta sessão não está mais disponível para confirmação segura. Revise o produto antes de tentar gerar o pedido inicial novamente.",
             }
         elif result == "checkout-completion-stock-conflict":
+            context["inventory_conflicts"] = checkout_completion_commands.get_inventory_conflicts(
+                session_key=str(session_key or "")
+            )
             context["checkout_feedback"] = {
                 "variant": "warning",
                 "icon": "⚠️",
                 "title": "Estoque mudou durante o checkout",
-                "description": "O saldo livre da variante não é mais suficiente para concluir esta sessão com segurança. Revise o produto antes de tentar gerar o pedido inicial novamente.",
+                "description": "O saldo livre de um ou mais itens não é mais suficiente para concluir esta sessão com segurança. Revise os detalhes antes de tentar gerar o pedido inicial novamente.",
             }
         elif result == "checkout-completion-snapshot-conflict":
             context["checkout_feedback"] = {
@@ -334,6 +358,20 @@ class CheckoutPageView(TemplateView):
                 "icon": "🧺",
                 "title": "Item removido",
                 "description": "A sessão foi atualizada com segurança após remover este item.",
+            }
+        elif result == "checkout-inventory-reconciled":
+            context["checkout_feedback"] = {
+                "variant": "success",
+                "icon": "📦",
+                "title": "Estoque reconciliado",
+                "description": "Ajustamos este item ao estoque disponível. Revise os novos totais e tente criar o pedido inicial novamente.",
+            }
+        elif result == "checkout-inventory-item-removed":
+            context["checkout_feedback"] = {
+                "variant": "success",
+                "icon": "🧺",
+                "title": "Item indisponível removido",
+                "description": "Removemos o item indisponível da sessão. Revise os novos totais antes de criar o pedido inicial novamente.",
             }
         elif result == "checkout-item-session-empty":
             context["checkout_feedback"] = {

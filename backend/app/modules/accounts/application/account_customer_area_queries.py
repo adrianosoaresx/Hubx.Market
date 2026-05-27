@@ -946,6 +946,7 @@ class DjangoOrmCustomerAreaRepository:
         page_meta = f"Entrega em {shipping_address_summary} · última atualização em {updated_at}"
         if recent_update_hint:
             page_meta = f"{page_meta} · {recent_update_hint.lower()}"
+        coupon_visibility = self._coupon_visibility(order)
 
         return {
             "order_number": order_number,
@@ -977,6 +978,10 @@ class DjangoOrmCustomerAreaRepository:
             "subtotal": self._money_value(getattr(order, "subtotal", None)),
             "shipping": self._money_value(getattr(order, "shipping_total", None)),
             "discount": self._money_value(getattr(order, "discount_total", None), allow_empty=True),
+            "coupon_visible": coupon_visibility["visible"],
+            "coupon_code": coupon_visibility["code"],
+            "coupon_title": coupon_visibility["title"],
+            "coupon_description": coupon_visibility["description"],
             "installments": self._string_value(getattr(order, "installments_summary", None), default=""),
             "total": self._money_value(getattr(order, "total", None)),
             "summary_note": f"{state_helper} {summary_note}",
@@ -1027,6 +1032,8 @@ class DjangoOrmCustomerAreaRepository:
                 "price": DjangoOrmCustomerAreaRepository._money_value(getattr(item, "price_snapshot", None)),
                 "quantity": str(getattr(item, "quantity", 1) or 1),
                 "quantity_readonly": bool(getattr(item, "quantity_readonly", True)),
+                "product_id_snapshot": getattr(item, "product_id_snapshot", None),
+                "product_slug_snapshot": str(getattr(item, "product_slug_snapshot", "") or ""),
             }
             for item in items
         ]
@@ -1058,6 +1065,34 @@ class DjangoOrmCustomerAreaRepository:
             return str(value)
         prefix = "-R$ " if allow_empty and numeric > 0 else "R$ "
         return f"{prefix}{numeric:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+    def _coupon_visibility(self, order: object) -> dict[str, object]:
+        code = str(getattr(order, "coupon_code", "") or "").strip().upper()
+        snapshot = getattr(order, "promotion_snapshot", {}) or {}
+        discount_total = self._safe_decimal(getattr(order, "discount_total", None))
+        if not code or not isinstance(snapshot, dict) or not snapshot or discount_total <= 0:
+            return {
+                "visible": False,
+                "code": "",
+                "title": "",
+                "description": "",
+            }
+        discount = self._money_value(discount_total, allow_empty=True)
+        return {
+            "visible": True,
+            "code": code,
+            "title": f"Cupom aplicado: {code}",
+            "description": f"Desconto preservado no pedido: {discount}.",
+        }
+
+    @staticmethod
+    def _safe_decimal(value: object) -> Decimal:
+        if isinstance(value, Decimal):
+            return value
+        try:
+            return Decimal(str(value or "0"))
+        except Exception:
+            return Decimal("0")
 
 
 class FallbackAccountProfileRepository:
@@ -1537,6 +1572,10 @@ class AccountCustomerAreaQueryService:
             "subtotal": order["subtotal"],
             "shipping": order["shipping"],
             "discount": order["discount"],
+            "coupon_visible": bool(order.get("coupon_visible")),
+            "coupon_code": str(order.get("coupon_code") or ""),
+            "coupon_title": str(order.get("coupon_title") or ""),
+            "coupon_description": str(order.get("coupon_description") or ""),
             "installments": order["installments"],
             "total": order["total"],
             "activity_items": order["activity_items"],

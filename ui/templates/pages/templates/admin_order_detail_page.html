@@ -94,6 +94,12 @@
             {% with title=order_summary_title|default:"Resumo do pedido" description=order_summary_description|default:"Itens, totais e condições da compra." items=order_items subtotal=subtotal shipping=shipping discount=discount installments=installments total=total note=summary_note showcase_mode=showcase_mode %}
                 {% include "shared/components/composite/order_summary.html" %}
             {% endwith %}
+
+            {% if coupon_visible %}
+                {% with title=coupon_title subtitle="Snapshot promocional do pedido" content=coupon_description %}
+                    {% include "shared/components/data_display/card.html" %}
+                {% endwith %}
+            {% endif %}
         </div>
 
         <aside class="space-y-6">

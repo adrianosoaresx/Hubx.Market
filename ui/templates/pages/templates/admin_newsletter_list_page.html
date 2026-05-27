@@ -1,0 +1,24 @@
+{% extends layout_template|default:"layouts/admin_shell.html" %}
+
+{% block page_title %}{{ page_title|default:"Newsletter" }}{% endblock %}
+{% block shell_title %}{% if shell_title %}{{ shell_title }}{% elif page_title %}{{ page_title }}{% else %}Newsletter{% endif %}{% endblock %}
+
+{% block content %}
+<section class="space-y-6">
+    {% with eyebrow=page_eyebrow|default:"Retenção" title=page_title|default:"Newsletter" description=page_description|default:"Leia opt-ins tenant-scoped." %}
+        {% include "shared/components/layout/page_header.html" %}
+    {% endwith %}
+
+    <div class="rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-4 text-sm text-[var(--color-text-secondary)]">
+        Primeira fundação: captura e leitura de consentimento. Campanhas, segmentação e envio ficam fora deste corte.
+    </div>
+
+    {% with method="get" action=filter_action title="Filtros" description="Busque por e-mail, nome ou origem e refine por status." search_name=search_name search_value=search_value search_label=search_label search_placeholder=search_placeholder status_name="status" status_options=status_options status_selected=status_selected status_label="Status" reset_url=reset_url submit_label="Aplicar filtros" reset_label="Limpar" %}
+        {% include "shared/components/composite/filter_bar.html" %}
+    {% endwith %}
+
+    {% with title="Inscritos" description="Contatos com opt-in registrado para este tenant." count=table_count columns=columns rows=rows table_id="admin-newsletter-table" empty_title=empty_title empty_description=empty_description %}
+        {% include "shared/components/data_display/data_table.html" %}
+    {% endwith %}
+</section>
+{% endblock %}

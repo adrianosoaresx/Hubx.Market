@@ -1,4 +1,5 @@
 from django.apps import apps
+from django.core.exceptions import ValidationError
 from django.db import models
 
 
@@ -74,3 +75,79 @@ class OwnerUser(models.Model):
 
     def __str__(self) -> str:  # pragma: no cover
         return f"{self.tenant_id}:{self.email}"
+
+
+class OwnerMfaFactor(models.Model):
+    class FactorType(models.TextChoices):
+        TOTP = "totp", "TOTP"
+        RECOVERY_CODE = "recovery_code", "Código de recuperação"
+        EXTERNAL = "external", "Provider externo"
+
+    tenant = models.ForeignKey("tenants.Tenant", on_delete=models.CASCADE, related_name="owner_mfa_factors")
+    owner = models.ForeignKey("accounts.OwnerUser", on_delete=models.CASCADE, related_name="mfa_factors")
+    factor_type = models.CharField(max_length=32, choices=FactorType.choices)
+    provider_key = models.CharField(max_length=64, blank=True)
+    label = models.CharField(max_length=120, blank=True)
+    secret_reference = models.CharField(max_length=255, blank=True)
+    is_verified = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+    verified_at = models.DateTimeField(null=True, blank=True)
+    last_challenged_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("tenant_id", "owner_id", "factor_type", "provider_key")
+        indexes = [
+            models.Index(fields=("tenant", "owner", "is_active"), name="accounts_mfa_owner_act_idx"),
+            models.Index(fields=("tenant", "factor_type"), name="accounts_mfa_tenant_type_idx"),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=("tenant", "owner", "factor_type", "provider_key"),
+                name="accounts_mfa_unique_factor_per_owner",
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.owner_id:
+            owner_tenant_id = self.owner.tenant_id
+            if not self.tenant_id:
+                self.tenant_id = owner_tenant_id
+            elif self.tenant_id != owner_tenant_id:
+                raise ValidationError("OwnerMfaFactor deve pertencer ao mesmo tenant do OwnerUser.")
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:  # pragma: no cover
+        return f"{self.tenant_id}:{self.owner_id}:{self.factor_type}:{self.provider_key or 'default'}"
+
+
+class OwnerMfaRecoveryCode(models.Model):
+    tenant = models.ForeignKey("tenants.Tenant", on_delete=models.CASCADE, related_name="owner_mfa_recovery_codes")
+    owner = models.ForeignKey("accounts.OwnerUser", on_delete=models.CASCADE, related_name="mfa_recovery_codes")
+    code_hash = models.CharField(max_length=255)
+    label = models.CharField(max_length=120, blank=True)
+    used_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("tenant_id", "owner_id", "created_at")
+        indexes = [
+            models.Index(fields=("tenant", "owner", "used_at"), name="accounts_mfa_rc_owner_idx"),
+        ]
+
+    @property
+    def is_used(self) -> bool:
+        return self.used_at is not None
+
+    def save(self, *args, **kwargs):
+        if self.owner_id:
+            owner_tenant_id = self.owner.tenant_id
+            if not self.tenant_id:
+                self.tenant_id = owner_tenant_id
+            elif self.tenant_id != owner_tenant_id:
+                raise ValidationError("OwnerMfaRecoveryCode deve pertencer ao mesmo tenant do OwnerUser.")
+        super().save(*args, **kwargs)
+
+    def __str__(self) -> str:  # pragma: no cover
+        return f"{self.tenant_id}:{self.owner_id}:recovery-code:{self.id}"

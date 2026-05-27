@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from django.db import transaction
 from django.utils import timezone
 
+from app.modules.coupons.application.coupon_redemption_commands import coupon_redemption_commands
+
 
 ORDER_STATUS_OPTIONS = [
     {"value": "paid", "label": "Pago"},
@@ -388,6 +390,12 @@ class AdminOrderCommandService:
                 description=f"Pedido cancelado a partir do status {self._order_status_label(current_status)}.",
                 badge_label="Cancelamento",
                 badge_variant="danger",
+            )
+            coupon_redemption_commands.reverse_order_coupon_redemption(
+                tenant_id=tenant_id or getattr(order, "tenant_id", None),
+                order_number=str(getattr(order, "number", "") or ""),
+                source_type="admin_action",
+                source_label="Admin Orders",
             )
         return True, "order-canceled"
 

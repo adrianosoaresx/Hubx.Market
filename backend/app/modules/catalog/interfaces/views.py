@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from decimal import Decimal, InvalidOperation
 from math import ceil
 from urllib.parse import urlencode
+from uuid import uuid4
 
 from django.conf import settings
+from django.contrib import messages
 from django.core.paginator import Paginator
 from django.http import Http404
 from django.http import HttpResponse
@@ -18,13 +21,18 @@ from app.modules.catalog.application.admin_product_queries import (
     STATUS_OPTIONS,
     admin_product_queries,
 )
+from app.modules.catalog.application.admin_conversion_analytics_queries import admin_conversion_analytics_queries
 from app.modules.catalog.application.catalog_metrics_queries import catalog_metrics_queries
 from app.modules.catalog.application.storefront_catalog_queries import (
     storefront_catalog_queries,
 )
+from app.modules.catalog.application.storefront_discovery_analytics import storefront_discovery_analytics
+from app.modules.catalog.application.storefront_search import storefront_product_matches_search
+from app.modules.cart.application.cart_commands import cart_commands
 from app.modules.checkout.application.checkout_activation_commands import (
     checkout_activation_commands,
 )
+from app.modules.reviews.application.review_summary_queries import product_review_summary_queries
 
 
 def _require_storefront_tenant(request):
@@ -34,12 +42,52 @@ def _require_storefront_tenant(request):
         raise Http404("Tenant not found")
     return tenant
 
+
+def _session_key(request) -> str:
+    if not request.session.session_key:
+        request.session.save()
+    return str(request.session.session_key or "")
+
+
+def _analytics_session_key(request) -> str:
+    return str(getattr(request, "session", None).session_key or "") if getattr(request, "session", None) else ""
+
+
 def _all_products(*, tenant_id: int | None = None) -> list[dict[str, object]]:
     return admin_product_queries.list_products(tenant_id=tenant_id)
 
 
 def _get_product(product_slug: str, *, tenant_id: int | None = None) -> dict[str, object]:
     return admin_product_queries.get_product(product_slug, tenant_id=tenant_id)
+
+
+def _admin_discovery_observability_by_slug(*, tenant_id: int | None) -> dict[str, dict[str, object]]:
+    if not tenant_id:
+        return {}
+    return {
+        str(product.get("slug") or ""): product
+        for product in storefront_catalog_queries.list_products(tenant_id=tenant_id)
+        if product.get("slug")
+    }
+
+
+def _admin_discovery_observability_cell(product: dict[str, object], discovery_product: dict[str, object]) -> str:
+    components = discovery_product.get("discovery_rank_components") or {}
+    component_summary = " · ".join(
+        f"{label} {components.get(key, 0)}"
+        for key, label in [
+            ("status", "status"),
+            ("stock", "estoque"),
+            ("offer", "oferta"),
+            ("featured", "destaque"),
+            ("decision_signal", "sinal"),
+        ]
+    )
+    return (
+        f'Score {discovery_product.get("discovery_rank_score", 0)} · '
+        f'{discovery_product.get("discovery_rank_reason", "sem razão registrada")} · '
+        f"{component_summary}"
+    )
 
 
 def _tenant_missing_empty_state(*, tenant_id: int | None, search_value: str, status_selected: str) -> tuple[str, str] | None:
@@ -125,9 +173,109 @@ CATALOG_QUICK_FILTER_OPTIONS = [
     {"value": "offer", "label": "Em oferta"},
 ]
 
+CATALOG_SORT_OPTIONS = [
+    {
+        "value": "recommended",
+        "label": "Recomendados",
+        "helper": "Disponibilidade, oferta e curadoria da loja.",
+    },
+    {"value": "price_asc", "label": "Menor preço", "helper": "Preço efetivo da variante em destaque."},
+    {"value": "price_desc", "label": "Maior preço", "helper": "Preço efetivo da variante em destaque."},
+    {"value": "name_asc", "label": "Nome A-Z", "helper": "Ordem alfabética dos produtos."},
+]
+
+CATALOG_AVAILABILITY_FACET_OPTIONS = [
+    {"value": "in_stock", "label": "Pronta entrega"},
+    {"value": "low_stock", "label": "Últimas unidades"},
+    {"value": "backorder", "label": "Sob encomenda"},
+]
+
 
 def _catalog_quick_filter_label(value: str) -> str:
     return next((option["label"] for option in CATALOG_QUICK_FILTER_OPTIONS if option["value"] == value), "")
+
+
+def _catalog_availability_value(value: str) -> str:
+    allowed_values = {option["value"] for option in CATALOG_AVAILABILITY_FACET_OPTIONS}
+    return value if value in allowed_values else ""
+
+
+def _catalog_availability_label(value: str) -> str:
+    availability_value = _catalog_availability_value(value)
+    return next((option["label"] for option in CATALOG_AVAILABILITY_FACET_OPTIONS if option["value"] == availability_value), "")
+
+
+def _catalog_offer_value(value: str) -> bool:
+    return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _catalog_sort_value(value: str) -> str:
+    allowed_values = {option["value"] for option in CATALOG_SORT_OPTIONS}
+    return value if value in allowed_values else "recommended"
+
+
+def _catalog_sort_label(value: str) -> str:
+    sort_value = _catalog_sort_value(value)
+    return next((option["label"] for option in CATALOG_SORT_OPTIONS if option["value"] == sort_value), "Recomendados")
+
+
+def _catalog_sort_helper(value: str) -> str:
+    sort_value = _catalog_sort_value(value)
+    return next((option["helper"] for option in CATALOG_SORT_OPTIONS if option["value"] == sort_value), "")
+
+
+def _catalog_price_value(product: dict[str, object]) -> Decimal:
+    try:
+        return Decimal(str(product.get("price") or "0"))
+    except (InvalidOperation, ValueError):
+        return Decimal("0")
+
+
+def _catalog_price_filter_value(value: str) -> Decimal | None:
+    normalized = str(value or "").strip().replace(",", ".")
+    if not normalized:
+        return None
+    try:
+        price = Decimal(normalized)
+    except (InvalidOperation, ValueError):
+        return None
+    return price if price >= 0 else None
+
+
+def _catalog_price_filter_label(value: Decimal | None) -> str:
+    if value is None:
+        return ""
+    return f"R$ {value:.2f}".replace(".", ",")
+
+
+def _apply_catalog_sort(products: list[dict[str, object]], sort_value: str) -> list[dict[str, object]]:
+    sort_value = _catalog_sort_value(sort_value)
+    if sort_value == "price_asc":
+        return sorted(products, key=lambda product: (_catalog_price_value(product), str(product.get("name") or "").lower()))
+    if sort_value == "price_desc":
+        return sorted(products, key=lambda product: (-_catalog_price_value(product), str(product.get("name") or "").lower()))
+    if sort_value == "name_asc":
+        return sorted(products, key=lambda product: str(product.get("name") or "").lower())
+    return products
+
+
+def _apply_catalog_facets(
+    products: list[dict[str, object]],
+    *,
+    availability: str,
+    offer_only: bool,
+    price_min: Decimal | None,
+    price_max: Decimal | None,
+) -> list[dict[str, object]]:
+    if availability:
+        products = [product for product in products if str(product.get("stock_state") or "") == availability]
+    if offer_only:
+        products = [product for product in products if bool(str(product.get("compare_price") or "").strip())]
+    if price_min is not None:
+        products = [product for product in products if _catalog_price_value(product) >= price_min]
+    if price_max is not None:
+        products = [product for product in products if _catalog_price_value(product) <= price_max]
+    return products
 
 
 def _apply_catalog_quick_filter(products: list[dict[str, object]], quick_filter: str) -> list[dict[str, object]]:
@@ -323,6 +471,96 @@ def _build_catalog_quick_filter_select(*, selected: str) -> str:
     )
 
 
+def _build_catalog_sort_select(*, selected: str) -> str:
+    selected = _catalog_sort_value(selected)
+    options_html = [
+        f'<option value="{option["value"]}"{" selected" if option["value"] == selected else ""}>{option["label"]}</option>'
+        for option in CATALOG_SORT_OPTIONS
+    ]
+    return format_html(
+        '<div class="w-full lg:w-56">'
+        '<div class="space-y-2">'
+        '<label for="sort" class="block text-sm font-medium text-[var(--color-text-primary)]">Ordenar por</label>'
+        '<select id="sort" name="sort" class="ds-select">{}</select>'
+        '<p class="text-xs text-[var(--color-text-secondary)]">{}</p>'
+        '</div>'
+        '</div>',
+        format_html_join("", "{}", ((option,) for option in options_html)),
+        _catalog_sort_helper(selected),
+    )
+
+
+def _build_catalog_availability_select(*, selected: str) -> str:
+    selected = _catalog_availability_value(selected)
+    options_html = ['<option value="">Toda disponibilidade</option>']
+    options_html.extend(
+        [
+            f'<option value="{option["value"]}"{" selected" if option["value"] == selected else ""}>{option["label"]}</option>'
+            for option in CATALOG_AVAILABILITY_FACET_OPTIONS
+        ]
+    )
+    return format_html(
+        '<div class="w-full lg:w-56">'
+        '<div class="space-y-2">'
+        '<label for="availability" class="block text-sm font-medium text-[var(--color-text-primary)]">Disponibilidade</label>'
+        '<select id="availability" name="availability" class="ds-select">{}</select>'
+        '</div>'
+        '</div>',
+        format_html_join("", "{}", ((option,) for option in options_html)),
+    )
+
+
+def _build_catalog_offer_select(*, selected: bool) -> str:
+    return format_html(
+        '<div class="w-full lg:w-48">'
+        '<div class="space-y-2">'
+        '<label for="offer" class="block text-sm font-medium text-[var(--color-text-primary)]">Oferta</label>'
+        '<select id="offer" name="offer" class="ds-select">'
+        '<option value="">Todas</option>'
+        '<option value="1"{}>Somente ofertas</option>'
+        '</select>'
+        '</div>'
+        '</div>',
+        format_html(' selected') if selected else "",
+    )
+
+
+def _build_catalog_price_input(*, name: str, label: str, value: str) -> str:
+    return format_html(
+        '<div class="w-full lg:w-40">'
+        '<div class="space-y-2">'
+        '<label for="{}" class="block text-sm font-medium text-[var(--color-text-primary)]">{}</label>'
+        '<input id="{}" name="{}" value="{}" inputmode="decimal" placeholder="0,00" class="ds-input" />'
+        '</div>'
+        '</div>',
+        name,
+        label,
+        name,
+        name,
+        value,
+    )
+
+
+def _build_catalog_storefront_extra_filters(
+    *,
+    quick_filter: str,
+    sort_value: str,
+    availability: str,
+    offer_only: bool,
+    price_min_raw: str,
+    price_max_raw: str,
+) -> str:
+    return format_html(
+        "{}{}{}{}{}{}",
+        _build_catalog_availability_select(selected=availability),
+        _build_catalog_offer_select(selected=offer_only),
+        _build_catalog_price_input(name="price_min", label="Preço mín.", value=price_min_raw),
+        _build_catalog_price_input(name="price_max", label="Preço máx.", value=price_max_raw),
+        _build_catalog_quick_filter_select(selected=quick_filter),
+        _build_catalog_sort_select(selected=sort_value),
+    )
+
+
 def _catalog_page_description(*, category_label: str, search_value: str) -> str:
     if search_value and category_label:
         return (
@@ -342,10 +580,10 @@ def _catalog_page_description(*, category_label: str, search_value: str) -> str:
 def _catalog_filter_description(*, category_label: str, search_value: str) -> str:
     if search_value and category_label:
         return (
-            f'Resultados para “{search_value}” dentro de {category_label.lower()}, combinando nome, marca, SKU e sinais atuais de destaque, oferta e disponibilidade já visíveis nos cards.'
+            f'Resultados para “{search_value}” dentro de {category_label.lower()}, combinando nome, marca, SKU, categoria, descrição e sinais públicos já visíveis nos cards.'
         )
     if search_value:
-        return f'Resultados para “{search_value}”, combinando nome, marca, SKU e sinais atuais de destaque, oferta e disponibilidade já visíveis nos cards.'
+        return f'Resultados para “{search_value}”, combinando nome, marca, SKU, categoria, descrição e sinais públicos já visíveis nos cards.'
     if category_label:
         return f"Use a categoria atual para refinar a vitrine sem perder combinação em destaque, disponibilidade e curadoria comercial leve."
     return "Use busca e categoria para encontrar mais rápido produtos com combinação em destaque, disponibilidade e curadoria comercial leve."
@@ -369,7 +607,7 @@ def _catalog_empty_state(*, category_label: str, search_value: str) -> tuple[str
     if search_value:
         return (
             "Nenhum produto encontrado para esta busca",
-            f'Não encontramos resultados para “{search_value}” no nome, marca ou SKU. Tente outro termo ou limpe a busca para voltar à vitrine completa.',
+            f'Não encontramos resultados para “{search_value}” em nome, marca, SKU, categoria ou descrição. Tente outro termo ou limpe a busca para voltar à vitrine completa.',
         )
     if category_label:
         return (
@@ -382,7 +620,60 @@ def _catalog_empty_state(*, category_label: str, search_value: str) -> tuple[str
     )
 
 
-def _build_storefront_product_card(product: dict[str, object], *, active_quick_filter: str = "") -> dict[str, object]:
+def _product_id(value: object) -> int | None:
+    try:
+        product_id = int(value)
+    except (TypeError, ValueError):
+        return None
+    return product_id if product_id > 0 else None
+
+
+def _append_query_params(url: str, params: dict[str, str]) -> str:
+    filtered_params = {key: value for key, value in params.items() if value}
+    if not filtered_params:
+        return url
+    separator = "&" if "?" in url else "?"
+    return f"{url}{separator}{urlencode(filtered_params)}"
+
+
+def _pdp_cart_feedback(value: object) -> dict[str, str]:
+    feedback = str(value or "").strip()
+    if feedback == "added":
+        return {
+            "variant": "success",
+            "icon": "🛒",
+            "title": "Produto adicionado ao carrinho",
+            "description": "Você pode continuar revisando esta combinação ou abrir o carrinho quando quiser finalizar a compra.",
+        }
+    if feedback == "stock-conflict":
+        return {
+            "variant": "warning",
+            "icon": "⚠️",
+            "title": "Quantidade ajustada pelo estoque disponível",
+            "description": "Revise a quantidade disponível antes de tentar adicionar esta combinação novamente.",
+        }
+    if feedback == "unavailable":
+        return {
+            "variant": "warning",
+            "icon": "⚠️",
+            "title": "Produto indisponível para carrinho",
+            "description": "Esta combinação não está disponível para compra agora. Revise outra variante ou volte ao catálogo.",
+        }
+    return {}
+
+
+def _review_summary_label(summary: dict[str, object] | None) -> str:
+    if not summary or str(summary.get("status") or "") != "ready":
+        return ""
+    return f'⭐ {summary.get("rating_average")}/5 · {summary.get("review_count")} avaliação(ões)'
+
+
+def _build_storefront_product_card(
+    product: dict[str, object],
+    *,
+    active_quick_filter: str = "",
+    review_summary: dict[str, object] | None = None,
+) -> dict[str, object]:
     curation_note = product.get("catalog_card_curation_note", "")
     click_helper = product.get("catalog_card_click_helper", "")
     if active_quick_filter == "offer":
@@ -411,6 +702,7 @@ def _build_storefront_product_card(product: dict[str, object], *, active_quick_f
         "variant_summary": product.get("catalog_card_variant_summary", ""),
         "curation_note": curation_note,
         "availability_note": product.get("catalog_card_availability_note", ""),
+        "review_summary": _review_summary_label(review_summary),
         "click_helper": click_helper,
         "stock_helper": product.get("stock_helper", _storefront_stock_helper(product)),
         "clickable": True,
@@ -477,6 +769,7 @@ class AdminProductsListView(TemplateView):
         if status_selected:
             products = [product for product in products if product["status"] == status_selected]
 
+        discovery_by_slug = _admin_discovery_observability_by_slug(tenant_id=tenant_id)
         paginator = Paginator(products, 2)
         page_obj = paginator.get_page(page_number)
         base_url = reverse("catalog:admin-products-list")
@@ -515,6 +808,7 @@ class AdminProductsListView(TemplateView):
                     {"label": "SKU"},
                     {"label": "Status"},
                     {"label": "Estoque"},
+                    *([{"label": "Descoberta"}] if discovery_by_slug else []),
                     {"label": "Atualização"},
                 ],
                 "rows": [
@@ -527,6 +821,16 @@ class AdminProductsListView(TemplateView):
                                 f'{product["stock"]} un. · reservadas {product.get("reserved_stock", "0")} '
                                 f'· recuperadas {product.get("recovered_stock", "0")} '
                                 f'· finalizadas {product.get("finalized_stock", "0")}'
+                            ),
+                            *(
+                                [
+                                    _admin_discovery_observability_cell(
+                                        product,
+                                        discovery_by_slug[str(product.get("slug") or "")],
+                                    )
+                                ]
+                                if str(product.get("slug") or "") in discovery_by_slug
+                                else []
                             ),
                             product["updated_at"],
                         ]
@@ -542,6 +846,67 @@ class AdminProductsListView(TemplateView):
                 "page_note": admin_product_queries.get_inventory_visibility_note(tenant_id=tenant_id),
                 "empty_title": empty_title,
                 "empty_description": empty_description,
+            }
+        )
+        return context
+
+
+class AdminConversionAnalyticsView(TemplateView):
+    template_name = "pages/templates/admin_conversion_analytics_page.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tenant_id = getattr(getattr(self.request, "tenant", None), "id", None)
+        event_selected = self.request.GET.get("event_name", "").strip()
+        summary = admin_conversion_analytics_queries.summary(tenant_id=tenant_id, event_name=event_selected)
+        event_options = admin_conversion_analytics_queries.event_options(tenant_id=tenant_id)
+        base_url = reverse("catalog:admin-conversion-analytics")
+
+        context.update(
+            {
+                "page_title": "Analytics de conversão",
+                "page_description": "Leitura read-only dos eventos recentes de descoberta, PDP e intenção de CTA deste tenant.",
+                "page_note": "Eventos brutos são tenant-scoped, sem PII e com sessão apenas em hash interno.",
+                "filter_action": base_url,
+                "status_name": "event_name",
+                "status_label": "Evento",
+                "status_placeholder": "Todos os eventos",
+                "status_options": event_options,
+                "status_selected": summary["event_selected"],
+                "reset_url": base_url,
+                "summary_cards": [
+                    {
+                        "title": "Eventos registrados",
+                        "content": f'{summary["total_count"]} evento(s) tenant-scoped',
+                    },
+                    {
+                        "title": "Eventos filtrados",
+                        "content": f'{summary["filtered_count"]} evento(s) neste recorte',
+                    },
+                    {
+                        "title": "Tipos observados",
+                        "content": f'{len(summary["counters"])} tipo(s) com registro',
+                    },
+                ],
+                "counter_columns": [{"label": "Evento"}, {"label": "Total"}],
+                "counter_rows": [
+                    {"cells": [item["label"], str(item["count"])]}
+                    for item in summary["counters"]
+                ],
+                "event_columns": [{"label": "Evento"}, {"label": "Resumo"}, {"label": "Path"}, {"label": "Horário"}],
+                "event_rows": [
+                    {
+                        "cells": [
+                            item["label"],
+                            item["payload_summary"],
+                            item["path"],
+                            item["occurred_at"],
+                        ]
+                    }
+                    for item in summary["recent_events"]
+                ],
+                "empty_title": "Nenhum evento de conversão registrado",
+                "empty_description": "Assim que clientes navegarem pela vitrine, os eventos recentes aparecerão aqui.",
             }
         )
         return context
@@ -657,24 +1022,56 @@ class CatalogListView(TemplateView):
         search_value = self.request.GET.get("q", "").strip()
         category_selected = self.request.GET.get("category", "").strip()
         quick_filter = self.request.GET.get("quick_filter", "").strip()
+        availability = _catalog_availability_value(self.request.GET.get("availability", "").strip())
+        offer_only = _catalog_offer_value(self.request.GET.get("offer", "").strip())
+        price_min = _catalog_price_filter_value(self.request.GET.get("price_min", ""))
+        price_max = _catalog_price_filter_value(self.request.GET.get("price_max", ""))
+        price_min_raw = self.request.GET.get("price_min", "").strip() if price_min is not None else ""
+        price_max_raw = self.request.GET.get("price_max", "").strip() if price_max is not None else ""
+        sort_value = _catalog_sort_value(self.request.GET.get("sort", "").strip())
         page_number = int(self.request.GET.get("page", "1") or "1")
 
         products = storefront_catalog_queries.list_products(tenant_id=getattr(tenant, "id", None))
         if search_value:
-            lowered_search = search_value.lower()
-            products = [
-                product
-                for product in products
-                if lowered_search in str(product["name"]).lower()
-                or lowered_search in str(product["brand"]).lower()
-                or lowered_search in str(product["sku"]).lower()
-            ]
+            products = [product for product in products if storefront_product_matches_search(product, search_value)]
         if category_selected:
             products = [product for product in products if _product_category_value(product) == category_selected]
+        products = _apply_catalog_facets(
+            products,
+            availability=availability,
+            offer_only=offer_only,
+            price_min=price_min,
+            price_max=price_max,
+        )
         products = _apply_catalog_quick_filter(products, quick_filter)
+        products = _apply_catalog_sort(products, sort_value)
 
         paginator = Paginator(products, 2)
         page_obj = paginator.get_page(page_number)
+        page_product_ids = [
+            product_id
+            for product_id in (_product_id(product.get("id")) for product in page_obj.object_list)
+            if product_id is not None
+        ]
+        review_summaries = product_review_summary_queries.get_product_review_summaries(
+            tenant_id=getattr(tenant, "id", None),
+            product_ids=page_product_ids,
+        )
+        storefront_discovery_analytics.record_listing_view(
+            tenant_id=getattr(tenant, "id", None),
+            session_key=_analytics_session_key(self.request),
+            path=self.request.path,
+            query=search_value,
+            category=category_selected,
+            availability=availability,
+            offer=offer_only,
+            price_min=price_min_raw,
+            price_max=price_max_raw,
+            quick_filter=quick_filter,
+            sort=sort_value,
+            result_count=paginator.count,
+            page=page_obj.number,
+        )
         base_url = reverse("storefront:catalog-list")
 
         query_params = []
@@ -682,8 +1079,18 @@ class CatalogListView(TemplateView):
             query_params.append(f"q={search_value}")
         if category_selected:
             query_params.append(f"category={category_selected}")
+        if availability:
+            query_params.append(f"availability={availability}")
+        if offer_only:
+            query_params.append("offer=1")
+        if price_min is not None:
+            query_params.append(f"price_min={price_min_raw}")
+        if price_max is not None:
+            query_params.append(f"price_max={price_max_raw}")
         if quick_filter in {option["value"] for option in CATALOG_QUICK_FILTER_OPTIONS}:
             query_params.append(f"quick_filter={quick_filter}")
+        if sort_value != "recommended":
+            query_params.append(f"sort={sort_value}")
 
         def page_url(number: int) -> str:
             suffix = "&".join(query_params)
@@ -694,6 +1101,17 @@ class CatalogListView(TemplateView):
             "",
         )
         quick_filter_label = _catalog_quick_filter_label(quick_filter)
+        availability_label = _catalog_availability_label(availability)
+        sort_label = _catalog_sort_label(sort_value)
+        active_facet_labels = []
+        if availability_label:
+            active_facet_labels.append(f"disponibilidade: {availability_label}")
+        if offer_only:
+            active_facet_labels.append("somente ofertas")
+        if price_min is not None:
+            active_facet_labels.append(f"preço mínimo: {_catalog_price_filter_label(price_min)}")
+        if price_max is not None:
+            active_facet_labels.append(f"preço máximo: {_catalog_price_filter_label(price_max)}")
         page_description = _catalog_page_description(category_label=category_label, search_value=search_value)
         filter_description = _catalog_filter_description(category_label=category_label, search_value=search_value)
         results_meta = _catalog_results_meta(
@@ -718,6 +1136,13 @@ class CatalogListView(TemplateView):
             page_description = f"{page_description} Filtro rápido ativo: {quick_filter_label}."
             filter_description = f"{filter_description} Filtro rápido ativo: {quick_filter_label}. Use Limpar para voltar à vitrine completa."
             results_meta = f"{results_meta} · filtro rápido: {quick_filter_label} · use Limpar para remover este recorte"
+        if active_facet_labels:
+            facet_summary = ", ".join(active_facet_labels)
+            filter_description = f"{filter_description} Facets ativas: {facet_summary}."
+            results_meta = f"{results_meta} · facets: {facet_summary}"
+        if sort_value != "recommended":
+            filter_description = f"{filter_description} Ordenação ativa: {sort_label}."
+            results_meta = f"{results_meta} · ordenação: {sort_label}"
         if quick_filter_empty_state and not products:
             empty_title, empty_description = quick_filter_empty_state
 
@@ -734,7 +1159,14 @@ class CatalogListView(TemplateView):
                 "filter_action": base_url,
                 "filter_description": filter_description,
                 "active_quick_filter_label": quick_filter_label,
-                "extra_filters": _build_catalog_quick_filter_select(selected=quick_filter),
+                "extra_filters": _build_catalog_storefront_extra_filters(
+                    quick_filter=quick_filter,
+                    sort_value=sort_value,
+                    availability=availability,
+                    offer_only=offer_only,
+                    price_min_raw=price_min_raw,
+                    price_max_raw=price_max_raw,
+                ),
                 "search_name": "q",
                 "search_value": search_value,
                 "status_name": "category",
@@ -744,7 +1176,11 @@ class CatalogListView(TemplateView):
                 "status_options": _storefront_category_options(),
                 "reset_url": base_url,
                 "products": [
-                    _build_storefront_product_card(product, active_quick_filter=quick_filter)
+                    _build_storefront_product_card(
+                        product,
+                        active_quick_filter=quick_filter,
+                        review_summary=review_summaries.get(_product_id(product.get("id")) or 0),
+                    )
                     for product in page_obj.object_list
                 ],
                 "empty_title": empty_title,
@@ -774,12 +1210,20 @@ class ProductDetailView(TemplateView):
     def _selection_query(selection: dict[str, str]) -> dict[str, str]:
         return {key: value for key, value in selection.items() if value}
 
+    @staticmethod
+    def _quantity(source) -> int:
+        try:
+            return max(1, int(source.get("quantity", 1) or 1))
+        except (TypeError, ValueError):
+            return 1
+
     def post(self, request, *args, **kwargs):
         tenant = _require_storefront_tenant(request)
         selection = self._selection_payload(request.POST)
+        tenant_id = getattr(tenant, "id", None)
         product = storefront_catalog_queries.get_product(
             kwargs["product_slug"],
-            tenant_id=getattr(tenant, "id", None),
+            tenant_id=tenant_id,
             **selection,
         )
         if not product:
@@ -790,9 +1234,89 @@ class ProductDetailView(TemplateView):
             f"{product_detail_url}?{urlencode(selection_query)}" if selection_query else product_detail_url
         )
         if str(product.get("stock_state") or "") == "out_of_stock":
+            storefront_discovery_analytics.record_pdp_cta_intent(
+                tenant_id=tenant_id,
+                session_key=_analytics_session_key(request),
+                path=request.path,
+                product_id=product.get("id"),
+                product_slug=str(product.get("slug") or kwargs["product_slug"]),
+                cta_intent=str(request.POST.get("intent") or "buy_now").strip(),
+                cta_result="unavailable",
+                quantity=self._quantity(request.POST),
+                variant_sku=str(product.get("sku") or ""),
+            )
+            messages.warning(request, "Esta combinação não está disponível para compra no momento.")
+            return HttpResponseRedirect(_append_query_params(product_detail_href, {"cart_feedback": "unavailable"}))
+
+        quantity = self._quantity(request.POST)
+        intent = str(request.POST.get("intent") or "buy_now").strip()
+        if intent == "add_to_cart":
+            result = cart_commands.add_item(
+                tenant_id=tenant_id,
+                session_key=_session_key(request),
+                product=product,
+                quantity=quantity,
+                idempotency_key=str(request.POST.get("cart_idempotency_key") or ""),
+            )
+            if result.get("result") in {"cart-item-added", "cart-item-added-idempotent"} and "cart" in result:
+                storefront_discovery_analytics.record_pdp_cta_intent(
+                    tenant_id=tenant_id,
+                    session_key=_analytics_session_key(request),
+                    path=request.path,
+                    product_id=product.get("id"),
+                    product_slug=str(product.get("slug") or kwargs["product_slug"]),
+                    cta_intent="add_to_cart",
+                    cta_result=str(result.get("result") or "cart-item-added"),
+                    quantity=quantity,
+                    variant_sku=str(product.get("sku") or ""),
+                )
+                messages.success(request, "Produto adicionado ao carrinho.")
+                return HttpResponseRedirect(_append_query_params(product_detail_href, {"cart_feedback": "added"}))
+            if result.get("result") == "cart-item-stock-unavailable":
+                storefront_discovery_analytics.record_pdp_cta_intent(
+                    tenant_id=tenant_id,
+                    session_key=_analytics_session_key(request),
+                    path=request.path,
+                    product_id=product.get("id"),
+                    product_slug=str(product.get("slug") or kwargs["product_slug"]),
+                    cta_intent="add_to_cart",
+                    cta_result="cart-item-stock-unavailable",
+                    quantity=quantity,
+                    variant_sku=str(product.get("sku") or ""),
+                )
+                messages.warning(request, "Este item não está disponível para compra no momento.")
+                return HttpResponseRedirect(_append_query_params(product_detail_href, {"cart_feedback": "unavailable"}))
+            elif result.get("result") == "cart-item-stock-conflict":
+                storefront_discovery_analytics.record_pdp_cta_intent(
+                    tenant_id=tenant_id,
+                    session_key=_analytics_session_key(request),
+                    path=request.path,
+                    product_id=product.get("id"),
+                    product_slug=str(product.get("slug") or kwargs["product_slug"]),
+                    cta_intent="add_to_cart",
+                    cta_result="cart-item-stock-conflict",
+                    quantity=quantity,
+                    variant_sku=str(product.get("sku") or ""),
+                )
+                messages.warning(
+                    request,
+                    f'Temos {result.get("available_quantity", 0)} unidade(s) disponível(is) para este item agora.',
+                )
+                return HttpResponseRedirect(_append_query_params(product_detail_href, {"cart_feedback": "stock-conflict"}))
             return HttpResponseRedirect(product_detail_href)
 
-        session_key = checkout_activation_commands.activate_from_product(product)
+        session_key = checkout_activation_commands.activate_from_product(product, quantity=quantity)
+        storefront_discovery_analytics.record_pdp_cta_intent(
+            tenant_id=tenant_id,
+            session_key=_analytics_session_key(request),
+            path=request.path,
+            product_id=product.get("id"),
+            product_slug=str(product.get("slug") or kwargs["product_slug"]),
+            cta_intent="buy_now",
+            cta_result="checkout-activated" if session_key else "checkout-activation-unavailable",
+            quantity=quantity,
+            variant_sku=str(product.get("sku") or ""),
+        )
         params = {"back_url": product_detail_href, "stage": "cart"}
         if session_key:
             params["session_key"] = session_key
@@ -822,9 +1346,27 @@ class ProductDetailView(TemplateView):
         gallery_items = product.get("product_gallery_items") or _build_product_gallery_items(product)
         stock_state = product.get("stock_state", _storefront_stock_state(product))
         stock_helper = product.get("stock_helper", _storefront_stock_helper(product))
+        product_id = product.get("id")
+        review_summary = product_review_summary_queries.get_product_review_summary(
+            tenant_id=getattr(tenant, "id", None),
+            product_id=product_id,
+        )
+        approved_reviews = product_review_summary_queries.list_approved_product_reviews(
+            tenant_id=getattr(tenant, "id", None),
+            product_id=product_id,
+            limit=3,
+        )
+        storefront_discovery_analytics.record_product_detail_view(
+            tenant_id=getattr(tenant, "id", None),
+            session_key=_analytics_session_key(self.request),
+            path=self.request.path,
+            product_id=product_id,
+            product_slug=str(product.get("slug") or kwargs["product_slug"]),
+        )
 
         context.update(
             {
+                "pdp_feedback": _pdp_cart_feedback(self.request.GET.get("cart_feedback")),
                 "product_title": product["name"],
                 "product_subtitle": product.get("product_subtitle", product["description"]),
                 "price": f'R$ {str(product["price"]).replace(".", ",")}',
@@ -839,19 +1381,32 @@ class ProductDetailView(TemplateView):
                 "variant_groups": product.get("variant_groups") or _build_variant_groups(product),
                 "quantity": product.get("quantity", 1),
                 "form_action": product_detail_url,
-                "primary_action_label": product.get("primary_action_label", "Adicionar ao carrinho"),
+                "cart_idempotency_key": uuid4().hex,
+                "primary_action_label": "Adicionar ao carrinho"
+                if stock_state != "out_of_stock"
+                else product.get("primary_action_label", "Avise-me da reposição"),
+                "primary_action_name": "intent",
+                "primary_action_value": "add_to_cart",
                 "primary_action_disabled": product.get("primary_action_disabled", False),
-                "secondary_action_label": product.get("secondary_action_label", "Comprar agora"),
-                "secondary_action_href": secondary_action_href,
+                "secondary_action_label": "Comprar agora"
+                if stock_state != "out_of_stock"
+                else product.get("secondary_action_label", "Ver catálogo"),
+                "secondary_action_href": secondary_action_href if secondary_target == "catalog" else "",
+                "secondary_action_type": "button" if secondary_target == "catalog" else "submit",
+                "secondary_action_name": "intent",
+                "secondary_action_value": "buy_now",
                 "short_description": product.get("short_description", product["description"]),
                 "purchase_note": product.get("purchase_note", "Seletores e estoque usam adapter de apresentação fino nesta primeira integração real."),
                 "effective_variant_summary": product.get("effective_variant_summary", ""),
                 "availability_note": product.get("availability_note", ""),
                 "cta_helper": product.get("cta_helper", ""),
+                "pdp_decision_checks": product.get("pdp_decision_checks", []),
                 "eyebrow": product.get("eyebrow", product["brand"]),
                 "selected_size": selection.get("size", ""),
                 "selected_color": selection.get("color", ""),
                 "selected_sku": selection.get("sku", ""),
+                "review_summary": review_summary,
+                "approved_reviews": approved_reviews,
             }
         )
         return context

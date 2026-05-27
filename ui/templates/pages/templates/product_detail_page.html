@@ -8,6 +8,10 @@
         {% include "shared/components/navigation/breadcrumb.html" with items=breadcrumbs %}
     {% endif %}
 
+    {% if pdp_feedback %}
+        {% include "shared/components/feedback/alert.html" with variant=pdp_feedback.variant icon=pdp_feedback.icon title=pdp_feedback.title description=pdp_feedback.description %}
+    {% endif %}
+
     <div class="grid gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(22rem,1fr)] lg:items-start">
         <div class="space-y-6">
             {% with title=product_title items=product_gallery_items images=product_images main_image_url=main_image_url main_image_alt=main_image_alt showcase_mode=showcase_mode %}
@@ -29,6 +33,15 @@
                     {% if product_subtitle %}
                         <p class="text-base text-[var(--color-text-secondary)]">{{ product_subtitle }}</p>
                     {% endif %}
+
+                    {% if review_summary.review_count %}
+                        <a href="#product-reviews" class="inline-flex w-fit items-center gap-2 rounded-full border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] px-3 py-1.5 text-sm font-medium text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]">
+                            <span aria-hidden="true">⭐</span>
+                            <span>{{ review_summary.rating_average }}/5</span>
+                            <span class="text-[var(--color-text-secondary)]">· {{ review_summary.review_count }} avaliação(ões) aprovada(s)</span>
+                            <span class="text-[var(--color-brand-primary)]">Ver avaliações</span>
+                        </a>
+                    {% endif %}
                 </div>
 
                 <div class="space-y-3">
@@ -49,10 +62,68 @@
                 </div>
             </header>
 
+            {% if approved_reviews %}
+                {% with featured_review=approved_reviews.0 %}
+                    <section class="rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-5" aria-label="Avaliação em destaque">
+                        <div class="flex items-start gap-3">
+                            <span class="mt-0.5 text-lg" aria-hidden="true">⭐</span>
+                            <div class="min-w-0 space-y-2">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <p class="text-sm font-semibold text-[var(--color-text-primary)]">{{ featured_review.title|default:"Cliente recomenda este produto" }}</p>
+                                    <span class="text-xs font-medium text-[var(--color-text-secondary)]">{{ featured_review.rating }}/5</span>
+                                </div>
+                                {% if featured_review.body %}
+                                    <p class="text-sm leading-6 text-[var(--color-text-secondary)]">“{{ featured_review.body }}”</p>
+                                {% else %}
+                                    <p class="text-sm leading-6 text-[var(--color-text-secondary)]">Avaliação aprovada por cliente verificado nesta loja.</p>
+                                {% endif %}
+                                <p class="text-xs text-[var(--color-text-muted)]">{{ featured_review.author_name|default:"Cliente" }} · <a href="#product-reviews" class="font-medium text-[var(--color-brand-primary)]">ver todas as avaliações</a></p>
+                            </div>
+                        </div>
+                    </section>
+                {% endwith %}
+            {% endif %}
+
             {% if short_description %}
                 <div class="rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-5">
                     <p class="text-sm leading-6 text-[var(--color-text-secondary)]">{{ short_description }}</p>
                 </div>
+            {% endif %}
+
+            {% if pdp_decision_checks %}
+                <section class="grid gap-3 rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-5 sm:grid-cols-3" aria-label="Resumo para decisão de compra">
+                    {% for check in pdp_decision_checks %}
+                        <article class="space-y-1">
+                            <p class="text-sm font-semibold text-[var(--color-text-primary)]">{{ check.title }}</p>
+                            <p class="text-xs leading-5 text-[var(--color-text-secondary)]">{{ check.description }}</p>
+                        </article>
+                    {% endfor %}
+                </section>
+            {% endif %}
+
+            {% if approved_reviews %}
+                <section id="product-reviews" class="space-y-4 rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-5 scroll-mt-24" aria-label="Avaliações de clientes">
+                    <div class="space-y-1">
+                        <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">Avaliações de clientes</h2>
+                        <p class="text-sm text-[var(--color-text-secondary)]">
+                            Média {{ review_summary.rating_average }}/5 baseada em {{ review_summary.review_count }} avaliação(ões) aprovada(s).
+                        </p>
+                    </div>
+                    <div class="space-y-3">
+                        {% for review in approved_reviews %}
+                            <article class="rounded-xl border border-[var(--color-border-muted)] bg-[var(--color-surface-subtle)] p-4">
+                                <div class="flex flex-wrap items-center justify-between gap-2">
+                                    <p class="text-sm font-semibold text-[var(--color-text-primary)]">{{ review.title|default:"Avaliação do produto" }}</p>
+                                    <p class="text-xs font-medium text-[var(--color-text-secondary)]">{{ review.rating }}/5</p>
+                                </div>
+                                {% if review.body %}
+                                    <p class="mt-2 text-sm leading-6 text-[var(--color-text-secondary)]">{{ review.body }}</p>
+                                {% endif %}
+                                <p class="mt-3 text-xs text-[var(--color-text-muted)]">{{ review.author_name|default:"Cliente" }}</p>
+                            </article>
+                        {% endfor %}
+                    </div>
+                </section>
             {% endif %}
 
             <form
@@ -61,6 +132,9 @@
                 class="space-y-6 rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-6"
             >
                 {% csrf_token %}
+                {% if cart_idempotency_key %}
+                    <input type="hidden" name="cart_idempotency_key" value="{{ cart_idempotency_key }}">
+                {% endif %}
 
                 {% if variant_groups %}
                     <div class="space-y-5">
@@ -96,12 +170,12 @@
                     </div>
 
                     <div class="flex w-full flex-col gap-3 sm:w-auto sm:min-w-72">
-                        {% with label=primary_action_label|default:"Adicionar ao carrinho" variant=primary_action_variant|default:"primary" type=primary_action_type|default:"submit" full_width=True disabled=primary_action_disabled loading=primary_action_loading %}
+                        {% with label=primary_action_label|default:"Adicionar ao carrinho" variant=primary_action_variant|default:"primary" type=primary_action_type|default:"submit" name=primary_action_name value=primary_action_value full_width=True disabled=primary_action_disabled loading=primary_action_loading %}
                             {% include "shared/components/actions/button.html" %}
                         {% endwith %}
 
                         {% if secondary_action_label %}
-                            {% with label=secondary_action_label variant=secondary_action_variant|default:"secondary" href=secondary_action_href type=secondary_action_type|default:"button" full_width=True disabled=secondary_action_disabled %}
+                            {% with label=secondary_action_label variant=secondary_action_variant|default:"secondary" href=secondary_action_href type=secondary_action_type|default:"button" name=secondary_action_name value=secondary_action_value full_width=True disabled=secondary_action_disabled %}
                                 {% include "shared/components/actions/button.html" %}
                             {% endwith %}
                         {% endif %}

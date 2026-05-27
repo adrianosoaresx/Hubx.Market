@@ -36,7 +36,7 @@ class CheckoutRecoveryEventCommandTests(TestCase):
         self.assertEqual(stored.result_code, "checkout-completion-stock-conflict")
         self.assertEqual(stored.family, "inventory")
         self.assertEqual(stored.severity, "warning")
-        self.assertEqual(stored.recovery_action, "restart_from_product")
+        self.assertEqual(stored.recovery_action, "review_current_session")
         self.assertEqual(stored.stage, "review")
 
     def test_does_not_record_without_tenant_or_known_result(self):

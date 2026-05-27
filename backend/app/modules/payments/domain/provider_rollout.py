@@ -29,12 +29,18 @@ def decide_provider_rollout(*, provider_code: str, tenant=None) -> ProviderRollo
     normalized_provider = _string(provider_code).lower()
     fallback_mode = _string(getattr(settings, "PAYMENTS_REAL_PROVIDER_FALLBACK_MODE", "lite")).lower() or "lite"
     rollout_mode = _string(getattr(settings, "PAYMENTS_REAL_PROVIDER_ROLLOUT_MODE", "sandbox")).lower() or "sandbox"
+    live_global_enabled = bool(getattr(settings, "PAYMENTS_REAL_PROVIDER_LIVE_GLOBAL_ENABLED", False))
 
     if normalized_provider != "pagarme":
         return ProviderRolloutDecision(False, fallback_mode, rollout_mode, "provider-lite-only")
 
-    if rollout_mode in {"sandbox", "live"}:
+    if rollout_mode == "sandbox":
         return ProviderRolloutDecision(True, fallback_mode, rollout_mode, f"{rollout_mode}-enabled")
+
+    if rollout_mode == "live":
+        if live_global_enabled:
+            return ProviderRolloutDecision(True, fallback_mode, rollout_mode, "live-global-enabled")
+        return ProviderRolloutDecision(False, fallback_mode, rollout_mode, "live-global-not-enabled")
 
     if rollout_mode == "off":
         return ProviderRolloutDecision(False, fallback_mode, rollout_mode, "rollout-disabled")

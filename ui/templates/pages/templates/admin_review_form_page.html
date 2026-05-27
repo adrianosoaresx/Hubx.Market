@@ -1,0 +1,77 @@
+{% extends layout_template|default:"layouts/admin_shell.html" %}
+
+{% block page_title %}{{ page_title|default:"Nova avaliação" }}{% endblock %}
+{% block shell_title %}{% if shell_title %}{{ shell_title }}{% elif page_title %}{{ page_title }}{% else %}Nova avaliação{% endif %}{% endblock %}
+
+{% block content %}
+<section class="space-y-6">
+    {% with eyebrow=page_eyebrow|default:"Prova social" title=page_title|default:"Nova avaliação" description=page_description|default:"Crie uma avaliação pendente para moderação." %}
+        {% include "shared/components/layout/page_header.html" %}
+    {% endwith %}
+
+    {% if form_error %}
+        <div class="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{{ form_error }}</div>
+    {% endif %}
+
+    <form method="post" action="{{ form_action }}" class="space-y-6">
+        {% csrf_token %}
+
+        <section class="ds-surface space-y-6 p-6">
+            <div class="space-y-1">
+                <h2 class="text-base font-semibold text-[var(--color-text-primary)]">Produto e nota</h2>
+                <p class="text-sm text-[var(--color-text-secondary)]">Use o slug ou ID de um produto deste tenant. A avaliação nasce como pendente.</p>
+            </div>
+
+            <div class="grid gap-6 md:grid-cols-3">
+                {% with name="product_slug" label="Slug do produto" value=product_slug placeholder="produto-avaliado" invalid=errors.product_slug error_text=errors.product_slug help_text="Preferencial para operação manual." %}
+                    {% include "shared/components/forms/input.html" %}
+                {% endwith %}
+
+                {% with name="product_id" label="ID do produto" value=product_id input_type="number" placeholder="123" invalid=errors.product_id error_text=errors.product_id help_text="Opcional se o slug for informado." %}
+                    {% include "shared/components/forms/input.html" %}
+                {% endwith %}
+
+                {% with name="rating" label="Nota" value=rating input_type="number" placeholder="5" required=True invalid=errors.rating error_text=errors.rating help_text="Valor entre 1 e 5." %}
+                    {% include "shared/components/forms/input.html" %}
+                {% endwith %}
+            </div>
+        </section>
+
+        <section class="ds-surface space-y-6 p-6">
+            <div class="space-y-1">
+                <h2 class="text-base font-semibold text-[var(--color-text-primary)]">Conteúdo da avaliação</h2>
+                <p class="text-sm text-[var(--color-text-secondary)]">O texto só aparece publicamente depois de aprovado em moderação.</p>
+            </div>
+
+            <div class="grid gap-6 md:grid-cols-2">
+                {% with name="author_name" label="Autor" value=author_name placeholder="Cliente" invalid=errors.author_name error_text=errors.author_name %}
+                    {% include "shared/components/forms/input.html" %}
+                {% endwith %}
+
+                {% with name="title" label="Título" value=title placeholder="Ótimo produto" invalid=errors.title error_text=errors.title %}
+                    {% include "shared/components/forms/input.html" %}
+                {% endwith %}
+            </div>
+
+            {% with name="body" label="Comentário" value=body placeholder="Conte como foi a experiência do cliente." rows="5" invalid=errors.body error_text=errors.body %}
+                {% include "shared/components/forms/textarea.html" %}
+            {% endwith %}
+        </section>
+
+        <section class="ds-surface space-y-6 p-6">
+            <div class="space-y-1">
+                <h2 class="text-base font-semibold text-[var(--color-text-primary)]">Associação opcional</h2>
+                <p class="text-sm text-[var(--color-text-secondary)]">Se informado, o cliente só será associado quando pertencer ao tenant atual.</p>
+            </div>
+
+            {% with name="customer_id" label="ID do cliente" value=customer_id input_type="number" placeholder="456" invalid=errors.customer_id error_text=errors.customer_id %}
+                {% include "shared/components/forms/input.html" %}
+            {% endwith %}
+        </section>
+
+        {% with primary_label="Criar avaliação pendente" secondary_label="Cancelar" secondary_href=cancel_href %}
+            {% include "shared/components/forms/form_actions.html" %}
+        {% endwith %}
+    </form>
+</section>
+{% endblock %}

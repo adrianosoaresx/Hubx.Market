@@ -1061,3 +1061,1873 @@ Integrar pagamentos de pedidos.
 - **Notifications Operational Parity Review**
 - motivo:
   - notifications já possui pipeline e observabilidade; falta confirmar se tem runbook e comandos suficientes para operar incidentes de entrega.
+
+## Wave FH — Payments Customer Experience Re-entry Review
+- reabrimos a hipótese de continuar em **Payments customer experience** depois do fechamento de checkout/recovery.
+- a revisão encontrou que o eixo já foi trabalhado em duas camadas:
+  - experiência customer-facing (`Payment Product Experience`)
+  - operação/suporte (`Payments Operational Parity`, triagem e métricas)
+
+### O que já existe
+- retorno hospedado diferencia:
+  - indisponibilidade
+  - retorno genérico
+  - verificação pendente
+  - falha/cancelamento
+- área do cliente comunica:
+  - pedido salvo
+  - pagamento pendente
+  - falha sem perda do pedido
+  - retomada segura quando aplicável
+- operação possui:
+  - `PaymentAttempt`
+  - webhook
+  - hosted redirect/return
+  - comando `list_payment_attempts`
+  - métrica `hubx_payments_attempt_total`
+  - dashboard/runbook/alertas
+
+### Leitura objetiva
+- continuar agora em payments tenderia a virar microcopy, painéis ou estados adicionais sem ganho proporcional.
+- os próximos ganhos relevantes já são temas maiores:
+  - métodos reais de pagamento
+  - conciliação financeira/backoffice
+  - refund/estorno
+  - tela financeira administrativa
+  - SLA de pagamento preso
+
+## Wave FI — Payments Customer Experience Stop/Continue Decision
+- decisão:
+  - **não continuar implementando payments customer experience agora**
+- motivo:
+  - a experiência atual já responde às dúvidas principais do cliente
+  - a operação já tem sinais mínimos para suporte
+  - novas waves pequenas teriam retorno marginal
+
+### Próxima abordagem recomendada
+- voltar ao roadmap funcional amplo e escolher uma área com lacuna mais clara de produto.
+- candidatos melhores que payments neste momento:
+  - `storefront/PDP conversion`
+  - `admin merchant operations`
+  - `catalog publishing quality`
+  - `shipping/fulfillment customer clarity`
+
+## Wave FJ — Checkout/Payment Execution Readiness Review
+- reabrimos `payments` pelo eixo transacional depois do fechamento de `Cart Reliability`.
+- a hipótese inicial era que pagamento real, webhook e baixa pós-pagamento ainda fossem uma lacuna grande.
+- a revisão mostrou que o sistema já possui um fluxo end-to-end relevante:
+  - `PaymentAttempt` tenant-scoped
+  - redirect hospedado para provider
+  - return hospedado com verificação pendente
+  - webhook `payment.paid` / `payment.failed`
+  - reconciliação da tentativa
+  - confirmação do pedido
+  - baixa operacional de estoque após pagamento confirmado
+
+### Contrato atual
+- `payments` é dono de:
+  - tentativa de pagamento
+  - bootstrap de contrato com provider
+  - criação/reuso de intent externa
+  - recebimento e normalização de webhook
+  - sinais operacionais de alerta
+- `orders` é dono de:
+  - confirmação/falha do pagamento no pedido
+  - transição do pedido para `paid`
+  - histórico operacional do pedido
+  - validação final de inventário no momento da confirmação
+  - baixa operacional de estoque pós-pagamento
+- `catalog` continua dono dos dados de variante e estoque persistido.
+
+### Leitura objetiva
+- não faz sentido criar outro esqueleto de pagamento agora.
+- o caminho crítico já existe e está parcialmente coberto por testes.
+- a próxima evolução segura é endurecer o contrato de confirmação paga, especialmente quando o webhook pago encontra conflito de estoque.
+
+### Riscos restantes
+- o retorno hospedado continua apenas registrando hint; a confirmação real depende do webhook.
+- não há motor de reserva/alocação antes do pagamento.
+- refund/estorno e reversão financeira continuam fora desta fase.
+- conciliação financeira/backoffice ainda é um produto maior, não uma micro-wave.
+
+### Próxima wave recomendada
+- **Checkout/Payment Execution Wave 2 — Paid Webhook Inventory Conflict Hardening**
+- foco:
+  - adicionar cobertura explícita para webhook `payment.paid` quando a confirmação encontra conflito de estoque
+  - garantir que o pedido não vira `paid`
+  - garantir que a tentativa não vira `paid`
+  - garantir que o alerta operacional seja registrado
+
+## Wave FK — Paid Webhook Inventory Conflict Hardening
+- a wave confirmou que o comportamento transacional já estava correto.
+- o webhook `payment.paid` delega a confirmação para `orders`.
+- quando `orders` retorna `payment-confirmation-stock-conflict`, `payments` responde `409` e registra sinal operacional.
+
+### Escopo executado
+- teste de contrato para webhook pago com estoque indisponível no momento da confirmação.
+- garantias cobertas:
+  - pedido permanece `pending`
+  - `payment_status` não vira confirmado
+  - `PaymentAttempt` permanece `pending`
+  - `external_reference` da tentativa não é reconciliada como paga
+  - `paid_at` continua vazio
+  - estoque não sofre nova mutação
+  - histórico `payment_paid_external` não é criado
+  - email de confirmação não é registrado
+  - `payment_confirmation.stock_conflict` é emitido com tenant, pedido, provider e reason code
+
+### Leitura objetiva
+- não houve necessidade de mudar o command service.
+- a lacuna era de proteção regressiva, não de regra.
+- o fluxo pago com conflito final agora está coberto como boundary entre `payments`, `orders` e `catalog`.
+
+### Próxima wave recomendada
+- **Checkout/Payment Execution Wave 3 — Hosted Return Verification UX Review**
+- foco:
+  - revisar se o retorno hospedado com sucesso pendente comunica bem que webhook ainda é a fonte de verdade
+  - decidir se basta UX/copy existente ou se precisamos de uma consulta segura da tentativa/pedido para reduzir ansiedade do cliente
+
+## Wave FL — Hosted Return Verification UX Review
+- a revisão confirmou que o retorno hospedado já está tratado como sinal informativo, não como confirmação financeira.
+- `hosted_return_commands.register_return(...)` registra o hint do provider na tentativa e retorna estados customer-facing.
+- `accounts.interfaces.views` traduz esses estados em feedback no detalhe do pedido.
+
+### Estados revisados
+- `hosted-payment-returned`
+  - comunica que o cliente voltou do ambiente seguro
+  - reforça que o pedido continua salvo enquanto a confirmação segura não chega
+- `hosted-payment-return-pending-verification`
+  - comunica que houve avanço no ambiente de pagamento
+  - reforça que o pedido só muda depois da confirmação segura
+  - evita pedir ação extra do cliente
+- `hosted-payment-return-failed`
+  - comunica falha/cancelamento sem perder o pedido
+  - preserva retomada segura
+- `hosted-payment-unavailable`
+  - comunica indisponibilidade sem alterar estado financeiro
+
+### Decisão
+- manter o webhook como única fonte de verdade para confirmar pagamento.
+- não consultar provider diretamente no detalhe do pedido nesta fase.
+- não converter `status=succeeded` no retorno hospedado em `Order.paid`.
+- não reconciliar `PaymentAttempt` como pago a partir do return.
+
+### Motivo
+- retorno hospedado é navegação do browser e pode chegar antes, depois ou sem o webhook.
+- provider return pode trazer apenas hint, não liquidação confiável.
+- consultar provider no detalhe adicionaria latência, acoplamento e risco de regra financeira em surface customer-facing.
+- a copy atual já reduz ansiedade sem prometer confirmação.
+
+### Próxima wave recomendada
+- **Checkout/Payment Execution Wave 4 — Payment Pending Operational State Review**
+- foco:
+  - revisar se pedido/tentativa em verificação pendente têm estado operacional suficiente para suporte
+  - decidir se precisamos de um estado explícito de “pagamento em verificação” ou se `PaymentAttempt.timeline` + detalhe do pedido já bastam
+
+## Wave FM — Payment Pending Operational State Review
+- a revisão avaliou se o fluxo precisa de um novo status persistido, como `verifying`, `awaiting_webhook` ou `pending_verification`.
+- conclusão:
+  - **não criar novo status agora**.
+- o estado operacional pendente já é composto por:
+  - `PaymentAttempt.status=pending`
+  - `PaymentAttempt.metadata.timeline`
+  - `latest_event_code`
+  - `latest_event_at`
+  - `provider_return`
+  - `provider_intent`
+  - idade da tentativa pendente
+  - detecção de drift entre tentativa e pedido
+
+### Superfícies revisadas
+- detalhe do pedido na área do cliente:
+  - mostra “Trilha do pagamento”
+  - mostra timeline da tentativa
+  - mostra stale state quando a tentativa pendente envelhece
+  - mostra drift quando pedido e tentativa divergem
+  - mantém CTA hospedado quando há tentativa pendente retomável
+- comando operacional:
+  - `list_payment_attempts`
+  - permite filtrar por tenant, status e pendência antiga
+- métricas:
+  - `hubx_payments_attempt_total{tenant_id,status}`
+  - permite observar backlog de tentativas pendentes por tenant
+
+### Decisão
+- manter `pending` como status persistido único para tentativa ainda não reconciliada.
+- tratar “em verificação” como leitura derivada de timeline/return, não como estado financeiro.
+- não adicionar migration nem novo enum de status nesta fase.
+- não alterar `Order.payment_status` para “em verificação” apenas por browser return.
+
+### Motivo
+- um novo status intermediário criaria transições adicionais sem mudar a fonte de verdade.
+- o webhook continua sendo o marco que decide `paid` ou `failed`.
+- a timeline já preserva granularidade operacional sem contaminar o estado financeiro.
+- suporte já consegue enxergar pendência, idade, provider, referência externa e drift.
+
+### Próxima wave recomendada
+- **Checkout/Payment Execution Wave 5 — Payment Stale Attempt Alert Review**
+- foco:
+  - revisar se a pendência antiga deve virar alerta operacional automático
+  - decidir threshold inicial usando o que já existe em `PaymentAttempt` e métricas
+  - evitar job novo se dashboard/alert rule por métrica já for suficiente
+
+## Wave FN — Payment Stale Attempt Alert Review
+- a revisão confirmou que já existe alerta para backlog total:
+  - `HubxPaymentsPendingAttemptsHigh`
+  - baseado em `sum(hubx_payments_attempt_total{status="pending"}) > 100`
+- esse alerta é útil para volume, mas não responde à pergunta operacional mais urgente:
+  - “alguma loja tem tentativa pendente antiga demais?”
+
+### Leitura atual
+- a área do cliente já classifica tentativa pendente antiga:
+  - warning após 30 minutos sem atualização recente
+  - critical após 6 horas sem atualização recente
+- o comando operacional já permite triagem:
+  - `list_payment_attempts --stale-hours=6`
+- a métrica atual `hubx_payments_attempt_total{tenant_id,status}` só mede quantidade.
+- Prometheus ainda não consegue alertar idade real da tentativa pendente mais antiga por tenant.
+
+### Decisão
+- adicionar uma métrica derivada por tenant na próxima execução:
+  - `hubx_payments_pending_attempt_oldest_age_seconds{tenant_id}`
+- manter o threshold inicial em 6 horas:
+  - `> 21600`
+- manter severidade `warning` inicialmente.
+- não criar Celery beat, job agendado ou novo modelo para esse recorte.
+- manter triagem manual via `list_payment_attempts --tenant-id=<id> --status=pending --stale-hours=6`.
+
+### Motivo
+- idade de pendência é mais acionável que backlog agregado em MVP.
+- métrica por tenant preserva isolamento operacional e reduz ruído.
+- calcular no scrape é suficiente para o volume esperado nesta fase.
+- job assíncrono só faria sentido quando houver SLA formal de conciliação/expiração.
+
+### Próxima wave recomendada
+- **Checkout/Payment Execution Wave 6 — Payment Stale Attempt Metric Execution**
+- foco:
+  - exportar `hubx_payments_pending_attempt_oldest_age_seconds{tenant_id}`
+  - adicionar alert rule `HubxPaymentsStalePendingAttempt`
+  - atualizar runbook e teste do endpoint de métricas
+
+## Wave FO — Payment Stale Attempt Metric Execution
+- a métrica de pendência antiga foi adicionada ao exporter Prometheus de payments.
+- ela complementa `hubx_payments_attempt_total`, que mede volume, com um sinal de idade por tenant.
+
+### Escopo executado
+- métrica:
+  - `hubx_payments_pending_attempt_oldest_age_seconds{tenant_id}`
+- cálculo:
+  - considera apenas `PaymentAttempt.status=pending`
+  - agrupa por `tenant_id`
+  - usa a menor `updated_at` pendente como referência
+  - exporta idade em segundos no momento do scrape
+- alerta:
+  - `HubxPaymentsStalePendingAttempt`
+  - threshold inicial `> 21600`
+  - `for: 10m`
+  - severidade `warning`
+- runbook:
+  - diagnóstico de tentativa pendente antiga
+  - comando recomendado com `--tenant-id`, `--status=pending` e `--stale-hours=6`
+- teste:
+  - endpoint de métricas agora verifica a presença da nova série por tenant
+
+### Leitura operacional
+- uma tentativa antiga isolada agora vira sinal independente de backlog agregado.
+- o alerta continua tenant-scoped e não cria novo estado financeiro.
+- o diagnóstico segue manual e seguro nesta fase; não há job de expiração automática.
+
+### Próxima wave recomendada
+- **Checkout/Payment Execution Wave 7 — Payment Stale Attempt Dashboard Review**
+- foco:
+  - decidir se o dashboard existente precisa destacar idade máxima por tenant
+  - evitar painel novo se a alert rule e o runbook já forem suficientes para operação inicial
+
+## Wave FP — Payment Stale Attempt Dashboard Review
+- a revisão confirmou que o dashboard atual de payments já cobre:
+  - sinais críticos por código
+  - timestamp do último sinal
+  - volume de `PaymentAttempt` por status
+- depois da métrica `hubx_payments_pending_attempt_oldest_age_seconds{tenant_id}`, ficou uma lacuna visual:
+  - o alerta detecta tentativa antiga por tenant
+  - o runbook explica a triagem
+  - mas o dashboard ainda não mostra rapidamente qual tenant tem maior idade pendente
+
+### Decisão
+- adicionar um painel dedicado no dashboard atual.
+- tipo recomendado:
+  - `table`
+- query recomendada:
+  - `hubx_payments_pending_attempt_oldest_age_seconds`
+- colunas esperadas:
+  - `tenant_id`
+  - idade em segundos
+- ordenação:
+  - maior idade primeiro
+- unidade:
+  - `s`
+- manter o painel no mesmo dashboard `Hubx Payments Alert Signals`.
+
+### Motivo
+- o alerta sozinho indica que há problema, mas o painel acelera triagem visual.
+- tabela por tenant é mais útil que timeseries agregada para esse caso.
+- não há necessidade de criar dashboard separado nesta fase.
+- a operação continua simples: dashboard aponta tenant, runbook orienta comando de triagem.
+
+### Próxima wave recomendada
+- **Checkout/Payment Execution Wave 8 — Payment Stale Attempt Dashboard Execution**
+- foco:
+  - adicionar painel Grafana para `hubx_payments_pending_attempt_oldest_age_seconds`
+  - atualizar README de observabilidade com a nova métrica
+  - validar JSON do dashboard
+
+## Wave FQ — Payment Stale Attempt Dashboard Execution
+- o dashboard Grafana de payments recebeu um painel específico para idade de tentativa pendente.
+
+### Escopo executado
+- dashboard atualizado:
+  - `infra/observability/grafana/payments-alert-signals-dashboard.json`
+- painel:
+  - `Tentativa pendente mais antiga por tenant`
+- query:
+  - `hubx_payments_pending_attempt_oldest_age_seconds`
+- tipo:
+  - tabela instantânea
+- unidade:
+  - segundos
+- ordenação:
+  - maior idade primeiro
+- thresholds visuais:
+  - verde abaixo de 30 minutos
+  - laranja acima de 30 minutos
+  - vermelho acima de 6 horas
+
+### Leitura operacional
+- o alerta `HubxPaymentsStalePendingAttempt` continua sendo o gatilho.
+- o painel agora acelera a identificação do tenant afetado.
+- o runbook continua apontando a triagem por `list_payment_attempts`.
+- não foi criado dashboard separado para evitar fragmentação nesta fase.
+
+### Próxima wave recomendada
+- **Checkout/Payment Execution Wave 9 — Payment Execution Closure Review**
+- foco:
+  - revisar se a trilha de execução payments já está suficientemente fechada para esta fase
+  - separar próximos temas maiores: refund/estorno, conciliação financeira, provider real production rollout e SLA formal
+
+## Wave FR — Payment Execution Closure Review
+- decisão:
+  - **Go técnico para encerrar `Checkout/Payment Execution` nesta fase**.
+- a trilha deixou de ser uma hipótese sobre “pagamento real inexistente” e virou uma revisão/hardening do fluxo já existente.
+
+### O que está pronto
+- `PaymentAttempt` tenant-scoped para acompanhar tentativas.
+- bootstrap de contrato com provider e criação/reuso de intent externa.
+- hosted redirect e hosted return com UX honesta de verificação pendente.
+- webhook assinado como fonte de verdade para `payment.paid` e `payment.failed`.
+- confirmação externa delegada para `orders`.
+- validação final de inventário antes de marcar pedido como pago.
+- baixa operacional de estoque pós-pagamento confirmado.
+- proteção regressiva para `payment.paid` com conflito de estoque.
+- reconciliação de tentativa apenas quando o pedido confirma/falha com segurança.
+- timeline operacional, stale state e drift no detalhe do pedido.
+- triagem CLI com `list_payment_attempts`.
+- métricas, alertas e dashboard para:
+  - sinais críticos
+  - tentativas por status
+  - tentativa pendente antiga por tenant
+
+### Riscos aceitos
+- não há reserva/alocação pré-pagamento.
+- retorno hospedado não consulta provider diretamente.
+- tentativa pendente antiga ainda exige triagem manual.
+- não há refund/estorno.
+- não há conciliação financeira/backoffice completa.
+- não há SLA formal automatizado de expiração/reconciliação.
+- production rollout real de provider ainda depende de ativação operacional controlada.
+
+### Go/No-Go
+- **Go para encerrar esta abordagem agora**.
+- **No-Go para continuar em micro-waves de payments execution** sem escolher um tema maior.
+
+### Próximos temas maiores
+- `Payment Refund/Reversal Foundation`
+  - estorno, reversão operacional e impacto em pedido/estoque.
+- `Payments Financial Reconciliation`
+  - conciliação backoffice, divergências financeiras e relatório operacional.
+- `Provider Production Rollout`
+  - ativação real controlada por tenant, credenciais, webhooks públicos e rollback.
+- `Payment SLA Automation`
+  - expiração/reconciliação automática de tentativas antigas.
+
+### Próxima abordagem recomendada
+- **Provider Production Rollout Review**
+- motivo:
+  - a base transacional e operacional já existe; o próximo bloqueio real para produção é ativar provider real com critérios de rollout, rollback e validação fim a fim.
+
+## Wave FS — Provider Production Rollout Contract Review
+- a revisão mostrou que já existem blocos importantes:
+  - `decide_provider_rollout(...)`
+  - rollout `sandbox`, `controlled`, `live` e `off`
+  - allowlist por tenant no modo `controlled`
+  - `fallback_mode` `lite` ou `block`
+  - alert signal `provider_rollout.blocked`
+  - readiness command
+- lacuna encontrada:
+  - `live` global podia liberar provider real para todos sem uma confirmação adicional explícita.
+- decisão:
+  - `live` global precisa de flag dedicada.
+
+## Wave FT — Provider Production Rollout Safety Execution
+- foi adicionado hardening para impedir ativação `live` global acidental.
+
+### Escopo executado
+- `PAYMENTS_REAL_PROVIDER_LIVE_GLOBAL_ENABLED`
+  - quando `false` ou ausente, `PAYMENTS_REAL_PROVIDER_ROLLOUT_MODE=live` não libera provider real.
+  - reason code: `live-global-not-enabled`.
+  - quando `true`, `live` global fica explicitamente liberado.
+  - reason code: `live-global-enabled`.
+- readiness command:
+  - ganhou `--target=sandbox|production`.
+  - produção exige rollout `controlled` ou `live`.
+  - produção exige `PAYMENTS_REAL_PROVIDER_FALLBACK_MODE=block`.
+  - produção bloqueia `live` sem `PAYMENTS_REAL_PROVIDER_LIVE_GLOBAL_ENABLED=true`.
+- testes:
+  - bloqueio de `live` global sem flag.
+  - liberação de `live` global com flag.
+  - readiness production bloqueado/liberado.
+
+## Wave FU — Provider Production Rollout Runbook Review
+- o runbook operacional agora diferencia sandbox, production controlled rollout e live global.
+- decisão operacional:
+  - iniciar produção por `controlled`, não por `live`.
+  - manter `fallback_mode=block` em produção.
+  - usar `live` apenas após piloto validado e com flag explícita.
+  - rollback rápido deve usar `PAYMENTS_REAL_PROVIDER_ROLLOUT_MODE=off` ou remover tenant da allowlist.
+
+### Próxima wave
+- **Provider Production Rollout Closure Review**
+- foco:
+  - fechar go/no-go da abordagem e separar rollout operacional real de futuras trilhas financeiras.
+
+## Wave FV — Provider Production Rollout Closure Review
+- decisão:
+  - **Go técnico para piloto controlado de provider real**.
+- decisão complementar:
+  - **No-Go para live global imediato**.
+
+### Critérios mínimos atendidos
+- rollout controlado por tenant existe.
+- provider real Pagar.me é ativado apenas quando o tenant está allowlisted.
+- modo `live` global exige flag explícita adicional.
+- readiness production bloqueia:
+  - provider default incorreto
+  - rollout mode inadequado
+  - controlled sem tenants
+  - fallback diferente de `block`
+  - live sem flag global explícita
+  - segredo/API/header/webhook ausentes
+- provider failures geram alert signal.
+- rollback operacional é simples:
+  - remover tenant da allowlist
+  - ou mudar rollout para `off`
+
+### Riscos aceitos
+- não houve chamada real ao provider neste ambiente.
+- credenciais e webhook público continuam responsabilidade de ambiente/deploy.
+- conciliação financeira, refund/estorno e SLA automático continuam fora desta abordagem.
+- live global só deve ser considerado após piloto controlado com monitoramento estável.
+
+### Próxima abordagem recomendada
+- **Payments Financial Reconciliation Review**
+- motivo:
+  - com rollout controlado tecnicamente protegido, o próximo grande risco de produção deixa de ser abrir o provider e passa a ser reconciliar divergências financeiras de forma operacionalmente confiável.
+
+## Wave FW — Payments Financial Reconciliation Surface Review
+- a revisão mostrou que a base de conciliação já tinha sinais dispersos:
+  - `PaymentAttempt.status`
+  - `amount`
+  - `external_reference`
+  - `paid_at` / `failed_at`
+  - `Order.status`
+  - `Order.payment_status`
+  - `Order.payment_reference`
+  - drift no detalhe do pedido
+- lacuna:
+  - não havia uma auditoria operacional explícita para listar divergências financeiras entre `PaymentAttempt` e `Order`.
+
+### Decisão
+- começar com auditoria read-only, não ledger persistido.
+- manter ownership:
+  - `payments` audita tentativas e divergências financeiras.
+  - `orders` continua dono da transição do pedido.
+- não criar ajuste automático nesta fase.
+
+## Wave FX — Payments Financial Reconciliation Audit Execution
+- foi criado o auditor operacional de divergências financeiras.
+
+### Escopo executado
+- service:
+  - `payments.application.financial_reconciliation_queries`
+- command:
+  - `list_payment_reconciliation_issues`
+- filtros:
+  - `--tenant-id`
+  - `--limit`
+- issues detectadas:
+  - `attempt_paid_order_unconfirmed`
+  - `order_confirmed_attempt_not_paid`
+  - `attempt_amount_mismatch`
+  - `paid_attempt_missing_external_reference`
+  - `payment_reference_mismatch`
+
+### Leitura operacional
+- a auditoria não altera dados.
+- a saída é tenant-scoped e serve para suporte/conciliação.
+- divergências críticas continuam exigindo conferência de provider, webhook e histórico do pedido antes de qualquer correção manual.
+
+## Wave FY — Payments Financial Reconciliation Runbook Review
+- o runbook operacional foi atualizado com o comando de auditoria.
+- a orientação explícita é:
+  - investigar divergências antes de qualquer ajuste manual.
+  - não transformar auditoria em correção automática nesta fase.
+  - preservar `PaymentAttempt` como trilha financeira sensível.
+
+### Próxima wave
+- **Payments Financial Reconciliation Closure Review**
+- foco:
+  - decidir se o recorte mínimo de conciliação financeira está pronto para esta fase
+  - separar ledger/backoffice financeiro completo como trilha maior
+
+## Wave FZ — Payments Financial Reconciliation Closure Review
+- decisão:
+  - **Go técnico para conciliação financeira mínima read-only**.
+- decisão complementar:
+  - **No-Go para ledger/backoffice financeiro completo nesta abordagem**.
+
+### O que ficou pronto
+- auditoria operacional tenant-scoped.
+- comando `list_payment_reconciliation_issues`.
+- detecção de:
+  - tentativa paga sem pedido confirmado
+  - pedido confirmado sem tentativa paga
+  - valor divergente entre tentativa e pedido
+  - tentativa paga sem referência externa
+  - referência externa divergente entre tentativa e pedido
+- runbook com orientação de triagem.
+- testes cobrindo divergência crítica, divergência de valor, filtro por tenant e estado limpo.
+
+### Riscos aceitos
+- não há ledger financeiro persistido.
+- não há tela admin financeira.
+- não há correção automática.
+- não há estorno/refund.
+- não há conciliação por extrato/settlement do provider.
+
+### Próxima abordagem recomendada
+- **Payments Admin Finance Surface Review**
+- motivo:
+  - agora existe auditoria CLI; o próximo ganho prático é decidir se merchants/admin precisam de uma tela interna mínima de divergências antes de criar ledger financeiro completo.
+
+## Wave GA — Payments Admin Finance Surface Review
+- a revisão confirmou que já havia:
+  - auditoria CLI read-only
+  - service tenant-scoped de divergências
+  - dashboard merchant ops com links para filas operacionais
+- lacuna:
+  - não havia surface visual para suporte/admin ver divergências financeiras sem rodar comando.
+
+### Decisão
+- criar uma tela admin mínima e read-only.
+- não criar correção manual.
+- não criar ledger persistido.
+- manter a surface dentro de `ops/payments/finance/`.
+
+## Wave GB — Payments Admin Finance Surface Execution
+- foi criada a página administrativa mínima para divergências financeiras.
+
+### Escopo executado
+- rota:
+  - `/ops/payments/finance/`
+- namespace:
+  - `payments_ops:admin-finance`
+- view:
+  - `AdminPaymentFinanceView`
+- template reutilizado:
+  - `admin_orders_list_page.html`
+- conteúdo:
+  - severidade
+  - pedido
+  - tentativa
+  - divergência
+- dashboard merchant ops:
+  - adiciona atalho `Financeiro`
+
+### Garantias
+- surface é read-only.
+- listagem é tenant-scoped.
+- sem tenant resolvido, a tela não lista divergências globais.
+- não há mutação financeira.
+
+## Wave GC — Payments Admin Finance Surface Closure Review
+- decisão:
+  - **Go técnico para surface admin financeira mínima**.
+- decisão complementar:
+  - **No-Go para backoffice financeiro completo nesta abordagem**.
+
+### Próximos temas maiores
+- ledger financeiro persistido.
+- workflow de resolução manual com auditoria.
+- refund/estorno.
+- conciliação por settlement/extrato de provider.
+
+### Próxima abordagem recomendada
+- **Payment Refund/Reversal Foundation Review**
+- motivo:
+  - com divergências visíveis para admin, o próximo tema financeiro realmente transacional é definir estorno/reversão sem quebrar pedidos, estoque e ledger futuro.
+
+## Wave GD — Payment Refund/Reversal Foundation Review
+- a revisão encontrou que o sistema já possui reversões operacionais parciais:
+  - cancelamento de pedido em `orders`
+  - recuperação de estoque reservado quando pedido pago é cancelado antes do envio
+  - reversão de redemption de cupom no cancelamento
+- lacuna:
+  - não existe refund financeiro real no provider
+  - não existe ledger de refund
+  - não existe política de refund parcial/total
+
+### Decisão
+- não implementar estorno transacional nesta abordagem.
+- criar apenas uma auditoria read-only de elegibilidade para refund/reversal.
+- manter refund real como trilha maior separada.
+
+## Wave GE — Payment Refund/Reversal Readiness Execution
+- foi criado um auditor operacional read-only de candidatos a refund/reversal.
+
+### Escopo executado
+- service:
+  - `payments.application.refund_reversal_queries`
+- command:
+  - `list_payment_refund_candidates`
+- filtros:
+  - `--tenant-id`
+  - `--ready-only`
+  - `--limit`
+- bloqueios iniciais:
+  - `order-not-paid`
+  - `order-already-canceled`
+  - `order-already-shipped`
+  - `inventory-finalized`
+  - `paid-attempt-missing`
+  - `external-reference-missing`
+
+### Leitura operacional
+- um candidato `ready` significa apenas que há base mínima para iniciar análise de refund.
+- o comando não chama provider.
+- o comando não altera pedido, tentativa, estoque ou cupom.
+- pedido enviado/finalizado fica bloqueado para evitar reversão financeira ingênua.
+
+## Wave GF — Payment Refund/Reversal Closure Review
+- decisão:
+  - **Go técnico para readiness read-only de refund/reversal**.
+- decisão complementar:
+  - **No-Go para estorno financeiro real nesta abordagem**.
+
+### Próximos temas maiores
+- modelo/ledger de refund.
+- chamada real ao provider para estorno.
+- política de refund parcial vs total.
+- integração com cancelamento, estoque, cupom e notificações.
+- surface admin de aprovação/execução com auditoria forte.
+
+### Próxima abordagem recomendada
+- **Refund Ledger Contract Review**
+- motivo:
+  - antes de chamar provider, o sistema precisa de um ledger persistido e idempotente para registrar intenção, execução, falha e reversão de refund.
+
+## Wave GG — Refund Ledger Contract Review
+- a revisão confirmou que o readiness read-only já identifica candidatos, mas ainda não havia trilha persistida para intenção de refund.
+- contrato mínimo escolhido:
+  - entidade tenant-scoped `PaymentRefund`
+  - vínculo com `Order`
+  - vínculo opcional com `PaymentAttempt` pago
+  - chave idempotente por tenant
+  - valor, moeda, provider, referência externa, motivo, blockers e metadata
+  - estados preparados para `requested`, `blocked`, `processing`, `succeeded`, `failed` e `reversed`
+
+### Decisão
+- registrar intenção/bloqueio de refund antes de qualquer chamada real ao provider.
+- manter o ledger sem mutar pedido, tentativa, estoque, cupom ou notificações nesta wave.
+- usar idempotência por `(tenant, idempotency_key)` como trava mínima contra duplicidade operacional.
+
+## Wave GH — Refund Ledger Contract Execution
+- foi criado o ledger persistido mínimo de refund.
+
+### Escopo executado
+- model:
+  - `PaymentRefund`
+- migration:
+  - `payments.0004_paymentrefund`
+- service:
+  - `payments.application.refund_ledger_commands`
+- command:
+  - `request_payment_refund_intent`
+- testes:
+  - criação de intenção `requested`
+  - idempotência por tenant
+  - bloqueio de pedido enviado
+  - proteção contra tenant ausente, chave ausente e cross-tenant
+  - saída operacional do comando
+
+### Garantias
+- não há chamada de provider.
+- não há alteração de `Order`.
+- não há alteração de `PaymentAttempt`.
+- não há alteração de estoque ou cupom.
+- blockers geram ledger `blocked` quando o pedido existe, preservando evidência operacional.
+
+## Wave GI — Refund Ledger Closure Review
+- decisão:
+  - **Go técnico para ledger mínimo de refund**.
+- decisão complementar:
+  - **No-Go para refund financeiro real nesta abordagem**.
+
+### Próxima abordagem recomendada
+- **Refund Provider Execution Review**
+- motivo:
+  - agora existe trilha idempotente; a próxima decisão é se já vale integrar execução real ao provider ou antes criar surface admin de aprovação.
+
+## Wave GJ — Refund Provider Execution Review
+- a revisão comparou o ledger atual com a integração real existente de provider.
+- achados:
+  - `PagarmeProviderAdapter` ainda cobre apenas criação de intenção/link de pagamento.
+  - não existe contrato de refund no adapter.
+  - não existe surface admin explícita para aprovar execução financeira.
+  - não existe política de refund parcial, total, múltiplo ou pós-envio.
+  - `payment.refunded` ainda é evento documentado, mas não deve ser emitido antes de execução real confirmada.
+
+### Decisão
+- **No-Go para execução direta de refund no provider agora**.
+- **Go para preparar uma surface admin de aprovação/triagem antes da chamada externa**.
+
+### Critérios mínimos antes de provider real
+- refund precisa nascer no ledger como `requested`.
+- operador precisa ver blockers, valor, pedido, tentativa e referência externa antes de aprovar.
+- aprovação deve ser tenant-scoped e idempotente.
+- execução real deve transicionar `requested → processing → succeeded|failed`.
+- somente `succeeded` pode emitir/representar `payment.refunded`.
+- efeitos em `orders`, estoque, cupom e notifications devem ser explícitos e posteriores à confirmação do provider.
+
+## Wave GK — Refund Provider Execution Closure Review
+- decisão:
+  - **Go técnico para surface admin de refund antes do provider**.
+- decisão complementar:
+  - **No-Go para CLI/API chamar provider diretamente nesta fase**.
+
+### Próxima abordagem recomendada
+- **Refund Admin Approval Surface Review**
+- motivo:
+  - a próxima peça segura é dar visibilidade e aprovação explícita ao ledger `PaymentRefund`, sem ainda movimentar dinheiro.
+
+## Wave GL — Refund Admin Approval Surface Review
+- a revisão avaliou a surface admin financeira existente e o ledger `PaymentRefund`.
+- ponto de partida:
+  - `/ops/payments/finance/` já mostra divergências financeiras read-only.
+  - `PaymentRefund` já guarda intenção/bloqueio idempotente.
+  - ainda não há tela dedicada para triagem/aprovação de refund.
+
+### Surface mínima recomendada
+- rota:
+  - `/ops/payments/refunds/`
+- namespace:
+  - `payments_ops:admin-refunds`
+- escopo inicial:
+  - listagem tenant-scoped de `PaymentRefund`
+  - filtros simples por `status`
+  - colunas:
+    - status
+    - pedido
+    - valor
+    - tentativa/referência externa
+    - blockers
+    - chave idempotente
+  - ações:
+    - detalhe read-only do refund
+    - sem botão de executar provider nesta primeira surface
+
+### Regras de segurança
+- sem tenant resolvido, a lista deve ficar vazia.
+- `blocked` deve ser exibido como estado operacional explícito, não como erro silencioso.
+- `requested` significa “pode entrar em aprovação”, não “estorno autorizado automaticamente”.
+- a tela não deve alterar `Order`, `PaymentAttempt`, estoque, cupom ou notificações.
+- aprovação real deve ser uma wave separada, com permissão/CSRF/auditoria e transição explícita no ledger.
+
+### Decisão
+- **Go para implementar uma surface admin read-only de refunds antes de aprovação mutável**.
+- **No-Go para botão de approve/execute provider nesta mesma etapa**.
+
+## Wave GM — Refund Admin Approval Surface Closure Review
+- decisão:
+  - a primeira surface deve ser **read-only**, apesar do nome “approval”.
+- motivo:
+  - o operador precisa enxergar o ledger antes de aprovar movimentação financeira.
+  - misturar visibilidade, aprovação e provider call no mesmo passo aumentaria risco operacional.
+
+### Próxima abordagem recomendada
+- **Refund Admin Read-Only Surface Execution**
+- motivo:
+  - criar `/ops/payments/refunds/` com listagem tenant-scoped do ledger e preparar a base visual para aprovação futura.
+
+## Wave GN — Refund Admin Read-Only Surface Execution
+- foi criada a primeira surface admin para triagem de refunds.
+
+### Escopo executado
+- rota:
+  - `/ops/payments/refunds/`
+- namespace:
+  - `payments_ops:admin-refunds`
+- query service:
+  - `payments.application.refund_ledger_queries`
+- view:
+  - `AdminPaymentRefundsView`
+- dashboard merchant ops:
+  - adiciona atalho `Refunds`
+- filtros:
+  - status do ledger
+- colunas:
+  - status
+  - pedido
+  - valor
+  - tentativa/referência externa
+  - blockers
+  - idempotency key
+
+### Garantias
+- a listagem é tenant-scoped.
+- sem tenant resolvido, a tela não lista refunds globais.
+- a tela é read-only.
+- não há botão de aprovar, executar provider, alterar pedido, alterar tentativa, estoque, cupom ou notificações.
+
+## Wave GO — Refund Admin Read-Only Surface Closure Review
+- decisão:
+  - **Go técnico para surface read-only de refunds**.
+- decisão complementar:
+  - **No-Go para aprovação/execução de refund nesta abordagem**.
+
+### Próxima abordagem recomendada
+- **Refund Approval Command Contract Review**
+- motivo:
+  - agora existe ledger e visibilidade admin; o próximo passo seguro é desenhar o command de aprovação que transiciona `requested` sem ainda chamar provider real.
+
+## Wave GP — Refund Approval Command Contract Review
+- a revisão confirmou que já existem:
+  - ledger `PaymentRefund`
+  - intenção/bloqueio idempotente
+  - surface admin read-only
+  - boundary documentada para não chamar provider diretamente
+- lacuna:
+  - não existe command explícito para aprovar um refund e preparar execução futura.
+
+### Contrato mínimo recomendado
+- service:
+  - `payments.application.refund_approval_commands`
+- método:
+  - `approve_refund(...)`
+- entrada:
+  - `tenant_id`
+  - `refund_key`
+  - `actor_label`
+  - `approval_note`
+- pré-condições:
+  - tenant resolvido
+  - refund pertence ao tenant
+  - status atual é `requested`
+  - sem blockers
+  - possui `payment_attempt`
+  - possui `external_reference`
+  - amount maior que zero
+- transição:
+  - `requested → processing`
+- metadata:
+  - `approved_by`
+  - `approved_at`
+  - `approval_note`
+  - `approval_contract_version=refund-approval-v1`
+  - `provider_call=not-executed`
+- retornos:
+  - `refund-approval-ready`
+  - `refund-approval-blocked`
+  - `refund-approval-unavailable`
+
+### Fora do escopo
+- não chamar provider.
+- não marcar `succeeded`.
+- não emitir `payment.refunded`.
+- não alterar `Order`, `PaymentAttempt`, estoque, cupom ou notifications.
+- não aprovar refunds `blocked`, `failed`, `succeeded`, `reversed` ou já `processing`.
+
+## Wave GQ — Refund Approval Command Contract Closure Review
+- decisão:
+  - **Go técnico para command de aprovação interna do ledger**.
+- decisão complementar:
+  - **No-Go para provider execution dentro do command de aprovação**.
+
+### Próxima abordagem recomendada
+- **Refund Approval Command Execution**
+- motivo:
+  - implementar o command que faz apenas a transição auditável `requested → processing`, preparando uma wave posterior de provider adapter.
+
+## Wave GR — Refund Approval Command Execution
+- foi implementado o command service de aprovação interna de refund.
+
+### Escopo executado
+- service:
+  - `payments.application.refund_approval_commands`
+- método:
+  - `approve_refund(...)`
+- transição:
+  - `requested → processing`
+- metadados:
+  - `approved_by`
+  - `approved_at`
+  - `approval_note`
+  - `approval_contract_version`
+  - `provider_call=not-executed`
+- bloqueios:
+  - tenant/refund ausente
+  - refund fora do tenant
+  - status diferente de `requested`
+  - blockers existentes
+  - ator ausente
+  - tentativa paga ausente
+  - referência externa ausente
+  - valor inválido
+
+### Garantias
+- não há chamada ao provider.
+- não há emissão de `payment.refunded`.
+- não há alteração de pedido, tentativa, estoque, cupom ou notificações.
+- reprovações preservam o status atual e registram `approval_blockers` na metadata do ledger.
+
+## Wave GS — Refund Approval Command Closure Review
+- decisão:
+  - **Go técnico para aprovação interna do ledger**.
+- decisão complementar:
+  - **No-Go para execução financeira real ainda**.
+
+### Próxima abordagem recomendada
+- **Refund Approval Admin Action Review**
+- motivo:
+  - agora o command existe; o próximo passo seguro é decidir como a surface admin poderá acionar essa transição sem chamar provider.
+
+## Wave GT — Refund Approval Admin Action Review
+- a revisão avaliou a surface `/ops/payments/refunds/` e o command `approve_refund(...)`.
+- decisão de produto/técnica:
+  - expor uma action admin mínima para aprovação interna do ledger.
+  - manter essa action como POST tenant-scoped.
+  - continuar sem chamada ao provider.
+
+### Contrato recomendado
+- rota:
+  - `/ops/payments/refunds/<refund_key>/approve/`
+- namespace:
+  - `payments_ops:admin-refund-approve`
+- método:
+  - `POST`
+- entrada:
+  - `refund_key` pela URL
+  - `approval_note` opcional no body
+  - `actor_label` derivado do usuário/request quando possível, com fallback operacional explícito
+- comportamento:
+  - resolve `tenant_id` da request
+  - chama `payment_refund_approval_commands.approve_refund(...)`
+  - redireciona de volta para `/ops/payments/refunds/`
+  - adiciona feedback simples de sucesso/bloqueio/indisponibilidade quando a base de messages estiver disponível
+
+### UI mínima
+- mostrar ação apenas para refunds `requested`.
+- texto sugerido:
+  - `Aprovar internamente`
+- nota/copy:
+  - “Esta ação prepara execução futura e não chama o provider.”
+- manter estados `blocked`, `processing`, `succeeded`, `failed` e `reversed` sem ação de aprovação.
+
+### Fora do escopo
+- não chamar provider.
+- não criar botão de “estornar”.
+- não alterar `Order`, `PaymentAttempt`, estoque, cupom ou notifications.
+- não emitir `payment.refunded`.
+- não criar fluxo completo de permissões avançadas; a action deve respeitar o escopo ops atual e permanecer tenant-scoped.
+
+## Wave GU — Refund Approval Admin Action Closure Review
+- decisão:
+  - **Go técnico para action admin de aprovação interna**.
+- decisão complementar:
+  - **No-Go para provider execution e efeitos externos nessa action**.
+
+### Próxima abordagem recomendada
+- **Refund Approval Admin Action Execution**
+- motivo:
+  - conectar a surface read-only ao command já testado, adicionando uma action POST segura para `requested → processing`.
+
+## Wave GV — Refund Approval Admin Action Execution
+- foi conectada a surface admin de refunds ao command de aprovação interna.
+
+### Escopo executado
+- rota:
+  - `POST /ops/payments/refunds/<refund_key>/approve/`
+- namespace:
+  - `payments_ops:admin-refund-approve`
+- view:
+  - `AdminPaymentRefundApproveView`
+- UI:
+  - coluna `Ação` na lista de refunds
+  - botão `Aprovar internamente` apenas para status `requested`
+  - copy explícita `Não executa estorno`
+
+### Comportamento
+- resolve tenant pela request.
+- deriva actor label do usuário quando possível, com fallback `Ops interno`.
+- delega para `payment_refund_approval_commands.approve_refund(...)`.
+- redireciona para `/ops/payments/refunds/`.
+
+### Garantias
+- a view não decide blockers.
+- a view não chama provider.
+- a view não altera pedido, tentativa, estoque, cupom ou notifications.
+- cross-tenant não altera o refund.
+
+## Wave GW — Refund Approval Admin Action Closure Review
+- decisão:
+  - **Go técnico para action admin de aprovação interna**.
+- decisão complementar:
+  - **No-Go para execução real de refund nesta abordagem**.
+
+### Próxima abordagem recomendada
+- **Refund Provider Adapter Contract Review**
+- motivo:
+  - agora há ledger, surface, command e action admin; o próximo passo natural é desenhar o contrato de adapter real de refund sem ainda acoplar efeitos em outros módulos.
+
+## Wave GX — Refund Provider Adapter Contract Review
+- a revisão comparou o adapter atual de pagamentos com o novo fluxo de refund.
+- estado atual:
+  - `PagarmeProviderAdapter` cria link/intenção de pagamento.
+  - `PaymentRefund` já pode chegar a `processing` por aprovação interna.
+  - ainda não existe contrato externo de refund.
+
+### Contrato mínimo recomendado
+- infrastructure:
+  - `RefundProviderContract`
+  - `RefundProviderResponse`
+- adapter:
+  - `create_refund(contract=...)`
+- campos do contrato:
+  - `tenant_id`
+  - `refund_key`
+  - `idempotency_key`
+  - `provider_code`
+  - `external_reference`
+  - `amount`
+  - `currency_code`
+  - `reason_code`
+  - `metadata`
+- campos da resposta:
+  - `provider_code`
+  - `provider_refund_reference`
+  - `status`
+  - `payload_snapshot`
+
+### Semântica de status
+- `accepted`:
+  - provider aceitou a solicitação, mas confirmação final ainda pode depender de webhook/consulta posterior.
+- `succeeded`:
+  - provider confirmou refund concluído.
+- `failed`:
+  - provider recusou ou falhou a execução.
+
+### Regras
+- adapter não altera `PaymentRefund` diretamente.
+- adapter não altera pedido, tentativa, estoque, cupom ou notifications.
+- command futuro de execução será responsável por:
+  - carregar `PaymentRefund` `processing`
+  - construir `RefundProviderContract`
+  - chamar adapter
+  - registrar resposta no ledger
+  - decidir transição `processing → succeeded|failed`
+- somente `succeeded` pode preparar emissão de `payment.refunded`.
+
+### Pagar.me
+- o endpoint exato de refund deve ser confirmado antes da execução.
+- a primeira implementação real deve exigir:
+  - secret key configurada
+  - `external_reference`
+  - amount em centavos
+  - chave idempotente
+- até esse contrato ser implementado, não há chamada externa de refund.
+
+## Wave GY — Refund Provider Adapter Contract Closure Review
+- decisão:
+  - **Go técnico para contrato de adapter de refund**.
+- decisão complementar:
+  - **No-Go para chamada real ao provider nesta abordagem**.
+
+### Próxima abordagem recomendada
+- **Refund Provider Adapter Skeleton Execution**
+- motivo:
+  - criar dataclasses e adapter lite/real skeleton com testes de contrato, ainda sem disparar refund real em produção.
+
+## Wave GZ — Refund Provider Adapter Skeleton Execution
+- foi criado o esqueleto de adapter de refund.
+
+### Escopo executado
+- dataclasses:
+  - `RefundProviderContract`
+  - `RefundProviderResponse`
+- adapter lite:
+  - `ProviderAdapterLite.create_refund(...)`
+  - retorna `status=accepted`
+  - marca `provider_call=lite`
+- adapter Pagar.me:
+  - `PagarmeProviderAdapter.create_refund(...)`
+  - falha explicitamente com `pagarme-refund-adapter-not-implemented`
+
+### Garantias
+- nenhuma chamada real ao provider é feita.
+- nenhum command de execução foi conectado ainda.
+- nenhum `PaymentRefund` é alterado por esse skeleton.
+- nenhum evento `payment.refunded` é emitido.
+
+## Wave HA — Refund Provider Adapter Skeleton Closure Review
+- decisão:
+  - **Go técnico para skeleton de adapter de refund**.
+- decisão complementar:
+  - **No-Go para execução real até existir command de execução e endpoint confirmado**.
+
+### Próxima abordagem recomendada
+- **Refund Execution Command Contract Review**
+- motivo:
+  - o adapter skeleton existe; o próximo passo seguro é desenhar o command que consumirá `PaymentRefund.processing` e registrará resposta externa sem efeitos em outros módulos.
+
+## Wave HB — Refund Execution Command Contract Review
+- a revisão confirmou que já existem:
+  - ledger `PaymentRefund`
+  - aprovação interna `requested → processing`
+  - action admin para aprovação interna
+  - skeleton de adapter de refund
+- lacuna:
+  - ainda não há command que consuma refunds `processing` e registre a resposta do adapter.
+
+### Contrato mínimo recomendado
+- service:
+  - `payments.application.refund_execution_commands`
+- método:
+  - `execute_refund(...)`
+- entrada:
+  - `tenant_id`
+  - `refund_key`
+- pré-condições:
+  - tenant resolvido
+  - refund pertence ao tenant
+  - status atual é `processing`
+  - `provider_refund_reference` ainda ausente
+  - possui `payment_attempt`
+  - possui `external_reference`
+  - amount maior que zero
+  - sem blockers
+- contrato externo:
+  - construir `RefundProviderContract` a partir de `PaymentRefund`
+  - chamar `get_provider_adapter(...).create_refund(contract=...)`
+- transições:
+  - resposta `accepted`:
+    - manter status `processing`
+    - salvar `provider_refund_reference`
+    - salvar `provider_refund.status=accepted` na metadata
+  - resposta `succeeded`:
+    - `processing → succeeded`
+    - preencher `completed_at`
+    - salvar referência e payload
+  - resposta `failed` ou erro do adapter:
+    - `processing → failed`
+    - preencher `failed_at`
+    - salvar reason/payload
+
+### Fora do escopo
+- não emitir `payment.refunded` nesta primeira execução.
+- não alterar `Order`, `PaymentAttempt`, estoque, cupom ou notifications.
+- não criar retry automático.
+- não tentar Pagar.me real enquanto `PagarmeProviderAdapter.create_refund(...)` estiver explicitamente não implementado.
+
+## Wave HC — Refund Execution Command Contract Closure Review
+- decisão:
+  - **Go técnico para command de execução do ledger contra adapter skeleton**.
+- decisão complementar:
+  - **No-Go para efeitos cross-module e evento `payment.refunded` nessa etapa**.
+
+### Próxima abordagem recomendada
+- **Refund Execution Command Skeleton Execution**
+- motivo:
+  - implementar `execute_refund(...)` consumindo `processing`, usando adapter lite/skeleton e registrando resposta no ledger sem efeitos externos.
+
+## Wave HD — Refund Execution Command Skeleton Execution
+- foi implementado o command skeleton de execução de refund.
+
+### Escopo executado
+- service:
+  - `payments.application.refund_execution_commands`
+- método:
+  - `execute_refund(...)`
+- entrada:
+  - `tenant_id`
+  - `refund_key`
+- consumo:
+  - apenas `PaymentRefund.status=processing`
+- integração:
+  - constrói `RefundProviderContract`
+  - chama `get_provider_adapter(...).create_refund(...)`
+  - registra resposta em `metadata.provider_refund`
+
+### Semântica implementada
+- `accepted`:
+  - mantém `processing`
+  - grava `provider_refund_reference`
+- `succeeded`:
+  - transiciona para `succeeded`
+  - grava `completed_at`
+- `failed` ou erro do adapter:
+  - transiciona para `failed`
+  - grava `failed_at`
+- blockers:
+  - preservam status atual
+  - gravam `execution_blockers`
+
+### Garantias
+- não emite `payment.refunded`.
+- não altera pedido, tentativa, estoque, cupom ou notifications.
+- cross-tenant retorna indisponível sem alterar o ledger.
+
+## Wave HE — Refund Execution Command Skeleton Closure Review
+- decisão:
+  - **Go técnico para execution command skeleton**.
+- decisão complementar:
+  - **No-Go para efeitos cross-module e provider real Pagar.me**.
+
+### Próxima abordagem recomendada
+- **Refund Provider Real Endpoint Review**
+- motivo:
+  - agora existe pipeline interno até o adapter; antes de chamar Pagar.me real, precisamos confirmar endpoint, payload, idempotência e estratégia de confirmação.
+
+## Wave HF — Refund Provider Real Endpoint Review
+- a revisão consultou a documentação oficial atual da API Reference V5 do Pagar.me.
+- endpoint oficial encontrado:
+  - `DELETE https://api.pagar.me/core/v5/charges/{charge_id}`
+- semântica documentada:
+  - cancelar cobrança.
+  - `charge_id` é obrigatório.
+  - `amount` é opcional e, se ausente, considera o valor total da cobrança.
+  - `bank_account` é usado para estorno de boleto e pode ser obrigatório nesse caso.
+- autenticação:
+  - Basic Auth com chave secreta, coerente com o adapter atual de criação de payment link.
+
+### Mapeamento para o Hubx
+- `PaymentRefund.external_reference` deve ser tratado como `charge_id`.
+- `PaymentRefund.amount` deve ser enviado em centavos quando houver refund parcial.
+- `PaymentRefund.idempotency_key` deve continuar sendo chave interna do ledger.
+- `PaymentRefund.provider_refund_reference` deve ser preenchido a partir da resposta quando o provider devolver identificador suficiente; caso contrário, usar fallback rastreável derivado de `charge_id/refund_key` apenas como referência operacional.
+
+### Riscos
+- o endpoint se chama “cancelar cobrança”, mas pode representar estorno dependendo do método/status da cobrança.
+- boleto pode exigir `bank_account`, que o ledger atual ainda não captura.
+- a resposta `200` precisa ser inspecionada em sandbox antes de decidir se representa `accepted` ou `succeeded`.
+- não há confirmação no código atual de que `external_reference` sempre contém `charge_id` válido para todos os métodos.
+
+### Decisão
+- **Go para preparar o adapter Pagar.me real em modo conservador**.
+- **No-Go para ativar execução real em produção sem sandbox contract test/manual validation**.
+
+### Próxima implementação segura
+- implementar `PagarmeProviderAdapter.create_refund(...)` usando:
+  - `DELETE /charges/{charge_id}`
+  - payload com `amount` em centavos
+  - sem suporte inicial a boleto com `bank_account`
+  - erro explícito se `external_reference` ausente
+  - status inicial `accepted` para respostas 2xx até validarmos a semântica real no sandbox
+
+## Wave HG — Refund Provider Real Endpoint Closure Review
+- decisão:
+  - **Go técnico para adapter real conservador em sandbox**.
+- decisão complementar:
+  - **No-Go para rollout de produção ou efeitos cross-module**.
+
+### Próxima abordagem recomendada
+- **Refund Pagar.me Adapter Sandbox Execution**
+- motivo:
+  - implementar o endpoint real no adapter com testes mockados, mantendo o execution command já existente e sem habilitar produção.
+
+## Wave HH — Refund Pagar.me Adapter Sandbox Execution
+- foi implementado o endpoint real conservador de refund no adapter Pagar.me.
+
+### Escopo executado
+- adapter:
+  - `PagarmeProviderAdapter.create_refund(...)`
+- endpoint:
+  - `DELETE /charges/{charge_id}`
+- autenticação:
+  - Basic Auth com `PAGARME_SECRET_KEY`
+- payload:
+  - `amount` em centavos quando maior que zero
+- headers:
+  - `Idempotency-Key` com `PaymentRefund.idempotency_key`
+
+### Semântica
+- resposta 2xx é registrada como `accepted`.
+- `provider_refund_reference` usa `id`, `code` ou `charge_id` da resposta.
+- se o provider não devolver referência, usa fallback rastreável com `charge_id/refund_key`.
+
+### Bloqueios explícitos
+- sem secret key:
+  - `pagarme-secret-key-missing`
+- sem charge id:
+  - `pagarme-refund-charge-id-missing`
+- falha de rede:
+  - `pagarme-network-unavailable`
+- JSON inválido:
+  - `pagarme-invalid-json-response`
+
+### Garantias
+- testes são mockados; não há chamada real durante a suíte.
+- boleto com `bank_account` continua fora do escopo.
+- production rollout continua bloqueado por decisão operacional.
+- nenhum efeito cross-module foi adicionado.
+
+## Wave HI — Refund Pagar.me Adapter Sandbox Closure Review
+- decisão:
+  - **Go técnico para adapter Pagar.me sandbox/mockado**.
+- decisão complementar:
+  - **No-Go para ativação real sem validação sandbox manual/contract test com credenciais reais**.
+
+### Próxima abordagem recomendada
+- **Refund Sandbox Validation Command Review**
+- motivo:
+  - antes de rollout real, criar um comando de validação controlada que execute um refund sandbox específico e registre resultado sem propagar efeitos.
+
+## Wave HJ — Refund Sandbox Validation Command Review
+- a revisão avaliou os comandos sandbox existentes de payments:
+  - `payment_sandbox_readiness`
+  - `payment_sandbox_validate_webhook`
+- lacuna:
+  - não existe comando controlado para validar uma execução real de refund sandbox a partir de um `PaymentRefund.processing`.
+
+### Contrato recomendado
+- command:
+  - `payment_sandbox_validate_refund`
+- argumentos obrigatórios:
+  - `--tenant-id`
+  - `--refund-key`
+- argumentos opcionais:
+  - `--dry-run`
+  - `--require-processing`
+- comportamento:
+  - carrega `PaymentRefund` tenant-scoped.
+  - valida que o status é `processing`.
+  - imprime dados críticos antes de executar:
+    - tenant
+    - order number
+    - refund key
+    - amount
+    - external reference
+    - idempotency key
+  - com `--dry-run`, não chama provider/adapter.
+  - sem `--dry-run`, chama `payment_refund_execution_commands.execute_refund(...)`.
+  - imprime resultado e status final do ledger.
+
+### Segurança
+- sem tenant não executa.
+- cross-tenant não encontra registro.
+- status diferente de `processing` bloqueia.
+- comando não altera `Order`, `PaymentAttempt`, estoque, cupom ou notifications.
+- comando não emite `payment.refunded`.
+- comando deve ser tratado como ferramenta de sandbox/ops controlada, não como feature de produção.
+
+### Decisão
+- **Go para implementar comando de validação sandbox de refund**.
+- **No-Go para expor esse comando como ação admin ou fluxo customer-facing**.
+
+## Wave HK — Refund Sandbox Validation Command Closure Review
+- decisão:
+  - **Go técnico para command sandbox de validação**.
+- decisão complementar:
+  - **No-Go para rollout real de refund automático**.
+
+### Próxima abordagem recomendada
+- **Refund Sandbox Validation Command Execution**
+- motivo:
+  - implementar `payment_sandbox_validate_refund` com `--dry-run`, validação tenant-scoped e integração controlada com `execute_refund(...)`.
+
+## Wave HL — Refund Sandbox Validation Command Execution
+- foi implementado o comando operacional de validação sandbox de refund.
+
+### Escopo executado
+- command:
+  - `payment_sandbox_validate_refund`
+- argumentos:
+  - `--tenant-id`
+  - `--refund-key`
+  - `--dry-run`
+  - `--require-processing`
+- comportamento:
+  - carrega `PaymentRefund` por tenant e `refund_key`
+  - imprime candidato e dados críticos
+  - bloqueia status diferente de `processing`
+  - em `--dry-run`, não chama adapter/provider
+  - sem `--dry-run`, delega para `execute_refund(...)`
+
+### Garantias
+- tenant-scoped.
+- sem bulk execution.
+- sem evento `payment.refunded`.
+- sem efeito em pedido, tentativa, estoque, cupum ou notifications.
+- útil para sandbox/ops controlado, não como feature de produção.
+
+## Wave HM — Refund Sandbox Validation Command Closure Review
+- decisão:
+  - **Go técnico para validação sandbox controlada**.
+- decisão complementar:
+  - **No-Go para rollout automático de refund real**.
+
+### Próxima abordagem recomendada
+- **Refund Provider Sandbox Runbook Review**
+- motivo:
+  - agora há comando; o próximo passo é consolidar a sequência operacional segura para validar um refund sandbox real ponta a ponta.
+
+## Wave HN — Refund Provider Sandbox Runbook Review
+- a revisão consolidou o runbook operacional de refund sandbox como sequência controlada, não como rollout automático.
+- o fluxo recomendado agora exige:
+  - tenant controlado de teste
+  - credenciais sandbox
+  - charge sandbox paga com `external_reference`
+  - intenção idempotente registrada no ledger
+  - aprovação interna antes de execução
+  - `payment_sandbox_validate_refund --dry-run`
+  - execução explícita sem `--dry-run` apenas depois de readiness positivo
+- foram documentados critérios de No-Go:
+  - tenant ausente ou incorreto
+  - credenciais de produção
+  - refund fora de `processing`
+  - ausência de `external_reference`
+  - idempotência não rastreável
+  - refund de boleto com dados bancários ainda não modelados
+  - resposta do provider sem referência auditável
+- foram documentados critérios de Go pós-sandbox:
+  - ledger auditável antes/depois da chamada
+  - `metadata.provider_refund` preservado
+  - nenhuma propagação para order, estoque, cupom ou notification
+  - `payment.refunded` ainda bloqueado até confirmação externa concluída
+- ajuste importante:
+  - o runbook deixou de tratar Pagar.me como “não implementado”
+  - a redação agora diferencia adapter lite `accepted` de adapter Pagar.me sandbox-first conservador.
+
+## Wave HO — Refund Provider Sandbox Runbook Closure Review
+- decisão:
+  - **Go técnico para runbook sandbox de refund**.
+- decisão complementar:
+  - **No-Go para produção real sem execução sandbox observada e conciliação financeira revisada**.
+
+### Próxima abordagem recomendada
+- **Refund Provider Production Gate Review**
+- motivo:
+  - com adapter, command e runbook documentados, o próximo passo seguro é transformar evidências sandbox em critérios objetivos para habilitar ou negar produção.
+
+## Wave HP — Refund Provider Production Gate Review
+- a revisão confirmou que refund provider ainda não deve ser tratado como produção liberada por padrão.
+- estado atual:
+  - ledger tenant-scoped existe
+  - aprovação interna `requested → processing` existe
+  - adapter Pagar.me sandbox-first existe
+  - command controlado `payment_sandbox_validate_refund` existe
+  - runbook sandbox ponta a ponta existe
+- lacuna antes de produção:
+  - ainda não há evidência registrada de execução sandbox real observada
+  - ainda não há confirmação operacional da semântica final do provider para `accepted` vs `succeeded`
+  - boleto com `bank_account` continua fora do modelo
+  - `payment.refunded` continua evento reservado para refund concluído confirmado
+
+### Gate recomendado
+- produção só pode avançar com evidência mínima:
+  - `tenant-id` sandbox usado no dry-run e execução
+  - `refund-key`
+  - `idempotency_key`
+  - `external_reference`
+  - saída do dry-run com `result=ready`
+  - saída da execução com status final do ledger
+  - payload preservado em `metadata.provider_refund`
+  - conciliação financeira revisada depois da execução
+- produção inicial, se habilitada futuramente, deve ser limitada a:
+  - execução manual por refund já aprovado internamente
+  - charge com referência externa conhecida
+  - método sem dados bancários adicionais
+  - observação pós-execução antes de eventos ou efeitos cross-module
+
+### No-Go explícito
+- execução em lote.
+- chamada direta pelo botão admin sem confirmação operacional separada.
+- refund sem `external_reference`.
+- boleto ou método que exija `bank_account`.
+- emissão automática de `payment.refunded`.
+- ajuste automático de pedido, estoque, cupom, notification ou tentativa financeira.
+- ausência de conciliação financeira depois da execução.
+
+## Wave HQ — Refund Provider Production Gate Closure Review
+- decisão:
+  - **No-Go para liberar refund provider em produção agora**.
+- decisão complementar:
+  - **Go técnico para gate documental de produção controlada**.
+- motivo:
+  - o sistema tem estrutura suficiente para validar sandbox e preparar produção manual limitada, mas ainda não tem evidência operacional real suficiente para movimentar dinheiro em produção.
+
+### Próxima abordagem recomendada
+- **Refund Sandbox Evidence Capture Review**
+- motivo:
+  - antes de qualquer execução real em produção, o próximo ganho é padronizar como registrar evidências sandbox e anexá-las ao ledger/ops sem depender de memória operacional solta.
+
+## Wave HR — Refund Sandbox Evidence Capture Review
+- a revisão confirmou que `PaymentRefund.metadata` já é suficiente para receber evidência operacional sem migration imediata.
+- decisão:
+  - evidência sandbox deve viver em envelope próprio `metadata.sandbox_evidence`
+  - `metadata.provider_refund` continua sendo a resposta técnica do adapter/provider
+  - captura de evidência não deve alterar status do ledger
+  - captura não deve emitir evento nem propagar efeitos cross-module
+
+### Envelope recomendado
+- `sandbox_evidence.captured_at`
+- `sandbox_evidence.captured_by`
+- `sandbox_evidence.environment`
+- `sandbox_evidence.tenant_id`
+- `sandbox_evidence.refund_key`
+- `sandbox_evidence.dry_run_output`
+- `sandbox_evidence.execution_output`
+- `sandbox_evidence.provider_dashboard_reference`
+- `sandbox_evidence.reconciliation_reference`
+- `sandbox_evidence.decision`
+- `sandbox_evidence.notes`
+
+### Guardrails
+- não armazenar secret keys, tokens, Authorization headers, dados de cartão ou dados bancários sensíveis.
+- não sobrescrever `provider_refund`.
+- não aceitar evidência sem tenant/refund explícitos.
+- `decision=go-production-limited` exige sandbox executado, provider revisado e conciliação conferida.
+- ausência de `sandbox_evidence` mantém o gate de produção fechado.
+
+## Wave HS — Refund Sandbox Evidence Capture Closure Review
+- decisão:
+  - **Go técnico para contrato documental de evidência sandbox em `PaymentRefund.metadata.sandbox_evidence`**.
+- decisão complementar:
+  - **No-Go para criar modelo novo ou automação de produção nesta etapa**.
+- motivo:
+  - o sistema precisa primeiro padronizar a evidência operacional antes de criar command/action de captura ou liberar produção.
+
+### Próxima abordagem recomendada
+- **Refund Sandbox Evidence Capture Command Review**
+- motivo:
+  - com o envelope definido, o próximo passo natural é decidir se vale criar um command explícito para anexar evidência ao ledger de forma tenant-scoped e auditável.
+
+## Wave HT — Refund Sandbox Evidence Capture Command Review
+- a revisão concluiu que a captura deve ser um command separado de `payment_sandbox_validate_refund`.
+- motivo:
+  - validação sandbox pode chamar provider
+  - captura de evidência deve apenas anexar observação operacional
+  - misturar os dois fluxos aumentaria risco de execução acidental
+
+### Command recomendado
+- nome sugerido:
+  - `capture_payment_refund_sandbox_evidence`
+- argumentos obrigatórios:
+  - `--tenant-id`
+  - `--refund-key`
+  - `--captured-by`
+  - `--decision`
+- argumentos opcionais:
+  - `--environment`
+  - `--dry-run-output`
+  - `--execution-output`
+  - `--provider-dashboard-reference`
+  - `--reconciliation-reference`
+  - `--notes`
+
+### Regras
+- carregar `PaymentRefund` por `tenant_id + refund_key`.
+- escrever somente em `metadata.sandbox_evidence`.
+- preservar `metadata.provider_refund`.
+- não alterar status, referência do provider ou timestamps finais.
+- bloquear secrets, tokens, Authorization headers, dados de cartão e dados bancários sensíveis.
+- aceitar decisões explícitas:
+  - `no-go`
+  - `sandbox-observed`
+  - `go-production-limited`
+- exigir `provider_refund`, referência de dashboard e referência de conciliação para `go-production-limited`.
+
+### Fora do escopo
+- chamar provider.
+- executar refund.
+- aprovar refund.
+- emitir `payment.refunded`.
+- alterar pedido, estoque, cupom, notification ou tentativa financeira.
+
+## Wave HU — Refund Sandbox Evidence Capture Command Closure Review
+- decisão:
+  - **Go técnico para implementar command separado de captura de evidência sandbox**.
+- decisão complementar:
+  - **No-Go para acoplar captura ao command de execução ou validação do provider**.
+- motivo:
+  - a captura precisa ser auditável, tenant-scoped e incapaz de movimentar dinheiro.
+
+### Próxima abordagem recomendada
+- **Refund Sandbox Evidence Capture Command Execution**
+- motivo:
+  - implementar o command com escrita limitada em `metadata.sandbox_evidence`, validação de campos sensíveis e testes de contrato.
+
+## Wave HV — Refund Sandbox Evidence Capture Command Execution
+- foi implementado o command operacional de captura de evidência sandbox.
+
+### Escopo executado
+- application service:
+  - `payments.application.refund_sandbox_evidence_commands`
+- command:
+  - `capture_payment_refund_sandbox_evidence`
+- escrita:
+  - somente `PaymentRefund.metadata.sandbox_evidence`
+- preservação:
+  - mantém `metadata.provider_refund`
+  - mantém `status`
+  - mantém `provider_refund_reference`
+  - mantém timestamps finais do ledger
+
+### Contrato
+- argumentos obrigatórios:
+  - `--tenant-id`
+  - `--refund-key`
+  - `--captured-by`
+  - `--decision`
+- decisões permitidas:
+  - `no-go`
+  - `sandbox-observed`
+  - `go-production-limited`
+- argumentos opcionais:
+  - `--environment`
+  - `--dry-run-output`
+  - `--execution-output`
+  - `--provider-dashboard-reference`
+  - `--reconciliation-reference`
+  - `--notes`
+
+### Guardrails implementados
+- cross-tenant retorna indisponível.
+- conteúdo com sinais de secret/token/header Authorization/cartão/dados bancários é bloqueado.
+- `go-production-limited` exige `metadata.provider_refund`, referência do provider e referência de conciliação.
+- command não chama provider.
+- command não aprova nem executa refund.
+- command não emite `payment.refunded`.
+- command não altera pedido, estoque, cupom, notification ou tentativa financeira.
+
+### Testes
+- captura escreve metadata e preserva status/provider.
+- captura é tenant-scoped.
+- conteúdo sensível é bloqueado.
+- gate limitado exige referências mínimas.
+
+## Wave HW — Refund Sandbox Evidence Capture Command Closure Review
+- decisão:
+  - **Go técnico para captura auditável de evidência sandbox no ledger**.
+- decisão complementar:
+  - **No-Go para liberar produção de refund apenas por existir evidência capturada**.
+- motivo:
+  - a evidência agora pode ser registrada com segurança, mas produção ainda depende de revisão operacional e decisão explícita do gate.
+
+### Próxima abordagem recomendada
+- **Refund Provider Production Enablement Review**
+- motivo:
+  - com adapter, execução sandbox, runbook, gate e captura de evidência, a próxima revisão deve decidir se existe alguma mudança mínima aceitável para habilitar produção manual limitada — ou se a trilha deve encerrar em No-Go até evidência real externa.
+
+## Wave HX — Refund Provider Production Enablement Review
+- a revisão confirmou que a trilha técnica já possui:
+  - ledger de refund tenant-scoped
+  - aprovação interna
+  - adapter Pagar.me sandbox-first
+  - execution command
+  - validation command sandbox
+  - runbook
+  - gate de produção
+  - captura auditável de evidência sandbox
+- a revisão também confirmou que ainda falta o insumo mais importante:
+  - evidência real de sandbox externo executado e conciliado.
+
+### Decisão de enablement
+- **No-Go para produção ampla**.
+- **No-Go para automação de refund**.
+- **No-Go para self-service de lojista ou cliente**.
+- **Go apenas para preparar uma futura produção manual limitada**, condicionada a evidência sandbox real.
+
+### Produção manual limitada futura
+- escopo máximo aceitável:
+  - um tenant controlado por vez
+  - um refund por execução
+  - execução manual por `refund_key`
+  - refunds já aprovados internamente e em `processing`
+  - método de pagamento sem dados bancários adicionais
+  - observação pós-execução antes de qualquer nova rodada
+- pré-requisitos:
+  - `metadata.sandbox_evidence.decision=go-production-limited`
+  - `metadata.provider_refund` revisado
+  - referência de dashboard do provider
+  - referência de conciliação financeira
+  - operador financeiro identificado
+
+### O que não implementar agora
+- feature flag ampla para produção.
+- botão admin que execute refund real diretamente.
+- retry automático.
+- execução em lote.
+- emissão automática de `payment.refunded`.
+- efeitos automáticos em pedidos, estoque, cupom ou notifications.
+
+## Wave HY — Refund Provider Production Enablement Closure Review
+- decisão:
+  - **No-Go final para habilitar produção real nesta abordagem sem evidência sandbox externa**.
+- decisão complementar:
+  - **Go técnico para encerrar a trilha de preparação de refund provider com produção manual limitada apenas como caminho futuro condicionado**.
+- motivo:
+  - o sistema agora está preparado para registrar e avaliar evidência, mas não deve movimentar dinheiro real enquanto essa evidência não existir fora dos testes mockados.
+
+### Próxima abordagem recomendada
+- **Payments Refund/Reversal Track Closure Review**
+- motivo:
+  - a trilha já cobriu ledger, admin, aprovação, adapter, execução, sandbox, evidência e gate; o próximo passo natural é declarar o status final e listar bloqueios residuais para produção real.
+
+## Wave HZ — Payments Refund/Reversal Track Closure Review
+- a trilha de refund/reversal foi revisada de ponta a ponta.
+- escopo construído:
+  - auditoria de candidatos a refund/reversal
+  - ledger tenant-scoped `PaymentRefund`
+  - intenção idempotente de refund
+  - surface admin read-only
+  - aprovação interna `requested → processing`
+  - adapter contract para refund
+  - execution command contra adapter
+  - endpoint Pagar.me sandbox-first conservador
+  - command de validação sandbox por `refund_key`
+  - runbook sandbox
+  - gate de produção
+  - captura auditável de evidência sandbox
+
+### Readiness final
+- **Go técnico para fundação interna de refund/reversal**.
+- **Go técnico para suporte, auditoria, triagem e preparação sandbox**.
+- **No-Go para produto financeiro de produção**.
+- **No-Go para automação, self-service e execução em lote**.
+
+### Bloqueios residuais
+- falta evidência sandbox externa real.
+- `accepted` ainda não deve ser tratado como refund concluído.
+- boleto/dados bancários adicionais seguem fora do modelo.
+- `payment.refunded` segue reservado para confirmação externa concluída.
+- não há propagação segura definida para pedido, estoque, cupom ou notifications.
+- não há retry/compensação automática.
+
+### Critério para reabrir a trilha
+- reabrir somente se houver:
+  - evidência sandbox real capturada
+  - demanda operacional de produção manual limitada
+  - necessidade concreta de boleto/dados bancários
+  - decisão explícita de emitir `payment.refunded` após confirmação externa
+
+## Wave IA — Payments Refund/Reversal Track Final Decision
+- decisão:
+  - **trilha encerrada como fundação técnica**.
+- decisão complementar:
+  - **produção real permanece bloqueada**.
+- motivo:
+  - o sistema agora possui base auditável e controlada, mas ainda não tem evidência externa suficiente para movimentar dinheiro real em produção.
+
+### Próxima abordagem recomendada
+- **Payments Financial Operations Closure Review**
+- motivo:
+  - com refund/reversal fechado como fundação, o próximo passo natural é consolidar o status de operações financeiras de payments como um todo e decidir se saímos de payments para outro módulo de maior ROI.
+
+## Wave IB — Payments Financial Operations Closure Review
+- a revisão consolidou o estado financeiro de payments após as trilhas de:
+  - provider rollout controlado
+  - checkout/payment execution
+  - stale payment attempts
+  - financial reconciliation
+  - admin finance surface
+  - refund/reversal foundation
+
+### Readiness consolidado
+- **Go técnico para operação controlada de payments**:
+  - `PaymentAttempt` tenant-scoped
+  - hosted redirect seguro
+  - hosted return como hint, não confirmação financeira
+  - webhook como fonte de verdade
+  - readiness sandbox/produção controlada
+  - auditoria read-only de divergências
+  - `/ops/payments/finance/`
+  - métricas e alertas operacionais
+  - fundação interna de refund/reversal
+- **No-Go para backoffice financeiro completo**:
+  - settlement/extrato de provider
+  - ledger financeiro geral
+  - correção automática de divergências
+  - expiração automática de tentativas pendentes
+  - pruning/retention financeiro formal
+  - refund production-ready
+
+### Decisão de continuidade
+- payments não deve receber novas micro-waves financeiras agora sem:
+  - evidência sandbox externa real
+  - demanda operacional concreta
+  - necessidade de settlement/ledger financeiro
+  - requisito de produção para refund/manual provider operations
+- a abordagem financeira fica encerrada como suficiente para suporte, triagem e rollout controlado.
+
+## Wave IC — Payments Financial Operations Final Decision
+- decisão:
+  - **encerrar payments financial operations como abordagem ativa neste ciclo**.
+- decisão complementar:
+  - **não tratar payments como bloqueador principal do próximo roadmap funcional**.
+- motivo:
+  - o módulo já tem controles suficientes para o estágio atual, e insistir em novas micro-waves tende a produzir baixo ROI sem validação externa real.
+
+### Próxima abordagem recomendada
+- **System Next ROI Track Selection Review**
+- motivo:
+  - payments atingiu suficiência operacional controlada; o próximo passo natural é escolher outro eixo de produto/sistema com maior impacto funcional.
+
+## Battery C — Payments Production Readiness Closure
+
+- o módulo `payments` agora possui gates executáveis para as 7 ondas da Battery C.
+- query service:
+  - `payments.application.production_readiness_queries`
+- comando:
+  - `python manage.py payments_production_readiness --review closure --provider-gate-ready --provider-activation-evidence-ready --webhook-smoke-ready --refund-gate-ready --refund-smoke-evidence-ready-or-no-go-recorded --financial-reconciliation-ready --rollback-runbook-ready --monitoring-window-defined --incident-owner-defined --no-unbounded-rollout --no-sensitive-material-recorded --decision-recorded`
+
+### Ondas fechadas
+
+1. Payment Provider Production Gate Refresh Review.
+2. Payment Provider Production Activation Evidence.
+3. Payment Webhook Production Smoke Review.
+4. Payment Refund Production Gate Review.
+5. Payment Refund Production Smoke Evidence.
+6. Payment Financial Reconciliation Production Review.
+7. Payments Production Closure Review.
+
+### Decisão
+
+- **Go para readiness de produção controlada de payments**.
+- **No-Go para rollout amplo, self-service de refund, execução em lote ou correção financeira automática**.
+- produção deve permanecer tenant-by-tenant, com rollback/runbook, monitoramento, dono de incidente e evidência sanitizada.
+
+### Próxima bateria recomendada
+
+**Battery D — Shipping Quote Productionization**
+
+Objetivo:
+
+- evoluir shipping de tracking/promise para cotação real e método de entrega produtivo.

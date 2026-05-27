@@ -1,0 +1,112 @@
+groups:
+  - name: hubx-accounts-owner-access
+    rules:
+      - alert: HubxAccountsOwnerLoginFailuresHigh
+        expr: increase(hubx_accounts_owner_access_audit_event_total{action="owner.login_failed"}[10m]) >= 5
+        for: 5m
+        labels:
+          severity: warning
+          domain: accounts
+        annotations:
+          summary: "Falhas recorrentes de login owner/admin"
+          description: "Foram observadas 5 ou mais falhas de login owner/admin nos últimos 10 minutos para o tenant {{ $labels.tenant_id }}. Revisar credenciais, convite/reset e possíveis tentativas indevidas."
+
+      - alert: HubxAccountsOwnerLoginRateLimited
+        expr: increase(hubx_accounts_owner_access_audit_event_total{action="owner.login_rate_limited"}[10m]) >= 1
+        for: 2m
+        labels:
+          severity: warning
+          domain: accounts
+        annotations:
+          summary: "Rate limit acionado no login owner/admin"
+          description: "O rate limit de login owner/admin foi acionado no tenant {{ $labels.tenant_id }}. Revisar possível brute force, credenciais incorretas recorrentes ou owner sem reset concluído."
+
+      - alert: HubxAccountsOpsGateForbiddenHigh
+        expr: increase(hubx_accounts_owner_access_audit_event_total{action="owner.ops_gate_forbidden"}[10m]) >= 3
+        for: 5m
+        labels:
+          severity: warning
+          domain: accounts
+        annotations:
+          summary: "Usuários autenticados bloqueados pelo gate /ops/"
+          description: "O gate /ops/ retornou 403 para usuários autenticados 3 ou mais vezes nos últimos 10 minutos no tenant {{ $labels.tenant_id }}. Revisar vínculo User.email + OwnerUser ativo."
+
+      - alert: HubxAccountsOpsPermissionDenied
+        expr: increase(hubx_accounts_owner_access_audit_event_total{action="owner.ops_permission_denied"}[10m]) >= 3
+        for: 5m
+        labels:
+          severity: warning
+          domain: accounts
+        annotations:
+          summary: "Permissão granular negada em /ops/"
+          description: "O gate /ops/ negou acesso por permissão granular 3 ou mais vezes nos últimos 10 minutos no tenant {{ $labels.tenant_id }}. Revisar role do owner/admin e navegação direta indevida."
+
+      - alert: HubxAccountsRBACPostProductionRollbackSignal
+        expr: increase(hubx_accounts_owner_access_audit_event_total{action="owner.login_rate_limited"}[15m]) >= 1 or hubx_accounts_owner_access_email_log_total{status="failed"} >= 1
+        for: 2m
+        labels:
+          severity: critical
+          domain: accounts
+        annotations:
+          summary: "Sinal de rollback pós-ativação RBAC"
+          description: "Há rate limit de login owner/admin ou falha de e-mail owner access após ativação RBAC. Rodar ops_rbac_post_production_monitoring para decidir rollback por tenant."
+
+      - alert: HubxAccountsOpsGateAnonymousRedirectHigh
+        expr: increase(hubx_accounts_owner_access_audit_event_total{action="owner.ops_gate_redirected"}[10m]) >= 10
+        for: 10m
+        labels:
+          severity: info
+          domain: accounts
+        annotations:
+          summary: "Volume alto de redirects anônimos para login owner"
+          description: "O gate /ops/ redirecionou anônimos para login 10 ou mais vezes nos últimos 10 minutos no tenant {{ $labels.tenant_id }}. Pode ser tráfego esperado pós-ativação ou tentativa de acesso indevida."
+
+      - alert: HubxAccountsOwnerAccessEmailFailures
+        expr: hubx_accounts_owner_access_email_log_total{status="failed"} >= 1
+        for: 10m
+        labels:
+          severity: warning
+          domain: accounts
+        annotations:
+          summary: "Falha em e-mail de owner access"
+          description: "Há EmailLog de owner access com status failed no tenant {{ $labels.tenant_id }} para intent {{ $labels.intent_key }}. Revisar provider e reprocessar via pipeline de notifications."
+
+      - alert: HubxAccountsOwnerAccessEmailBacklog
+        expr: sum by (tenant_id, intent_key) (hubx_accounts_owner_access_email_log_total{status=~"planned|requested"}) >= 5
+        for: 30m
+        labels:
+          severity: warning
+          domain: accounts
+        annotations:
+          summary: "Backlog de e-mails owner access"
+          description: "Há 5 ou mais EmailLogs planejados/solicitados de owner access por 30 minutos no tenant {{ $labels.tenant_id }} para intent {{ $labels.intent_key }}. Revisar worker/Celery e process_email_logs."
+
+      - alert: HubxAccountsOwnerMfaProviderCritical
+        expr: hubx_accounts_owner_mfa_provider_health_status{status="CRITICAL"} >= 1
+        for: 5m
+        labels:
+          severity: critical
+          domain: accounts
+        annotations:
+          summary: "Provider MFA owner/admin crítico"
+          description: "O provider externo de segredo TOTP MFA está crítico no tenant {{ $labels.tenant_id }} usando provider {{ $labels.provider }}. Rodar owner_mfa_provider_health e validar refs externas antes de novos logins owner/admin."
+
+      - alert: HubxAccountsOwnerMfaExternalReferenceUnresolved
+        expr: hubx_accounts_owner_mfa_provider_external_reference_total{state="unresolved"} >= 1
+        for: 5m
+        labels:
+          severity: critical
+          domain: accounts
+        annotations:
+          summary: "Referência externa TOTP MFA não resolvida"
+          description: "Há referência externa TOTP MFA não resolvida no tenant {{ $labels.tenant_id }}. Revisar provider/env/vault e considerar rollback temporário de OWNER_MFA_ALLOW_LOCAL_TOTP_SECRET se necessário."
+
+      - alert: HubxAccountsOwnerMfaLocalPlainStillPresent
+        expr: hubx_accounts_owner_mfa_secret_storage_total{storage_mode="local-plain"} >= 1
+        for: 30m
+        labels:
+          severity: warning
+          domain: accounts
+        annotations:
+          summary: "Fallback local/plain TOTP MFA ainda presente"
+          description: "Ainda há fatores TOTP MFA owner/admin em local/plain no tenant {{ $labels.tenant_id }}. Completar migração para ref:<path> antes de aposentar o fallback local."

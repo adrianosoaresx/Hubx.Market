@@ -1205,3 +1205,407 @@ Orquestrar endereço, frete, cupom e criação do pedido.
   - revisar se a abordagem de checkout/recovery já fecha como produtiva
   - apontar apenas bloqueios reais restantes
   - evitar abrir nova feature sem necessidade objetiva
+
+## Wave ABM — Checkout Recovery Final Readiness Review
+- revisamos a trilha completa de recovery do checkout
+- leitura objetiva:
+  - o contrato de UI está explícito
+  - a taxonomia está centralizada
+  - eventos reais são persistidos por tenant
+  - métricas e dashboard existem
+  - retenção conservadora existe
+
+## Wave ABN — Checkout Recovery Production Blockers
+- bloqueios reais antes de produção:
+  - aplicar migration `0004_checkoutrecoveryevent`
+  - configurar `CHECKOUT_OBSERVABILITY_TOKEN`
+  - publicar scrape/rules/dashboard de checkout no Prometheus/Grafana real
+  - decidir agenda operacional para `prune_checkout_recovery_events`
+
+### Não bloqueia produção
+- criar novos result codes
+- criar alertas por recovery event
+- expor analytics em UI admin
+- arquivar eventos em tabela separada
+
+## Wave ABO — Checkout Recovery Go/No-Go Decision
+- decisão desta abordagem:
+  - **Go técnico com pré-requisitos operacionais**
+- justificativa:
+  - o fluxo segue tenant-scoped
+  - não há mutação transacional nova além de analytics de recovery
+  - métricas derivam de dados reais
+  - pruning evita crescimento indefinido
+
+## Wave ABP — Checkout Recovery Approach Close
+- esta abordagem fica encerrada como produtiva após:
+  - migration aplicada
+  - token de observabilidade configurado
+  - dashboard importado
+  - rotina de pruning validada em `--dry-run`
+
+### Próxima abordagem sugerida
+- **Payments Customer Experience Readiness Review**
+- foco:
+  - revisar se a experiência de pagamento pendente/falho já tem a mesma clareza operacional do checkout
+  - não reabrir checkout enquanto não houver novo blocker objetivo
+
+## Cart Foundation Wave 18 — Coupon Checkout Handoff Snapshot Review
+- o handoff `cart → checkout` já transporta `discount_total` e o usa no `grand_total`.
+- a próxima evolução deve transportar também snapshot promocional explícito:
+  - `coupon_code`
+  - `promotion_snapshot`
+- checkout deve persistir o snapshot recebido, não recalcular cupom nesta etapa.
+- `coupons` continua dono da validação promocional.
+
+## Cart Foundation Wave 19 — Coupon Checkout Handoff Snapshot Execution
+- `CheckoutSession` passa a armazenar:
+  - `coupon_code`
+  - `promotion_snapshot`
+- `activate_from_cart(...)` persiste snapshot promocional vindo do carrinho.
+- cupom inválido ou sem desconto não é marcado como aplicado no checkout.
+- checkout continua sem recalcular promoção.
+
+## Cart Foundation Wave 20 — Coupon Order Snapshot Review
+- `checkout_completion_commands` já copia `discount_total` da sessão para o pedido.
+- a próxima execução deve copiar também:
+  - `coupon_code`
+  - `promotion_snapshot`
+- checkout completion não deve revalidar nem recalcular cupom ao criar pedido.
+- o pedido deve guardar o snapshot promocional visto pelo cliente no checkout.
+
+## Cart Foundation Wave 21 — Coupon Order Snapshot Execution
+- `checkout_completion_commands` agora copia `coupon_code` e `promotion_snapshot` para `Order`.
+- a cópia acontece apenas quando a sessão tem desconto aplicado e snapshot promocional.
+- checkout completion continua sem chamar `coupons`.
+
+## Checkout Delivery Method Hardening Wave 1 — Delivery Method Contract Review
+
+### Diagnóstico
+
+O checkout já seleciona modalidades de entrega e recalcula totais a partir do método salvo na sessão.
+
+Lacuna encontrada:
+
+- quando um POST enviava um `shipping_method` não presente em `shipping_methods`, o comando ignorava silenciosamente a seleção;
+- a sessão podia manter o frete anterior sem feedback explícito;
+- isso deixava ambíguo se a entrega foi realmente escolhida naquela submissão.
+
+### Decisão
+
+**Go para rejeição explícita de método de entrega inválido.**
+
+**No-Go para cotação real por CEP, frete dinâmico ou nova integração logística.**
+
+## Checkout Delivery Method Hardening Wave 2 — Invalid Method Guard Execution
+
+### Execução
+
+`checkout_session_commands.update_session(...)` agora retorna `checkout-shipping-method-invalid` quando a sessão possui métodos de entrega e o método enviado não existe na lista disponível.
+
+Nessa situação:
+
+- a sessão não é salva;
+- endereço/contato não são atualizados;
+- frete e total permanecem inalterados;
+- o usuário permanece na etapa de entrega;
+- a UI exibe feedback claro para escolher uma entrega válida.
+
+### Boundary preservada
+
+- `checkout` continua dono da seleção final de entrega;
+- `shipping` não é chamado para quote real;
+- `cart` não ganha cálculo de frete;
+- `orders` não é afetado.
+
+## Checkout Delivery Method Hardening Wave 3 — Test Coverage
+
+### Cobertura adicionada
+
+Teste cobre:
+
+- POST com método de entrega inexistente;
+- retorno `checkout-shipping-method-invalid`;
+- permanência em `stage=delivery`;
+- ausência de mutação nos dados da sessão;
+- feedback customer-facing na página.
+
+## Checkout Delivery Method Hardening Wave 4 — Approach Closure Review
+
+### Resultado
+
+A abordagem endureceu o contrato de entrega no ponto correto: dentro do checkout, antes de pagamento/revisão.
+
+### Decisão de encerramento
+
+**Go para encerrar Checkout Delivery Method Hardening neste ponto.**
+
+O sistema agora rejeita seleção inválida sem inventar frete, sem recalcular de modo silencioso e sem avançar a etapa.
+
+### Fora de escopo preservado
+
+- quote por CEP;
+- cálculo dinâmico por provider;
+- frete grátis;
+- SLA por região;
+- split shipment;
+- reserva logística;
+- alteração em pedido/pagamento.
+
+### Próxima abordagem recomendada
+
+**Checkout Payment Method Hardening Review**
+
+Aplicar o mesmo endurecimento ao método de pagamento para evitar seleção inválida ou drift silencioso antes da revisão final.
+
+## Checkout Payment Method Hardening Wave 1 — Payment Method Contract Review
+
+### Diagnóstico
+
+O checkout já salva o método de pagamento e usa esse estado para liberar a revisão final.
+
+Lacuna encontrada:
+
+- quando um POST enviava um `payment_method` não presente em `payment_methods`, o comando ignorava silenciosamente a seleção;
+- a sessão podia manter o pagamento anterior sem feedback explícito;
+- aceite de termos e parcelas poderiam ser processados junto de uma submissão conceitualmente inválida.
+
+### Decisão
+
+**Go para rejeição explícita de método de pagamento inválido.**
+
+**No-Go para criar processamento real de pagamento, provider selection ou regras financeiras novas.**
+
+## Checkout Payment Method Hardening Wave 2 — Invalid Payment Guard Execution
+
+### Execução
+
+`checkout_session_commands.update_session(...)` agora retorna `checkout-payment-method-invalid` quando a sessão possui métodos de pagamento e o método enviado não existe na lista disponível.
+
+Nessa situação:
+
+- a sessão não é salva;
+- contato/endereço não são sobrescritos;
+- método de pagamento anterior permanece;
+- termos e parcelas não são atualizados;
+- o usuário permanece na etapa de pagamento;
+- a UI exibe feedback claro para escolher pagamento válido.
+
+### Boundary preservada
+
+- `checkout` continua dono da seleção de pagamento no funil;
+- `payments` continua responsável por execução/tentativa real;
+- `orders` não é afetado;
+- nenhuma cobrança é criada.
+
+## Checkout Payment Method Hardening Wave 3 — Test Coverage
+
+### Cobertura adicionada
+
+Teste cobre:
+
+- POST com método de pagamento inexistente;
+- retorno `checkout-payment-method-invalid`;
+- permanência em `stage=payment`;
+- ausência de mutação em dados da sessão;
+- feedback customer-facing na página.
+
+## Checkout Payment Method Hardening Wave 4 — Approach Closure Review
+
+### Resultado
+
+A abordagem igualou o hardening de pagamento ao de entrega.
+
+### Decisão de encerramento
+
+**Go para encerrar Checkout Payment Method Hardening neste ponto.**
+
+O checkout agora rejeita seleção inválida de entrega e pagamento antes da revisão final, evitando drift silencioso.
+
+### Fora de escopo preservado
+
+- execução real de pagamento;
+- retry de provider;
+- split payment;
+- antifraude;
+- validação de cartão;
+- regras financeiras avançadas;
+- criação de pedido antecipada.
+
+### Próxima abordagem recomendada
+
+**Checkout Stage Guardrail Closure Review**
+
+Revisar se entrega + pagamento + revisão já estão consistentes o suficiente para encerrar a frente de hardening do checkout, sem abrir provider/payment execution novamente.
+
+## Checkout Stage Guardrail Closure Wave 1 — Stage Contract Review
+
+### Revisão
+
+O checkout possui guardrails coerentes por etapa:
+
+- sessão sem itens fica em `cart`;
+- tentativa de abrir `payment` sem entrega completa volta para `delivery`;
+- tentativa de abrir `review` sem pagamento/termos volta para `payment` ou `delivery`;
+- entrega inválida retorna `checkout-shipping-method-invalid`;
+- pagamento inválido retorna `checkout-payment-method-invalid`;
+- conclusão em `review` ainda passa por readiness, estoque e snapshot.
+
+### Decisão
+
+**Go para closure, sem nova feature de checkout.**
+
+Não há blocker objetivo que justifique abrir nova implementação funcional nesta abordagem.
+
+## Checkout Stage Guardrail Closure Wave 2 — Closure Test Coverage
+
+### Cobertura adicionada
+
+Foi adicionado teste explícito para pedido de `review` cedo demais:
+
+- quando entrega está completa;
+- pagamento ainda não está salvo;
+- `requested_stage=review`;
+- o serviço força `current_stage=payment`;
+- exibe feedback de etapa ajustada;
+- mantém hints coerentes.
+
+### Propósito
+
+Esse teste fecha a matriz de navegação:
+
+- `payment` cedo demais → `delivery`;
+- `review` cedo demais → `payment` quando entrega já existe;
+- POST inválido de entrega → permanece em `delivery`;
+- POST inválido de pagamento → permanece em `payment`.
+
+## Checkout Stage Guardrail Closure Wave 3 — Approach Closure Review
+
+### Resultado
+
+A frente de hardening do checkout está suficiente para este ciclo.
+
+### Decisão de encerramento
+
+**Go para encerrar Checkout Stage Guardrail Closure.**
+
+O checkout agora tem:
+
+- progressão explícita `cart → delivery → payment → review`;
+- rollback seguro de etapa solicitada cedo demais;
+- validação explícita de entrega inválida;
+- validação explícita de pagamento inválido;
+- feedback customer-facing;
+- testes de não-mutação para seleções inválidas;
+- bloqueios de conclusão por readiness, estoque e snapshot.
+
+### No-Go deliberado
+
+Não avançar agora para:
+
+- provider de pagamento real;
+- cotação de frete por CEP;
+- novo wizard;
+- edição assíncrona por HTMX;
+- validação de cartão;
+- antifraude;
+- reserva de estoque;
+- criação antecipada de pedido.
+
+### Próxima abordagem recomendada
+
+**Storefront Checkout Copy & Trust Closure Review**
+
+Revisar apenas se a copy customer-facing do checkout já transmite confiança suficiente antes de voltar para trilhas maiores como provider real, fulfillment ou analytics.
+
+## Storefront Checkout Copy & Trust Closure Wave 1 — Copy Surface Review
+
+### Revisão
+
+O checkout já possuía boa copy contextual:
+
+- alertas por etapa;
+- hints de conclusão;
+- explicação de pedido inicial;
+- explicação de pagamento real pendente;
+- readiness da revisão;
+- mensagens para sessão inválida/expirada.
+
+Lacuna leve encontrada:
+
+- as garantias estavam espalhadas em alertas e descrições;
+- faltava um bloco estável no sidebar reforçando por que é seguro seguir.
+
+### Decisão
+
+**Go para um bloco pequeno de confiança no checkout.**
+
+**No-Go para redesign, nova etapa, novo provider ou alteração de regra transacional.**
+
+## Storefront Checkout Copy & Trust Closure Wave 2 — Trust Sidebar Execution
+
+### Execução
+
+Foi adicionado o bloco `Compra com revisão segura` no sidebar do checkout.
+
+O bloco reforça:
+
+- pedido só nasce na revisão;
+- pagamento real fica pendente;
+- estoque é revalidado antes de criar pedido.
+
+### Boundary preservada
+
+- apenas contexto de apresentação em `checkout_page_queries`;
+- template apenas renderiza copy;
+- nenhum evento novo;
+- nenhuma mutation nova;
+- nenhuma alteração em pedido, pagamento, frete ou estoque.
+
+## Storefront Checkout Copy & Trust Closure Wave 3 — Test Coverage
+
+### Cobertura adicionada
+
+O teste de revisão do checkout agora garante que a página exibe:
+
+- `Compra com revisão segura`;
+- `Pedido só nasce na revisão`;
+- `Pagamento real fica pendente`;
+- `Estoque é revalidado`.
+
+## Storefront Checkout Copy & Trust Closure Wave 4 — Approach Closure Review
+
+### Resultado
+
+A experiência customer-facing do checkout está suficientemente clara para esta fase.
+
+### Decisão de encerramento
+
+**Go para encerrar Storefront Checkout Copy & Trust Closure.**
+
+O checkout agora comunica:
+
+- progressão por etapas;
+- bloqueios seguros;
+- diferença entre pedido inicial e pagamento real;
+- revisão antes de criação do pedido;
+- revalidação de estoque;
+- estados inválidos de entrega/pagamento.
+
+### No-Go deliberado
+
+Não avançar agora para:
+
+- redesenho completo de checkout;
+- provider real de pagamento;
+- validação de cartão;
+- cotação real por CEP;
+- reserva de estoque;
+- analytics de funil;
+- edição assíncrona por HTMX.
+
+### Próxima abordagem recomendada
+
+**System ROI Re-Selection Review**
+
+Revisar o próximo eixo de maior retorno fora de micro-hardening de checkout, porque checkout/cart/storefront já atingiram boa suficiência incremental neste ciclo.

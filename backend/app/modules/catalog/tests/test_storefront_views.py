@@ -3,10 +3,18 @@ from django.urls import reverse
 from urllib.parse import urlencode
 
 from app.modules.accounts.models import AccountProfile
-from app.modules.catalog.models import Product, ProductVariant
+from app.modules.cart.models import Cart, CartItem, CartMutation
+from app.modules.catalog.models import Product, ProductVariant, StorefrontDiscoveryEventLog
 from app.modules.catalog.application.storefront_catalog_queries import storefront_catalog_queries
+from app.modules.catalog.application.storefront_discovery_analytics import (
+    DjangoStorefrontDiscoveryEventLogPublisher,
+    NoopStorefrontDiscoveryAnalyticsPublisher,
+    StorefrontDiscoveryEvent,
+    storefront_discovery_analytics,
+)
 from app.modules.checkout.models import CheckoutSession
 from app.modules.customers.models import Customer, CustomerAddress
+from app.modules.reviews.models import ProductReview
 from app.modules.tenants.models import Tenant
 
 
@@ -20,6 +28,9 @@ class StorefrontViewTests(TestCase):
         )
         self.storefront_host = f"{self.tenant.subdomain}.hubx.market"
         self.client.defaults["HTTP_HOST"] = self.storefront_host
+
+    def tearDown(self):
+        storefront_discovery_analytics.publisher = NoopStorefrontDiscoveryAnalyticsPublisher()
 
     def test_catalog_list_view_renders_design_system_template(self):
         response = self.client.get(reverse("storefront:catalog-list"), HTTP_HOST=self.storefront_host)
@@ -40,6 +51,28 @@ class StorefrontViewTests(TestCase):
         self.assertContains(response, "Resultados para “mochila”")
         self.assertContains(response, "vale abrir agora")
 
+    def test_catalog_list_view_search_matches_category_without_accents(self):
+        response = self.client.get(reverse("storefront:catalog-list"), {"q": "acessorios"}, HTTP_HOST=self.storefront_host)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Mochila Hubx Urban")
+        self.assertNotContains(response, "Tênis Hubx Runner")
+        self.assertContains(response, "nome, marca, SKU, categoria, descrição")
+
+    def test_catalog_list_view_search_matches_description_terms(self):
+        response = self.client.get(reverse("storefront:catalog-list"), {"q": "tecido respiravel"}, HTTP_HOST=self.storefront_host)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Camiseta Hubx Performance")
+        self.assertNotContains(response, "Mochila Hubx Urban")
+
+    def test_catalog_list_view_search_matches_public_card_terms(self):
+        response = self.client.get(reverse("storefront:catalog-list"), {"q": "preto 42"}, HTTP_HOST=self.storefront_host)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Tênis Hubx Runner")
+        self.assertNotContains(response, "Mochila Hubx Urban")
+
     def test_catalog_list_view_applies_category_context(self):
         response = self.client.get(reverse("storefront:catalog-list"), {"category": "calcados"}, HTTP_HOST=self.storefront_host)
 
@@ -54,6 +87,7 @@ class StorefrontViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Nenhum produto encontrado para esta busca")
         self.assertContains(response, "Não encontramos resultados para “nada-aqui”")
+        self.assertContains(response, "em nome, marca, SKU, categoria ou descrição")
 
     def test_catalog_list_view_shows_category_empty_state_guidance(self):
         response = self.client.get(reverse("storefront:catalog-list"), {"category": "vestuario", "q": "runner"}, HTTP_HOST=self.storefront_host)
@@ -107,6 +141,211 @@ class StorefrontViewTests(TestCase):
         self.assertContains(response, "mesma leitura de oferta ativa mostrada neste card")
         self.assertContains(response, "Use Limpar para voltar à vitrine completa")
 
+    def test_catalog_list_view_applies_availability_facet(self):
+        response = self.client.get(reverse("storefront:catalog-list"), {"availability": "backorder"}, HTTP_HOST=self.storefront_host)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Disponibilidade")
+        self.assertContains(response, "facets: disponibilidade: Sob encomenda")
+        self.assertContains(response, "Mochila Hubx Urban")
+        self.assertNotContains(response, "Tênis Hubx Runner")
+
+    def test_catalog_list_view_applies_price_facets(self):
+        response = self.client.get(
+            reverse("storefront:catalog-list"),
+            {"price_min": "150", "price_max": "250"},
+            HTTP_HOST=self.storefront_host,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Preço mín.")
+        self.assertContains(response, "Preço máx.")
+        self.assertContains(response, "preço mínimo: R$ 150,00")
+        self.assertContains(response, "preço máximo: R$ 250,00")
+        self.assertContains(response, "Mochila Hubx Urban")
+        self.assertNotContains(response, "Tênis Hubx Runner")
+
+    def test_catalog_list_view_applies_offer_facet_and_preserves_pagination(self):
+        response = self.client.get(reverse("storefront:catalog-list"), {"offer": "1"}, HTTP_HOST=self.storefront_host)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Somente ofertas")
+        self.assertContains(response, "facets: somente ofertas")
+        self.assertIn("offer=1", response.context["next_url"])
+
+    def test_catalog_list_view_ignores_invalid_facet_values(self):
+        response = self.client.get(
+            reverse("storefront:catalog-list"),
+            {"availability": "all", "price_min": "-10", "price_max": "abc"},
+            HTTP_HOST=self.storefront_host,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "facets:")
+        self.assertEqual(
+            [product["title"] for product in response.context["products"]],
+            ["Tênis Hubx Runner", "Mochila Hubx Urban"],
+        )
+
+    def test_catalog_list_view_records_discovery_analytics_events(self):
+        class SpyPublisher:
+            def __init__(self):
+                self.events = []
+
+            def publish(self, event):
+                self.events.append(event)
+
+        spy = SpyPublisher()
+        storefront_discovery_analytics.publisher = spy
+
+        response = self.client.get(
+            reverse("storefront:catalog-list"),
+            {
+                "q": "runner",
+                "category": "calcados",
+                "availability": "in_stock",
+                "offer": "1",
+                "price_min": "100",
+                "sort": "price_desc",
+            },
+            HTTP_HOST=self.storefront_host,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [event.name for event in spy.events],
+            [
+                "catalog.discovery_viewed",
+                "catalog.search_performed",
+                "catalog.facets_applied",
+                "catalog.sort_changed",
+            ],
+        )
+        payload = spy.events[0].payload
+        self.assertEqual(payload["tenant_id"], self.tenant.id)
+        self.assertEqual(payload["query"], "runner")
+        self.assertEqual(payload["category"], "calcados")
+        self.assertEqual(payload["availability"], "in_stock")
+        self.assertTrue(payload["offer"])
+        self.assertEqual(payload["price_min"], "100")
+        self.assertEqual(payload["sort"], "price_desc")
+        self.assertEqual(payload["result_count"], 1)
+
+    def test_catalog_list_view_does_not_block_when_discovery_analytics_fails(self):
+        class FailingPublisher:
+            def publish(self, event):
+                raise RuntimeError("analytics unavailable")
+
+        storefront_discovery_analytics.publisher = FailingPublisher()
+
+        response = self.client.get(reverse("storefront:catalog-list"), {"q": "runner"}, HTTP_HOST=self.storefront_host)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Tênis Hubx Runner")
+
+    def test_product_detail_view_records_discovery_analytics_event(self):
+        class SpyPublisher:
+            def __init__(self):
+                self.events = []
+
+            def publish(self, event):
+                self.events.append(event)
+
+        spy = SpyPublisher()
+        storefront_discovery_analytics.publisher = spy
+
+        response = self.client.get(
+            reverse("storefront:product-detail", kwargs={"product_slug": "tenis-hubx-runner"}),
+            HTTP_HOST=self.storefront_host,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual([event.name for event in spy.events], ["catalog.product_detail_viewed"])
+        self.assertEqual(spy.events[0].payload["tenant_id"], self.tenant.id)
+        self.assertEqual(spy.events[0].payload["product_slug"], "tenis-hubx-runner")
+
+    def test_discovery_analytics_persistent_publisher_stores_sanitized_event(self):
+        publisher = DjangoStorefrontDiscoveryEventLogPublisher()
+
+        publisher.publish(
+            StorefrontDiscoveryEvent(
+                name="catalog.discovery_viewed",
+                payload={
+                    "tenant_id": self.tenant.id,
+                    "session_key": "raw-session-key",
+                    "path": "/catalog/",
+                    "query": "runner",
+                    "result_count": 1,
+                    "email": "customer@example.com",
+                },
+            )
+        )
+
+        event_log = StorefrontDiscoveryEventLog.objects.get()
+        self.assertEqual(event_log.tenant, self.tenant)
+        self.assertEqual(event_log.event_name, "catalog.discovery_viewed")
+        self.assertEqual(event_log.path, "/catalog/")
+        self.assertEqual(len(event_log.session_key_hash), 40)
+        self.assertNotEqual(event_log.session_key_hash, "raw-session-key")
+        self.assertEqual(event_log.payload["query"], "runner")
+        self.assertEqual(event_log.payload["result_count"], 1)
+        self.assertNotIn("email", event_log.payload)
+        self.assertNotIn("session_key", event_log.payload)
+
+    def test_discovery_analytics_persistent_publisher_discards_missing_tenant(self):
+        publisher = DjangoStorefrontDiscoveryEventLogPublisher()
+
+        publisher.publish(
+            StorefrontDiscoveryEvent(
+                name="catalog.discovery_viewed",
+                payload={"tenant_id": None, "path": "/catalog/", "query": "runner"},
+            )
+        )
+
+        self.assertFalse(StorefrontDiscoveryEventLog.objects.exists())
+
+    def test_catalog_list_view_applies_public_sort_by_lowest_price(self):
+        response = self.client.get(reverse("storefront:catalog-list"), {"sort": "price_asc"}, HTTP_HOST=self.storefront_host)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Ordenar por")
+        self.assertContains(response, "ordenação: Menor preço")
+        self.assertEqual(
+            [product["title"] for product in response.context["products"]],
+            ["Camiseta Hubx Performance", "Mochila Hubx Urban"],
+        )
+
+    def test_catalog_list_view_applies_public_sort_by_highest_price(self):
+        response = self.client.get(reverse("storefront:catalog-list"), {"sort": "price_desc"}, HTTP_HOST=self.storefront_host)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "ordenação: Maior preço")
+        self.assertEqual(
+            [product["title"] for product in response.context["products"]],
+            ["Tênis Hubx Runner", "Mochila Hubx Urban"],
+        )
+
+    def test_catalog_list_view_applies_public_sort_by_name_and_preserves_pagination(self):
+        response = self.client.get(reverse("storefront:catalog-list"), {"sort": "name_asc"}, HTTP_HOST=self.storefront_host)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "ordenação: Nome A-Z")
+        self.assertEqual(
+            [product["title"] for product in response.context["products"]],
+            ["Camiseta Hubx Performance", "Mochila Hubx Urban"],
+        )
+        self.assertIn("sort=name_asc", response.context["next_url"])
+
+    def test_catalog_list_view_falls_back_to_recommended_for_invalid_sort(self):
+        response = self.client.get(reverse("storefront:catalog-list"), {"sort": "rating_desc"}, HTTP_HOST=self.storefront_host)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "ordenação: rating_desc")
+        self.assertEqual(
+            [product["title"] for product in response.context["products"]],
+            ["Tênis Hubx Runner", "Mochila Hubx Urban"],
+        )
+
     def test_catalog_list_view_shows_quick_filter_empty_state_for_backorder(self):
         response = self.client.get(reverse("storefront:catalog-list"), {"quick_filter": "backorder", "q": "runner"}, HTTP_HOST=self.storefront_host)
 
@@ -141,7 +380,8 @@ class StorefrontViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "pages/templates/product_detail_page.html")
         self.assertContains(response, "Tênis Hubx Runner")
-        self.assertContains(response, "Ir para checkout")
+        self.assertContains(response, "Adicionar ao carrinho")
+        self.assertContains(response, "Comprar agora")
 
     def test_storefront_catalog_query_service_returns_expected_contract(self):
         product = storefront_catalog_queries.get_product("tenis-hubx-runner", tenant_id=self.tenant.id)
@@ -149,7 +389,26 @@ class StorefrontViewTests(TestCase):
 
         self.assertEqual(product["slug"], "tenis-hubx-runner")
         self.assertEqual(product["brand"], "Hubx")
+        self.assertIsInstance(product["discovery_rank_score"], int)
+        self.assertGreater(product["discovery_rank_score"], 0)
+        self.assertEqual(
+            set(product["discovery_rank_components"]),
+            {"status", "stock", "offer", "featured", "decision_signal"},
+        )
+        self.assertTrue(product["discovery_rank_reason"])
         self.assertTrue(any(item["slug"] == "tenis-hubx-runner" for item in products))
+
+    def test_storefront_catalog_query_service_orders_fallback_by_discovery_score(self):
+        products = storefront_catalog_queries.list_products(tenant_id=self.tenant.id)
+
+        self.assertEqual(
+            [product["slug"] for product in products],
+            ["tenis-hubx-runner", "mochila-hubx-urban", "camiseta-hubx-performance"],
+        )
+        self.assertEqual(
+            [product["discovery_rank_score"] for product in products],
+            sorted([product["discovery_rank_score"] for product in products], reverse=True),
+        )
 
     def test_storefront_views_require_resolved_tenant(self):
         response = self.client.get(reverse("storefront:catalog-list"), HTTP_HOST="ghost.hubx.market")
@@ -175,6 +434,9 @@ class StorefrontPersistedReadTests(TestCase):
         self.assertEqual(product["name"], "Tênis Hubx Runner Persistido")
         self.assertEqual(product["brand"], "Hubx Persisted")
         self.assertEqual(product["sku"], "RUNNER-PERSIST-BLK-42")
+        self.assertIsInstance(product["discovery_rank_score"], int)
+        self.assertEqual(product["discovery_rank_components"]["status"], 1000)
+        self.assertIn("oferta", product["discovery_rank_reason"])
         self.assertEqual(product["price"], "399.90")
         self.assertEqual(product["compare_price"], "449.90")
         self.assertEqual(product["stock_state"], "in_stock")
@@ -195,6 +457,53 @@ class StorefrontPersistedReadTests(TestCase):
         self.assertEqual(product["main_image_url"], "https://cdn.hubx.market/demo/catalog/runner-primary.jpg")
         self.assertEqual(product["main_image_alt"], "Tênis Hubx Runner Persistido · imagem principal")
         self.assertEqual(product["variant_groups"][0]["selected"], "42")
+
+    def test_storefront_query_service_orders_persisted_records_by_discovery_score(self):
+        backorder_product = Product.objects.create(
+            tenant=self.tenant,
+            name="Mochila Persistida Backorder",
+            slug="mochila-persistida-backorder",
+            status=Product.Status.ACTIVE,
+            is_active=True,
+        )
+        ProductVariant.objects.create(
+            product=backorder_product,
+            sku="BAG-PERSIST-BACKORDER",
+            price="199.90",
+            compare_price="249.90",
+            stock=0,
+            allow_backorder=True,
+        )
+        draft_product = Product.objects.create(
+            tenant=self.tenant,
+            name="Camiseta Persistida Draft",
+            slug="camiseta-persistida-draft",
+            status=Product.Status.DRAFT,
+            is_active=False,
+        )
+        ProductVariant.objects.create(
+            product=draft_product,
+            sku="TSHIRT-PERSIST-DRAFT",
+            price="99.90",
+            compare_price="149.90",
+            stock=10,
+        )
+
+        products = storefront_catalog_queries.list_products(tenant_id=self.tenant.id)
+        product = storefront_catalog_queries.get_product("tenis-hubx-runner-persistido", tenant_id=self.tenant.id)
+
+        self.assertEqual(
+            [product["slug"] for product in products],
+            [
+                "tenis-hubx-runner-persistido",
+                "mochila-persistida-backorder",
+                "camiseta-persistida-draft",
+            ],
+        )
+        self.assertEqual(
+            [product["discovery_rank_score"] for product in products],
+            sorted([product["discovery_rank_score"] for product in products], reverse=True),
+        )
         self.assertIn("Combinação em destaque · Preto · 42", product["purchase_note"])
         self.assertIn("valor percebido mais alto", product["product_subtitle"])
         self.assertIn("valor percebido mais alto", product["short_description"])
@@ -217,6 +526,9 @@ class StorefrontPersistedReadTests(TestCase):
         self.assertIn("combinação destacada no catálogo continua sendo Preto · 42", product["purchase_note"])
         self.assertIn("já pode seguir para checkout", product["purchase_note"])
         self.assertIn("decisão segura", product["cta_helper"])
+        self.assertEqual(product["pdp_decision_checks"][0]["title"], "Preço confirmado")
+        self.assertIn("R$ 399,90 para Preto · 42", product["pdp_decision_checks"][0]["description"])
+        self.assertEqual(product["pdp_decision_checks"][2]["title"], "Checkout sem surpresa")
 
     def test_storefront_query_service_applies_selected_variant_when_valid(self):
         product = storefront_catalog_queries.get_product("tenis-hubx-runner-persistido", tenant_id=self.tenant.id, size="42", color="wht")
@@ -271,14 +583,53 @@ class StorefrontPersistedReadTests(TestCase):
         self.assertContains(detail_response, "Combinação em destaque · Preto · 42, com disponibilidade imediata e compra segura no storefront.")
         self.assertContains(detail_response, "valor percebido mais alto")
         self.assertContains(detail_response, "A combinação destacada no catálogo continua sendo Preto · 42")
-        self.assertContains(detail_response, "Ir para checkout")
+        self.assertContains(detail_response, "Adicionar ao carrinho")
+        self.assertContains(detail_response, "Comprar agora")
         self.assertContains(detail_response, "decisão segura")
         self.assertContains(detail_response, "Esta combinação (Preto · 42) já pode seguir para checkout")
-        self.assertContains(
-            detail_response,
-            f'{reverse("checkout:checkout-page")}?{urlencode({"back_url": reverse("storefront:product-detail", kwargs={"product_slug": "tenis-hubx-runner-persistido"})})}',
-        )
+        self.assertContains(detail_response, "Resumo para decisão de compra")
+        self.assertContains(detail_response, "Preço confirmado")
+        self.assertContains(detail_response, "Disponibilidade atual")
+        self.assertContains(detail_response, "Checkout sem surpresa")
         self.assertContains(detail_response, "https://cdn.hubx.market/demo/catalog/runner-primary.jpg")
+
+    def test_storefront_product_cards_render_approved_review_summary_only(self):
+        product = Product.objects.get(slug="tenis-hubx-runner-persistido", tenant=self.tenant)
+        other_tenant = Tenant.objects.create(name="Outra Card Reviews", slug="outra-card-reviews", subdomain="outra-card-reviews")
+        other_product = Product.objects.create(
+            tenant=other_tenant,
+            name="Produto card outra loja",
+            slug="produto-card-outra-loja",
+            status=Product.Status.ACTIVE,
+            is_active=True,
+        )
+        ProductReview.objects.create(
+            tenant=self.tenant,
+            product=product,
+            rating=5,
+            status=ProductReview.Status.APPROVED,
+            author_name="Cliente Card",
+        )
+        ProductReview.objects.create(
+            tenant=self.tenant,
+            product=product,
+            rating=1,
+            status=ProductReview.Status.PENDING,
+            author_name="Pendente Invisível",
+        )
+        ProductReview.objects.create(
+            tenant=other_tenant,
+            product=other_product,
+            rating=1,
+            status=ProductReview.Status.APPROVED,
+            author_name="Outra Loja",
+        )
+
+        response = self.client.get(reverse("storefront:catalog-list"), HTTP_HOST=self.storefront_host)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "⭐ 5.0/5 · 1 avaliação(ões)")
+        self.assertNotContains(response, "⭐ 1.0/5")
 
     def test_product_detail_view_renders_selected_variant_when_requested(self):
         response = self.client.get(
@@ -310,6 +661,183 @@ class StorefrontPersistedReadTests(TestCase):
         self.assertEqual(session.items.first().subtitle, "Preto · 42")
         self.assertEqual(session.items.first().variant_sku, "RUNNER-PERSIST-BLK-42")
 
+    def test_product_detail_post_add_to_cart_creates_session_cart_and_redirects_with_feedback(self):
+        response = self.client.post(
+            reverse("storefront:product-detail", kwargs={"product_slug": "tenis-hubx-runner-persistido"}),
+            data={"intent": "add_to_cart"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response["Location"],
+            f'{reverse("storefront:product-detail", kwargs={"product_slug": "tenis-hubx-runner-persistido"})}?cart_feedback=added',
+        )
+        self.assertEqual(CheckoutSession.objects.count(), 0)
+
+        cart = Cart.objects.get()
+        self.assertEqual(cart.tenant, self.tenant)
+        self.assertEqual(cart.session_key, self.client.session.session_key)
+        self.assertEqual(cart.items.count(), 1)
+        self.assertEqual(cart.items.first().product_name, "Tênis Hubx Runner Persistido")
+        self.assertEqual(cart.items.first().variant_sku, "RUNNER-PERSIST-BLK-42")
+
+    def test_product_detail_post_add_to_cart_records_cta_intent_analytics(self):
+        class SpyPublisher:
+            def __init__(self):
+                self.events = []
+
+            def publish(self, event):
+                self.events.append(event)
+
+        spy = SpyPublisher()
+        storefront_discovery_analytics.publisher = spy
+
+        response = self.client.post(
+            reverse("storefront:product-detail", kwargs={"product_slug": "tenis-hubx-runner-persistido"}),
+            data={"intent": "add_to_cart", "quantity": "2"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual([event.name for event in spy.events], ["catalog.pdp_cta_intent"])
+        payload = spy.events[0].payload
+        self.assertEqual(payload["tenant_id"], self.tenant.id)
+        self.assertEqual(payload["product_slug"], "tenis-hubx-runner-persistido")
+        self.assertEqual(payload["cta_intent"], "add_to_cart")
+        self.assertEqual(payload["cta_result"], "cart-item-added")
+        self.assertEqual(payload["quantity"], 2)
+        self.assertEqual(payload["variant_sku"], "RUNNER-PERSIST-BLK-42")
+
+    def test_product_detail_renders_add_to_cart_feedback(self):
+        response = self.client.post(
+            reverse("storefront:product-detail", kwargs={"product_slug": "tenis-hubx-runner-persistido"}),
+            data={"intent": "add_to_cart"},
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Produto adicionado ao carrinho")
+        self.assertContains(response, "Você pode continuar revisando esta combinação")
+        self.assertContains(response, "Produto adicionado ao carrinho.")
+
+    def test_product_detail_renders_cart_idempotency_key(self):
+        response = self.client.get(
+            reverse("storefront:product-detail", kwargs={"product_slug": "tenis-hubx-runner-persistido"}),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="cart_idempotency_key"')
+
+    def test_product_detail_renders_only_approved_reviews_for_current_tenant(self):
+        product = Product.objects.get(slug="tenis-hubx-runner-persistido", tenant=self.tenant)
+        other_tenant = Tenant.objects.create(name="Outra PDP Reviews", slug="outra-pdp-reviews", subdomain="outra-pdp-reviews")
+        other_product = Product.objects.create(
+            tenant=other_tenant,
+            name="Produto outra loja",
+            slug="produto-outra-loja",
+            status=Product.Status.ACTIVE,
+            is_active=True,
+        )
+        ProductReview.objects.create(
+            tenant=self.tenant,
+            product=product,
+            rating=5,
+            title="Compra excelente",
+            body="Produto confortável e entrega correta.",
+            author_name="Ana Review",
+            status=ProductReview.Status.APPROVED,
+        )
+        ProductReview.objects.create(
+            tenant=self.tenant,
+            product=product,
+            rating=1,
+            title="Review pendente invisível",
+            status=ProductReview.Status.PENDING,
+        )
+        ProductReview.objects.create(
+            tenant=other_tenant,
+            product=other_product,
+            rating=1,
+            title="Outra loja invisível",
+            status=ProductReview.Status.APPROVED,
+        )
+
+        response = self.client.get(
+            reverse("storefront:product-detail", kwargs={"product_slug": "tenis-hubx-runner-persistido"}),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'href="#product-reviews"')
+        self.assertContains(response, "5.0/5")
+        self.assertContains(response, "1 avaliação(ões) aprovada(s)")
+        self.assertContains(response, "Ver avaliações")
+        self.assertContains(response, 'id="product-reviews"')
+        self.assertContains(response, "Avaliação em destaque")
+        self.assertContains(response, "ver todas as avaliações")
+        self.assertContains(response, "Avaliações de clientes")
+        self.assertContains(response, "Média 5.0/5 baseada em 1 avaliação")
+        self.assertContains(response, "Compra excelente")
+        self.assertContains(response, "Produto confortável e entrega correta.")
+        self.assertContains(response, "Ana Review")
+        self.assertNotContains(response, "Review pendente invisível")
+        self.assertNotContains(response, "Outra loja invisível")
+
+    def test_product_detail_omits_review_block_without_approved_reviews(self):
+        response = self.client.get(
+            reverse("storefront:product-detail", kwargs={"product_slug": "tenis-hubx-runner-persistido"}),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Avaliações de clientes")
+        self.assertNotContains(response, "Avaliação em destaque")
+        self.assertNotContains(response, 'href="#product-reviews"')
+        self.assertNotContains(response, "Ver avaliações")
+
+    def test_product_detail_featured_review_uses_safe_fallback_without_title_or_body(self):
+        product = Product.objects.get(slug="tenis-hubx-runner-persistido", tenant=self.tenant)
+        ProductReview.objects.create(
+            tenant=self.tenant,
+            product=product,
+            rating=4,
+            author_name="Cliente Sem Texto",
+            status=ProductReview.Status.APPROVED,
+        )
+
+        response = self.client.get(
+            reverse("storefront:product-detail", kwargs={"product_slug": "tenis-hubx-runner-persistido"}),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Cliente recomenda este produto")
+        self.assertContains(response, "Avaliação aprovada por cliente verificado nesta loja")
+        self.assertContains(response, "Cliente Sem Texto")
+
+    def test_product_detail_add_to_cart_replay_with_same_key_does_not_increment_twice(self):
+        url = reverse("storefront:product-detail", kwargs={"product_slug": "tenis-hubx-runner-persistido"})
+        payload = {"intent": "add_to_cart", "cart_idempotency_key": "pdp-add-1"}
+
+        first_response = self.client.post(url, data=payload)
+        replay_response = self.client.post(url, data=payload)
+
+        self.assertEqual(first_response.status_code, 302)
+        self.assertEqual(replay_response.status_code, 302)
+        item = CartItem.objects.get()
+        self.assertEqual(item.quantity, 1)
+        self.assertEqual(CartMutation.objects.count(), 1)
+
+    def test_product_detail_post_add_to_cart_preserves_selected_variant(self):
+        response = self.client.post(
+            reverse("storefront:product-detail", kwargs={"product_slug": "tenis-hubx-runner-persistido"}),
+            data={"intent": "add_to_cart", "size": "42", "color": "wht"},
+        )
+
+        self.assertEqual(
+            response["Location"],
+            f'{reverse("storefront:product-detail", kwargs={"product_slug": "tenis-hubx-runner-persistido"})}?size=42&color=wht&cart_feedback=added',
+        )
+        item = CartItem.objects.get()
+        self.assertEqual(item.variant_label, "Branco · 42")
+        self.assertEqual(item.variant_sku, "RUNNER-PERSIST-WHT-42")
+
     def test_product_detail_post_creates_checkout_session_from_selected_variant(self):
         response = self.client.post(
             reverse("storefront:product-detail", kwargs={"product_slug": "tenis-hubx-runner-persistido"}),
@@ -325,6 +853,29 @@ class StorefrontPersistedReadTests(TestCase):
         self.assertIsNotNone(session)
         self.assertEqual(session.items.first().subtitle, "Branco · 42")
         self.assertEqual(session.items.first().variant_sku, "RUNNER-PERSIST-WHT-42")
+
+    def test_product_detail_post_buy_now_records_cta_intent_analytics(self):
+        class SpyPublisher:
+            def __init__(self):
+                self.events = []
+
+            def publish(self, event):
+                self.events.append(event)
+
+        spy = SpyPublisher()
+        storefront_discovery_analytics.publisher = spy
+
+        response = self.client.post(
+            reverse("storefront:product-detail", kwargs={"product_slug": "tenis-hubx-runner-persistido"}),
+            data={"size": "42", "color": "wht"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual([event.name for event in spy.events], ["catalog.pdp_cta_intent"])
+        payload = spy.events[0].payload
+        self.assertEqual(payload["cta_intent"], "buy_now")
+        self.assertEqual(payload["cta_result"], "checkout-activated")
+        self.assertEqual(payload["variant_sku"], "RUNNER-PERSIST-WHT-42")
 
     def test_product_detail_post_reuses_open_session_and_adds_second_variant_item(self):
         first_response = self.client.post(reverse("storefront:product-detail", kwargs={"product_slug": "tenis-hubx-runner-persistido"}))
@@ -371,8 +922,32 @@ class StorefrontPersistedReadTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(
             response["Location"],
-            f'{reverse("storefront:product-detail", kwargs={"product_slug": "tenis-hubx-runner-persistido"})}?size=43&color=blk',
+            f'{reverse("storefront:product-detail", kwargs={"product_slug": "tenis-hubx-runner-persistido"})}?size=43&color=blk&cart_feedback=unavailable',
         )
+        self.assertFalse(Cart.objects.exists())
+
+    def test_product_detail_post_out_of_stock_records_cta_intent_analytics(self):
+        class SpyPublisher:
+            def __init__(self):
+                self.events = []
+
+            def publish(self, event):
+                self.events.append(event)
+
+        spy = SpyPublisher()
+        storefront_discovery_analytics.publisher = spy
+
+        response = self.client.post(
+            reverse("storefront:product-detail", kwargs={"product_slug": "tenis-hubx-runner-persistido"}),
+            data={"intent": "add_to_cart", "size": "43", "color": "blk"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual([event.name for event in spy.events], ["catalog.pdp_cta_intent"])
+        payload = spy.events[0].payload
+        self.assertEqual(payload["cta_intent"], "add_to_cart")
+        self.assertEqual(payload["cta_result"], "unavailable")
+        self.assertEqual(payload["variant_sku"], "RUNNER-PERSIST-BLK-43")
 
     def test_product_detail_post_prefills_checkout_session_from_account_and_address_when_available(self):
         tenant = Tenant.objects.get(pk=1)
@@ -742,6 +1317,8 @@ class StorefrontPersistedReadTests(TestCase):
         self.assertIn("não segue para checkout agora", item["cta_helper"])
         self.assertIn("acompanhar a reposição com tranquilidade", item["cta_helper"])
         self.assertIn("próximo passo mais seguro é acompanhar a reposição ou voltar ao catálogo", item["purchase_note"])
+        self.assertEqual(item["pdp_decision_checks"][1]["title"], "Sem checkout agora")
+        self.assertIn("não está disponível para compra imediata", item["pdp_decision_checks"][1]["description"])
 
     def test_storefront_pdp_uses_low_stock_commercial_messaging_when_variant_is_scarce(self):
         tenant = Tenant.objects.create(name="Baixo Estoque", slug="baixo-estoque", subdomain="baixo-estoque")

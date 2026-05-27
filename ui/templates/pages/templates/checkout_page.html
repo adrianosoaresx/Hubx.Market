@@ -63,6 +63,69 @@
         </section>
     {% endif %}
 
+    {% if inventory_conflicts %}
+        <section class="ds-surface space-y-4 p-6" aria-label="Itens com estoque alterado">
+            <div class="space-y-1">
+                <h2 class="text-base font-semibold text-[var(--color-text-primary)]">Itens que precisam de revisão</h2>
+                <p class="text-sm text-[var(--color-text-secondary)]">
+                    Estes itens mudaram de disponibilidade depois que a sessão foi criada. Nenhum pedido foi gerado.
+                </p>
+            </div>
+            <div class="divide-y divide-[var(--color-border-default)] rounded-2xl border border-[var(--color-border-default)]">
+                {% for conflict in inventory_conflicts %}
+                    <article class="space-y-2 p-4">
+                        <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                                <h3 class="text-sm font-semibold text-[var(--color-text-primary)]">{{ conflict.title }}</h3>
+                                {% if conflict.variant_sku %}
+                                    <p class="text-xs text-[var(--color-text-secondary)]">SKU {{ conflict.variant_sku }}</p>
+                                {% endif %}
+                            </div>
+                            <span class="rounded-full bg-[var(--color-surface-muted)] px-3 py-1 text-xs font-medium text-[var(--color-text-secondary)]">
+                                Solicitado: {{ conflict.requested_quantity }} · Disponível: {{ conflict.available_quantity }}
+                            </span>
+                        </div>
+                        {% if conflict.reason == "stock-conflict" %}
+                            <p class="text-sm text-[var(--color-text-secondary)]">
+                                A quantidade pedida ficou acima do estoque livre atual. Reduza a quantidade antes de concluir.
+                            </p>
+                        {% else %}
+                            <p class="text-sm text-[var(--color-text-secondary)]">
+                                Este item não está disponível com segurança para concluir a compra agora.
+                            </p>
+                        {% endif %}
+                        {% if conflict.item_id %}
+                            <form method="post" action="{{ form_action }}" class="flex flex-wrap gap-2">
+                                {% csrf_token %}
+                                <input type="hidden" name="inventory_reconciliation" value="1">
+                                {% if conflict.available_quantity > 0 %}
+                                    <input type="hidden" name="quantity" value="{{ conflict.available_quantity }}">
+                                    <button
+                                        class="ds-btn ds-btn-primary ds-btn-sm"
+                                        type="submit"
+                                        name="item_action"
+                                        value="set_quantity:{{ conflict.item_id }}"
+                                    >
+                                        <span>Reduzir para {{ conflict.available_quantity }} disponível(is)</span>
+                                    </button>
+                                {% else %}
+                                    <button
+                                        class="ds-btn ds-btn-secondary ds-btn-sm"
+                                        type="submit"
+                                        name="item_action"
+                                        value="remove:{{ conflict.item_id }}"
+                                    >
+                                        <span>Remover item indisponível</span>
+                                    </button>
+                                {% endif %}
+                            </form>
+                        {% endif %}
+                    </article>
+                {% endfor %}
+            </div>
+        </section>
+    {% endif %}
+
     {% if checkout_steps or showcase_mode %}
         {% with steps=checkout_steps showcase_mode=showcase_mode %}
             {% include "shared/components/composite/checkout_steps.html" %}
@@ -223,6 +286,20 @@
             {% with title=summary_title|default:"Resumo do pedido" description=summary_description|default:"Confira os totais antes de finalizar." note=summary_note items=order_items subtotal=subtotal shipping=shipping_total discount=discount_total total=grand_total installments=installments_summary actions=summary_actions showcase_mode=showcase_mode %}
                 {% include "shared/components/composite/order_summary.html" %}
             {% endwith %}
+
+            {% if checkout_trust_items %}
+                <section class="ds-surface space-y-4 p-6" aria-label="Confiança no checkout">
+                    <h2 class="text-base font-semibold text-[var(--color-text-primary)]">{{ checkout_trust_title }}</h2>
+                    <div class="space-y-3">
+                        {% for item in checkout_trust_items %}
+                            <div class="rounded-2xl border border-[var(--color-border-default)] p-4">
+                                <p class="text-sm font-medium text-[var(--color-text-primary)]">✅ {{ item.label }}</p>
+                                <p class="mt-1 text-sm text-[var(--color-text-secondary)]">{{ item.description }}</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </section>
+            {% endif %}
 
             {% block checkout_sidebar %}{% endblock %}
         </aside>

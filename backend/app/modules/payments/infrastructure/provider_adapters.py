@@ -87,6 +87,27 @@ class ProviderIntentResponse:
     payload_snapshot: dict[str, object]
 
 
+@dataclass(frozen=True)
+class RefundProviderContract:
+    tenant_id: int
+    refund_key: str
+    idempotency_key: str
+    provider_code: str
+    external_reference: str
+    amount: str
+    currency_code: str
+    reason_code: str
+    metadata: dict[str, object]
+
+
+@dataclass(frozen=True)
+class RefundProviderResponse:
+    provider_code: str
+    provider_refund_reference: str
+    status: str
+    payload_snapshot: dict[str, object]
+
+
 class ProviderAdapterError(RuntimeError):
     pass
 
@@ -117,6 +138,27 @@ class ProviderAdapterLite:
             provider_label=normalized_label,
             external_reference=external_reference,
             action_url=action_url,
+            payload_snapshot=payload_snapshot,
+        )
+
+    def create_refund(self, *, contract: RefundProviderContract) -> RefundProviderResponse:
+        normalized_provider = _string(contract.provider_code) or "payment"
+        provider_refund_reference = f"refund-{_string(contract.refund_key)}"
+        payload_snapshot = {
+            "provider_code": normalized_provider,
+            "refund_key": contract.refund_key,
+            "idempotency_key": contract.idempotency_key,
+            "external_reference": contract.external_reference,
+            "amount": contract.amount,
+            "currency_code": contract.currency_code,
+            "reason_code": contract.reason_code,
+            "metadata": dict(contract.metadata),
+            "provider_call": "lite",
+        }
+        return RefundProviderResponse(
+            provider_code=normalized_provider,
+            provider_refund_reference=provider_refund_reference,
+            status="accepted",
             payload_snapshot=payload_snapshot,
         )
 
@@ -179,6 +221,52 @@ class PagarmeProviderAdapter:
             },
         )
 
+    def create_refund(self, *, contract: RefundProviderContract) -> RefundProviderResponse:
+        secret_key = _string(getattr(settings, "PAGARME_SECRET_KEY", ""))
+        if not secret_key:
+            raise ProviderAdapterError("pagarme-secret-key-missing")
+        charge_id = _string(contract.external_reference)
+        if not charge_id:
+            raise ProviderAdapterError("pagarme-refund-charge-id-missing")
+
+        payload = self._build_refund_payload(contract=contract)
+        request = Request(
+            url=f'{_string(getattr(settings, "PAGARME_API_BASE_URL", "https://api.pagar.me/core/v5")).rstrip("/")}/charges/{charge_id}',
+            data=json.dumps(payload).encode("utf-8"),
+            headers={
+                "Authorization": self._build_auth_header(secret_key),
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "Idempotency-Key": _string(contract.idempotency_key),
+            },
+            method="DELETE",
+        )
+        timeout = float(getattr(settings, "PAGARME_HTTP_TIMEOUT_SECONDS", 15) or 15)
+        try:
+            with urlopen(request, timeout=timeout) as response:
+                response_payload = json.loads(response.read().decode("utf-8") or "{}")
+        except HTTPError as exc:
+            body = exc.read().decode("utf-8", errors="ignore")
+            raise ProviderAdapterError(body or f"pagarme-http-{exc.code}") from exc
+        except URLError as exc:
+            raise ProviderAdapterError("pagarme-network-unavailable") from exc
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ProviderAdapterError("pagarme-invalid-json-response") from exc
+
+        provider_refund_reference = _extract_response_value(response_payload, "id", "code", "charge_id")
+        if not provider_refund_reference:
+            provider_refund_reference = f"pagarme-refund-{charge_id}-{_string(contract.refund_key)}"
+
+        return RefundProviderResponse(
+            provider_code=self.provider_code,
+            provider_refund_reference=provider_refund_reference,
+            status="accepted",
+            payload_snapshot={
+                "request": payload,
+                "response": response_payload,
+            },
+        )
+
     def _build_auth_header(self, secret_key: str) -> str:
         token = base64.b64encode(f"{secret_key}:".encode("utf-8")).decode("ascii")
         return f"Basic {token}"
@@ -211,6 +299,13 @@ class PagarmeProviderAdapter:
                 ],
             },
         }
+
+    def _build_refund_payload(self, *, contract: RefundProviderContract) -> dict[str, object]:
+        payload: dict[str, object] = {}
+        amount_cents = _money_to_cents(contract.amount)
+        if amount_cents > 0:
+            payload["amount"] = amount_cents
+        return payload
 
 
 def get_provider_adapter(*, provider_code: str, tenant=None):

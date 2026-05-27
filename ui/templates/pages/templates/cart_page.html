@@ -1,0 +1,131 @@
+{% extends layout_template|default:"layouts/storefront_shell.html" %}
+
+{% block page_title %}{{ page_title|default:"Carrinho" }}{% endblock %}
+
+{% block content %}
+<section class="space-y-8">
+    <header class="space-y-3">
+        <div class="space-y-2">
+            <h1 class="text-3xl font-semibold tracking-tight text-[var(--color-text-primary)]">
+                {{ page_title|default:"Carrinho" }}
+            </h1>
+            {% if page_description %}
+                <p class="max-w-3xl text-base text-[var(--color-text-secondary)]">{{ page_description }}</p>
+            {% endif %}
+        </div>
+    </header>
+
+    {% if cart_items %}
+        <div class="grid gap-8 lg:grid-cols-[minmax(0,1.5fr)_minmax(22rem,26rem)]">
+            <section class="space-y-4">
+                {% for item in cart_items %}
+                    <form method="post" action="">
+                        {% csrf_token %}
+                        <input type="hidden" name="cart_id" value="{{ item.cart_id }}">
+                        <input type="hidden" name="item_id" value="{{ item.id }}">
+                        <input type="hidden" name="quantity" value="{{ item.quantity }}">
+                        {% with image_url=item.image_url image_alt=item.image_alt title=item.title subtitle=item.subtitle meta=item.meta price=item.price compare_price=item.compare_price quantity=item.quantity quantity_readonly=item.quantity_readonly mutation_actions=item.mutation_actions %}
+                            {% include "shared/components/commerce/cart_item.html" %}
+                        {% endwith %}
+                    </form>
+                {% endfor %}
+            </section>
+
+            <aside class="space-y-6">
+                {% with title="Resumo do carrinho" description=summary_description note=summary_note items=cart_items subtotal=subtotal discount=discount_total total=total %}
+                    {% include "shared/components/composite/order_summary.html" %}
+                {% endwith %}
+                {% if delivery_promise.items %}
+                    <section class="space-y-4 rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-4" aria-label="Promessa de entrega">
+                        <header class="space-y-1">
+                            <h2 class="text-sm font-semibold text-[var(--color-text-primary)]">{{ delivery_promise.title }}</h2>
+                            <p class="text-xs leading-5 text-[var(--color-text-secondary)]">{{ delivery_promise.description }}</p>
+                        </header>
+                        <div class="space-y-3">
+                            {% for item in delivery_promise.items %}
+                                <div class="rounded-xl border border-[var(--color-border-default)] bg-[var(--color-surface-default)] px-3 py-2">
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div>
+                                            <p class="text-sm font-medium text-[var(--color-text-primary)]">{{ item.label }}</p>
+                                            <p class="mt-1 text-xs leading-5 text-[var(--color-text-secondary)]">{{ item.description }}</p>
+                                        </div>
+                                        <span class="shrink-0 rounded-full bg-[var(--color-surface-muted)] px-3 py-1 text-xs font-medium text-[var(--color-text-secondary)]">
+                                            {{ item.price_hint }}
+                                        </span>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        {% if delivery_promise.note %}
+                            <p class="text-xs leading-5 text-[var(--color-text-secondary)]">{{ delivery_promise.note }}</p>
+                        {% endif %}
+                    </section>
+                {% endif %}
+                {% if conversion_readiness_items %}
+                    <section class="space-y-4 rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-4" aria-label="Próximo passo seguro">
+                        <header class="space-y-1">
+                            <h2 class="text-sm font-semibold text-[var(--color-text-primary)]">{{ conversion_readiness_title }}</h2>
+                            <p class="text-xs leading-5 text-[var(--color-text-secondary)]">{{ conversion_readiness_description }}</p>
+                        </header>
+                        <div class="space-y-3">
+                            {% for item in conversion_readiness_items %}
+                                <div class="rounded-xl border border-[var(--color-border-default)] bg-[var(--color-surface-default)] px-3 py-2">
+                                    <p class="text-sm font-medium text-[var(--color-text-primary)]">
+                                        {% if item.ready %}✅{% else %}⏳{% endif %} {{ item.label }}
+                                    </p>
+                                    <p class="mt-1 text-xs leading-5 text-[var(--color-text-secondary)]">{{ item.description }}</p>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </section>
+                {% endif %}
+                <section class="space-y-4 rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-4" aria-label="Cupom">
+                    <header class="space-y-1">
+                        <h2 class="text-sm font-semibold text-[var(--color-text-primary)]">Cupom</h2>
+                        <p class="text-xs leading-5 text-[var(--color-text-secondary)]">
+                            Informe um cupom para validar desconto no carrinho. O total só muda quando o código for válido para esta loja.
+                        </p>
+                    </header>
+                    <form method="post" action="" class="space-y-3">
+                        {% csrf_token %}
+                        <label class="sr-only" for="coupon-code">Código do cupom</label>
+                        <input
+                            id="coupon-code"
+                            name="coupon_code"
+                            value="{{ coupon_code }}"
+                            placeholder="Digite seu cupom"
+                            class="w-full rounded-xl border border-[var(--color-border-default)] bg-[var(--color-surface-default)] px-3 py-2 text-sm text-[var(--color-text-primary)]"
+                        >
+                        <div class="flex flex-col gap-2 sm:flex-row">
+                            <button class="ds-btn ds-btn-secondary ds-btn-md w-full" type="submit" name="cart_intent" value="apply_coupon">
+                                <span>Salvar cupom</span>
+                            </button>
+                            {% if coupon_code %}
+                                <button class="ds-btn ds-btn-secondary ds-btn-md w-full" type="submit" name="cart_intent" value="remove_coupon">
+                                    <span>Remover</span>
+                                </button>
+                            {% endif %}
+                        </div>
+                    </form>
+                    {% if coupon_message %}
+                        <p class="text-xs leading-5 text-[var(--color-text-secondary)]">{{ coupon_message }}</p>
+                    {% endif %}
+                </section>
+                {% if checkout_action_enabled %}
+                    <form method="post" action="" class="rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-4">
+                        {% csrf_token %}
+                        <button class="ds-btn ds-btn-primary ds-btn-md w-full" type="submit" name="cart_intent" value="checkout">
+                            <span>Ir para checkout</span>
+                        </button>
+                    </form>
+                {% endif %}
+                <div class="rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-4">
+                    {{ continue_shopping_action }}
+                </div>
+            </aside>
+        </div>
+    {% else %}
+        {% include "shared/components/feedback/empty_state.html" with icon="🛒" title=empty_title description=empty_description primary_action=continue_shopping_action %}
+    {% endif %}
+</section>
+{% endblock %}

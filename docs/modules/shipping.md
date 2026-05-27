@@ -1260,3 +1260,35 @@ Gerenciar frete e rastreio.
 - **Payments Operational Parity Review**
 - motivo:
   - shipping chegou a um pacote operacional completo; o próximo domínio crítico é revisar se payments tem a mesma clareza de operação, retenção e runbook.
+
+## Shipping Quote & Delivery Promise — Pre-Checkout Contract
+
+### Decisão
+
+Shipping passa a expor um contrato de promessa pré-checkout por `shipping.application.delivery_promise_queries`.
+
+Esse contrato é apenas informativo e customer-facing.
+
+### Escopo
+
+Permitido:
+
+- exibir opções de entrega padrão/expressa antes do checkout;
+- usar preço como “a partir de”;
+- explicar que valores e prazos finais dependem do endereço;
+- consumir o contrato em `cart`.
+
+Não permitido:
+
+- calcular frete final no carrinho;
+- persistir método de envio no carrinho;
+- alterar total do carrinho;
+- criar pedido ou reserva logística;
+- substituir a escolha de frete do checkout.
+
+### Boundary
+
+- `shipping` define a promessa.
+- `cart` apresenta a promessa.
+- `checkout` escolhe e aplica o frete final.
+- `orders` persiste o snapshot transacional do pedido.

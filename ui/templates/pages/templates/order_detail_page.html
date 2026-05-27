@@ -36,9 +36,23 @@
 
             <section class="space-y-4">
                 <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">{{ items_title|default:"Itens do pedido" }}</h2>
-                {% with title=order_summary_title|default:"Resumo da compra" description=order_summary_description|default:"Itens, totais e condições do pedido." items=order_items subtotal=subtotal shipping=shipping discount=discount installments=installments total=total note=summary_note showcase_mode=showcase_mode %}
+                {% with title=order_summary_title|default:"Resumo da compra" description=order_summary_description|default:"Itens, totais e condições do pedido." items=order_items subtotal=subtotal shipping=shipping discount=discount installments=installments total=total note=summary_note actions=order_review_actions showcase_mode=showcase_mode %}
                     {% include "shared/components/composite/order_summary.html" %}
                 {% endwith %}
+
+                {% if order_review_status_items %}
+                    <div class="space-y-3">
+                        {% for review_status in order_review_status_items %}
+                            {% include "shared/components/feedback/alert.html" with variant=review_status.variant icon=review_status.icon title=review_status.title description=review_status.description %}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                {% if coupon_visible %}
+                    {% with title=coupon_title subtitle="Promoção preservada no pedido" content=coupon_description %}
+                        {% include "shared/components/data_display/card.html" %}
+                    {% endwith %}
+                {% endif %}
             </section>
         </div>
 

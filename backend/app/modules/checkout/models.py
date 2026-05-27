@@ -35,6 +35,8 @@ class CheckoutSession(models.Model):
     shipping_total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     discount_total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     grand_total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    coupon_code = models.CharField(max_length=64, blank=True)
+    promotion_snapshot = models.JSONField(default=dict, blank=True)
     completed_order_number = models.CharField(max_length=32, blank=True)
 
     installments_summary = models.CharField(max_length=120, blank=True)

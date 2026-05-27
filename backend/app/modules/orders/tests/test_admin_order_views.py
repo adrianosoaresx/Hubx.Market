@@ -6,6 +6,7 @@ from django.utils import timezone
 from django.contrib.auth import get_user_model
 
 from app.modules.catalog.models import Product, ProductVariant
+from app.modules.coupons.models import Coupon, CouponRedemption
 from app.modules.orders.application.admin_order_queries import DjangoOrmOrderRepository, admin_order_queries
 from app.modules.orders.models import Order, OrderStatusHistory
 from app.modules.shipping.models import Shipment
@@ -184,6 +185,40 @@ class AdminOrderPersistedReadTests(TestCase):
         self.assertContains(detail_response, "Rua Persistida, 200")
         self.assertContains(detail_response, "Order.customer")
         self.assertContains(detail_response, "Estoque impactado após pagamento")
+
+    def test_admin_order_detail_surfaces_applied_coupon_snapshot(self):
+        Order.objects.filter(number="2048").update(
+            coupon_code="PROMO10",
+            discount_total="10.00",
+            promotion_snapshot={
+                "coupon_code": "PROMO10",
+                "discount_total": "10.00",
+                "source": "cart",
+                "validation_result": "coupon-valid",
+            },
+        )
+
+        order = admin_order_queries.get_order("2048")
+        response = self.client.get(reverse("orders:admin-orders-detail", kwargs={"order_number": "2048"}))
+
+        self.assertTrue(order["coupon_visible"])
+        self.assertEqual(order["coupon_code"], "PROMO10")
+        self.assertEqual(order["coupon_title"], "Cupom aplicado: PROMO10")
+        self.assertEqual(order["coupon_description"], "-R$ 10,00 · origem: cart · validação: coupon-valid")
+        self.assertContains(response, "Cupom aplicado: PROMO10")
+        self.assertContains(response, "-R$ 10,00 · origem: cart · validação: coupon-valid")
+
+    def test_admin_order_detail_hides_coupon_without_valid_snapshot(self):
+        Order.objects.filter(number="2048").update(
+            coupon_code="PROMO10",
+            discount_total="10.00",
+            promotion_snapshot={},
+        )
+
+        order = admin_order_queries.get_order("2048")
+
+        self.assertFalse(order["coupon_visible"])
+        self.assertEqual(order["coupon_code"], "")
 
     def test_admin_orders_list_shows_inventory_exception_backlog_summary(self):
         order = Order.objects.get(number="2048")
@@ -1865,6 +1900,38 @@ class AdminOrderPersistedReadTests(TestCase):
         history = OrderStatusHistory.objects.get(order=order, event_type="order_canceled")
         self.assertEqual(history.source_type, "admin_action")
         self.assertEqual(history.title, "Pedido cancelado")
+
+    def test_admin_order_cancel_reverses_coupon_redemption(self):
+        order = Order.objects.get(number="2048")
+        coupon = Coupon.objects.create(
+            tenant=order.tenant,
+            code="PROMO10",
+            status=Coupon.Status.ACTIVE,
+            discount_type=Coupon.DiscountType.FIXED,
+            discount_value="10.00",
+        )
+        redemption = CouponRedemption.objects.create(
+            tenant=order.tenant,
+            coupon=coupon,
+            order=order,
+            customer_id=order.customer_id,
+            coupon_code_snapshot="PROMO10",
+            discount_total_snapshot="10.00",
+            promotion_snapshot={"coupon_code": "PROMO10"},
+            source_type="application_command",
+            source_label="Coupon Redemption Commands",
+        )
+
+        response = self.client.post(
+            reverse("orders:admin-order-update", kwargs={"order_number": "2048"}),
+            {"action_type": "cancel_order"},
+        )
+
+        self.assertRedirects(response, "/ops/orders/2048/?result=order-canceled", fetch_redirect_response=False)
+        redemption.refresh_from_db()
+        self.assertEqual(redemption.status, CouponRedemption.Status.REVERSED)
+        self.assertIsNotNone(redemption.reversed_at)
+        self.assertEqual(redemption.source_label, "Admin Orders")
 
     @override_settings(HUBX_MARKET_ROOT_DOMAIN="hubx.market", ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver"])
     def test_admin_order_cancel_action_scopes_command_by_request_tenant(self):

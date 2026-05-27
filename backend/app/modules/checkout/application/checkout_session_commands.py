@@ -25,7 +25,15 @@ class CheckoutSessionCommandRepository(Protocol):
     def update_session(self, *, session_key: str, payload: dict[str, object]) -> str:
         ...
 
-    def mutate_item(self, *, session_key: str, item_id: int, operation: str) -> str:
+    def mutate_item(
+        self,
+        *,
+        session_key: str,
+        item_id: int,
+        operation: str,
+        quantity: int | None = None,
+        inventory_reconciliation: bool = False,
+    ) -> str:
         ...
 
 
@@ -70,6 +78,10 @@ class DjangoOrmCheckoutSessionCommandRepository:
 
         selected_shipping = _selected_method(shipping_methods, requested_shipping)
         selected_payment = _selected_method(payment_methods, requested_payment)
+        if shipping_methods and not selected_shipping:
+            return "checkout-shipping-method-invalid"
+        if payment_methods and requested_payment and not selected_payment:
+            return "checkout-payment-method-invalid"
 
         subtotal = _safe_decimal(getattr(session, "subtotal", Decimal("0.00")))
         shipping_total = (
@@ -176,8 +188,16 @@ class DjangoOrmCheckoutSessionCommandRepository:
 
         session.subtotal = subtotal
 
-    def mutate_item(self, *, session_key: str, item_id: int, operation: str) -> str:
-        if not self.is_ready() or not session_key or not item_id or operation not in {"increment", "decrement", "remove"}:
+    def mutate_item(
+        self,
+        *,
+        session_key: str,
+        item_id: int,
+        operation: str,
+        quantity: int | None = None,
+        inventory_reconciliation: bool = False,
+    ) -> str:
+        if not self.is_ready() or not session_key or not item_id or operation not in {"increment", "decrement", "remove", "set_quantity"}:
             return "checkout-item-mutation-unavailable"
 
         try:
@@ -211,9 +231,18 @@ class DjangoOrmCheckoutSessionCommandRepository:
                     else:
                         item.delete()
                         result = "checkout-item-removed"
+                elif operation == "set_quantity":
+                    requested_quantity = max(0, int(quantity or 0))
+                    if requested_quantity > 0:
+                        item.quantity = requested_quantity
+                        item.save(update_fields=["quantity", "updated_at"])
+                        result = "checkout-inventory-reconciled" if inventory_reconciliation else "checkout-item-updated"
+                    else:
+                        item.delete()
+                        result = "checkout-inventory-item-removed" if inventory_reconciliation else "checkout-item-removed"
                 else:
                     item.delete()
-                    result = "checkout-item-removed"
+                    result = "checkout-inventory-item-removed" if inventory_reconciliation else "checkout-item-removed"
 
                 self._recalculate_session_totals(session=session)
                 session.save(
@@ -243,8 +272,22 @@ class CheckoutSessionCommandService:
     def update_session(self, *, session_key: str, payload: dict[str, object]) -> str:
         return self.repository.update_session(session_key=session_key, payload=payload)
 
-    def mutate_item(self, *, session_key: str, item_id: int, operation: str) -> str:
-        return self.repository.mutate_item(session_key=session_key, item_id=item_id, operation=operation)
+    def mutate_item(
+        self,
+        *,
+        session_key: str,
+        item_id: int,
+        operation: str,
+        quantity: int | None = None,
+        inventory_reconciliation: bool = False,
+    ) -> str:
+        return self.repository.mutate_item(
+            session_key=session_key,
+            item_id=item_id,
+            operation=operation,
+            quantity=quantity,
+            inventory_reconciliation=inventory_reconciliation,
+        )
 
 
 checkout_session_commands = CheckoutSessionCommandService(

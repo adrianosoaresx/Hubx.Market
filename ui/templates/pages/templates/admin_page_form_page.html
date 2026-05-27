@@ -1,0 +1,64 @@
+{% extends layout_template|default:"layouts/admin_shell.html" %}
+
+{% block page_title %}{{ page_title|default:"Nova página" }}{% endblock %}
+{% block shell_title %}{% if shell_title %}{{ shell_title }}{% elif page_title %}{{ page_title }}{% else %}Nova página{% endif %}{% endblock %}
+
+{% block content %}
+<section class="space-y-6">
+    {% with eyebrow=page_eyebrow|default:"Conteúdo & SEO" title=page_title|default:"Nova página" description=page_description|default:"Crie conteúdo institucional simples por tenant." %}
+        {% include "shared/components/layout/page_header.html" %}
+    {% endwith %}
+
+    {% if form_error %}
+        <div class="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{{ form_error }}</div>
+    {% endif %}
+
+    <form method="post" action="{{ form_action }}" class="space-y-6">
+        {% csrf_token %}
+
+        <section class="ds-surface space-y-6 p-6">
+            <div class="space-y-1">
+                <h2 class="text-base font-semibold text-[var(--color-text-primary)]">Conteúdo da página</h2>
+                <p class="text-sm text-[var(--color-text-secondary)]">Primeiro corte: título, slug, texto simples e status de publicação.</p>
+            </div>
+
+            <div class="grid gap-6 md:grid-cols-2">
+                {% with name="title" label="Título" value=title placeholder="Sobre a loja" required=True invalid=errors.title error_text=errors.title %}
+                    {% include "shared/components/forms/input.html" %}
+                {% endwith %}
+
+                {% with name="slug" label="Slug" value=slug placeholder="sobre-a-loja" invalid=errors.slug error_text=errors.slug help_text="Se ficar vazio, será gerado a partir do título." %}
+                    {% include "shared/components/forms/input.html" %}
+                {% endwith %}
+            </div>
+
+            {% with name="status" label="Status" options=status_options selected=status_selected invalid=errors.status error_text=errors.status help_text="Rascunhos não aparecem no storefront." %}
+                {% include "shared/components/forms/select.html" %}
+            {% endwith %}
+
+            {% with name="body" label="Conteúdo" value=body placeholder="Conte a história, políticas ou informações institucionais da loja." rows=10 invalid=errors.body error_text=errors.body %}
+                {% include "shared/components/forms/textarea.html" %}
+            {% endwith %}
+        </section>
+
+        <section class="ds-surface space-y-6 p-6">
+            <div class="space-y-1">
+                <h2 class="text-base font-semibold text-[var(--color-text-primary)]">SEO básico</h2>
+                <p class="text-sm text-[var(--color-text-secondary)]">Metadados simples. Nenhum motor SEO automático nesta fase.</p>
+            </div>
+
+            {% with name="seo_title" label="Título SEO" value=seo_title placeholder="Sobre a Hubx Store" invalid=errors.seo_title error_text=errors.seo_title %}
+                {% include "shared/components/forms/input.html" %}
+            {% endwith %}
+
+            {% with name="seo_description" label="Descrição SEO" value=seo_description placeholder="Conheça a loja, nossa curadoria e políticas." rows=3 invalid=errors.seo_description error_text=errors.seo_description %}
+                {% include "shared/components/forms/textarea.html" %}
+            {% endwith %}
+        </section>
+
+        {% with primary_label=submit_label|default:"Salvar página" secondary_label="Cancelar" secondary_href=cancel_href %}
+            {% include "shared/components/forms/form_actions.html" %}
+        {% endwith %}
+    </form>
+</section>
+{% endblock %}

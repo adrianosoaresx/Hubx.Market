@@ -1,18 +1,6 @@
 <section class="space-y-4">
     {% if title or description or count or actions or selection_count or bulk_actions or search_name or filters %}
-        {% include "shared/components/composite/data_table_toolbar.html" with
-            title=title
-            description=description
-            count=count
-            search_name=search_name
-            search_value=search_value
-            search_label=search_label
-            search_placeholder=search_placeholder
-            filters=filters
-            actions=actions
-            selection_count=selection_count
-            bulk_actions=bulk_actions
-        %}
+        {% include "shared/components/composite/data_table_toolbar.html" with title=title description=description count=count search_name=search_name search_value=search_value search_label=search_label search_placeholder=search_placeholder filters=filters actions=actions selection_count=selection_count bulk_actions=bulk_actions %}
     {% endif %}
 
     <div {% if hx_target_id %}id="{{ hx_target_id }}"{% endif %} class="space-y-4">
@@ -56,13 +44,7 @@
             </div>
             {% include "shared/components/navigation/pagination.html" with page=1 total_pages=3 next_url='?page=2' %}
         {% else %}
-            {% include "shared/components/feedback/empty_state.html" with
-                icon=empty_icon
-                title=empty_title|default:"Nenhum registro encontrado"
-                description=empty_description|default:"Não há dados para exibir com os filtros atuais."
-                primary_action=empty_primary_action
-                secondary_action=empty_secondary_action
-            %}
+            {% include "shared/components/feedback/empty_state.html" with icon=empty_icon title=empty_title|default:"Nenhum registro encontrado" description=empty_description|default:"Não há dados para exibir com os filtros atuais." primary_action=empty_primary_action secondary_action=empty_secondary_action %}
         {% endif %}
     </div>
 </section>

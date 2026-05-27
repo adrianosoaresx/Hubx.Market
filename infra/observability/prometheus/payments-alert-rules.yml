@@ -60,3 +60,13 @@ groups:
         annotations:
           summary: "Backlog alto de tentativas de pagamento pendentes"
           description: "Existem mais de 100 PaymentAttempts pendentes por 30 minutos. Revisar checkout, redirect hospedado, webhooks e triagem com `list_payment_attempts --status=pending`."
+
+      - alert: HubxPaymentsStalePendingAttempt
+        expr: hubx_payments_pending_attempt_oldest_age_seconds > 21600
+        for: 10m
+        labels:
+          severity: warning
+          domain: payments
+        annotations:
+          summary: "Tentativa de pagamento pendente antiga"
+          description: "Há pelo menos uma PaymentAttempt pendente há mais de 6 horas para o tenant {{ $labels.tenant_id }}. Revisar webhook, retorno hospedado e triagem com `list_payment_attempts --tenant-id={{ $labels.tenant_id }} --status=pending --stale-hours=6`."

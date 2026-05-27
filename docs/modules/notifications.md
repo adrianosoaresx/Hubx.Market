@@ -1926,3 +1926,112 @@ Gerenciar e-mails e notificações.
 - **Operational Docs Index Review**
 - motivo:
   - já existem runbooks separados; o próximo passo é criar um índice operacional único para navegar shipping, payments e notifications.
+
+## Cart Foundation Wave 22 — Coupon Notification Visibility Review
+- notificações não devem ser alteradas nesta wave.
+- cupom aplicado deve aparecer primeiro em detalhe do pedido customer/admin.
+- e-mails/logs customer-facing só devem incluir cupom após decisão de copy transacional e payload de evento.
+
+## Cart Foundation Wave 24 — Coupon Notification Copy Review
+
+### Diagnóstico
+
+O pipeline atual de notifications é baseado em intents estáticos:
+
+- `notification_intent_catalog` define título, descrição, CTA e público.
+- `notification_dispatch_resolver` gera previews por `source_event`.
+- `notification_dispatch_envelopes` monta envelopes por destinatário.
+- `notification_event_handlers` resolve o pedido apenas para achar destinatário e entidade.
+- `EmailLog` persiste a mensagem planejada/entregue.
+
+Hoje o envelope não carrega contexto promocional específico do pedido.
+
+Isso evita acoplamento indevido, mas significa que colocar cupom na copy exigiria uma decisão explícita de payload/enrichment.
+
+### Decisão
+
+Não exibir cupom aplicado diretamente nos e-mails/notificações nesta etapa.
+
+O cupom aplicado deve continuar visível em:
+
+- detalhe do pedido na área do cliente;
+- detalhe operacional em Admin Orders.
+
+As notificações devem manter CTA para o detalhe do pedido:
+
+- `customer.order.received` → “Acompanhar pedido”;
+- `owner.order.created` → “Abrir pedido”.
+
+Essas páginas já são a fonte tenant-scoped e auditável para explicar o desconto/cupom.
+
+### Critério para futura execução
+
+Uma futura wave pode incluir cupom em notificações somente se:
+
+- a mensagem vier de snapshot de `Order`, não de consulta a `coupons`;
+- `coupon_code` estiver preenchido;
+- `discount_total > 0`;
+- `promotion_snapshot` não estiver vazio;
+- houver copy específica por público;
+- o enrichment for implementado em `notifications.application`, sem transferir regra promocional para notifications.
+
+### Copy candidata futura
+
+Customer-facing:
+
+```text
+Seu cupom PROMO10 foi preservado neste pedido. O desconto aparece no resumo do pedido.
+```
+
+Owner/admin-facing:
+
+```text
+Pedido com cupom PROMO10 aplicado; confira o snapshot promocional no detalhe operacional.
+```
+
+### Fora de escopo
+
+- alterar `NotificationIntent`;
+- expandir payload de `order.created`;
+- alterar `EmailLog`;
+- recalcular cupom;
+- consultar `coupons`;
+- enviar cupom em e-mail antes de validar copy final.
+
+### Próxima wave
+
+**Cart Foundation Wave 25 — Coupon Usage Accounting Review**
+
+Revisar se o sistema já deve começar a registrar uso de cupom por pedido ou se ainda basta o snapshot em `Order`.
+
+## Platform Owner Email Delivery Review
+
+### Escopo
+
+O módulo `notifications` passa a expor um command service específico para registrar e-mails owner/admin ligados a acesso operacional.
+
+### Entregue
+
+- `owner_access_email_commands.record_owner_invite_email(...)`
+- `owner_access_email_commands.record_owner_password_reset_email(...)`
+- `EmailLog` planejado para:
+  - `source_event=owner.invited`
+  - `intent_key=owner.access.invite`
+  - `source_event=owner.password_reset_requested`
+  - `intent_key=owner.access.password_reset`
+
+### Boundary
+
+- `accounts` valida owner, permissão, tenant e token.
+- `notifications` registra a mensagem e usa o pipeline existente de entrega.
+- nenhum provider de e-mail é chamado diretamente pelo módulo `accounts`.
+
+### Operação
+
+Os logs podem ser processados pelo fluxo já existente:
+
+```bash
+python manage.py process_email_logs --tenant-id=<tenant_id>
+```
+
+Em ambiente seguro, `NOTIFICATIONS_EMAIL_DRY_RUN=0` e `DEFAULT_FROM_EMAIL` controlam a entrega real.

@@ -79,6 +79,9 @@ class CheckoutActivationRepository(Protocol):
     def activate_from_product(self, product: dict[str, object], *, quantity: int = 1) -> str | None:
         ...
 
+    def activate_from_cart(self, cart: dict[str, object]) -> str | None:
+        ...
+
 
 class DjangoOrmCheckoutActivationRepository:
     def __init__(self) -> None:
@@ -333,6 +336,86 @@ class DjangoOrmCheckoutActivationRepository:
             )
         return str(session.session_key)
 
+    def activate_from_cart(self, cart: dict[str, object]) -> str | None:
+        if not self.is_ready():
+            return None
+
+        tenant_id = cart.get("tenant_id")
+        if not tenant_id:
+            return None
+
+        items = list(cart.get("items") or [])
+        if not items:
+            return None
+
+        tenant = self.tenant_model._default_manager.filter(pk=tenant_id).first()
+        if tenant is None:
+            return None
+
+        prefill = self._profile_and_address_prefill(tenant_id=tenant_id)
+        subtotal = sum(
+            (
+                _safe_decimal(item.get("price"))
+                * max(1, int(item.get("quantity", 1) or 1))
+                for item in items
+            ),
+            Decimal("0.00"),
+        ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        shipping_total = Decimal("24.90")
+        discount_total = _safe_decimal(cart.get("discount_total"), default="0.00")
+        grand_total = (subtotal + shipping_total - discount_total).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        installments_summary, installments_selected, installments_options = _installments_summary(grand_total)
+        coupon_code = str(cart.get("coupon_code") or "").strip().upper()
+        promotion_snapshot = dict(cart.get("promotion_snapshot") or {})
+        if not promotion_snapshot:
+            coupon_code = ""
+
+        with transaction.atomic():
+            session = self.session_model._default_manager.create(
+                tenant=tenant,
+                status=self.session_model.Status.OPEN,
+                first_name=prefill.get("first_name", ""),
+                last_name=prefill.get("last_name", ""),
+                email=prefill.get("email", ""),
+                phone=prefill.get("phone", ""),
+                address_line_1=prefill.get("address_line_1", ""),
+                address_line_2=prefill.get("address_line_2", ""),
+                city=prefill.get("city", ""),
+                state=prefill.get("state", ""),
+                zip_code=prefill.get("zip_code", ""),
+                shipping_methods=_default_shipping_methods(),
+                shipping_method_selected="standard",
+                payment_methods=_default_payment_methods(),
+                payment_method_selected="credit_card",
+                subtotal=subtotal,
+                shipping_total=shipping_total,
+                discount_total=discount_total,
+                grand_total=grand_total,
+                coupon_code=coupon_code,
+                promotion_snapshot=promotion_snapshot,
+                installments_summary=installments_summary,
+                installments_selected=installments_selected,
+                installments_options=installments_options,
+                accept_terms=False,
+            )
+            for index, item in enumerate(items, start=1):
+                compare_price = _safe_decimal(item.get("compare_price"), default="0.00")
+                self.item_model._default_manager.create(
+                    checkout_session=session,
+                    title=str(item.get("title") or "Produto"),
+                    subtitle=str(item.get("subtitle") or ""),
+                    meta=str(item.get("meta") or ""),
+                    variant_sku=str(item.get("variant_sku") or ""),
+                    image_url=str(item.get("image_url") or ""),
+                    image_alt=str(item.get("image_alt") or item.get("title") or ""),
+                    price=_safe_decimal(item.get("price")),
+                    compare_price=compare_price if compare_price > 0 else None,
+                    quantity=max(1, int(item.get("quantity", 1) or 1)),
+                    quantity_readonly=True,
+                    sort_order=int(item.get("sort_order") or index),
+                )
+        return str(session.session_key)
+
 
 @dataclass
 class CheckoutActivationCommandService:
@@ -340,6 +423,9 @@ class CheckoutActivationCommandService:
 
     def activate_from_product(self, product: dict[str, object], *, quantity: int = 1) -> str | None:
         return self.repository.activate_from_product(product, quantity=quantity)
+
+    def activate_from_cart(self, cart: dict[str, object]) -> str | None:
+        return self.repository.activate_from_cart(cart)
 
 
 checkout_activation_commands = CheckoutActivationCommandService(

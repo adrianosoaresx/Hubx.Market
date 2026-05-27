@@ -98,6 +98,9 @@ Readiness atual:
 - existe publisher interno em `orders.application.order_event_publisher`
 - checkout publica `order.created` por essa boundary após materializar novo pedido
 - notifications consome o evento por subscriber, sem checkout conhecer detalhes de notificação
+- cupom aplicado não entra no payload do evento nesta fase; quando necessário, notifications deve usar snapshot tenant-scoped em `Order`
+- ledger futuro de cupom deve ser registrado antes de `order.created` ou por command explícito idempotente, sem expandir o payload do evento nesta etapa
+- reversão de cupom por cancelamento administrativo deve ser command explícito de `coupons`, não payload adicional de evento nesta fase
 
 ---
 
@@ -112,6 +115,174 @@ Consumidores:
 
 Descrição:
 Status do pedido foi alterado.
+
+---
+
+# Eventos de descoberta storefront
+
+## catalog.discovery_viewed
+
+Origem: catalog
+
+Consumidores:
+- analytics (futuro)
+- audit (opcional)
+
+Descrição:
+Cliente visualizou a listagem pública de catálogo com o conjunto atual de busca, facets, sort e paginação.
+
+Payload mínimo futuro:
+
+{
+  "tenant_id": "...",
+  "session_key": "...",
+  "path": "...",
+  "query": "...",
+  "category": "...",
+  "availability": "...",
+  "offer": "...",
+  "price_min": "...",
+  "price_max": "...",
+  "quick_filter": "...",
+  "sort": "...",
+  "result_count": 0,
+  "page": 1
+}
+
+Readiness atual:
+
+- evento agora possui log persistente mínimo em `StorefrontDiscoveryEventLog`
+- publisher persistente salva apenas payload allowlisted e `session_key_hash`
+- deve descartar execução sem tenant resolvido
+- não deve armazenar PII
+- não deve bloquear renderização do storefront
+
+---
+
+## catalog.search_performed
+
+Origem: catalog
+
+Consumidores:
+- analytics (futuro)
+
+Descrição:
+Cliente executou busca textual pública no catálogo.
+
+Readiness atual:
+
+- deve ser derivado de `q=` normalizado
+- deve registrar `result_count`
+- pode ser persistido como evento bruto tenant-scoped
+- não deve registrar dados pessoais nem querystring bruta com parâmetros sensíveis
+
+---
+
+## catalog.facets_applied
+
+Origem: catalog
+
+Consumidores:
+- analytics (futuro)
+
+Descrição:
+Cliente aplicou uma ou mais facets públicas de catálogo.
+
+Readiness atual:
+
+- cobre `category`, `availability`, `offer`, `price_min`, `price_max` e `quick_filter`
+- deve preservar tenant-scope
+- pode ser persistido como evento bruto tenant-scoped
+- não deve criar contagens cross-tenant
+
+---
+
+## catalog.sort_changed
+
+Origem: catalog
+
+Consumidores:
+- analytics (futuro)
+
+Descrição:
+Cliente escolheu ordenação pública diferente do default recomendado.
+
+Readiness atual:
+
+- cobre `sort=price_asc`, `sort=price_desc` e `sort=name_asc`
+- `recommended` é default e não precisa ser tratado como mudança
+- pode ser persistido como evento bruto tenant-scoped
+
+---
+
+## catalog.product_card_clicked
+
+Origem: catalog
+
+Consumidores:
+- analytics (futuro)
+
+Descrição:
+Cliente clicou em um card de produto a partir da listagem pública.
+
+Readiness atual:
+
+- requer instrumentação futura de clique ou rota intermediária
+- deve carregar `product_id`/`product_slug` e contexto de descoberta
+- não deve depender de provider externo
+
+---
+
+## catalog.product_detail_viewed
+
+Origem: catalog
+
+Consumidores:
+- analytics (futuro)
+
+Descrição:
+Cliente visualizou o PDP público de um produto.
+
+Readiness atual:
+
+- pode ser emitido server-side após resolver tenant e produto
+- deve carregar `tenant_id`, `product_id`/`product_slug` e contexto de entrada quando disponível
+- pode ser persistido como evento bruto tenant-scoped sem PII
+
+---
+
+## catalog.pdp_cta_intent
+
+Origem: catalog
+
+Consumidores:
+- analytics
+
+Descrição:
+Cliente submeteu uma intenção de CTA no PDP, como adicionar ao carrinho, comprar agora ou tentar uma combinação indisponível.
+
+Payload mínimo:
+
+{
+  "tenant_id": "...",
+  "session_key": "...",
+  "path": "...",
+  "product_id": "...",
+  "product_slug": "...",
+  "cta_intent": "add_to_cart|buy_now",
+  "cta_result": "...",
+  "quantity": 1,
+  "variant_sku": "..."
+}
+
+Readiness atual:
+
+- emitido server-side no POST do PDP
+- cobre `add_to_cart`, `buy_now` e indisponibilidade antes da mutação
+- pode ser persistido como evento bruto tenant-scoped
+- não depende de JavaScript
+- não armazena PII
+- não deve alterar ranking ou fluxo de checkout
 
 ---
 
@@ -204,6 +375,15 @@ Consumidores:
 
 Descrição:
 Pagamento foi estornado.
+
+Readiness atual:
+
+- `PaymentRefund` já registra intenção/bloqueio de refund por tenant.
+- evento ainda não deve ser emitido para `requested`, `blocked` ou `processing`.
+- resposta `accepted` do provider também não deve emitir o evento.
+- o evento só deve representar refund confirmado pelo provider, com ledger em `succeeded`.
+- a primeira execução do command de refund ainda pode adiar emissão do evento mesmo ao gravar `succeeded`, até que os efeitos cross-module sejam definidos.
+- efeitos em pedido, estoque, cupom e notificação devem ser modelados após essa confirmação.
 
 ---
 
@@ -335,6 +515,56 @@ Consumidores:
 
 Descrição:
 Assinatura da loja foi cancelada.
+
+---
+
+## api_key.created
+
+Origem: api_keys
+
+Consumidores:
+- audit
+
+Descrição:
+Chave de API foi criada para um tenant. O payload não deve conter segredo claro nem hash.
+
+---
+
+## api_key.revoked
+
+Origem: api_keys
+
+Consumidores:
+- audit
+
+Descrição:
+Chave de API foi revogada para um tenant sem deletar histórico.
+
+---
+
+## api_key.auth_failed
+
+Origem: api_keys
+
+Consumidores:
+- audit
+- observability
+
+Descrição:
+Tentativa relevante de autenticação por API key falhou. O payload deve conter apenas tenant, prefixo quando disponível, motivo classificado e contexto operacional seguro; nunca segredo claro, hash ou header completo.
+
+---
+
+## api_key.rate_limited
+
+Origem: api_keys
+
+Consumidores:
+- audit
+- observability
+
+Descrição:
+Chave de API excedeu limite de requisições em endpoint público. O payload deve conter tenant, key_id/prefixo, endpoint, limite, janela e contador seguro; nunca segredo claro, hash ou header completo.
 
 ---
 

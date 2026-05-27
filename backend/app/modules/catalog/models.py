@@ -63,3 +63,26 @@ class ProductImage(models.Model):
 
     def __str__(self) -> str:  # pragma: no cover
         return f"{self.product_id}:{self.image_url}"
+
+
+class StorefrontDiscoveryEventLog(models.Model):
+    tenant = models.ForeignKey(
+        "tenants.Tenant",
+        on_delete=models.CASCADE,
+        related_name="storefront_discovery_events",
+    )
+    event_name = models.CharField(max_length=80)
+    session_key_hash = models.CharField(max_length=64, blank=True)
+    path = models.CharField(max_length=500, blank=True)
+    payload = models.JSONField(default=dict, blank=True)
+    occurred_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-occurred_at", "-id")
+        indexes = [
+            models.Index(fields=("tenant", "event_name", "-occurred_at"), name="cat_disc_tenant_name_idx"),
+            models.Index(fields=("tenant", "-occurred_at"), name="cat_disc_tenant_time_idx"),
+        ]
+
+    def __str__(self) -> str:  # pragma: no cover
+        return f"{self.tenant_id}:{self.event_name}:{self.occurred_at:%Y-%m-%d %H:%M:%S}"

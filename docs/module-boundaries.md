@@ -301,6 +301,21 @@ Gerenciar autenticação e contexto de usuários administrativos da loja e da pl
 `accounts` não representa `Customer`.  
 Customer é outro contexto do domínio.
 
+### Contrato de permissões administrativas
+
+- `accounts.application.admin_permissions` é dono da matriz inicial de papéis administrativos.
+- módulos tenant-owned podem consultar esse contrato por permission keys explícitas.
+- commands sensíveis devem aceitar `actor_role` quando a surface admin conseguir resolver o owner atual.
+- views não devem implementar regra de autorização local; elas apenas coletam contexto da request e delegam.
+- ausência de `actor_role` ainda é compatibilidade legada temporária até existir autenticação/admin middleware definitivo.
+- `accounts.application.admin_owner_commands` é dono de criar/editar `OwnerUser`.
+- gestão de roles/status/notificações de owners deve passar por `/ops/owners/` e não por mutações espalhadas em outros módulos.
+- `accounts.interfaces.middleware.OwnerContextMiddleware` pode preencher `request.owner_user` em `/ops/` a partir de `tenant + request.user.email`.
+- o middleware não decide autorização; ele apenas fornece contexto para views delegarem `actor_role` aos commands.
+- ausência de `request.owner_user` ainda deve ser tratada como compatibilidade temporária, não como permissão forte.
+- `accounts.interfaces.middleware.OpsAuthenticationGateMiddleware` pode transformar ausência de autenticação/owner em redirect ou `403` quando `HUBX_OPS_AUTH_GATE_ENFORCED=1`.
+- ativação default do gate depende de login owner/admin real, não apenas das páginas visuais de autenticação.
+
 ---
 
 ## 2. tenants
@@ -345,6 +360,35 @@ Ele fornece dados de produto; não decide compra.
 
 ---
 
+## 3A. audit
+
+### Responsabilidade
+Registrar eventos auditáveis administrativos e operacionais.
+
+### Pode acessar
+- tenants
+- eventos/payloads públicos enviados por application services
+
+### Não deve acessar diretamente
+- models internos de outros módulos
+- regras de negócio internas
+- executar correções operacionais
+
+### Contrato
+- escrita ocorre por `audit.application.audit_log_commands.record_event(...)`
+- leitura admin ocorre por `audit.application.admin_audit_log_queries`
+- eventos tenant-owned devem carregar `tenant_id`
+- eventos platform-scope exigem `allow_platform_scope=True`
+- metadados devem ser simples e sanitizados
+- instrumentação inicial permitida:
+  - criação de cupom em `coupons.application.admin_coupon_commands`
+  - criação/edição de página em `pages.application.admin_page_commands`
+  - aprovação/rejeição de avaliação em `reviews.application.admin_review_commands`
+- `audit` não deve importar models internos desses módulos nem decidir se a ação é permitida
+- ações bloqueadas por `accounts.application.admin_permissions` não devem registrar evento de domínio executado
+
+---
+
 ## 4. customers
 
 ### Responsabilidade
@@ -375,6 +419,7 @@ Gerenciar carrinho persistente e itens do carrinho.
 - customers
 - catalog
 - tenants
+- coupons, somente via application service de validação
 
 ### Não deve acessar diretamente
 - payments
@@ -384,6 +429,25 @@ Gerenciar carrinho persistente e itens do carrinho.
 ### Observação
 Carrinho não é pedido.
 `cart` prepara a compra, mas não a materializa sozinho.
+
+### Contrato atual de evolução
+
+- `cart` deve representar intenção de compra persistente antes do checkout.
+- `checkout` continua dono de entrega, pagamento, revisão final e criação de pedido.
+- `cart` pode guardar snapshots visuais e subtotal, mas não deve decidir frete final nem pagamento.
+- `cart` pode guardar `coupon_code`, mas elegibilidade e cálculo promocional pertencem a `coupons`.
+- o handoff esperado é `Cart active` → `CheckoutSession` → `Order`.
+- add-to-cart permanece acumulativo por padrão; proteção contra double-submit deve usar idempotency key explícita no boundary de `cart.application`.
+- `CartMutation` registra replay protection de mutações de cart por tenant/cart/chave, sem substituir a intenção acumulativa normal.
+- `cart` pode aplicar guarda leve de quantidade contra disponibilidade de `ProductVariant`, mas apenas para rejeitar intenção obviamente impossível; reserva, decremento e validação final de estoque continuam fora do carrinho.
+- `checkout` permanece a autoridade final para bloquear inconsistência de inventário no momento de conclusão da compra.
+- conflitos finais de estoque devem ser comunicados por `checkout` como resultado de conclusão e, quando evoluídos, carregar payload por item afetado; reconciliação não deve criar pedido parcial nem ajustar quantidade sem confirmação.
+- o payload de conflito de estoque pode ser recalculado por `checkout` no GET de recuperação usando `CheckoutSessionItem` e `ProductVariant`, desde que a leitura seja tenant-scoped e não escreva estoque.
+- ações de reconciliação de conflito final devem alterar somente a `CheckoutSession` via `checkout.application`, nunca `Cart` convertido, estoque de `catalog` ou pedido parcial.
+- `set_quantity` em `checkout.application` é aceitável como mutação explícita da sessão de checkout; ele não representa reserva de estoque nem confirmação de compra.
+- reconciliação de estoque não deve concluir pedido automaticamente; depois de ajustar a sessão, o cliente precisa confirmar novamente para acionar a revalidação final.
+- result codes de reconciliação de estoque pertencem a `checkout`; eles descrevem recuperação da sessão, não evento de pedido nem movimentação de inventário.
+- a trilha Cart Reliability está tecnicamente encerrada para esta fase; reservation engine, baixa pós-pagamento e allocation devem ser tratados em trilhas próprias de inventory/payment, não como responsabilidade adicional do carrinho.
 
 ---
 
@@ -498,6 +562,12 @@ Gerenciar cupons de desconto e sua validação.
 
 ### Observação
 Regras promocionais não devem ser espalhadas por checkout, cart e orders sem centralização.
+`coupons` deve validar por `tenant_id` e devolver resultado normalizado para cart/checkout consumirem.
+O contrato mínimo esperado é `validate_cart_coupon(tenant_id, coupon_code, cart_snapshot)`, sempre retornando result code explícito e `discount_total` serializado.
+A surface administrativa mínima de cupons deve viver em `coupons.interfaces` e escrever somente por `coupons.application.admin_coupon_commands`.
+Contabilidade de uso pertence a `coupons` e lê `Order` apenas como fonte do snapshot aplicado, sem recalcular promoção.
+O contrato inicial é `record_order_coupon_redemption(tenant_id, order_number)`, chamado por `checkout` após criação do pedido.
+Reversão de redemption também pertence a `coupons`; `orders` pode acionar command explícito durante cancelamento, mas não deve alterar ledger de cupons diretamente.
 
 ---
 
@@ -520,6 +590,9 @@ Gerenciar avaliações de produto.
 
 ### Observação
 `reviews` não deve decidir regra de catálogo, apenas enriquecê-lo.
+`catalog` deve consumir avaliações por application query de `reviews`, como agregados approved-only, sem ler diretamente detalhes internos do ORM.
+Reviews públicas devem ser tenant-scoped e moderadas antes de aparecer no storefront/PDP.
+Na PDP, `catalog.interfaces.views.ProductDetailView` pode compor `review_summary` e `approved_reviews` chamando `reviews.application.review_summary_queries`; `storefront_catalog_queries` não deve incorporar regras internas de moderação.
 
 ---
 
@@ -566,12 +639,15 @@ Gerenciar envio de e-mails e notificações transacionais.
 ### Observação
 `notifications` deve reagir a eventos, não tomar decisões centrais do domínio.
 
+Para cupons aplicados, `notifications` não deve consultar `coupons` nem recalcular desconto.
+Qualquer copy futura sobre cupom deve ser derivada do snapshot já persistido em `Order`, com CTA para o detalhe do pedido como fonte auditável.
+
 ---
 
 ## 14. pages
 
 ### Responsabilidade
-Gerenciar páginas institucionais editáveis da loja.
+Gerenciar páginas institucionais editáveis tenant-owned da loja.
 
 ### Pode acessar
 - tenants
@@ -582,12 +658,19 @@ Gerenciar páginas institucionais editáveis da loja.
 - orders
 - subscriptions
 
+### Contrato
+- admin escreve por `pages.application.admin_page_commands`
+- admin lê por `pages.application.admin_page_queries`
+- storefront lê por `pages.application.storefront_page_queries`
+- leitura pública deve exigir tenant resolvido e `status=published`
+- não há fallback global de conteúdo entre tenants
+
 ---
 
 ## 15. newsletter
 
 ### Responsabilidade
-Gerenciar inscrição de newsletter e base de contatos.
+Gerenciar inscrição de newsletter e base de contatos tenant-scoped.
 
 ### Pode acessar
 - tenants
@@ -596,6 +679,15 @@ Gerenciar inscrição de newsletter e base de contatos.
 
 ### Não deve acessar diretamente
 - checkout
+- payments
+- orders
+
+### Contrato
+- opt-in público escreve por `newsletter.application.newsletter_subscription_commands`
+- admin lê por `newsletter.application.admin_newsletter_queries`
+- inscrição exige tenant resolvido e e-mail normalizado
+- descadastro deve alterar status, não deletar histórico
+- campanhas e envio real devem passar por `notifications` em trilha futura
 - payments
 - shipping
 
@@ -828,3 +920,293 @@ Este documento existe para manter o Hubx Market:
 - leitura prática:
   - a abordagem multi-tenant deste módulo pode ser considerada concluída nesta fase
   - o que sobra agora é compatibilidade deliberada de leitura, não gap estrutural de boundary
+
+## Boundary de execução checkout/payment
+
+- a revisão pós-`Cart Reliability` confirma que a execução de pagamento já passa por três boundaries distintos:
+  - `payments` cria/acompanha `PaymentAttempt`, provider intent, redirect/return e webhook
+  - `orders` confirma ou falha o pagamento no pedido e aplica a baixa operacional pós-pagamento
+  - `catalog` fornece a variante e o estoque atual usado pela validação final
+- regra prática:
+  - `payments` não deve alterar pedido diretamente fora do command service público de `orders`
+  - `orders` não deve interpretar payload bruto de provider
+  - `catalog` não deve decidir estado financeiro do pedido
+- a ausência de reserva pré-pagamento continua deliberada nesta fase:
+  - carrinho e checkout bloqueiam impossibilidades óbvias
+  - checkout revalida antes de criar pedido
+  - webhook pago ainda revalida estoque antes de marcar pedido como pago
+- próxima fronteira a endurecer:
+  - cobertura explícita do caso `payment.paid` recebido quando estoque já não permite confirmação segura
+
+## Boundary de refund financeiro
+
+- `payments` é dono de `PaymentRefund`, idempotência, referência externa e chamada futura ao provider.
+- `orders` não deve chamar provider de refund nem interpretar payload bruto financeiro.
+- `orders`, `coupons`, `catalog` e `notifications` só devem reagir a uma confirmação explícita de refund concluído, preferencialmente por evento/command público.
+- regra prática:
+  - registrar intenção/bloqueio de refund não altera pedido, estoque, cupom ou comunicação.
+  - aprovação/admin deve preceder qualquer chamada real ao provider.
+  - `payment.refunded` só representa refund confirmado, não intenção `requested` nem `processing`.
+- a primeira surface admin de refunds deve ficar em `payments.interfaces` e listar apenas dados do ledger do tenant.
+- qualquer ação mutável futura deve continuar em `payments.application`, nunca dentro da view.
+- o command de aprovação de refund pertence a `payments.application` e deve apenas preparar execução futura.
+- provider execution, efeitos em pedido e eventos continuam fora do command de aprovação inicial.
+- a action admin de aprovação deve ficar em `payments.interfaces`, mas apenas como adaptador HTTP fino para `payments.application.approve_refund(...)`.
+- a view não deve decidir blockers nem transições; ela só coleta `tenant_id`, `refund_key`, ator/nota e delega.
+- o provider adapter de refund pertence a `payments.infrastructure` e deve apenas traduzir contrato externo/resposta.
+- transição de ledger após provider pertence a `payments.application`; efeitos em outros módulos continuam posteriores a refund confirmado.
+- o command de execução de refund pertence a `payments.application` e só pode consumir ledger `processing`.
+- mesmo quando a resposta externa for `succeeded`, emissão de evento e efeitos cross-module devem ser tratados como etapa posterior explícita.
+- detalhes do endpoint Pagar.me (`DELETE /charges/{charge_id}`, amount em centavos, bank account de boleto) pertencem exclusivamente a `payments.infrastructure`.
+- readiness produtiva de payments pertence a `payments.application.production_readiness_queries`.
+- os gates de produção podem classificar provider, webhook, refund, reconciliação, runbook e rollback, mas não devem chamar provider real nem movimentar dinheiro.
+- closure produtiva de payments não deve habilitar rollout amplo, self-service de refund, execução em lote ou correção financeira automática.
+
+## Boundary de login owner/admin
+
+- `accounts` é dono da autenticação owner/admin inicial para superfícies `/ops/`.
+- o contrato exige:
+  - tenant resolvido por subdomínio;
+  - `User` Django autenticável;
+  - `OwnerUser` ativo no mesmo tenant e com e-mail correspondente.
+- outros módulos não devem autenticar owner diretamente nem inferir permissão por e-mail.
+- módulos operacionais devem consumir `request.owner_user`, role/permissions ou application services de `accounts`.
+- customer login e `AccountProfile` permanecem fora desta boundary owner/admin.
+- convite e reset owner/admin também pertencem a `accounts`, mas delivery de e-mail real deve ser delegado futuramente a `notifications`.
+- nenhum módulo externo deve criar token de reset owner diretamente.
+- o registro de `EmailLog` para convite/reset pertence a `notifications.application`.
+- o processamento de entrega deve seguir o pipeline de notifications, nunca SMTP direto em `accounts`.
+- provisionamento inicial de owner pertence a `accounts` e só deve existir como operação explícita/management command.
+- nenhum módulo de storefront/customer deve criar `OwnerUser` ou `User` administrativo.
+- preflight de ativação do gate pertence a `accounts`, mas pode consultar readiness de provider em `notifications`.
+- o preflight não deve alterar settings/env nem executar deploy; ele apenas decide Go/No-Go.
+- evidência de rollout de produção também pertence a `accounts` como orquestração operacional.
+- health de `EmailLog` continua sendo dado de `notifications`; `accounts` apenas consome o snapshot para Go/No-Go.
+- métricas de owner access pertencem a `accounts`, mas podem agregar contagens de `EmailLog` owner access de `notifications`.
+- o endpoint de métricas não deve ficar sob `/ops/`, para não depender do gate que monitora.
+- rate limiting de login owner/admin pertence a `accounts.application`.
+- a proteção deve permanecer no fluxo owner/admin e não ser reaproveitada implicitamente para customer login.
+- política de sessão owner/admin pertence a `accounts.application`.
+- views não devem decidir duração de sessão; apenas repassam a intenção `remember_me`.
+- outros módulos não devem interpretar diretamente os marcadores internos `hubx_owner_session_*`.
+- matriz de roles/permissões administrativas pertence a `accounts.application.admin_permissions`.
+- helpers de interface para extrair role/permissão de `request.owner_user` pertencem a `accounts.interfaces.admin_rbac`.
+- módulos operacionais podem consultar esse helper para renderizar actions, mas writes sensíveis devem continuar validando permissão no command service dono.
+- o cockpit `/ops/` pode personalizar navegação usando permissões de `accounts`, mas não deve criar regras próprias de autorização fora dessa matriz.
+- enforcement HTTP granular de `/ops/` pertence a `accounts.interfaces.middleware`.
+- módulos operacionais não devem implementar middleware próprio de RBAC para `/ops/`; devem manter validação de writes nos command services.
+- permissões de navegação/leitura agora também podem proteger URL direta quando o gate `/ops/` está ativo.
+- readiness de produção do RBAC granular pertence a `accounts.application.ops_rbac_production_readiness_queries`.
+- o comando de readiness não deve alterar env, roles, usuários ou tenants; ele apenas emite evidência Go/No-Go.
+- evidência de ativação staging do RBAC granular pertence a `accounts.application.ops_rbac_staging_evidence_queries`.
+- o comando de evidência de staging apenas compõe preflight/readiness, checklist manual e rollback; ele não altera ambiente nem substitui validação real de staging.
+- evidência de ativação production do RBAC granular pertence a `accounts.application.ops_rbac_production_activation_evidence_queries`.
+- o comando de evidência production pode consumir health de notifications via rollout, mas não deve alterar `EmailLog`, provider, env ou roles.
+- monitoramento pós-produção do RBAC pertence a `accounts.application.ops_rbac_post_production_monitoring_queries`.
+- o snapshot pós-produção pode ler `AuditLog` e `EmailLog`, mas não deve executar rollback, alterar estado ou reprocessar notificações.
+- closure de produção do RBAC pertence a `accounts.application.ops_rbac_production_closure_queries`.
+- o closure apenas agrega evidências já existentes; ele não deve virar executor de rollout, rollback, IAM ou exportação formal de auditoria.
+- contrato/readiness de MFA/SSO owner/admin pertence a `accounts.application.owner_mfa_sso_readiness_queries`.
+- MFA futuro deve ser aplicado dentro do boundary de login owner/admin antes da sessão efetiva.
+- SSO futuro deve resolver identidade externa para `User` Django e `OwnerUser` ativo no mesmo tenant; nenhum módulo externo deve criar sessão owner diretamente.
+- audit continua dono dos registros persistidos, mas accounts decide quando registrar eventos owner access.
+- enrollment de MFA owner/admin pertence a `accounts.models.OwnerMfaFactor` e `accounts.application.owner_mfa_enrollment_queries`.
+- fatores MFA devem sempre pertencer ao mesmo tenant do `OwnerUser`; nenhum provider externo deve gravar fator diretamente fora de application service de `accounts`.
+- mutações de enrollment MFA pertencem a `accounts.application.owner_mfa_enrollment_commands`.
+- challenge de MFA owner/admin pertence a `accounts.application.owner_mfa_challenge_commands`.
+- commands de MFA devem registrar `AuditLog`, mas não devem autenticar owner nem criar sessão.
+- verificação de challenge pode marcar fator como verificado, mas enforcement no login continua boundary separada do fluxo owner/admin.
+- surface admin de MFA pertence a `accounts.interfaces.owner_views`, mas deve permanecer fina e delegar leituras/mutações para `accounts.application`.
+- readiness de break-glass e enforcement MFA pertence a `accounts.application`; nenhum módulo externo deve decidir bypass ou obrigatoriedade de MFA.
+- enforcement MFA de login owner/admin pertence a `accounts.application.owner_login_commands` e `accounts.interfaces.views`.
+- customer login não herda enforcement MFA owner/admin implicitamente.
+- rollback de enforcement MFA deve ser controlado por setting, não por alteração de dados ou remoção de fatores.
+- recovery codes MFA pertencem a `accounts.models.OwnerMfaRecoveryCode` e `accounts.application.owner_mfa_recovery_code_commands`.
+- recovery codes nunca devem ser persistidos ou auditados em texto claro; apenas a saída operacional de geração pode exibir o valor uma única vez.
+- resolução de `secret_reference` TOTP pertence a `accounts.application.owner_mfa_secret_storage`.
+- login/challenge não devem ler segredo TOTP diretamente sem passar pelo resolver de storage.
+- referências externas `ref:<path>` não devem ser consideradas resolvidas sem adapter/provider explícito.
+- adapters de provider de segredo MFA pertencem a `accounts.infrastructure.owner_mfa_secret_providers`.
+- readiness pode informar provider/referência/status, mas nunca deve imprimir o valor do segredo.
+- plano de migração de segredo TOTP pertence a `accounts.application.owner_mfa_totp_secret_migration_plan_queries`.
+- plano de migração não deve mover segredo nem atualizar `secret_reference`; execução deve ser trilha separada e controlada.
+- execução de migração de segredo TOTP pertence a `accounts.application.owner_mfa_totp_secret_migration_commands`.
+- execução só pode atualizar `OwnerMfaFactor.secret_reference` depois que o provider externo resolver o `target_ref` e o valor conferido for equivalente ao segredo local atual.
+- comandos de migração não devem copiar segredo para provider externo, imprimir segredo, nem alterar settings como `OWNER_MFA_ALLOW_LOCAL_TOTP_SECRET`.
+- readiness de aposentadoria do fallback local/plain pertence a `accounts.application.owner_mfa_local_secret_retirement_queries`.
+- readiness de retirement pode recomendar `OWNER_MFA_ALLOW_LOCAL_TOTP_SECRET=False`, mas não deve alterar env/settings nem migrar fatores.
+- evidência de execução da aposentadoria local/plain pertence a `accounts.application.owner_mfa_local_secret_retirement_execution_queries`.
+- evidência before/after pode validar setting atual e storage, mas não deve fazer deploy, reiniciar processo, alterar env/settings ou escrever em `OwnerMfaFactor`.
+- health monitoring do provider MFA pertence a `accounts.application.owner_mfa_provider_health_queries`.
+- monitoring pode reportar status/sinais/contagens por tenant, mas não deve imprimir segredo, fazer retry automático, alterar provider/env ou autenticar owner.
+- métricas Prometheus de health do provider MFA pertencem a `accounts.application.owner_mfa_provider_health_metrics_queries` e `accounts.interfaces.views`.
+- métricas devem usar labels de baixa cardinalidade e não devem incluir owner, factor, segredo ou reference path completo.
+- closure da trilha de provider health MFA pertence a `accounts.application.owner_mfa_provider_health_closure_queries`.
+- closure apenas agrega health e presença de artefatos de observabilidade; não deve ativar Prometheus/Grafana, alterar env/settings ou executar rollback.
+- readiness para aposentadoria do código local/plain pertence a `accounts.application.owner_mfa_local_secret_code_retirement_queries`.
+- essa readiness pode listar superfícies de código e recomendar execução futura, mas não deve remover suporte `plain:`, alterar dados ou desligar rollback operacional.
+- execução de aposentadoria do default local/plain pertence a `accounts.application.owner_mfa_local_secret_code_retirement_execution_queries`.
+- execução pode endurecer defaults de settings e emitir evidência, mas rollback deve continuar por env explícito e parsing local só deve ser removido após sweep global.
+- sweep global de dados legados MFA pertence a `accounts.application.owner_mfa_legacy_data_global_sweep_queries`.
+- sweep global deve ser read-only, agregar por tenant e não expor owner, factor, segredo ou reference path completo.
+- review de remoção do parser local/plain pertence a `accounts.application.owner_mfa_local_secret_parser_removal_queries`.
+- essa review pode montar plano e rollback de deploy, mas não deve remover parser, alterar dados ou tratar env rollback como suficiente após a remoção.
+- execução de remoção do parser local/plain pertence a `accounts.application.owner_mfa_local_secret_parser_removal_execution_queries` e `accounts.application.owner_mfa_secret_storage`.
+- após a execution, `plain:` e valores legados sem `ref:` devem ser tratados como `unsupported-local` sem retornar segredo; comandos/readiness podem reportar blocker, mas não devem expor secret material.
+- review de provider Vault/KMS para MFA pertence a `accounts.application.owner_mfa_vault_kms_provider_review_queries`.
+- essa review pode escolher contrato/target e compor health/parser removal, mas não deve chamar Vault/KMS real, alterar env/settings, migrar refs ou imprimir segredo.
+- contrato técnico de adapter Vault/KMS pertence a `accounts.application.owner_mfa_vault_kms_provider_adapter_contract_queries`.
+- esse contrato pode definir settings, erros e testes esperados, mas a implementação de chamadas externas deve permanecer em `accounts.infrastructure.owner_mfa_secret_providers`.
+- skeleton de adapter Vault/KMS pertence a `accounts.infrastructure.owner_mfa_secret_providers`.
+- evidência de execution do skeleton pertence a `accounts.application.owner_mfa_vault_kms_provider_adapter_skeleton_execution_queries` e não deve escrever fatores, chamar SDK real, cachear segredo ou fazer fallback automático para `env`.
+- readiness evidence do provider Vault/KMS pertence a `accounts.application.owner_mfa_vault_kms_provider_readiness_evidence_queries`.
+- essa evidence pode compor skeleton e health closure por tenant, mas não deve ativar staging, mudar env/settings, exportar auditoria formal ou imprimir segredo.
+- review de canário staging Vault/KMS pertence a `accounts.application.owner_mfa_vault_kms_provider_staging_canary_queries`.
+- essa review pode emitir checklist manual, preflight e rollback, mas não deve autenticar owner, criar sessão, alterar env/settings, chamar SDK real ou coletar código TOTP.
+- evidência declarativa do canário staging Vault/KMS pertence a `accounts.application.owner_mfa_vault_kms_provider_staging_canary_evidence_queries`.
+- essa evidence pode registrar resultados manuais informados por flags, mas não deve automatizar browser/login, criar sessão, alterar fatores, escrever AuditLog ou coletar segredo/código TOTP.
+- contrato do adapter real Vault/KMS pertence a `accounts.application.owner_mfa_vault_kms_provider_real_adapter_contract_queries`.
+- esse contrato pode exigir evidência de canário e confirmações operacionais, mas não deve instalar SDK, chamar provider real, alterar settings/env, migrar segredo ou trocar o skeleton.
+- skeleton real/mocável do adapter Vault/KMS pertence a `accounts.infrastructure.owner_mfa_secret_providers`.
+- evidência de execution do skeleton real pertence a `accounts.application.owner_mfa_vault_kms_provider_real_adapter_skeleton_execution_queries` e não deve instalar SDK, usar credenciais reais, escrever segredo, cachear segredo ou fazer fallback automático para `env`.
+- review de dependência SDK Vault/KMS pertence a `accounts.application.owner_mfa_vault_kms_provider_sdk_dependency_review_queries`.
+- essa review pode definir pacotes, imports opcionais, contratos de falha, testes e rollback, mas não deve instalar dependências, importar SDK em module load, chamar provider real, alterar env/settings ou expor segredo.
+- execução do branch SDK Vault/KMS pertence a `accounts.infrastructure.owner_mfa_secret_providers` e a evidência pertence a `accounts.application.owner_mfa_vault_kms_provider_sdk_adapter_execution_queries`.
+- essa execução pode validar import lazy e resposta mocável do adapter SDK, mas não deve exigir SDK no startup, chamar endpoint externo real, carregar credencial real, escrever fatores ou fazer fallback automático para `env`.
+- review de endpoint real Vault/KMS pertence a `accounts.application.owner_mfa_vault_kms_provider_real_endpoint_review_queries`.
+- essa review pode escolher Hashicorp Vault como primeiro endpoint, definir settings/auth/path/timeout e blockers, mas não deve chamar `hvac`, carregar token/AppRole, criar secrets, escrever fatores ou imprimir path completo.
+- execução do endpoint real Hashicorp Vault pertence a `accounts.infrastructure.owner_mfa_secret_providers` e a evidência pertence a `accounts.application.owner_mfa_hashicorp_vault_real_endpoint_execution_queries`.
+- essa execução pode chamar `hvac` de forma lazy quando explicitamente habilitada, mas não deve instalar dependência, criar/migrar secrets, imprimir token/role secret/path completo ou reativar fallback local/plain.
+- evidência de smoke staging Hashicorp Vault pertence a `accounts.application.owner_mfa_hashicorp_vault_staging_smoke_evidence_queries`.
+- essa evidência pode agregar resultado manual de smoke/rollback/redaction/health, mas não deve automatizar login, criar sessão, alterar fatores, criar secrets no Vault, chamar rollback ou exportar evidência formal.
+- readiness de produção do provider Vault/KMS pertence a `accounts.application.owner_mfa_vault_kms_provider_production_readiness_queries`.
+- essa readiness pode consolidar smoke, health, runbook, monitoring e rollback em Go/No-Go, mas não deve alterar flags/env, executar deploy, chamar rollback, criar secrets ou exportar evidência formal.
+- gate de produção Hashicorp Vault pertence a `accounts.application.owner_mfa_hashicorp_vault_production_gate_queries`.
+- esse gate pode definir ativação por tenant, ordem de rollout, flags esperadas, plantão e rollback window, mas não deve alterar flags/env, executar deploy/restart, criar secrets, ativar produção ou chamar rollback.
+- evidência de ativação production Vault/KMS pertence a `accounts.application.owner_mfa_vault_kms_provider_production_activation_evidence_queries`.
+- essa evidência pode consolidar resultados declarados pós-deploy, probe, login/challenge, health e redaction, mas não deve executar deploy/restart, alterar flags/env, chamar rollback, criar secrets ou exportar evidência formal.
+- monitoramento pós-ativação Hashicorp Vault pertence a `accounts.application.owner_mfa_hashicorp_vault_post_activation_monitoring_queries`.
+- esse monitoring pode classificar HEALTHY/WATCH/ROLLBACK a partir de sinais declarados, mas não deve executar rollback, expandir tenants, alterar flags/env, criar incidentes ou exportar evidência formal.
+- closure production Vault/KMS pertence a `accounts.application.owner_mfa_vault_kms_production_closure_queries`.
+- esse closure pode compor monitoring, registrar riscos residuais e recomendar expansão, mas não deve executar rollback, expandir tenants, alterar flags/env, acessar secrets ou tratar evidence do tenant canário como autorização global.
+- review de expansão Hashicorp Vault pertence a `accounts.application.owner_mfa_hashicorp_vault_tenant_expansion_queries`.
+- essa review pode validar tenants-alvo e guardrails de expansão, mas não deve ativar provider, alterar flags/env, criar secrets, executar rollback ou reutilizar evidence do canário como evidência dos targets.
+- evidência de expansão Hashicorp Vault pertence a `accounts.application.owner_mfa_hashicorp_vault_tenant_expansion_evidence_queries`.
+- essa evidência pode registrar confirmations declarativas por target tenant, mas não deve ativar flags/env, executar rollback, chamar expansão global, criar secrets ou expor path/token/segredo.
+- monitoramento pós-expansão Hashicorp Vault pertence a `accounts.application.owner_mfa_hashicorp_vault_target_post_expansion_monitoring_queries`.
+- esse monitoring pode classificar sinais do target e recomendar próximo ciclo, mas não deve liberar próximo tenant automaticamente, alterar flags/env, executar rollback ou criar incidentes.
+- review do próximo tenant Hashicorp Vault pertence a `accounts.application.owner_mfa_hashicorp_vault_next_tenant_expansion_queries`.
+- essa review pode decidir READY/PAUSED/BLOCKED para cadência, mas não deve ativar o próximo tenant, alterar flags/env, executar rollback, criar secrets ou pular review/evidence/monitoring do próximo ciclo.
+- closure de cadência Hashicorp Vault pertence a `accounts.application.owner_mfa_hashicorp_vault_expansion_cadence_closure_queries`.
+- esse closure pode consolidar decisão, riscos, arquivo de evidências e próximos tracks, mas não deve ativar tenants, alterar flags/env, executar rollback, exportar evidência formal ou acessar secrets.
+- review de runbook de rotação Vault/KMS pertence a `accounts.application.owner_mfa_vault_kms_rotation_runbook_queries`.
+- essa review pode listar passos de rotação/rollback e validar readiness operacional, mas não deve gerar token/AppRole, atualizar secret/configuração, alterar flags/env, executar rotação/rollback ou expor material sensível.
+- evidência de rotação Vault/KMS pertence a `accounts.application.owner_mfa_vault_kms_rotation_evidence_queries`.
+- essa evidência pode registrar confirmations pós-execução e evidence pack redigido, mas não deve gerar/revogar credencial, atualizar secret/configuração, executar rollback ou expor token/secret/path.
+- monitoramento pós-rotação Vault/KMS pertence a `accounts.application.owner_mfa_vault_kms_post_rotation_monitoring_queries`.
+- esse monitoring pode classificar sinais pós-rotação e orientar rollback/closure, mas não deve restaurar credencial, retomar expansão automaticamente, alterar flags/env ou executar rollback.
+- closure de rotação Vault/KMS pertence a `accounts.application.owner_mfa_vault_kms_rotation_closure_queries`.
+- esse closure pode encerrar a rotação e recomendar export/retomada, mas não deve exportar evidência formal, restaurar credencial, retomar expansão automaticamente, alterar flags/env ou executar rollback.
+- closure final da trilha MFA owner/admin pertence a `accounts.application.owner_mfa_track_closure_queries`.
+- esse closure pode consumir a closure de evidência MFA de `audit` e consolidar decisão operacional, mas não deve reimprimir/exportar evidência, alterar `AuditLog`, ativar enforcement/provider/tenant, alterar flags/env ou executar rollback.
+- re-seleção de ROI de segurança pertence a `accounts.application.security_roi_reselection_queries`.
+- essa review pode compor a closure MFA e recomendar próxima trilha, mas não deve implementar API keys, alterar autenticação, ativar provider/tenant/enforcement, escrever `AuditLog` ou reimprimir evidência auditável.
+- governança inicial de API keys pertence a `api_keys.application.api_key_governance_foundation_queries`.
+- essa review pode definir contrato de modelo, hash, escopos, revogação, auditoria, last-used e rate limit, mas não deve criar modelo/migration, gerar segredo real, autenticar requests, criar API pública ou UI admin.
+- modelo e commands mínimos de API keys pertencem a `api_keys.models.ApiKey` e `api_keys.application.api_key_commands`.
+- criação/revogação podem registrar `AuditLog`, mas não devem autenticar requests, criar API pública, expor hash, persistir segredo claro ou permitir revogação cross-tenant.
+- contrato runtime de autenticação por API key pertence a `api_keys.application.api_key_runtime_authentication_contract_queries`.
+- skeleton runtime de autenticação por API key pertence a `api_keys.application.api_key_runtime_authentication`.
+- review do adapter DRF de API keys pertence a `api_keys.application.api_key_drf_authentication_adapter_review_queries`.
+- adapter DRF mínimo de API keys pertence a `api_keys.interfaces.authentication`.
+- review do primeiro endpoint público por API key pertence a `api_keys.application.api_key_public_endpoint_pilot_review_queries`.
+- autenticação runtime futura deve validar `tenant_id + prefix`, hash do segredo completo, status ativo e escopo mínimo antes de entregar acesso a qualquer endpoint público.
+- API key não define tenant por conta própria; tenant continua sendo resolvido pelo ciclo de request/subdomínio.
+- falhas runtime podem emitir `api_key.auth_failed`, mas sem header completo, segredo claro, hash ou material sensível em payload/log.
+- o skeleton runtime pode retornar uma `rate_limit_key` declarativa, mas não deve implementar rate limiter real nem liberar endpoint público por conta própria.
+- adapter DRF futuro deve ser opt-in por view/surface e não deve ser adicionado globalmente em `DEFAULT_AUTHENTICATION_CLASSES` neste estágio.
+- principal DRF futuro não pode expor segredo, hash ou header completo; deve carregar apenas dados mínimos de autorização.
+- `HasApiKeyScope` deve negar views sem `required_api_key_scope`, para impedir endpoints programáticos sem escopo explícito.
+- primeiro endpoint público recomendado é leitura versionada de catálogo (`GET /api/v1/catalog/products/`) com escopo `read:catalog`; pedidos, clientes, pagamentos e `/ops/` ficam fora do piloto.
+- endpoint público futuro não pode aceitar `tenant_id` via query/body; tenant continua vindo do request.
+- execução do endpoint público de catálogo pertence a `catalog.application.public_catalog_api_queries` e `catalog.interfaces.public_api_views`, usando autenticação/permission do módulo `api_keys`.
+- `GET /api/v1/catalog/products/` deve permanecer read-only, versionado, protegido por `read:catalog` e flag `API_KEYS_PUBLIC_CATALOG_PRODUCTS_ENABLED`.
+- payload público de catálogo não deve expor estoque bruto, dados de clientes, pedidos, pagamentos, segredo, hash, header ou `tenant_id`.
+- review de rate limit para endpoints públicos por API key pertence a `api_keys.application.api_key_public_endpoint_rate_limit_review_queries`.
+- rate limit futuro deve usar `tenant + api_key + endpoint`, não IP como substituto de tenant/key.
+- evento `api_key.rate_limited` pode ser emitido por throttle futuro, sem segredo, hash ou header completo.
+- execução de rate limit por API key pertence a `api_keys.application.api_key_rate_limit` e `api_keys.interfaces.throttling`.
+- endpoints públicos devem ativar `ApiKeyRateLimitThrottle` explicitamente; `DEFAULT_THROTTLE_CLASSES` permanece fora do corte.
+- review de observabilidade de endpoints públicos por API key pertence a `api_keys.application.api_key_public_endpoint_observability_review_queries`.
+- métricas futuras de API key pública podem usar `tenant_id`, `endpoint`, `result` e prefixo, mas nunca segredo, hash, header ou valor claro.
+- endpoint futuro de métricas deve ser protegido por token de observabilidade, não por API key pública.
+- métricas Prometheus de API keys públicas pertencem a `api_keys.application.api_key_public_endpoint_metrics` e `api_keys.interfaces.views.ApiKeyPublicEndpointMetricsView`.
+- `/api-keys/metrics/public-endpoints/` deve aceitar somente token de observabilidade; API keys públicas não autenticam esse scrape.
+- contrato de dashboard Grafana para endpoints públicos pertence a `api_keys.application.api_key_public_endpoint_dashboard_review_queries`.
+- dashboard de API keys públicas deve consumir somente métricas já expostas por `api_keys`, sem importar detalhes internos de `catalog`, `accounts` ou billing.
+- labels de dashboard devem permanecer operacionais e de baixa cardinalidade; segredo, hash, header ou valor claro da API key são proibidos.
+- artefato Grafana versionado para API keys públicas pertence a `infra/observability/grafana/api-key-public-endpoints-dashboard.json` e não deve introduzir consulta direta a banco, API pública ou módulo de catálogo.
+- review de alert rules para endpoints públicos por API key pertence a `api_keys.application.api_key_public_endpoint_alert_rules_review_queries`.
+- alertas de API keys públicas devem consumir apenas métricas Prometheus de `api_keys`; não devem consultar banco, audit log diretamente ou identificar API key completa/hash.
+- artefato de alert rules para API keys públicas pertence a `infra/observability/prometheus/api-keys-alert-rules.yml` e deve permanecer separado de billing/quotas e Alertmanager real.
+- closure de observabilidade de endpoints públicos por API key pertence a `api_keys.application.api_key_public_endpoint_observability_closure_queries`.
+- closure de observabilidade apenas verifica artefatos e riscos residuais; não deve ativar Prometheus/Grafana/Alertmanager nem alterar settings de ambiente.
+- review de rollout produtivo de endpoints públicos por API key pertence a `api_keys.application.api_key_public_endpoint_production_rollout_review_queries`.
+- rollout review apenas define checklist, evidência e rollback; não deve criar token real, executar chamadas contra produção ou alterar Prometheus/Grafana/Alertmanager.
+- evidência de ativação produtiva de endpoints públicos por API key pertence a `api_keys.application.api_key_public_endpoint_production_activation_evidence_queries`.
+- activation evidence apenas registra sinais sanitizados e referência externa; não deve executar chamadas reais, armazenar token/header/API key ou alterar observabilidade do ambiente.
+- review de monitoramento pós-ativação de endpoints públicos por API key pertence a `api_keys.application.api_key_public_endpoint_post_activation_monitoring_review_queries`.
+- post-activation monitoring review apenas classifica estabilidade e ruído; não deve alterar thresholds, expandir endpoints ou executar rollback diretamente.
+- review de expansão de endpoints públicos por API key pertence a `api_keys.application.api_key_public_endpoint_expansion_review_queries`.
+- expansão recomendada para detalhe público de produto deve ser implementada em `catalog` na query/view pública, reutilizando autenticação, permission, rate limit e observabilidade de `api_keys`.
+- endpoints públicos novos não devem abrir pedidos, clientes, pagamentos, operações admin, escopo `read:*`, PII, tenant_id ou estoque bruto.
+- review de contrato do endpoint público de detalhe de produto pertence a `api_keys.application.api_key_public_product_detail_endpoint_contract_review_queries`.
+- execução do detalhe público de produto deve pertencer a `catalog.application.public_catalog_api_queries` e `catalog.interfaces.public_api_views`, com `api_keys` fornecendo autenticação, escopo, throttle e métricas.
+- detalhe público de produto deve filtrar por tenant atual, slug, `status=ACTIVE` e `is_active=True`; não pode fazer fallback global ou expor dados privados de variante.
+- execução do endpoint público de detalhe de produto pertence a `catalog.application.public_catalog_api_queries.get_product_detail` e `catalog.interfaces.public_api_views.PublicCatalogProductDetailApiView`.
+- detalhe público de produto deve registrar métricas de sucesso com endpoint `catalog.products.detail` e usar flag `API_KEYS_PUBLIC_CATALOG_PRODUCT_DETAIL_ENABLED`.
+- review de observabilidade do detalhe público de produto pertence a `api_keys.application.api_key_public_product_detail_observability_review_queries`.
+- observabilidade do detalhe deve reutilizar métricas, dashboard e alert rules por label `endpoint`; não deve adicionar labels por slug/SKU nem criar artefatos dedicados sem necessidade operacional.
+- closure de expansão de endpoints públicos por API key pertence a `api_keys.application.api_key_public_endpoint_expansion_closure_queries`.
+- closure de expansão apenas confirma listagem, detalhe e observabilidade; não deve selecionar ou implementar novo endpoint público.
+- closure de governança de API keys pertence a `api_keys.application.api_key_governance_closure_queries`.
+- governance closure apenas agrega artefatos, decisões e riscos residuais; não deve criar novo endpoint, alterar billing/quotas, ativar ambiente real ou exportar segredo/hash/header/API key.
+- re-seleção ROI sistêmica pós-governança de API keys pertence a `api_keys.application.api_key_system_roi_reselection_queries`.
+- system ROI re-selection apenas classifica candidatos e recomenda próxima abordagem; não deve criar endpoints, quotas, cobrança, UX admin, runbook produtivo ou exemplos com material sensível.
+- review de documentação/onboarding de parceiros pertence a `api_keys.application.api_key_partner_onboarding_documentation_review_queries`.
+- onboarding de parceiros pode documentar endpoints públicos já existentes, escopo, erros, rate limit e observabilidade; não deve alterar `catalog`, runtime auth, billing, quotas, admin UX, endpoints ou credenciais reais.
+- execution review de documentação de parceiros pertence a `api_keys.application.api_key_partner_documentation_execution_review_queries`.
+- documentation execution review pode validar canal, owner, suporte, template de smoke e change control; não deve publicar documento, enviar credencial, executar smoke real, alterar runtime ou definir termos comerciais.
+- evidência de publicação da documentação de parceiros pertence a `api_keys.application.api_key_partner_documentation_publication_evidence_queries`.
+- publication evidence pode registrar versão, canal, audiência, tenant reference e referência de evidência sanitizada; não deve armazenar credencial, header, token, screenshot sensível, executar smoke real ou ativar runtime.
+- closure de onboarding de parceiros pertence a `api_keys.application.api_key_partner_onboarding_closure_queries`.
+- partner onboarding closure apenas consolida documentação, pacote, evidência, riscos residuais e deferrals; não deve ativar parceiro, criar quota/billing, abrir endpoint ou executar smoke real.
+- re-seleção ROI pós-onboarding pertence a `api_keys.application.api_key_post_onboarding_roi_reselection_queries`.
+- post-onboarding ROI re-selection apenas classifica candidatos após closure; não deve executar smoke, criar credencial, ativar parceiro, abrir endpoint, alterar quota/billing ou mudar autenticação.
+- contrato de smoke de ativação de parceiro pertence a `api_keys.application.api_key_partner_activation_smoke_contract_queries`.
+- smoke contract pode registrar referências sanitizadas de parceiro/tenant/ambiente/slug/evidência e escopo do smoke; não deve executar request, armazenar credencial, alterar runtime, abrir endpoint, criar billing/quotas ou publicar material sensível.
+- contrato de quotas comerciais pertence a `api_keys.application.api_key_commercial_quotas_contract_queries`.
+- commercial quotas contract pode definir dimensões, janela, limite padrão, comportamento de excesso, visibilidade admin e observabilidade; não deve criar modelo, enforcement runtime, cobrança, plano, endpoint novo ou material sensível nesta wave.
+- modelo e commands mínimos de quotas comerciais pertencem a `api_keys.models.ApiKeyQuota`, `api_keys.models.ApiKeyQuotaUsage` e `api_keys.application.api_key_quota_commands`.
+- enforcement runtime de quota pertence a `api_keys.application.api_key_quota_enforcement` e deve ser chamado por `api_keys.interfaces.throttling` depois do rate limit técnico.
+- quotas comerciais não devem importar `subscriptions`, criar cobrança, validar plano ou abrir endpoint público novo.
+- visibilidade admin de quotas pertence a `api_keys.application.api_key_quota_queries` e `api_keys.interfaces.ops_views`; deve expor apenas prefixo, quota e uso agregado, nunca segredo/hash/header.
+- closure de quotas comerciais pertence a `api_keys.application.api_key_commercial_quotas_closure_queries`.
+
+## Boundary de exportação de evidência auditável
+
+- exportação formal de `AuditLog` pertence a `audit.application.audit_evidence_export_queries`.
+- módulos como `accounts`, `orders`, `coupons`, `pages` e `reviews` devem registrar eventos por `audit.application.audit_log_commands`, não exportar suas próprias evidências diretamente.
+- export tenant-owned exige `tenant_id`; export platform-scope exige opt-in explícito.
+- export não deve alterar logs, reprocessar eventos, executar rollback ou consultar dados internos dos módulos de origem.
+- metadata em export é opt-in para reduzir exposição acidental.
+- surface HTTP de exportação pertence a `audit.interfaces` e deve apenas adaptar a request para `audit.application.audit_evidence_export_queries`.
+- export HTTP sob `/ops/audit/` não deve habilitar platform-scope nem bypassar o gate `audit.view`.
+- closure da trilha de evidência auditável pertence a `audit.application.audit_evidence_closure_queries`.
+- closure de audit não deve virar storage, assinatura, redaction avançado ou IAM.
+- review de export de evidência MFA owner/admin pertence a `audit.application.owner_mfa_audit_evidence_export_review_queries`.
+- essa review pode amostrar `AuditLog` tenant-scoped com `module=accounts` e decidir Go/No-Go para export, mas não deve consultar tabelas internas de `accounts`, exportar artefato final, incluir metadata sensível por padrão ou habilitar platform-scope.
+- execution de export de evidência MFA owner/admin pertence a `audit.application.owner_mfa_audit_evidence_export_execution_queries`.
+- essa execution pode gerar JSONL/CSV tenant-scoped a partir de `AuditLog`, mas não deve incluir metadata, habilitar platform-scope, assinar/armazenar artefato, registrar novo `AuditLog` ou consultar tabelas internas de `accounts`.
+- closure de export de evidência MFA owner/admin pertence a `audit.application.owner_mfa_audit_evidence_export_closure_queries`.
+- esse closure pode validar entrega, retenção, storage decision e riscos residuais, mas não deve reimprimir o export, assinar/armazenar artefato, alterar `AuditLog`, habilitar platform-scope ou consultar tabelas internas de `accounts`.

@@ -1,0 +1,78 @@
+from __future__ import annotations
+
+from django.core.management.base import BaseCommand, CommandError
+
+from app.modules.accounts.application.owner_mfa_hashicorp_vault_tenant_expansion_queries import (
+    owner_mfa_hashicorp_vault_tenant_expansion_queries,
+)
+
+
+class Command(BaseCommand):
+    help = "Revisa expansão tenant-by-tenant do provider Hashicorp Vault MFA owner/admin."
+
+    def add_arguments(self, parser):
+        parser.add_argument("--canary-tenant-id", dest="canary_tenant_id", required=True)
+        parser.add_argument("--target-tenant-ids", dest="target_tenant_ids", required=True)
+        parser.add_argument("--probe-reference", dest="probe_reference", default="owners/vault-kms/hashicorp-vault-probe")
+        parser.add_argument("--canary-owner-email", dest="canary_owner_email", required=True)
+        parser.add_argument("--monitoring-window-elapsed", action="store_true")
+        parser.add_argument("--provider-health-stable", action="store_true")
+        parser.add_argument("--owner-login-error-spike-absent", action="store_true")
+        parser.add_argument("--support-incidents-absent", action="store_true")
+        parser.add_argument("--rollback-signal-absent", action="store_true")
+        parser.add_argument("--evidence-redacted", action="store_true")
+        parser.add_argument("--rollback-runbook-confirmed", action="store_true")
+        parser.add_argument("--residual-risks-accepted", action="store_true")
+        parser.add_argument("--tenant-expansion-plan-documented", action="store_true")
+        parser.add_argument("--expansion-window-confirmed", action="store_true")
+        parser.add_argument("--per-tenant-evidence-required", action="store_true")
+        parser.add_argument("--support-standby-confirmed", action="store_true")
+        parser.add_argument("--rollback-window-confirmed", action="store_true")
+        parser.add_argument("--max-parallel-tenants", type=int, default=1)
+        parser.add_argument("--fail-on-blockers", action="store_true")
+
+    def handle(self, *args, **options):
+        review = owner_mfa_hashicorp_vault_tenant_expansion_queries.get_review(
+            canary_tenant_id=options["canary_tenant_id"],
+            target_tenant_ids=options["target_tenant_ids"],
+            probe_reference=options["probe_reference"],
+            canary_owner_email=options["canary_owner_email"],
+            monitoring_window_elapsed=options["monitoring_window_elapsed"],
+            provider_health_stable=options["provider_health_stable"],
+            owner_login_error_spike_absent=options["owner_login_error_spike_absent"],
+            support_incidents_absent=options["support_incidents_absent"],
+            rollback_signal_absent=options["rollback_signal_absent"],
+            evidence_redacted=options["evidence_redacted"],
+            rollback_runbook_confirmed=options["rollback_runbook_confirmed"],
+            residual_risks_accepted=options["residual_risks_accepted"],
+            tenant_expansion_plan_documented=options["tenant_expansion_plan_documented"],
+            expansion_window_confirmed=options["expansion_window_confirmed"],
+            per_tenant_evidence_required=options["per_tenant_evidence_required"],
+            support_standby_confirmed=options["support_standby_confirmed"],
+            rollback_window_confirmed=options["rollback_window_confirmed"],
+            max_parallel_tenants=options["max_parallel_tenants"],
+        )
+        self.stdout.write(
+            f"[{str(review['status']).upper()}] result={review['result']} canary_tenant_id={review['canary_tenant_id']} "
+            f"target_provider={review['target_provider']} max_parallel_tenants={review['max_parallel_tenants']}"
+        )
+        for target in review["target_tenants"]:
+            blockers = ",".join(target["blockers"]) if target["blockers"] else "none"
+            self.stdout.write(
+                f"target_tenant tenant_id={target['tenant_id']} slug={target['tenant_slug']} "
+                f"ready={str(target['ready']).lower()} blockers={blockers}"
+            )
+        for key, value in review["expansion_signals"].items():
+            self.stdout.write(f"expansion_signal key={key} value={value}")
+        for decision in review["decisions"]:
+            self.stdout.write(f"decision key={decision.key} status={decision.status} summary={decision.summary}")
+        for blocker in review["blockers"]:
+            self.stdout.write(f"blocker={blocker}")
+        for step in review["runbook"]:
+            self.stdout.write(f"runbook={step}")
+        for requirement in review["evidence_requirements"]:
+            self.stdout.write(f"evidence_requirement={requirement}")
+        for track in review["next_tracks"]:
+            self.stdout.write(f"next_track={track}")
+        if options["fail_on_blockers"] and not review["ready"]:
+            raise CommandError("Owner MFA Hashicorp Vault tenant expansion review is blocked.")

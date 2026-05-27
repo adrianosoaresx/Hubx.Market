@@ -1,0 +1,13 @@
+{% extends "pages/templates/login_page.html" %}
+
+{% block title %}{{ page_title|default:"Verificação MFA" }}{% endblock %}
+
+{% block login_fields %}
+    {% if mfa_ready %}
+        {% include "shared/components/forms/input.html" with name="challenge" label="Código MFA" value=challenge_value placeholder="000000" autocomplete="one-time-code" %}
+    {% else %}
+        <p class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+            Challenge MFA expirado ou indisponível. Volte ao login e tente novamente.
+        </p>
+    {% endif %}
+{% endblock %}

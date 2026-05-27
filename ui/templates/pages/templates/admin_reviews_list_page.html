@@ -1,0 +1,27 @@
+{% extends layout_template|default:"layouts/admin_shell.html" %}
+
+{% block page_title %}{{ page_title|default:"Avaliações" }}{% endblock %}
+{% block shell_title %}{% if shell_title %}{{ shell_title }}{% elif page_title %}{{ page_title }}{% else %}Avaliações{% endif %}{% endblock %}
+
+{% block content %}
+<section class="space-y-6">
+    {% with eyebrow=page_eyebrow|default:"Prova social" title=page_title|default:"Avaliações" description=page_description|default:"Modere avaliações antes de exibir no storefront." %}
+        {% include "shared/components/layout/page_header.html" %}
+    {% endwith %}
+
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        {% if create_href %}
+            {% include "shared/components/actions/button.html" with label="Nova avaliação" href=create_href variant="primary" %}
+        {% endif %}
+        <p class="text-sm text-[var(--color-text-secondary)]">Somente avaliações aprovadas poderão aparecer na PDP.</p>
+    </div>
+
+    {% with method="get" action=filter_action title="Filtros" description="Busque por produto, autor, título ou texto e refine por status." search_name=search_name search_value=search_value search_label=search_label search_placeholder=search_placeholder status_name="status" status_options=status_options status_selected=status_selected status_label="Status" reset_url=reset_url submit_label="Aplicar filtros" reset_label="Limpar" %}
+        {% include "shared/components/composite/filter_bar.html" %}
+    {% endwith %}
+
+    {% with title="Avaliações para moderação" description="Listagem tenant-scoped de reviews antes da exibição pública." count=table_count columns=columns rows=rows table_id="admin-reviews-table" empty_title=empty_title empty_description=empty_description %}
+        {% include "shared/components/data_display/data_table.html" %}
+    {% endwith %}
+</section>
+{% endblock %}

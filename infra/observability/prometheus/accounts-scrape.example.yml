@@ -1,0 +1,16 @@
+scrape_configs:
+  - job_name: "hubx-accounts-owner-access"
+    metrics_path: "/accounts/metrics/owner-access/"
+    scheme: "https"
+    static_configs:
+      - targets:
+          - "store.hubx.market"
+    bearer_token: "${ACCOUNTS_OBSERVABILITY_TOKEN}"
+
+  - job_name: "hubx-accounts-owner-mfa-provider-health"
+    metrics_path: "/accounts/metrics/owner-mfa-provider-health/"
+    scheme: "https"
+    static_configs:
+      - targets:
+          - "store.hubx.market"
+    bearer_token: "${ACCOUNTS_OBSERVABILITY_TOKEN}"

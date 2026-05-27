@@ -1,0 +1,40 @@
+{% extends "layouts/storefront_shell.html" %}
+
+{% block page_title %}{{ page_title|default:"Receba novidades" }}{% endblock %}
+
+{% block content %}
+<section class="mx-auto max-w-2xl space-y-6">
+    <header class="space-y-3 text-center">
+        <p class="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--color-text-secondary)]">Newsletter</p>
+        <h1 class="text-4xl font-semibold tracking-tight text-[var(--color-text-primary)]">Receba novidades da loja</h1>
+        <p class="text-lg text-[var(--color-text-secondary)]">Um opt-in simples para novidades, lançamentos e comunicações deste tenant.</p>
+    </header>
+
+    {% if feedback_result == "subscribed" %}
+        <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
+            Inscrição registrada. Vamos manter você por perto — do jeito certo, com consentimento claro.
+        </div>
+    {% endif %}
+
+    {% if form_error %}
+        <div class="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{{ form_error }}</div>
+    {% endif %}
+
+    <form method="post" action="{{ form_action }}" class="ds-surface space-y-6 p-6">
+        {% csrf_token %}
+        {% with name="name" label="Nome" value=name placeholder="Seu nome" %}
+            {% include "shared/components/forms/input.html" %}
+        {% endwith %}
+        {% with name="email" label="E-mail" value=email placeholder="voce@email.com" input_type="email" required=True %}
+            {% include "shared/components/forms/input.html" %}
+        {% endwith %}
+        <label class="flex gap-3 text-sm text-[var(--color-text-secondary)]">
+            <input type="checkbox" name="consent_label" value="{{ consent_label }}" required class="mt-1">
+            <span>{{ consent_label }}</span>
+        </label>
+        {% with primary_label="Quero receber novidades" secondary_label="Voltar ao catálogo" secondary_href="/catalog/" %}
+            {% include "shared/components/forms/form_actions.html" %}
+        {% endwith %}
+    </form>
+</section>
+{% endblock %}

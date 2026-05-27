@@ -1,11 +1,28 @@
+from django.contrib.auth import SESSION_KEY
+from django.contrib.auth.models import User
+from django.contrib.auth.tokens import default_token_generator
+from django.core.cache import cache
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
 
 from app.modules.accounts.application.account_page_queries import account_page_queries
-from app.modules.accounts.models import AccountProfile
+from app.modules.accounts.application.owner_session_policy import (
+    OWNER_SESSION_KIND_KEY,
+    OWNER_SESSION_REMEMBERED_KEY,
+)
+from app.modules.accounts.application.owner_login_commands import OWNER_MFA_PENDING_SESSION_KEY
+from app.modules.accounts.application.owner_mfa_challenge_commands import TotpChallengeVerifier
+from app.modules.accounts.application.owner_mfa_recovery_code_commands import owner_mfa_recovery_code_commands
+from app.modules.accounts.models import AccountProfile, OwnerMfaFactor, OwnerUser
+from app.modules.audit.models import AuditLog
 from app.modules.customers.models import Customer
+from app.modules.notifications.models import EmailLog
 from app.modules.orders.models import Order, OrderItem
 from app.modules.tenants.models import Tenant
+import time
+from unittest.mock import patch
 
 
 class AccountViewTests(TestCase):
@@ -52,7 +69,7 @@ class AccountViewTests(TestCase):
         overview_payload = account_page_queries.get_account_overview_data()
 
         self.assertEqual(login_payload["page_title"], "Entrar")
-        self.assertTrue(login_payload["remember_me"])
+        self.assertFalse(login_payload["remember_me"])
         self.assertEqual(login_payload["login_label"], "E-mail da conta")
         self.assertEqual(login_payload["primary_label"], "Acessar conta")
         self.assertEqual(login_payload["login_value"], "")
@@ -65,6 +82,467 @@ class AccountViewTests(TestCase):
         self.assertEqual(overview_payload["profile_mode"], "missing")
         self.assertIn("ainda não encontramos um perfil persistido", overview_payload["summary_content"].lower())
         self.assertIn("voltar ao catálogo", overview_payload["page_meta"].lower())
+
+
+@override_settings(ALLOWED_HOSTS=["testserver", ".hubx.market", "localhost"])
+class OwnerLoginViewTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.tenant = Tenant.objects.create(
+            name="Owner Login Tenant",
+            slug="owner-login-tenant",
+            subdomain="owner-login-tenant",
+            is_active=True,
+        )
+        self.user = User.objects.create_user(
+            username="owner-login",
+            email="owner.login@hubx.market",
+            password="secret-pass",
+        )
+        self.owner = OwnerUser.objects.create(
+            tenant=self.tenant,
+            email="owner.login@hubx.market",
+            full_name="Owner Login",
+            role="owner",
+            is_active=True,
+        )
+
+    def test_owner_login_post_authenticates_active_owner_and_redirects_to_next(self):
+        response = self.client.post(
+            reverse("accounts:login"),
+            data={
+                "login": "owner.login@hubx.market",
+                "password": "secret-pass",
+                "next": reverse("owners:admin-owners-list"),
+            },
+            HTTP_HOST=f"{self.tenant.subdomain}.hubx.market",
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], reverse("owners:admin-owners-list"))
+        self.assertEqual(str(self.client.session[SESSION_KEY]), str(self.user.id))
+        self.assertEqual(self.client.session[OWNER_SESSION_KIND_KEY], "owner")
+        self.assertFalse(self.client.session[OWNER_SESSION_REMEMBERED_KEY])
+        self.assertTrue(
+            AuditLog.objects.filter(
+                tenant=self.tenant,
+                module="accounts",
+                action="owner.login",
+                entity_id=str(self.owner.id),
+            ).exists()
+        )
+
+    @override_settings(OWNER_MFA_REQUIRED=True, OWNER_MFA_SECRET_PROVIDER="env", OWNER_MFA_SECRET_ENV_PREFIX="OWNER_MFA_SECRET_")
+    def test_owner_login_with_mfa_required_redirects_to_challenge_without_session(self):
+        self._create_verified_totp_factor()
+
+        response = self.client.post(
+            reverse("accounts:login"),
+            data={
+                "login": "owner.login@hubx.market",
+                "password": "secret-pass",
+                "next": reverse("owners:admin-owners-list"),
+            },
+            HTTP_HOST=f"{self.tenant.subdomain}.hubx.market",
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], reverse("accounts:owner-mfa-challenge"))
+        self.assertNotIn(SESSION_KEY, self.client.session)
+        self.assertIn(OWNER_MFA_PENDING_SESSION_KEY, self.client.session)
+        self.assertTrue(AuditLog.objects.filter(action="owner.login_mfa_required").exists())
+
+    @override_settings(OWNER_MFA_REQUIRED=True, OWNER_MFA_SECRET_PROVIDER="env", OWNER_MFA_SECRET_ENV_PREFIX="OWNER_MFA_SECRET_")
+    def test_owner_mfa_challenge_completes_login_session(self):
+        self._create_verified_totp_factor()
+        self.client.post(
+            reverse("accounts:login"),
+            data={
+                "login": "owner.login@hubx.market",
+                "password": "secret-pass",
+                "next": reverse("owners:admin-owners-list"),
+            },
+            HTTP_HOST=f"{self.tenant.subdomain}.hubx.market",
+        )
+
+        with patch.dict("os.environ", {"OWNER_MFA_SECRET_OWNERS_LOGIN_TOTP": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"}):
+            response = self.client.post(
+                reverse("accounts:owner-mfa-challenge"),
+                data={"challenge": self._current_challenge(), "next": reverse("owners:admin-owners-list")},
+                HTTP_HOST=f"{self.tenant.subdomain}.hubx.market",
+            )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], reverse("owners:admin-owners-list"))
+        self.assertEqual(str(self.client.session[SESSION_KEY]), str(self.user.id))
+        self.assertEqual(self.client.session[OWNER_SESSION_KIND_KEY], "owner")
+        self.assertNotIn(OWNER_MFA_PENDING_SESSION_KEY, self.client.session)
+        self.assertTrue(AuditLog.objects.filter(action="owner.login_mfa_completed").exists())
+        self.assertTrue(AuditLog.objects.filter(action="owner.login").exists())
+
+    @override_settings(OWNER_MFA_REQUIRED=True, OWNER_MFA_SECRET_PROVIDER="env", OWNER_MFA_SECRET_ENV_PREFIX="OWNER_MFA_SECRET_")
+    def test_owner_mfa_challenge_rejects_invalid_code_without_session(self):
+        self._create_verified_totp_factor()
+        self.client.post(
+            reverse("accounts:login"),
+            data={"login": "owner.login@hubx.market", "password": "secret-pass"},
+            HTTP_HOST=f"{self.tenant.subdomain}.hubx.market",
+        )
+
+        with patch.dict("os.environ", {"OWNER_MFA_SECRET_OWNERS_LOGIN_TOTP": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"}):
+            response = self.client.post(
+                reverse("accounts:owner-mfa-challenge"),
+                data={"challenge": "000000"},
+                HTTP_HOST=f"{self.tenant.subdomain}.hubx.market",
+            )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertNotIn(SESSION_KEY, self.client.session)
+        self.assertIn(OWNER_MFA_PENDING_SESSION_KEY, self.client.session)
+        self.assertTrue(AuditLog.objects.filter(action="owner.login_mfa_failed").exists())
+
+    @override_settings(OWNER_MFA_REQUIRED=True)
+    def test_owner_mfa_challenge_accepts_recovery_code_once(self):
+        result = owner_mfa_recovery_code_commands.generate_codes(
+            tenant_id=self.tenant.id,
+            owner_id=self.owner.id,
+            count=1,
+            actor_role="owner",
+        )
+        self.client.post(
+            reverse("accounts:login"),
+            data={"login": "owner.login@hubx.market", "password": "secret-pass"},
+            HTTP_HOST=f"{self.tenant.subdomain}.hubx.market",
+        )
+
+        response = self.client.post(
+            reverse("accounts:owner-mfa-challenge"),
+            data={"challenge": result["codes"][0]},
+            HTTP_HOST=f"{self.tenant.subdomain}.hubx.market",
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(str(self.client.session[SESSION_KEY]), str(self.user.id))
+        self.assertTrue(AuditLog.objects.filter(action="owner.mfa_recovery_code_used").exists())
+
+    @override_settings(OWNER_MFA_REQUIRED=True, OWNER_MFA_SECRET_PROVIDER="env", OWNER_MFA_SECRET_ENV_PREFIX="OWNER_MFA_SECRET_")
+    def test_owner_mfa_challenge_accepts_external_secret_reference(self):
+        OwnerMfaFactor.objects.create(
+            tenant=self.tenant,
+            owner=self.owner,
+            factor_type=OwnerMfaFactor.FactorType.TOTP,
+            provider_key="env",
+            secret_reference="ref:owners/login/totp",
+            is_active=True,
+            is_verified=True,
+        )
+        self.client.post(
+            reverse("accounts:login"),
+            data={"login": "owner.login@hubx.market", "password": "secret-pass"},
+            HTTP_HOST=f"{self.tenant.subdomain}.hubx.market",
+        )
+
+        with patch.dict("os.environ", {"OWNER_MFA_SECRET_OWNERS_LOGIN_TOTP": "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"}):
+            response = self.client.post(
+                reverse("accounts:owner-mfa-challenge"),
+                data={"challenge": self._current_challenge()},
+                HTTP_HOST=f"{self.tenant.subdomain}.hubx.market",
+            )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(str(self.client.session[SESSION_KEY]), str(self.user.id))
+
+    @override_settings(OWNER_MFA_REQUIRED=True)
+    def test_owner_login_blocks_when_mfa_required_without_verified_factor(self):
+        response = self.client.post(
+            reverse("accounts:login"),
+            data={"login": "owner.login@hubx.market", "password": "secret-pass"},
+            HTTP_HOST=f"{self.tenant.subdomain}.hubx.market",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertNotIn(SESSION_KEY, self.client.session)
+        self.assertTrue(AuditLog.objects.filter(action="owner.login_mfa_blocked").exists())
+
+    @override_settings(OWNER_MFA_REQUIRED=False, OWNER_MFA_ALLOW_LOCAL_TOTP_SECRET=True)
+    def test_owner_mfa_enforcement_rollback_setting_preserves_direct_login(self):
+        self._create_verified_totp_factor()
+
+        response = self.client.post(
+            reverse("accounts:login"),
+            data={"login": "owner.login@hubx.market", "password": "secret-pass"},
+            HTTP_HOST=f"{self.tenant.subdomain}.hubx.market",
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(str(self.client.session[SESSION_KEY]), str(self.user.id))
+        self.assertNotIn(OWNER_MFA_PENDING_SESSION_KEY, self.client.session)
+
+    def _create_verified_totp_factor(self):
+        return OwnerMfaFactor.objects.create(
+            tenant=self.tenant,
+            owner=self.owner,
+            factor_type=OwnerMfaFactor.FactorType.TOTP,
+            provider_key="env",
+            secret_reference="ref:owners/login/totp",
+            is_active=True,
+            is_verified=True,
+        )
+
+    def _current_challenge(self) -> str:
+        verifier = TotpChallengeVerifier()
+        secret = verifier._normalize_secret("GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ")
+        return verifier._code(secret=secret, counter=int(time.time()) // verifier.interval_seconds)
+
+    @override_settings(OWNER_SESSION_IDLE_SECONDS=1800, OWNER_SESSION_REMEMBER_SECONDS=86400)
+    def test_owner_login_uses_short_session_without_remember_me(self):
+        response = self.client.post(
+            reverse("accounts:login"),
+            data={"login": "owner.login@hubx.market", "password": "secret-pass"},
+            HTTP_HOST=f"{self.tenant.subdomain}.hubx.market",
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(self.client.session.get_expiry_age(), 1800)
+        self.assertEqual(self.client.session[OWNER_SESSION_KIND_KEY], "owner")
+        self.assertFalse(self.client.session[OWNER_SESSION_REMEMBERED_KEY])
+        audit_log = AuditLog.objects.get(
+            tenant=self.tenant,
+            module="accounts",
+            action="owner.login",
+            entity_id=str(self.owner.id),
+        )
+        self.assertEqual(audit_log.metadata["session_expiry_seconds"], 1800)
+        self.assertFalse(audit_log.metadata["session_remembered"])
+
+    @override_settings(OWNER_SESSION_IDLE_SECONDS=1800, OWNER_SESSION_REMEMBER_SECONDS=86400)
+    def test_owner_login_uses_remember_me_session_when_requested(self):
+        response = self.client.post(
+            reverse("accounts:login"),
+            data={
+                "login": "owner.login@hubx.market",
+                "password": "secret-pass",
+                "remember_me": "on",
+            },
+            HTTP_HOST=f"{self.tenant.subdomain}.hubx.market",
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(self.client.session.get_expiry_age(), 86400)
+        self.assertEqual(self.client.session[OWNER_SESSION_KIND_KEY], "owner")
+        self.assertTrue(self.client.session[OWNER_SESSION_REMEMBERED_KEY])
+        audit_log = AuditLog.objects.get(
+            tenant=self.tenant,
+            module="accounts",
+            action="owner.login",
+            entity_id=str(self.owner.id),
+        )
+        self.assertEqual(audit_log.metadata["session_expiry_seconds"], 86400)
+        self.assertTrue(audit_log.metadata["session_remembered"])
+
+    def test_owner_login_rejects_missing_owner_for_current_tenant(self):
+        other_tenant = Tenant.objects.create(
+            name="Other Owner Login Tenant",
+            slug="other-owner-login-tenant",
+            subdomain="other-owner-login-tenant",
+            is_active=True,
+        )
+
+        response = self.client.post(
+            reverse("accounts:login"),
+            data={"login": "owner.login@hubx.market", "password": "secret-pass"},
+            HTTP_HOST=f"{other_tenant.subdomain}.hubx.market",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertNotIn(SESSION_KEY, self.client.session)
+        self.assertContains(response, "Não foi possível entrar", status_code=400)
+
+    def test_owner_login_rejects_inactive_owner(self):
+        self.owner.is_active = False
+        self.owner.save(update_fields=["is_active"])
+
+        response = self.client.post(
+            reverse("accounts:login"),
+            data={"login": "owner.login@hubx.market", "password": "secret-pass"},
+            HTTP_HOST=f"{self.tenant.subdomain}.hubx.market",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertNotIn(SESSION_KEY, self.client.session)
+
+    def test_owner_login_rejects_unsafe_next_url(self):
+        response = self.client.post(
+            reverse("accounts:login"),
+            data={
+                "login": "owner.login@hubx.market",
+                "password": "secret-pass",
+                "next": "https://evil.example/ops/",
+            },
+            HTTP_HOST=f"{self.tenant.subdomain}.hubx.market",
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], reverse("merchant_ops:admin-dashboard"))
+
+    @override_settings(OWNER_LOGIN_RATE_LIMIT_MAX_ATTEMPTS=2, OWNER_LOGIN_RATE_LIMIT_WINDOW_SECONDS=60, OWNER_LOGIN_RATE_LIMIT_LOCKOUT_SECONDS=120)
+    def test_owner_login_rate_limits_repeated_failures(self):
+        for _ in range(2):
+            response = self.client.post(
+                reverse("accounts:login"),
+                data={"login": "owner.login@hubx.market", "password": "wrong-pass"},
+                HTTP_HOST=f"{self.tenant.subdomain}.hubx.market",
+                REMOTE_ADDR="203.0.113.10",
+            )
+            self.assertEqual(response.status_code, 400)
+
+        response = self.client.post(
+            reverse("accounts:login"),
+            data={"login": "owner.login@hubx.market", "password": "secret-pass"},
+            HTTP_HOST=f"{self.tenant.subdomain}.hubx.market",
+            REMOTE_ADDR="203.0.113.10",
+        )
+
+        self.assertEqual(response.status_code, 429)
+        self.assertEqual(response["Retry-After"], "120")
+        self.assertNotIn(SESSION_KEY, self.client.session)
+        self.assertTrue(
+            AuditLog.objects.filter(
+                tenant=self.tenant,
+                module="accounts",
+                action="owner.login_rate_limited",
+                actor_label="owner.login@hubx.market",
+            ).exists()
+        )
+
+    @override_settings(OWNER_LOGIN_RATE_LIMIT_MAX_ATTEMPTS=2, OWNER_LOGIN_RATE_LIMIT_WINDOW_SECONDS=60, OWNER_LOGIN_RATE_LIMIT_LOCKOUT_SECONDS=120)
+    def test_owner_login_success_clears_failed_attempts(self):
+        response = self.client.post(
+            reverse("accounts:login"),
+            data={"login": "owner.login@hubx.market", "password": "wrong-pass"},
+            HTTP_HOST=f"{self.tenant.subdomain}.hubx.market",
+            REMOTE_ADDR="203.0.113.20",
+        )
+        self.assertEqual(response.status_code, 400)
+
+        response = self.client.post(
+            reverse("accounts:login"),
+            data={"login": "owner.login@hubx.market", "password": "secret-pass"},
+            HTTP_HOST=f"{self.tenant.subdomain}.hubx.market",
+            REMOTE_ADDR="203.0.113.20",
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.client.logout()
+
+        response = self.client.post(
+            reverse("accounts:login"),
+            data={"login": "owner.login@hubx.market", "password": "wrong-pass"},
+            HTTP_HOST=f"{self.tenant.subdomain}.hubx.market",
+            REMOTE_ADDR="203.0.113.20",
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_owner_logout_clears_session_and_records_audit(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse("accounts:logout"),
+            HTTP_HOST=f"{self.tenant.subdomain}.hubx.market",
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], reverse("accounts:login"))
+        self.assertNotIn(SESSION_KEY, self.client.session)
+        self.assertTrue(
+            AuditLog.objects.filter(
+                tenant=self.tenant,
+                module="accounts",
+                action="owner.logout",
+                entity_id=str(self.owner.id),
+            ).exists()
+        )
+
+    def test_owner_forgot_password_returns_generic_success_and_reset_url_when_valid(self):
+        response = self.client.post(
+            reverse("accounts:forgot-password"),
+            data={"email": "owner.login@hubx.market"},
+            HTTP_HOST=f"{self.tenant.subdomain}.hubx.market",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Se este e-mail estiver habilitado")
+        self.assertContains(response, "/accounts/reset-password/")
+        self.assertTrue(
+            EmailLog.objects.filter(
+                tenant=self.tenant,
+                source_event="owner.password_reset_requested",
+                intent_key="owner.access.password_reset",
+                recipient_email="owner.login@hubx.market",
+            ).exists()
+        )
+        self.assertTrue(
+            AuditLog.objects.filter(
+                tenant=self.tenant,
+                module="accounts",
+                action="owner.password_reset_requested",
+                entity_id=str(self.owner.id),
+            ).exists()
+        )
+
+    def test_owner_forgot_password_is_generic_for_unknown_owner(self):
+        response = self.client.post(
+            reverse("accounts:forgot-password"),
+            data={"email": "unknown@hubx.market"},
+            HTTP_HOST=f"{self.tenant.subdomain}.hubx.market",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Se este e-mail estiver habilitado")
+        self.assertNotContains(response, "/accounts/reset-password/")
+
+    def test_owner_reset_password_token_updates_password_and_redirects_to_login(self):
+        uidb64 = urlsafe_base64_encode(force_bytes(self.user.pk))
+        token = default_token_generator.make_token(self.user)
+
+        response = self.client.post(
+            reverse("accounts:reset-password-token", kwargs={"uidb64": uidb64, "token": token}),
+            data={"password": "OwnerPass-12345", "confirm_password": "OwnerPass-12345"},
+            HTTP_HOST=f"{self.tenant.subdomain}.hubx.market",
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], f"{reverse('accounts:login')}?reset=completed")
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("OwnerPass-12345"))
+        self.assertTrue(
+            AuditLog.objects.filter(
+                tenant=self.tenant,
+                module="accounts",
+                action="owner.password_reset_completed",
+                entity_id=str(self.owner.id),
+            ).exists()
+        )
+
+    def test_owner_reset_password_token_rejects_cross_tenant_owner_context(self):
+        other_tenant = Tenant.objects.create(
+            name="Other Reset Tenant",
+            slug="other-reset-tenant",
+            subdomain="other-reset-tenant",
+            is_active=True,
+        )
+        uidb64 = urlsafe_base64_encode(force_bytes(self.user.pk))
+        token = default_token_generator.make_token(self.user)
+
+        response = self.client.post(
+            reverse("accounts:reset-password-token", kwargs={"uidb64": uidb64, "token": token}),
+            data={"password": "OwnerPass-12345", "confirm_password": "OwnerPass-12345"},
+            HTTP_HOST=f"{other_tenant.subdomain}.hubx.market",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.check_password("OwnerPass-12345"))
 
 
 class AccountPersistedReadTests(TestCase):

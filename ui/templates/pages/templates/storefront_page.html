@@ -1,0 +1,23 @@
+{% extends "layouts/storefront_shell.html" %}
+
+{% block page_title %}{{ page_title|default:page.title }}{% endblock %}
+
+{% block content %}
+<article class="mx-auto max-w-3xl space-y-8">
+    <header class="space-y-3">
+        <p class="text-sm font-semibold uppercase tracking-[0.24em] text-[var(--color-text-secondary)]">Informações da loja</p>
+        <h1 class="text-4xl font-semibold tracking-tight text-[var(--color-text-primary)]">{{ page.title }}</h1>
+        {% if page.seo_description %}
+            <p class="text-lg text-[var(--color-text-secondary)]">{{ page.seo_description }}</p>
+        {% endif %}
+    </header>
+
+    <section class="ds-surface space-y-4 p-6 text-base leading-7 text-[var(--color-text-primary)]">
+        {% if page.body %}
+            {{ page.body|linebreaks }}
+        {% else %}
+            <p>Esta página ainda não possui conteúdo publicado.</p>
+        {% endif %}
+    </section>
+</article>
+{% endblock %}

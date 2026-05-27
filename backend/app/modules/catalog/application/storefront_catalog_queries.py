@@ -219,7 +219,61 @@ def _catalog_card_decision_signal(product: dict[str, object]) -> str:
     return "compra_pronta"
 
 
-def _catalog_initial_order_key(product: dict[str, object]) -> tuple[int, int, int, str, str]:
+def _discovery_rank_components(product: dict[str, object]) -> dict[str, int]:
+    status = str(product.get("status") or "").strip().lower()
+    stock_state = str(product.get("stock_state") or _stock_state(product))
+    decision_signal = str(product.get("catalog_card_decision_signal") or _catalog_card_decision_signal(product))
+    return {
+        "status": 0 if status == "draft" else 1000,
+        "stock": {
+            "low_stock": 400,
+            "in_stock": 320,
+            "backorder": 180,
+            "out_of_stock": 20,
+        }.get(stock_state, 0),
+        "offer": 60 if bool(str(product.get("compare_price") or "").strip()) else 0,
+        "featured": 40 if bool(product.get("is_featured")) else 0,
+        "decision_signal": {
+            "decisao_rapida_com_oferta": 40,
+            "decisao_rapida": 35,
+            "oferta_editorial": 30,
+            "oferta_para_comparar": 25,
+            "destaque_editorial": 20,
+            "compra_pronta": 15,
+            "reserva_planejada": 10,
+            "acompanhar_reposicao": 0,
+        }.get(decision_signal, 0),
+    }
+
+
+def _discovery_rank_score(product: dict[str, object]) -> int:
+    return sum(_discovery_rank_components(product).values())
+
+
+def _discovery_rank_reason(product: dict[str, object]) -> str:
+    stock_state = str(product.get("stock_state") or _stock_state(product))
+    has_offer = bool(str(product.get("compare_price") or "").strip())
+    is_featured = bool(product.get("is_featured"))
+    decision_signal = str(product.get("catalog_card_decision_signal") or _catalog_card_decision_signal(product))
+
+    if stock_state == "out_of_stock":
+        return "reposição acompanhável, sem prioridade de compra imediata"
+    if stock_state == "backorder":
+        return "reserva planejada com disponibilidade futura"
+    if decision_signal == "decisao_rapida_com_oferta":
+        return "poucas unidades com oferta ativa"
+    if decision_signal == "decisao_rapida":
+        return "poucas unidades prontas para decisão rápida"
+    if has_offer and is_featured:
+        return "oferta ativa com destaque editorial"
+    if has_offer:
+        return "oferta ativa em produto disponível"
+    if is_featured:
+        return "destaque editorial disponível"
+    return "produto disponível para compra pronta"
+
+
+def _catalog_initial_order_key(product: dict[str, object]) -> tuple[int, int, int, int, str]:
     status = str(product.get("status") or "").strip().lower()
     stock_state = str(product.get("stock_state") or _stock_state(product))
     status_rank = 1 if status == "draft" else 0
@@ -236,6 +290,13 @@ def _catalog_initial_order_key(product: dict[str, object]) -> tuple[int, int, in
         stock_rank,
         offer_rank,
         featured_rank,
+        str(product.get("name") or "").lower(),
+    )
+
+
+def _discovery_rank_order_key(product: dict[str, object]) -> tuple[int, str]:
+    return (
+        -int(product.get("discovery_rank_score") or _discovery_rank_score(product)),
         str(product.get("name") or "").lower(),
     )
 
@@ -353,6 +414,72 @@ def _checkout_continuity_note(product: dict[str, object]) -> str:
     if state == "low_stock":
         return f"A combinação {variant} já pode seguir para checkout agora, com o mesmo contexto de poucas unidades destacado nesta página."
     return f"A combinação {variant} já pode seguir para checkout com o mesmo preço e disponibilidade vistos aqui."
+
+
+def _pdp_decision_checks(product: dict[str, object]) -> list[dict[str, str]]:
+    state = _stock_state(product)
+    variant = _variant_emphasis_copy(product)
+    price = str(product.get("price") or "").strip()
+    price_label = f"R$ {price.replace('.', ',')}" if price else "Preço confirmado"
+    if state == "out_of_stock":
+        return [
+            {
+                "title": "Preço visível",
+                "description": f"{price_label} para {variant}, preservado para comparação enquanto você acompanha reposição.",
+            },
+            {
+                "title": "Sem checkout agora",
+                "description": f"{variant} não está disponível para compra imediata nesta loja.",
+            },
+            {
+                "title": "Próximo passo seguro",
+                "description": "Voltar ao catálogo ou acompanhar reposição evita iniciar um checkout indisponível.",
+            },
+        ]
+    if state == "backorder":
+        return [
+            {
+                "title": "Preço confirmado",
+                "description": f"{price_label} para {variant}, com reserva disponível.",
+            },
+            {
+                "title": "Prazo antes do pagamento",
+                "description": "A compra segue como reserva e o prazo é confirmado antes de finalizar.",
+            },
+            {
+                "title": "Checkout consistente",
+                "description": "O checkout mantém a mesma variante, preço e contexto de encomenda desta página.",
+            },
+        ]
+    if state == "low_stock":
+        return [
+            {
+                "title": "Preço confirmado",
+                "description": f"{price_label} para {variant}, pronto para checkout.",
+            },
+            {
+                "title": "Poucas unidades",
+                "description": "A disponibilidade exibida já considera a variante selecionada agora.",
+            },
+            {
+                "title": "Checkout sem surpresa",
+                "description": "O próximo passo preserva preço, variante e estoque desta decisão.",
+            },
+        ]
+    return [
+        {
+            "title": "Preço confirmado",
+            "description": f"{price_label} para {variant}, pronto para checkout.",
+        },
+        {
+            "title": "Disponibilidade atual",
+            "description": "Estoque e variante exibidos nesta página são a base da próxima etapa.",
+        },
+        {
+            "title": "Checkout sem surpresa",
+            "description": "O checkout mantém a mesma combinação, preço e disponibilidade vistos aqui.",
+        },
+    ]
 
 def _gallery_seed(product: dict[str, object]) -> str:
     brand = str(product.get("brand", "") or "").strip()
@@ -703,6 +830,7 @@ def _enrich_product(product: dict[str, object]) -> dict[str, object]:
     badge_label, badge_variant = _badge(enriched)
     gallery_items = _persisted_gallery_items(enriched) or _gallery_items(enriched)
     stock_state = _stock_state(enriched)
+    decision_signal = _catalog_card_decision_signal(enriched)
     enriched.update(
         {
             "stock_state": stock_state,
@@ -718,7 +846,7 @@ def _enrich_product(product: dict[str, object]) -> dict[str, object]:
             "catalog_card_availability_note": _catalog_card_availability_note(enriched),
             "catalog_card_click_helper": _catalog_card_click_helper(enriched),
             "catalog_card_curation_note": _catalog_card_curation_note(enriched),
-            "catalog_card_decision_signal": _catalog_card_decision_signal(enriched),
+            "catalog_card_decision_signal": decision_signal,
             "product_gallery_items": gallery_items,
             "main_image_url": gallery_items[0]["url"],
             "main_image_alt": gallery_items[0]["alt"],
@@ -729,6 +857,7 @@ def _enrich_product(product: dict[str, object]) -> dict[str, object]:
             "effective_variant_summary": _effective_variant_summary(enriched),
             "availability_note": _availability_note(enriched),
             "cta_helper": _cta_helper(enriched),
+            "pdp_decision_checks": _pdp_decision_checks(enriched),
             "primary_action_label": (
                 "Avise-me da reposição"
                 if stock_state == "out_of_stock"
@@ -743,6 +872,13 @@ def _enrich_product(product: dict[str, object]) -> dict[str, object]:
             "quantity": 1,
             "eyebrow": product["brand"],
             "effective_variant_label": _variant_emphasis_copy(enriched),
+        }
+    )
+    enriched.update(
+        {
+            "discovery_rank_components": _discovery_rank_components(enriched),
+            "discovery_rank_score": _discovery_rank_score(enriched),
+            "discovery_rank_reason": _discovery_rank_reason(enriched),
         }
     )
     return enriched
@@ -765,7 +901,7 @@ class StorefrontCatalogQueryService:
         real_products = self.orm_repository.list_products(tenant_id=tenant_id)
         source = real_products or self.fallback_repository.list_products()
         enriched = [_enrich_product(product) for product in source]
-        return sorted(enriched, key=_catalog_initial_order_key)
+        return sorted(enriched, key=_discovery_rank_order_key)
 
     def get_product(
         self,

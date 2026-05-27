@@ -1,0 +1,54 @@
+{% extends layout_template|default:"layouts/admin_shell.html" %}
+
+{% block page_title %}{{ page_title|default:"Owner" }}{% endblock %}
+{% block shell_title %}{{ page_title|default:"Owner" }}{% endblock %}
+
+{% block content %}
+<section class="space-y-6">
+    {% with eyebrow=page_eyebrow title=page_title description=page_description meta=form_error %}
+        {% include "shared/components/layout/page_header.html" %}
+    {% endwith %}
+
+    <form method="post" action="{{ form_action }}" class="grid gap-6 rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-sm">
+        {% csrf_token %}
+
+        <div class="grid gap-2">
+            <label class="text-sm font-semibold text-[var(--color-text-primary)]" for="email">E-mail</label>
+            <input id="email" name="email" type="email" value="{{ email }}" class="ds-input" required>
+            {% if errors.email %}<p class="text-sm text-[var(--color-danger)]">{{ errors.email }}</p>{% endif %}
+        </div>
+
+        <div class="grid gap-2">
+            <label class="text-sm font-semibold text-[var(--color-text-primary)]" for="full_name">Nome</label>
+            <input id="full_name" name="full_name" type="text" value="{{ full_name }}" class="ds-input">
+            {% if errors.full_name %}<p class="text-sm text-[var(--color-danger)]">{{ errors.full_name }}</p>{% endif %}
+        </div>
+
+        <div class="grid gap-2">
+            <label class="text-sm font-semibold text-[var(--color-text-primary)]" for="role">Papel</label>
+            <select id="role" name="role" class="ds-input">
+                {% for option in role_options %}
+                    <option value="{{ option.value }}"{% if option.value == role_selected %} selected{% endif %}>{{ option.label }}</option>
+                {% endfor %}
+            </select>
+            {% if errors.role %}<p class="text-sm text-[var(--color-danger)]">{{ errors.role }}</p>{% endif %}
+        </div>
+
+        <div class="grid gap-3 md:grid-cols-2">
+            <label class="flex items-center gap-3 rounded-2xl border border-[var(--color-border)] p-4 text-sm text-[var(--color-text-primary)]">
+                <input type="checkbox" name="is_active" value="1"{% if is_active == "1" or is_active == "on" %} checked{% endif %}>
+                Owner ativo
+            </label>
+            <label class="flex items-center gap-3 rounded-2xl border border-[var(--color-border)] p-4 text-sm text-[var(--color-text-primary)]">
+                <input type="checkbox" name="receives_notifications" value="1"{% if receives_notifications == "1" or receives_notifications == "on" %} checked{% endif %}>
+                Recebe notificações
+            </label>
+        </div>
+
+        <div class="flex flex-wrap gap-3">
+            <button type="submit" class="ds-btn-primary">{{ submit_label|default:"Salvar" }}</button>
+            <a href="{{ cancel_href }}" class="ds-btn-secondary">Cancelar</a>
+        </div>
+    </form>
+</section>
+{% endblock %}

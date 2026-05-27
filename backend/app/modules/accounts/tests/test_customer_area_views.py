@@ -13,7 +13,9 @@ from app.modules.accounts.application.account_customer_area_queries import (
 from app.modules.checkout.models import CheckoutSession, CheckoutSessionItem
 from app.modules.orders.models import Order, OrderItem, OrderStatusHistory
 from app.modules.payments.models import PaymentAttempt
+from app.modules.reviews.models import ProductReview
 from app.modules.shipping.models import Shipment
+from app.modules.tenants.models import Tenant
 
 
 class CustomerAreaViewTests(TestCase):
@@ -366,6 +368,40 @@ class CustomerAreaPersistedReadTests(TestCase):
 
         self.assertEqual(order_detail_payload["order_number"], "#3051")
         self.assertEqual(order_detail_payload["payment_status"], "Confirmado")
+
+    def test_account_order_detail_surfaces_applied_coupon_snapshot(self):
+        Order.objects.filter(number="3051").update(
+            coupon_code="PROMO10",
+            discount_total="10.00",
+            promotion_snapshot={
+                "coupon_code": "PROMO10",
+                "discount_total": "10.00",
+                "source": "cart",
+                "validation_result": "coupon-valid",
+            },
+        )
+
+        payload = account_customer_area_queries.get_order_detail_page_data("3051")
+        response = self.client.get(reverse("accounts:account-order-detail", kwargs={"order_number": "3051"}))
+
+        self.assertTrue(payload["coupon_visible"])
+        self.assertEqual(payload["coupon_code"], "PROMO10")
+        self.assertEqual(payload["coupon_title"], "Cupom aplicado: PROMO10")
+        self.assertEqual(payload["coupon_description"], "Desconto preservado no pedido: -R$ 10,00.")
+        self.assertContains(response, "Cupom aplicado: PROMO10")
+        self.assertContains(response, "Desconto preservado no pedido: -R$ 10,00.")
+
+    def test_account_order_detail_hides_coupon_without_valid_snapshot(self):
+        Order.objects.filter(number="3051").update(
+            coupon_code="PROMO10",
+            discount_total="10.00",
+            promotion_snapshot={},
+        )
+
+        payload = account_customer_area_queries.get_order_detail_page_data("3051")
+
+        self.assertFalse(payload["coupon_visible"])
+        self.assertEqual(payload["coupon_code"], "")
 
     def test_customer_area_query_service_falls_back_to_tenant_and_email_when_links_are_absent(self):
         AccountProfile.objects.filter(pk=2).update(customer=None)
@@ -1297,3 +1333,203 @@ class CustomerAreaPersistedReadTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Revise os campos do endereço")
         self.assertContains(response, "Este campo é obrigatório")
+
+
+@override_settings(HUBX_MARKET_ROOT_DOMAIN="hubx.market", ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver"])
+class CustomerReviewSubmissionRouteTests(TestCase):
+    def setUp(self):
+        self.tenant = Tenant.objects.create(name="Review Route", slug="review-route", subdomain="review-route")
+        self.host = f"{self.tenant.subdomain}.hubx.market"
+        self.customer = Customer.objects.create(
+            tenant=self.tenant,
+            slug="cliente-review-route",
+            full_name="Cliente Review Route",
+            email="cliente.review.route@example.com",
+        )
+        AccountProfile.objects.create(
+            tenant=self.tenant,
+            customer=self.customer,
+            email=self.customer.email,
+            first_name="Cliente",
+            last_name="Route",
+            is_active=True,
+        )
+        self.product = Product.objects.create(
+            tenant=self.tenant,
+            name="Produto Review Route",
+            slug="produto-review-route",
+            status=Product.Status.ACTIVE,
+            is_active=True,
+        )
+        self.variant = ProductVariant.objects.create(
+            product=self.product,
+            sku="REVIEW-ROUTE-SKU",
+            price="99.00",
+            stock=10,
+        )
+        self.order = Order.objects.create(
+            tenant=self.tenant,
+            customer=self.customer,
+            number="7001",
+            status=Order.Status.SHIPPED,
+            payment_status="Confirmado internamente",
+            fulfillment_status_label="Concluído",
+            fulfillment_status_variant="success",
+            shipping_status="Entregue",
+            subtotal="99.00",
+            total="99.00",
+        )
+        self.order.items.create(
+            title=self.product.name,
+            product_id_snapshot=self.product.id,
+            product_slug_snapshot=self.product.slug,
+            variant_sku=self.variant.sku,
+            price_snapshot="99.00",
+            quantity=1,
+        )
+
+    def _url(self):
+        return reverse(
+            "accounts:account-order-review-create",
+            kwargs={"order_number": self.order.number, "product_id": self.product.id},
+        )
+
+    def test_customer_review_create_view_renders_form(self):
+        response = self.client.get(self._url(), HTTP_HOST=self.host)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "pages/templates/customer_review_form_page.html")
+        self.assertContains(response, "Avaliar produto")
+        self.assertContains(response, "Sua avaliação será analisada antes de aparecer no produto")
+        self.assertContains(response, "Você pode enviar sem exibir seu nome publicamente")
+
+    def test_customer_review_create_post_creates_pending_review_and_redirects(self):
+        response = self.client.post(
+            self._url(),
+            {
+                "rating": "5",
+                "title": "Muito bom",
+                "body": "Chegou bem e gostei do produto.",
+                "author_name": "Cliente Route",
+                "consent_display_name": "1",
+            },
+            HTTP_HOST=self.host,
+        )
+
+        self.assertRedirects(
+            response,
+            f"/accounts/account/orders/{self.order.number}/?result=customer-review-submitted-pending",
+            fetch_redirect_response=False,
+        )
+        review = ProductReview.objects.get()
+        self.assertEqual(review.tenant, self.tenant)
+        self.assertEqual(review.customer, self.customer)
+        self.assertEqual(review.product, self.product)
+        self.assertEqual(review.status, ProductReview.Status.PENDING)
+        self.assertEqual(review.author_name, "Cliente Route")
+
+    def test_customer_review_create_post_invalid_rating_redirects_without_review(self):
+        response = self.client.post(
+            self._url(),
+            {"rating": "9"},
+            HTTP_HOST=self.host,
+        )
+
+        self.assertRedirects(
+            response,
+            f"/accounts/account/orders/{self.order.number}/?result=customer-review-invalid-rating",
+            fetch_redirect_response=False,
+        )
+        self.assertFalse(ProductReview.objects.exists())
+
+    def test_order_detail_shows_customer_review_feedback(self):
+        response = self.client.get(
+            reverse("accounts:account-order-detail", kwargs={"order_number": self.order.number}),
+            {"result": "customer-review-submitted-pending"},
+            HTTP_HOST=self.host,
+        )
+
+        self.assertContains(response, "Avaliação enviada para moderação")
+        self.assertContains(response, "será analisada antes de aparecer no produto")
+
+    def test_order_detail_shows_review_cta_for_delivered_eligible_item(self):
+        response = self.client.get(
+            reverse("accounts:account-order-detail", kwargs={"order_number": self.order.number}),
+            HTTP_HOST=self.host,
+        )
+
+        self.assertContains(response, f"Avaliar {self.product.name}")
+        self.assertContains(response, self._url())
+        self.assertContains(response, "A avaliação passa por moderação antes de aparecer no produto")
+
+    def test_order_detail_hides_review_cta_when_order_is_not_delivered(self):
+        self.order.shipping_status = "Preparando envio"
+        self.order.fulfillment_status_label = "Em preparação"
+        self.order.save(update_fields=["shipping_status", "fulfillment_status_label"])
+
+        response = self.client.get(
+            reverse("accounts:account-order-detail", kwargs={"order_number": self.order.number}),
+            HTTP_HOST=self.host,
+        )
+
+        self.assertNotContains(response, f"Avaliar {self.product.name}")
+        self.assertNotContains(response, "Avaliação já registrada")
+
+    def test_order_detail_shows_pending_review_status_when_customer_already_reviewed_product(self):
+        ProductReview.objects.create(
+            tenant=self.tenant,
+            product=self.product,
+            customer=self.customer,
+            rating=5,
+            title="Já avaliado",
+            author_name="Cliente Route",
+        )
+
+        response = self.client.get(
+            reverse("accounts:account-order-detail", kwargs={"order_number": self.order.number}),
+            HTTP_HOST=self.host,
+        )
+
+        self.assertNotContains(response, f"Avaliar {self.product.name}")
+        self.assertContains(response, f"Avaliação em moderação para {self.product.name}")
+        self.assertContains(response, "Recebemos sua avaliação e ela será analisada antes de aparecer no produto")
+
+    def test_order_detail_shows_approved_review_status_when_customer_review_was_approved(self):
+        ProductReview.objects.create(
+            tenant=self.tenant,
+            product=self.product,
+            customer=self.customer,
+            rating=5,
+            title="Aprovada",
+            author_name="Cliente Route",
+            status=ProductReview.Status.APPROVED,
+        )
+
+        response = self.client.get(
+            reverse("accounts:account-order-detail", kwargs={"order_number": self.order.number}),
+            HTTP_HOST=self.host,
+        )
+
+        self.assertNotContains(response, f"Avaliar {self.product.name}")
+        self.assertContains(response, f"Avaliação publicada para {self.product.name}")
+        self.assertContains(response, "Sua avaliação já pode aparecer na página do produto")
+
+    def test_order_detail_shows_rejected_review_status_when_customer_review_was_rejected(self):
+        ProductReview.objects.create(
+            tenant=self.tenant,
+            product=self.product,
+            customer=self.customer,
+            rating=5,
+            title="Rejeitada",
+            author_name="Cliente Route",
+            status=ProductReview.Status.REJECTED,
+        )
+
+        response = self.client.get(
+            reverse("accounts:account-order-detail", kwargs={"order_number": self.order.number}),
+            HTTP_HOST=self.host,
+        )
+
+        self.assertNotContains(response, f"Avaliar {self.product.name}")
+        self.assertContains(response, f"Avaliação não publicada para {self.product.name}")
+        self.assertContains(response, "Sua avaliação foi analisada e não será exibida no produto")

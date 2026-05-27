@@ -7,6 +7,7 @@ from app.modules.catalog.models import Product, ProductVariant
 from app.modules.checkout.application.checkout_page_queries import checkout_page_queries
 from app.modules.checkout.models import CheckoutRecoveryEvent, CheckoutSession, CheckoutSessionItem
 from app.modules.accounts.models import OwnerUser
+from app.modules.coupons.models import Coupon, CouponRedemption
 from app.modules.customers.models import Customer
 from app.modules.notifications.models import EmailLog
 from app.modules.orders.models import Order, OrderStatusHistory
@@ -409,6 +410,49 @@ class CheckoutPersistedReadTests(TestCase):
         self.assertEqual(payload["payment_completion_hint"]["title"], "Pagamento aguardando entrega")
         self.assertEqual(payload["current_stage_completion_hint"]["title"], "Entrega ainda incompleta")
 
+    def test_checkout_query_service_forces_payment_stage_when_review_requested_too_early(self):
+        session = CheckoutSession.objects.create(
+            tenant=self.tenant,
+            status=CheckoutSession.Status.OPEN,
+            first_name="Clara",
+            last_name="Entrega",
+            email="clara@hubx.market",
+            phone="(11) 94444-0000",
+            address_line_1="Rua Completa, 123",
+            city="São Paulo",
+            state="SP",
+            zip_code="01000-000",
+            shipping_methods=[{"value": "standard", "label": "Entrega padrão", "price": "R$ 24,90"}],
+            shipping_method_selected="standard",
+            payment_methods=[{"value": "credit_card", "label": "Cartão de crédito"}],
+            subtotal="199.90",
+            shipping_total="24.90",
+            discount_total="0.00",
+            grand_total="224.80",
+        )
+        CheckoutSessionItem.objects.create(
+            checkout_session=session,
+            title="Produto em progresso",
+            subtitle="Cinza · 40",
+            meta="SKU PROG-005",
+            price="199.90",
+            quantity=1,
+            sort_order=1,
+        )
+
+        payload = checkout_page_queries.get_checkout_page_data(
+            tenant_id=self.tenant.id,
+            session_key=str(session.session_key),
+            requested_stage="review",
+        )
+
+        self.assertEqual(payload["current_stage"], "payment")
+        self.assertEqual(payload["submit_label"], "Salvar pagamento e revisar")
+        self.assertIsNotNone(payload["stage_feedback"])
+        self.assertEqual(payload["delivery_completion_hint"]["title"], "Entrega salva")
+        self.assertEqual(payload["payment_completion_hint"]["title"], "Pagamento em andamento")
+        self.assertEqual(payload["current_stage_completion_hint"]["title"], "Pagamento em andamento")
+
     def test_checkout_post_updates_requested_session_and_recalculates_totals(self):
         session = CheckoutSession.objects.get(pk=1)
         response = self.client.post(
@@ -504,6 +548,142 @@ class CheckoutPersistedReadTests(TestCase):
         self.assertEqual(session.shipping_method_selected, "express")
         self.assertFalse(session.accept_terms)
 
+    def test_checkout_post_rejects_invalid_shipping_method_without_mutating_session(self):
+        session = CheckoutSession.objects.create(
+            tenant=self.tenant,
+            status=CheckoutSession.Status.OPEN,
+            shipping_methods=[
+                {"value": "standard", "label": "Entrega padrão", "price": "R$ 24,90"},
+                {"value": "express", "label": "Entrega expressa", "price": "R$ 39,90"},
+            ],
+            shipping_method_selected="standard",
+            payment_methods=[{"value": "credit_card", "label": "Cartão de crédito"}],
+            subtotal="199.90",
+            shipping_total="24.90",
+            discount_total="0.00",
+            grand_total="224.80",
+        )
+        CheckoutSessionItem.objects.create(
+            checkout_session=session,
+            title="Produto em progresso",
+            subtitle="Preto · 42",
+            meta="SKU PROG-003",
+            price="199.90",
+            quantity=1,
+            sort_order=1,
+        )
+
+        response = self.client.post(
+            reverse("checkout:checkout-page"),
+            data={
+                "session_key": str(session.session_key),
+                "current_stage": "delivery",
+                "first_name": "João",
+                "last_name": "Progressivo",
+                "email": "joao@hubx.market",
+                "phone": "(11) 95555-0000",
+                "address_line_1": "Rua Entrega, 10",
+                "city": "São Paulo",
+                "state": "SP",
+                "zip_code": "01000-000",
+                "shipping_method": "same_day",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("result=checkout-shipping-method-invalid", response["Location"])
+        self.assertIn("stage=delivery", response["Location"])
+
+        session.refresh_from_db()
+        self.assertEqual(session.first_name, "")
+        self.assertEqual(session.shipping_method_selected, "standard")
+        self.assertEqual(str(session.shipping_total), "24.90")
+        self.assertEqual(str(session.grand_total), "224.80")
+
+        follow_response = self.client.get(
+            reverse("checkout:checkout-page"),
+            {
+                "session_key": str(session.session_key),
+                "result": "checkout-shipping-method-invalid",
+                "stage": "delivery",
+            },
+        )
+        self.assertContains(follow_response, "Escolha uma entrega válida")
+        self.assertContains(follow_response, "Selecione uma modalidade de frete disponível")
+
+    def test_checkout_post_rejects_invalid_payment_method_without_mutating_session(self):
+        session = CheckoutSession.objects.create(
+            tenant=self.tenant,
+            status=CheckoutSession.Status.OPEN,
+            first_name="João",
+            last_name="Progressivo",
+            email="joao@hubx.market",
+            phone="(11) 95555-0000",
+            address_line_1="Rua Entrega, 10",
+            city="São Paulo",
+            state="SP",
+            zip_code="01000-000",
+            shipping_methods=[{"value": "standard", "label": "Entrega padrão", "price": "R$ 24,90"}],
+            shipping_method_selected="standard",
+            payment_methods=[{"value": "credit_card", "label": "Cartão de crédito"}],
+            payment_method_selected="credit_card",
+            subtotal="199.90",
+            shipping_total="24.90",
+            discount_total="0.00",
+            grand_total="224.80",
+        )
+        CheckoutSessionItem.objects.create(
+            checkout_session=session,
+            title="Produto em progresso",
+            subtitle="Preto · 42",
+            meta="SKU PROG-004",
+            price="199.90",
+            quantity=1,
+            sort_order=1,
+        )
+
+        response = self.client.post(
+            reverse("checkout:checkout-page"),
+            data={
+                "session_key": str(session.session_key),
+                "current_stage": "payment",
+                "first_name": "Marina",
+                "last_name": "Alterada",
+                "email": "marina@hubx.market",
+                "phone": "(11) 96666-0000",
+                "address_line_1": "Rua Nova, 300",
+                "city": "Campinas",
+                "state": "SP",
+                "zip_code": "13010-000",
+                "shipping_method": "standard",
+                "payment_method": "crypto",
+                "installments": "2x",
+                "accept_terms": "on",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("result=checkout-payment-method-invalid", response["Location"])
+        self.assertIn("stage=payment", response["Location"])
+
+        session.refresh_from_db()
+        self.assertEqual(session.first_name, "João")
+        self.assertEqual(session.payment_method_selected, "credit_card")
+        self.assertEqual(session.installments_selected, "")
+        self.assertFalse(session.accept_terms)
+        self.assertEqual(str(session.grand_total), "224.80")
+
+        follow_response = self.client.get(
+            reverse("checkout:checkout-page"),
+            {
+                "session_key": str(session.session_key),
+                "result": "checkout-payment-method-invalid",
+                "stage": "payment",
+            },
+        )
+        self.assertContains(follow_response, "Escolha um pagamento válido")
+        self.assertContains(follow_response, "Selecione uma forma de pagamento disponível")
+
     def test_checkout_view_shows_feedback_after_successful_save(self):
         session = CheckoutSession.objects.get(pk=1)
 
@@ -555,8 +735,13 @@ class CheckoutPersistedReadTests(TestCase):
         self.assertContains(response, "Entrega e frete salvos")
         self.assertContains(response, "Pagamento e termos revisados")
         self.assertContains(response, "Totais prontos para gerar o pedido")
+        self.assertContains(response, "Compra com revisão segura")
+        self.assertContains(response, "Pedido só nasce na revisão")
+        self.assertContains(response, "Pagamento real fica pendente")
+        self.assertContains(response, "Estoque é revalidado")
 
     def test_checkout_view_shows_inventory_conflict_feedback(self):
+        self._create_checkout_variants(stock_runner=1, reserved_runner=1, stock_sock=12, reserved_sock=0)
         session = CheckoutSession.objects.get(pk=1)
 
         response = self.client.get(
@@ -566,20 +751,116 @@ class CheckoutPersistedReadTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Estoque mudou durante o checkout")
-        self.assertContains(response, "saldo livre da variante não é mais suficiente")
+        self.assertContains(response, "saldo livre de um ou mais itens")
         self.assertContains(response, "Como retomar com segurança")
-        self.assertContains(response, "Volte ao produto para confirmar estoque atual")
+        self.assertContains(response, "Revise os itens afetados nesta sessão")
+        self.assertContains(response, "Itens que precisam de revisão")
+        self.assertContains(response, "Tênis Hubx Runner Persistido")
+        self.assertContains(response, "SKU RUNNER-PERSIST-001")
+        self.assertContains(response, "Solicitado: 1 · Disponível: 0")
+        self.assertContains(response, "A quantidade pedida ficou acima do estoque livre atual")
+        self.assertContains(response, "Reabrir checkout")
         self.assertContains(response, "Voltar ao produto")
-        self.assertNotContains(response, "Reabrir checkout")
+        self.assertEqual(
+            response.context["inventory_conflicts"],
+            [
+                {
+                    "item_id": session.items.get(meta="SKU RUNNER-PERSIST-001").id,
+                    "variant_sku": "RUNNER-PERSIST-001",
+                    "title": "Tênis Hubx Runner Persistido",
+                    "requested_quantity": 1,
+                    "available_quantity": 0,
+                    "reason": "stock-conflict",
+                }
+            ],
+        )
         self.assertEqual(response.context["checkout_result_taxonomy"]["family"], "inventory")
-        self.assertEqual(response.context["checkout_result_taxonomy"]["recovery_action"], "restart_from_product")
+        self.assertEqual(response.context["checkout_result_taxonomy"]["recovery_action"], "review_current_session")
         event = CheckoutRecoveryEvent.objects.get()
         self.assertEqual(event.tenant, self.tenant)
         self.assertEqual(event.checkout_session, session)
         self.assertEqual(event.result_code, "checkout-completion-stock-conflict")
         self.assertEqual(event.family, "inventory")
-        self.assertEqual(event.recovery_action, "restart_from_product")
+        self.assertEqual(event.recovery_action, "review_current_session")
         self.assertEqual(event.stage, "review")
+
+    def test_checkout_inventory_conflict_allows_reducing_item_to_available_quantity(self):
+        self._create_checkout_variants(stock_runner=2, reserved_runner=1, stock_sock=12, reserved_sock=0)
+        session = CheckoutSession.objects.get(pk=1)
+        item = session.items.get(meta="SKU RUNNER-PERSIST-001")
+        item.quantity = 2
+        item.save(update_fields=["quantity", "updated_at"])
+        session.subtotal = Decimal("859.70")
+        session.grand_total = Decimal("884.60")
+        session.save(update_fields=["subtotal", "grand_total", "updated_at"])
+
+        response = self.client.get(
+            reverse("checkout:checkout-page"),
+            {"session_key": str(session.session_key), "result": "checkout-completion-stock-conflict", "stage": "review"},
+        )
+
+        self.assertContains(response, "Reduzir para 1 disponível")
+        self.assertEqual(response.context["inventory_conflicts"][0]["available_quantity"], 1)
+
+        post_response = self.client.post(
+            reverse("checkout:checkout-page"),
+            data={
+                "session_key": str(session.session_key),
+                "current_stage": "review",
+                "item_action": f"set_quantity:{item.id}",
+                "quantity": "1",
+                "inventory_reconciliation": "1",
+            },
+        )
+
+        self.assertEqual(post_response.status_code, 302)
+        self.assertIn("result=checkout-inventory-reconciled", post_response["Location"])
+        item.refresh_from_db()
+        session.refresh_from_db()
+        self.assertEqual(item.quantity, 1)
+        self.assertEqual(str(session.subtotal), "459.80")
+        self.assertEqual(str(session.grand_total), "484.70")
+
+        follow_response = self.client.get(post_response["Location"])
+        self.assertContains(follow_response, "Estoque reconciliado")
+        self.assertContains(follow_response, "Revise os novos totais e tente criar o pedido inicial novamente")
+        self.assertEqual(follow_response.context["checkout_result_taxonomy"]["family"], "inventory")
+        self.assertEqual(follow_response.context["checkout_result_taxonomy"]["recovery_action"], "review_current_session")
+
+    def test_checkout_inventory_conflict_allows_removing_unavailable_item(self):
+        self._create_checkout_variants(stock_runner=1, reserved_runner=1, stock_sock=12, reserved_sock=0)
+        session = CheckoutSession.objects.get(pk=1)
+        item = session.items.get(meta="SKU RUNNER-PERSIST-001")
+
+        response = self.client.get(
+            reverse("checkout:checkout-page"),
+            {"session_key": str(session.session_key), "result": "checkout-completion-stock-conflict", "stage": "review"},
+        )
+
+        self.assertContains(response, "Remover item indisponível")
+
+        post_response = self.client.post(
+            reverse("checkout:checkout-page"),
+            data={
+                "session_key": str(session.session_key),
+                "current_stage": "review",
+                "item_action": f"remove:{item.id}",
+                "inventory_reconciliation": "1",
+            },
+        )
+
+        self.assertEqual(post_response.status_code, 302)
+        self.assertIn("result=checkout-inventory-item-removed", post_response["Location"])
+        self.assertFalse(CheckoutSessionItem.objects.filter(pk=item.id).exists())
+        session.refresh_from_db()
+        self.assertEqual(str(session.subtotal), "59.90")
+        self.assertEqual(str(session.grand_total), "84.80")
+
+        follow_response = self.client.get(post_response["Location"])
+        self.assertContains(follow_response, "Item indisponível removido")
+        self.assertContains(follow_response, "Revise os novos totais antes de criar o pedido inicial novamente")
+        self.assertEqual(follow_response.context["checkout_result_taxonomy"]["family"], "inventory")
+        self.assertEqual(follow_response.context["checkout_result_taxonomy"]["recovery_action"], "review_current_session")
 
     def test_checkout_view_shows_snapshot_conflict_feedback(self):
         session = CheckoutSession.objects.get(pk=1)
@@ -648,6 +929,8 @@ class CheckoutPersistedReadTests(TestCase):
         self.assertEqual(order.payment_reference, "")
         self.assertEqual(order.shipping_status, "Aguardando confirmação")
         self.assertEqual(order.items.count(), 2)
+        self.assertEqual(order.coupon_code, "")
+        self.assertEqual(order.promotion_snapshot, {})
         self.assertEqual(order.customer_id, customer.id)
         self.assertEqual(order.payment_attempts.count(), 1)
         self.assertEqual(order.payment_attempts.first().status, PaymentAttempt.Status.PENDING)
@@ -682,6 +965,8 @@ class CheckoutPersistedReadTests(TestCase):
             ).exists()
         )
         self.assertEqual(order.items.first().variant_sku, "RUNNER-PERSIST-001")
+        self.assertEqual(order.items.first().product_id_snapshot, ProductVariant.objects.get(sku="RUNNER-PERSIST-001").product_id)
+        self.assertEqual(order.items.first().product_slug_snapshot, "tenis-hubx-runner-persistido-checkout")
         self.assertIn(reverse("accounts:account-order-detail", kwargs={"order_number": order.number}), response["Location"])
         self.assertIn("result=checkout-completed", response["Location"])
 
@@ -691,6 +976,55 @@ class CheckoutPersistedReadTests(TestCase):
         follow_response = self.client.get(response["Location"])
         self.assertContains(follow_response, "itens, entrega e pagamento já registrados")
         self.assertContains(follow_response, "pagamento ainda pendente")
+
+    def test_checkout_review_post_copies_coupon_snapshot_to_order(self):
+        self._create_checkout_variants()
+        coupon = Coupon.objects.create(
+            tenant=self.tenant,
+            code="PROMO10",
+            status=Coupon.Status.ACTIVE,
+            discount_type=Coupon.DiscountType.FIXED,
+            discount_value="15.00",
+        )
+        session = CheckoutSession.objects.get(pk=1)
+        session.coupon_code = "PROMO10"
+        session.discount_total = Decimal("15.00")
+        session.grand_total = session.subtotal + session.shipping_total - session.discount_total
+        session.promotion_snapshot = {
+            "coupon_code": "PROMO10",
+            "discount_total": "15.00",
+            "source": "cart",
+            "validation_result": "coupon-valid",
+        }
+        session.save(update_fields=["coupon_code", "discount_total", "grand_total", "promotion_snapshot", "updated_at"])
+
+        response = self.client.post(
+            reverse("checkout:checkout-page"),
+            data={
+                "session_key": str(session.session_key),
+                "current_stage": "review",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        order = Order.objects.order_by("-id").first()
+        self.assertIsNotNone(order)
+        self.assertEqual(order.coupon_code, "PROMO10")
+        self.assertEqual(str(order.discount_total), "15.00")
+        self.assertEqual(
+            order.promotion_snapshot,
+            {
+                "coupon_code": "PROMO10",
+                "discount_total": "15.00",
+                "source": "cart",
+                "validation_result": "coupon-valid",
+            },
+        )
+        redemption = CouponRedemption.objects.get(order=order)
+        self.assertEqual(redemption.tenant, self.tenant)
+        self.assertEqual(redemption.coupon, coupon)
+        self.assertEqual(redemption.coupon_code_snapshot, "PROMO10")
+        self.assertEqual(str(redemption.discount_total_snapshot), "15.00")
 
     def test_checkout_review_post_reuses_existing_order_after_successful_completion(self):
         self._create_checkout_variants()

@@ -293,7 +293,7 @@ class AccountPageQueryService:
             "page_description": "Acesse sua conta para acompanhar pedidos, endereços salvos e preferências com segurança.",
             "login_value": profile.get("email") or "",
             "login_label": "E-mail da conta",
-            "remember_me": True,
+            "remember_me": False,
             "helper_text": (
                 f"Entre como {display_name} e continue de onde parou."
                 if display_name

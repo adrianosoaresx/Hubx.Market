@@ -756,6 +756,10 @@ class AdminOrderDetailView(TemplateView):
                 "subtotal": order["subtotal"],
                 "shipping": order["shipping"],
                 "discount": order["discount"],
+                "coupon_visible": bool(order.get("coupon_visible")),
+                "coupon_code": order.get("coupon_code", ""),
+                "coupon_title": order.get("coupon_title", ""),
+                "coupon_description": order.get("coupon_description", ""),
                 "installments": order["installments"],
                 "total": order["total"],
                 "summary_note": (

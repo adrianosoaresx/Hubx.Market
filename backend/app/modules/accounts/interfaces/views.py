@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from urllib.parse import urlencode
 
+from django.conf import settings
 from django.core.paginator import Paginator
-from django.http import HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseNotFound, HttpResponseRedirect
 from django.middleware.csrf import get_token
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.views.generic import TemplateView, View
@@ -15,6 +17,10 @@ from app.modules.accounts.application.account_page_queries import account_page_q
 from app.modules.accounts.application.account_customer_area_queries import (
     account_customer_area_queries,
 )
+from app.modules.accounts.application.owner_login_commands import owner_login_commands
+from app.modules.accounts.application.owner_access_recovery_commands import owner_access_recovery_commands
+from app.modules.accounts.application.owner_access_metrics_queries import owner_access_metrics_queries
+from app.modules.accounts.application.owner_mfa_provider_health_metrics_queries import owner_mfa_provider_health_metrics_queries
 from app.modules.checkout.application.checkout_reorder_commands import (
     checkout_reorder_commands,
 )
@@ -24,6 +30,11 @@ from app.modules.checkout.application.checkout_payment_retry_commands import (
 from app.modules.orders.application.customer_order_payment_commands import (
     customer_order_payment_commands,
 )
+from app.modules.reviews.application.customer_review_submission_commands import (
+    customer_review_submission_commands,
+)
+from app.modules.reviews.application.customer_review_status_queries import customer_review_status_queries
+from app.modules.reviews.application.review_eligibility_queries import DUPLICATE, review_eligibility_queries
 from .forms import AccountAddressForm
 
 
@@ -334,6 +345,36 @@ def _build_order_detail_feedback_context(request) -> dict[str, object]:
             "title": "Tentativa de pagamento não concluída",
             "description": "A tentativa não foi concluída ou foi cancelada. Seu pedido continua salvo para você revisar e tentar novamente com segurança.",
         },
+        "customer-review-submitted-pending": {
+            "variant": "success",
+            "icon": "⭐",
+            "title": "Avaliação enviada para moderação",
+            "description": "Obrigado por compartilhar sua experiência. A avaliação será analisada antes de aparecer no produto.",
+        },
+        "customer-review-ineligible": {
+            "variant": "warning",
+            "icon": "ℹ️",
+            "title": "Avaliação não disponível para este item",
+            "description": "Só é possível avaliar produtos elegíveis deste pedido, depois que a entrega estiver concluída.",
+        },
+        "customer-review-duplicate": {
+            "variant": "info",
+            "icon": "⭐",
+            "title": "Avaliação já enviada",
+            "description": "Você já enviou uma avaliação para este produto. Ela permanece na fila de moderação ou já foi analisada.",
+        },
+        "customer-review-invalid-rating": {
+            "variant": "warning",
+            "icon": "⚠️",
+            "title": "Escolha uma nota entre 1 e 5",
+            "description": "A avaliação precisa de uma nota válida antes de ser enviada para moderação.",
+        },
+        "customer-review-unavailable": {
+            "variant": "warning",
+            "icon": "ℹ️",
+            "title": "Não foi possível enviar a avaliação agora",
+            "description": "Tente novamente em instantes. Seu pedido continua salvo para você voltar depois.",
+        },
     }
     if result not in mapping:
         return {}
@@ -442,6 +483,118 @@ def _build_order_detail_actions(request, context: dict[str, object], *, order_nu
     return {"page_actions": mark_safe("".join(str(block) for block in action_blocks))}
 
 
+def _int_or_none(value: object) -> int | None:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None
+
+
+def _order_review_eligibility_items(request, context: dict[str, object]) -> list[dict[str, object]]:
+    tenant_id = _request_tenant_id(request)
+    if not tenant_id:
+        return []
+    profile = account_customer_area_queries.get_active_profile_context(tenant_id=tenant_id)
+    customer_id = _int_or_none(profile.get("customer_id"))
+    if not customer_id:
+        return []
+
+    eligibility_items: list[dict[str, object]] = []
+    seen_product_ids: set[int] = set()
+    for item in context.get("order_items") or []:
+        if not isinstance(item, dict):
+            continue
+        product_id = _int_or_none(item.get("product_id_snapshot"))
+        if product_id is None or product_id in seen_product_ids:
+            continue
+        seen_product_ids.add(product_id)
+        title = str(item.get("title") or "produto").strip() or "produto"
+        eligibility = review_eligibility_queries.can_customer_review_product(
+            tenant_id=tenant_id,
+            customer_id=customer_id,
+            product_id=product_id,
+        )
+        eligibility_items.append(
+            {
+                "product_id": product_id,
+                "title": title,
+                "tenant_id": tenant_id,
+                "customer_id": customer_id,
+                "result": str(eligibility.get("result") or ""),
+                "eligible": bool(eligibility.get("eligible")),
+            }
+        )
+    return eligibility_items
+
+
+def _build_order_review_action_items(request, context: dict[str, object], *, order_number: str) -> list[dict[str, str]]:
+    action_items: list[dict[str, str]] = []
+    for item in _order_review_eligibility_items(request, context):
+        if not item.get("eligible"):
+            continue
+        product_id = _int_or_none(item.get("product_id"))
+        if product_id is None:
+            continue
+        title = str(item.get("title") or "produto")
+        action_items.append(
+            {
+                "kind": "link",
+                "href": reverse(
+                    "accounts:account-order-review-create",
+                    kwargs={"order_number": order_number, "product_id": product_id},
+                ),
+                "button_class": "ds-btn-secondary",
+                "label": f"Avaliar {title}",
+                "helper": "Conte como foi sua experiência. A avaliação passa por moderação antes de aparecer no produto.",
+            }
+        )
+    return action_items
+
+
+def _build_order_review_actions(request, context: dict[str, object], *, order_number: str) -> dict[str, object]:
+    action_blocks = [
+        _render_order_detail_action_item(request, item)
+        for item in _build_order_review_action_items(request, context, order_number=order_number)
+    ]
+    if not action_blocks:
+        return {}
+    return {"order_review_actions": mark_safe("".join(str(block) for block in action_blocks))}
+
+
+def _build_order_review_status_context(request, context: dict[str, object]) -> dict[str, object]:
+    status_items = []
+    for item in _order_review_eligibility_items(request, context):
+        if item.get("result") != DUPLICATE:
+            continue
+        review_status = customer_review_status_queries.get_customer_product_review_status(
+            tenant_id=_int_or_none(item.get("tenant_id")),
+            customer_id=_int_or_none(item.get("customer_id")),
+            product_id=_int_or_none(item.get("product_id")),
+        )
+        status = str(review_status.get("status") or "")
+        title = str(review_status.get("status_label") or "Avaliação já registrada")
+        descriptions = {
+            "pending": "Recebemos sua avaliação e ela será analisada antes de aparecer no produto.",
+            "approved": "Sua avaliação já pode aparecer na página do produto.",
+            "rejected": "Sua avaliação foi analisada e não será exibida no produto.",
+        }
+        status_items.append(
+            {
+                "variant": "info",
+                "icon": "⭐",
+                "title": f"{title} para {item.get('title')}",
+                "description": descriptions.get(
+                    status,
+                    "Recebemos uma avaliação sua para este produto. Ela permanece em moderação ou já foi analisada.",
+                ),
+            }
+        )
+    if not status_items:
+        return {}
+    return {"order_review_status_items": status_items}
+
+
 class LoginView(TemplateView):
     template_name = "pages/templates/login_page.html"
 
@@ -452,7 +605,159 @@ class LoginView(TemplateView):
         context["form_action"] = self.request.path
         context["register_href"] = reverse("accounts:register")
         context["forgot_password_href"] = reverse("accounts:forgot-password")
+        context["next_url"] = self._safe_next_url()
+        context.update(kwargs)
         return context
+
+    def post(self, request, *args, **kwargs):
+        tenant_id = getattr(getattr(request, "tenant", None), "id", None)
+        result = owner_login_commands.authenticate_owner(
+            request=request,
+            tenant_id=tenant_id,
+            login=request.POST.get("login"),
+            password=request.POST.get("password"),
+            remember_me=request.POST.get("remember_me") in {"1", "on", "true", "True"},
+        )
+        if result.get("result") == "owner-login-authenticated":
+            return HttpResponseRedirect(self._safe_next_url() or reverse("merchant_ops:admin-dashboard"))
+        if result.get("result") == "owner-login-mfa-challenge-required":
+            return HttpResponseRedirect(reverse("accounts:owner-mfa-challenge"))
+
+        errors = result.get("errors") if isinstance(result.get("errors"), dict) else {}
+        context = self.get_context_data(
+            form_error=errors.get("__all__", "Não foi possível entrar."),
+            login_value=request.POST.get("login", ""),
+        )
+        status_code = 429 if result.get("result") == "owner-login-rate-limited" else 400
+        response = self.render_to_response(context, status=status_code)
+        if status_code == 429 and result.get("retry_after_seconds"):
+            response["Retry-After"] = str(result["retry_after_seconds"])
+        return response
+
+    def _safe_next_url(self) -> str:
+        next_url = str(self.request.POST.get("next") or self.request.GET.get("next") or "").strip()
+        if not next_url:
+            return ""
+        if url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={self.request.get_host()},
+            require_https=self.request.is_secure(),
+        ):
+            return next_url
+        return ""
+
+
+class OwnerMfaChallengeView(TemplateView):
+    template_name = "pages/templates/owner_mfa_challenge_page.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tenant_id = getattr(getattr(self.request, "tenant", None), "id", None)
+        pending = owner_login_commands.get_pending_mfa(request=self.request, tenant_id=tenant_id)
+        context.update(
+            {
+                "page_title": "Verificação MFA",
+                "page_description": "Informe o código do app autenticador para concluir o acesso administrativo.",
+                "form_action": self.request.path,
+                "primary_label": "Verificar e entrar",
+                "secondary_label": "Cancelar",
+                "secondary_href": reverse("accounts:login"),
+                "helper_text": f"Challenge pendente para {pending.get('owner_email', 'owner/admin')}.",
+                "forgot_password_href": reverse("accounts:forgot-password"),
+                "next_url": pending.get("next_url", ""),
+                "mfa_ready": pending.get("ready", False),
+            }
+        )
+        context.update(kwargs)
+        return context
+
+    def get(self, request, *args, **kwargs):
+        tenant_id = getattr(getattr(request, "tenant", None), "id", None)
+        pending = owner_login_commands.get_pending_mfa(request=request, tenant_id=tenant_id)
+        if not pending.get("ready"):
+            return HttpResponseRedirect(reverse("accounts:login"))
+        return super().get(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        tenant_id = getattr(getattr(request, "tenant", None), "id", None)
+        result = owner_login_commands.complete_mfa_challenge(
+            request=request,
+            tenant_id=tenant_id,
+            challenge=request.POST.get("challenge"),
+        )
+        if result.get("result") == "owner-login-authenticated":
+            next_url = self._safe_next_url(request.POST.get("next"))
+            return HttpResponseRedirect(next_url or reverse("merchant_ops:admin-dashboard"))
+        errors = result.get("errors") if isinstance(result.get("errors"), dict) else {}
+        context = self.get_context_data(form_error=errors.get("__all__", "Não foi possível verificar o código."))
+        return self.render_to_response(context, status=400)
+
+    def _safe_next_url(self, next_url: object) -> str:
+        candidate = str(next_url or "").strip()
+        if not candidate:
+            return ""
+        if url_has_allowed_host_and_scheme(
+            candidate,
+            allowed_hosts={self.request.get_host()},
+            require_https=self.request.is_secure(),
+        ):
+            return candidate
+        return ""
+
+
+class LogoutView(View):
+    def post(self, request, *args, **kwargs):
+        tenant_id = getattr(getattr(request, "tenant", None), "id", None)
+        owner_login_commands.logout_owner(request=request, tenant_id=tenant_id)
+        return HttpResponseRedirect(reverse("accounts:login"))
+
+    def get(self, request, *args, **kwargs):
+        return HttpResponseRedirect(reverse("accounts:login"))
+
+
+class OwnerAccessMetricsView(View):
+    http_method_names = ["get"]
+
+    def get(self, request, *args, **kwargs):
+        token_response = _validate_observability_token(request)
+        if token_response is not None:
+            return token_response
+
+        return HttpResponse(
+            owner_access_metrics_queries.export_prometheus_metrics(),
+            status=200,
+            content_type="text/plain; version=0.0.4; charset=utf-8",
+        )
+
+
+class OwnerMfaProviderHealthMetricsView(View):
+    http_method_names = ["get"]
+
+    def get(self, request, *args, **kwargs):
+        token_response = _validate_observability_token(request)
+        if token_response is not None:
+            return token_response
+
+        return HttpResponse(
+            owner_mfa_provider_health_metrics_queries.export_prometheus_metrics(),
+            status=200,
+            content_type="text/plain; version=0.0.4; charset=utf-8",
+        )
+
+
+def _validate_observability_token(request):
+    configured_token = str(getattr(settings, "ACCOUNTS_OBSERVABILITY_TOKEN", "") or "").strip()
+    if not configured_token:
+        return HttpResponseNotFound("Métricas de accounts indisponíveis.")
+
+    provided_token = str(request.headers.get("X-Hubx-Observability-Token", "") or "").strip()
+    if not provided_token:
+        authorization_header = str(request.headers.get("Authorization", "") or "").strip()
+        if authorization_header.lower().startswith("bearer "):
+            provided_token = authorization_header[7:].strip()
+    if provided_token != configured_token:
+        return HttpResponse("Forbidden", status=403, content_type="text/plain; charset=utf-8")
+    return None
 
 
 class RegisterView(TemplateView):
@@ -476,7 +781,22 @@ class ForgotPasswordView(TemplateView):
         context.update(account_page_queries.get_forgot_password_page_data(tenant_id=tenant_id))
         context["form_action"] = self.request.path
         context["login_href"] = reverse("accounts:login")
+        context.update(kwargs)
         return context
+
+    def post(self, request, *args, **kwargs):
+        tenant_id = getattr(getattr(request, "tenant", None), "id", None)
+        result = owner_access_recovery_commands.request_password_reset(
+            request=request,
+            tenant_id=tenant_id,
+            email=request.POST.get("email"),
+        )
+        context = self.get_context_data(
+            email=request.POST.get("email", ""),
+            form_success=result.get("message", "Se este e-mail estiver habilitado, enviaremos instruções."),
+            reset_url=result.get("reset_url", ""),
+        )
+        return self.render_to_response(context)
 
 
 class ResetPasswordView(TemplateView):
@@ -488,7 +808,22 @@ class ResetPasswordView(TemplateView):
         context.update(account_page_queries.get_reset_password_page_data(tenant_id=tenant_id))
         context["form_action"] = self.request.path
         context["login_href"] = reverse("accounts:login")
+        context.update(kwargs)
         return context
+
+    def post(self, request, *args, **kwargs):
+        tenant_id = getattr(getattr(request, "tenant", None), "id", None)
+        result = owner_access_recovery_commands.complete_password_reset(
+            tenant_id=tenant_id,
+            uidb64=kwargs.get("uidb64"),
+            token=kwargs.get("token"),
+            password=request.POST.get("password"),
+            confirm_password=request.POST.get("confirm_password"),
+        )
+        if result.get("result") == "owner-password-reset-completed":
+            return HttpResponseRedirect(f"{reverse('accounts:login')}?reset=completed")
+        context = self.get_context_data(errors=result.get("errors") or {}, form_error=(result.get("errors") or {}).get("__all__", ""))
+        return self.render_to_response(context, status=400)
 
 
 class AccountOverviewView(TemplateView):
@@ -643,8 +978,63 @@ class AccountOrderDetailView(TemplateView):
             )
         )
         context.update(_build_order_detail_actions(self.request, context, order_number=kwargs["order_number"]))
+        context.update(_build_order_review_actions(self.request, context, order_number=kwargs["order_number"]))
+        context.update(_build_order_review_status_context(self.request, context))
         context.update(_build_order_detail_feedback_context(self.request))
         return context
+
+
+class AccountOrderReviewCreateView(TemplateView):
+    template_name = "pages/templates/customer_review_form_page.html"
+
+    def _detail_url(self) -> str:
+        return reverse("accounts:account-order-detail", kwargs={"order_number": self.kwargs["order_number"]})
+
+    def _context(self, *, values: dict[str, object] | None = None):
+        profile = account_customer_area_queries.get_active_profile_context(tenant_id=_request_tenant_id(self.request))
+        default_author = " ".join(
+            part
+            for part in [
+                str(profile.get("first_name") or "").strip(),
+                str(profile.get("last_name") or "").strip(),
+            ]
+            if part
+        ).strip()
+        values = values or {}
+        return {
+            "page_title": "Avaliar produto",
+            "page_eyebrow": "Minha compra",
+            "page_description": "Compartilhe sua experiência com este produto. Sua avaliação será analisada antes de aparecer no storefront.",
+            "form_action": self.request.path,
+            "cancel_href": self._detail_url(),
+            "order_number": self.kwargs["order_number"],
+            "product_id": self.kwargs["product_id"],
+            "rating": values.get("rating", ""),
+            "title": values.get("title", ""),
+            "body": values.get("body", ""),
+            "author_name": values.get("author_name", default_author),
+            "consent_display_name": bool(values.get("consent_display_name")),
+        }
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(self._context())
+        return context
+
+    def post(self, request, *args, **kwargs):
+        profile = account_customer_area_queries.get_active_profile_context(tenant_id=_request_tenant_id(request))
+        result, _review = customer_review_submission_commands.submit_customer_product_review(
+            tenant_id=profile.get("tenant_id"),
+            customer_id=profile.get("customer_id"),
+            order_number=kwargs["order_number"],
+            product_id=kwargs["product_id"],
+            rating=request.POST.get("rating"),
+            title=request.POST.get("title", ""),
+            body=request.POST.get("body", ""),
+            author_name=request.POST.get("author_name", ""),
+            consent_display_name=bool(request.POST.get("consent_display_name")),
+        )
+        return HttpResponseRedirect(f'{self._detail_url()}?{urlencode({"result": result})}')
 
 
 class AccountAddressesView(TemplateView):

@@ -279,6 +279,7 @@ Fluxo padrão:
 HTTP Request
 → Middleware
 → Tenant Resolution
+→ Owner Context Resolution em `/ops/`
 → View
 → Application Service
 → Domain Logic

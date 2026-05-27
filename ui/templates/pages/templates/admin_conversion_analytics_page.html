@@ -1,0 +1,40 @@
+{% extends layout_template|default:"layouts/admin_shell.html" %}
+
+{% block page_title %}{{ page_title|default:"Analytics de conversão" }}{% endblock %}
+{% block shell_title %}{{ page_title|default:"Analytics de conversão" }}{% endblock %}
+
+{% block content %}
+<section class="space-y-6">
+    {% with eyebrow=page_eyebrow|default:"Catálogo" title=page_title description=page_description %}
+        {% include "shared/components/layout/page_header.html" %}
+    {% endwith %}
+
+    {% if page_note %}
+        <p class="rounded-xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] px-4 py-3 text-sm text-[var(--color-text-secondary)]">
+            {{ page_note }}
+        </p>
+    {% endif %}
+
+    {% if filter_action %}
+        {% with method="get" action=filter_action title="Filtros" description="Filtre os eventos recentes por tipo sem alterar dados de catálogo ou sessão." status_name=status_name status_options=status_options status_selected=status_selected status_label=status_label status_placeholder=status_placeholder reset_url=reset_url submit_label="Aplicar filtros" %}
+            {% include "shared/components/composite/filter_bar.html" %}
+        {% endwith %}
+    {% endif %}
+
+    {% if summary_cards %}
+        <div class="grid gap-4 md:grid-cols-3">
+            {% for card in summary_cards %}
+                {% include "shared/components/data_display/card.html" with title=card.title content=card.content %}
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {% with title="Contadores por evento" description="Distribuição tenant-scoped dos eventos persistidos de descoberta e conversão." columns=counter_columns rows=counter_rows table_id="conversion-analytics-counters" empty_title="Nenhum contador disponível" empty_description="Ainda não há eventos suficientes para montar contadores neste tenant." %}
+        {% include "shared/components/data_display/data_table.html" %}
+    {% endwith %}
+
+    {% with title="Eventos recentes" description="Últimos eventos públicos persistidos para apoiar leitura operacional de conversão." columns=event_columns rows=event_rows table_id="conversion-analytics-events" empty_title=empty_title empty_description=empty_description %}
+        {% include "shared/components/data_display/data_table.html" %}
+    {% endwith %}
+</section>
+{% endblock %}

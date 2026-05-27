@@ -11,6 +11,8 @@
 {% else %}
 <button
     type="{{ type|default:'button' }}"
+    {% if name %}name="{{ name }}"{% endif %}
+    {% if value %}value="{{ value }}"{% endif %}
     class="ds-btn {% if variant == 'secondary' %}ds-btn-secondary{% else %}ds-btn-primary{% endif %} {% if size == 'sm' %}ds-btn-sm{% else %}ds-btn-md{% endif %} {% if full_width %}w-full{% endif %} {% if disabled %}pointer-events-none opacity-50{% endif %}"
     {% if disabled or loading %}disabled{% endif %}
 >

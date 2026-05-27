@@ -4,7 +4,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol
 
-from django.db.models import Count
+from django.db.models import Count, Min
+from django.utils import timezone
 
 from app.modules.payments.infrastructure.alert_signal_metrics import list_payment_alert_signal_snapshots
 
@@ -30,6 +31,9 @@ class PaymentAlertSignalQueryRepository(Protocol):
     def list_attempt_status_counts(self) -> list[dict[str, object]]:
         ...
 
+    def list_pending_attempt_oldest_ages(self) -> list[dict[str, object]]:
+        ...
+
 
 class InMemoryPaymentAlertSignalQueryRepository:
     def list_snapshots(self) -> list[dict[str, object]]:
@@ -45,6 +49,31 @@ class InMemoryPaymentAlertSignalQueryRepository:
             .annotate(count=Count("id"))
             .order_by("tenant_id", "status")
         )
+
+    def list_pending_attempt_oldest_ages(self) -> list[dict[str, object]]:
+        try:
+            from app.modules.payments.models import PaymentAttempt
+        except Exception:
+            return []
+        current_time = timezone.now()
+        rows = (
+            PaymentAttempt.objects.filter(status=PaymentAttempt.Status.PENDING)
+            .values("tenant_id")
+            .annotate(oldest_updated_at=Min("updated_at"))
+            .order_by("tenant_id")
+        )
+        return [
+            {
+                "tenant_id": row.get("tenant_id"),
+                "oldest_age_seconds": max(
+                    int((current_time - row["oldest_updated_at"]).total_seconds()),
+                    0,
+                )
+                if row.get("oldest_updated_at")
+                else 0,
+            }
+            for row in rows
+        ]
 
 
 @dataclass
@@ -86,6 +115,19 @@ class PaymentAlertSignalQueryService:
             status = _string(row.get("status"))
             count = int(row.get("count", 0) or 0)
             lines.append(f'hubx_payments_attempt_total{{tenant_id="{tenant_id}",status="{status}"}} {count}')
+
+        lines.extend(
+            [
+                "# HELP hubx_payments_pending_attempt_oldest_age_seconds Idade em segundos da tentativa pendente mais antiga por tenant.",
+                "# TYPE hubx_payments_pending_attempt_oldest_age_seconds gauge",
+            ]
+        )
+        for row in self.repository.list_pending_attempt_oldest_ages():
+            tenant_id = _string(row.get("tenant_id"))
+            age_seconds = int(row.get("oldest_age_seconds", 0) or 0)
+            lines.append(
+                f'hubx_payments_pending_attempt_oldest_age_seconds{{tenant_id="{tenant_id}"}} {age_seconds}'
+            )
 
         return "\n".join(lines) + "\n"
 

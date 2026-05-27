@@ -467,6 +467,26 @@ def _build_summary_confidence_copy(*, current_stage: str, has_items: bool) -> di
     }
 
 
+def _build_checkout_trust_items(*, current_stage: str) -> list[dict[str, str]]:
+    items = [
+        {
+            "label": "Pedido só nasce na revisão",
+            "description": "Entrega e pagamento podem ser salvos antes, mas o pedido inicial só é criado no último passo.",
+        },
+        {
+            "label": "Pagamento real fica pendente",
+            "description": "Criar o pedido inicial não confirma cobrança real nesta etapa.",
+        },
+        {
+            "label": "Estoque é revalidado",
+            "description": "Antes de criar o pedido, os itens passam por validação de disponibilidade.",
+        },
+    ]
+    if current_stage == "review":
+        return items
+    return items[:2]
+
+
 def _build_unavailable_session_payload(*, reason: str) -> dict[str, object]:
     expired = reason == "expired"
     title = "Sessão de checkout expirada" if expired else "Sessão de checkout indisponível"
@@ -768,6 +788,8 @@ class DjangoOrmCheckoutRepository:
             "accept_terms": accepted_terms,
             "summary_description": summary_confidence["summary_description"],
             "summary_note": summary_confidence["summary_note"],
+            "checkout_trust_title": "Compra com revisão segura",
+            "checkout_trust_items": _build_checkout_trust_items(current_stage=str(stage_context["current_stage"])),
             "show_cart_surface": str(stage_context["current_stage"]) == "cart",
             "show_delivery_surface": str(stage_context["current_stage"]) in {"delivery", "payment", "review"},
             "show_payment_surface": str(stage_context["current_stage"]) in {"delivery", "payment", "review"},

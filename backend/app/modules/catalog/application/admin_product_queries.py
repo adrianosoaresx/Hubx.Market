@@ -600,6 +600,7 @@ class DjangoOrmProductRepository:
         inventory_finalization = self._inventory_finalization_snapshot(product)
 
         return {
+            "id": getattr(product, "id", None),
             "tenant_id": getattr(product, "tenant_id", None),
             "slug": self._string_value(getattr(product, "slug", ""), default=slugify(self._string_value(getattr(product, "name", ""), default="produto"))),
             "name": self._string_value(getattr(product, "name", ""), default="Produto"),

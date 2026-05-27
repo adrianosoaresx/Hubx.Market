@@ -1,9 +1,11 @@
 import json
 import hashlib
 import hmac
+from datetime import timedelta
 
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 from app.modules.catalog.models import Product, ProductVariant
 from app.modules.customers.models import Customer
@@ -29,6 +31,7 @@ class PaymentWebhookViewTests(TestCase):
         reset_payment_alert_signal("webhook.invalid_signature")
         reset_payment_alert_signal("webhook.tenant_unavailable")
         reset_payment_alert_signal("hosted_redirect.unavailable")
+        reset_payment_alert_signal("payment_confirmation.stock_conflict")
         self.tenant = Tenant.objects.create(
             name="Hubx Webhook Tenant",
             slug="hubx-webhook-tenant",
@@ -292,6 +295,59 @@ class PaymentWebhookViewTests(TestCase):
             ).exists()
         )
 
+    def test_payment_webhook_paid_stock_conflict_keeps_order_and_attempt_pending(self):
+        self.variant.stock = 0
+        self.variant.save(update_fields=["stock", "updated_at"])
+
+        response = self._post(
+            {
+                "event_type": "payment.paid",
+                "tenant_slug": self.tenant.slug,
+                "order_number": "5001",
+                "payment_reference": "ch_stock_conflict",
+                "payment_source_label": "Gateway Pagar.me",
+            }
+        )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()["result"], "payment-confirmation-stock-conflict")
+
+        self.order.refresh_from_db()
+        self.variant.refresh_from_db()
+        self.payment_attempt.refresh_from_db()
+
+        self.assertEqual(self.order.status, "pending")
+        self.assertEqual(self.order.payment_status, "Pagamento pendente")
+        self.assertEqual(self.order.payment_source_type, "checkout_pending")
+        self.assertEqual(self.order.payment_reference, "")
+        self.assertIsNone(self.order.payment_confirmed_at)
+        self.assertIsNone(self.order.inventory_reserved_at)
+        self.assertEqual(self.payment_attempt.status, PaymentAttempt.Status.PENDING)
+        self.assertEqual(self.payment_attempt.external_reference, "")
+        self.assertIsNone(self.payment_attempt.paid_at)
+        self.assertEqual(self.variant.stock, 0)
+        self.assertEqual(self.variant.reserved_stock, 0)
+        self.assertFalse(
+            OrderStatusHistory.objects.filter(
+                order=self.order,
+                event_type="payment_paid_external",
+            ).exists()
+        )
+        self.assertFalse(
+            EmailLog.objects.filter(
+                tenant=self.tenant,
+                source_event="payment.paid",
+                intent_key="customer.payment.confirmed",
+            ).exists()
+        )
+
+        snapshot = get_payment_alert_signal_snapshot("payment_confirmation.stock_conflict")
+        self.assertEqual(snapshot["count"], 1)
+        self.assertEqual(snapshot["tenant_id"], self.tenant.id)
+        self.assertEqual(snapshot["order_number"], "5001")
+        self.assertEqual(snapshot["provider_code"], "Gateway Pagar.me")
+        self.assertEqual(snapshot["reason_code"], "payment-confirmation-stock-conflict")
+
     def test_payment_webhook_normalizes_pagarme_style_payload(self):
         response = self._post_pagarme(
             {
@@ -500,6 +556,9 @@ class PaymentWebhookViewTests(TestCase):
         self.assertEqual(response.status_code, 403)
 
     def test_payment_alert_metrics_exports_prometheus_counters_for_recorded_signals(self):
+        PaymentAttempt.objects.filter(pk=self.payment_attempt.pk).update(
+            updated_at=timezone.now() - timedelta(hours=7),
+        )
         self._post_pagarme(
             {
                 "provider": "pagarme",
@@ -531,6 +590,11 @@ class PaymentWebhookViewTests(TestCase):
         )
         self.assertIn("# TYPE hubx_payments_attempt_total gauge", body)
         self.assertIn(f'hubx_payments_attempt_total{{tenant_id="{self.tenant.id}",status="pending"}}', body)
+        self.assertIn("# TYPE hubx_payments_pending_attempt_oldest_age_seconds gauge", body)
+        self.assertIn(
+            f'hubx_payments_pending_attempt_oldest_age_seconds{{tenant_id="{self.tenant.id}"}}',
+            body,
+        )
 
     def test_payment_alert_metrics_accepts_bearer_authorization_token(self):
         self._post_pagarme(

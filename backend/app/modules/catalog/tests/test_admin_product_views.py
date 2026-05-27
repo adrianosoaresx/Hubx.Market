@@ -2,6 +2,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from app.modules.catalog.application.admin_product_queries import admin_product_queries
+from app.modules.catalog.models import StorefrontDiscoveryEventLog
 from app.modules.orders.models import Order, OrderItem
 from app.modules.tenants.models import Tenant
 
@@ -203,6 +204,96 @@ class AdminProductPersistedReadTests(TestCase):
         self.assertContains(response, "Visibilidade de estoque:")
         self.assertContains(response, "Recuperação operacional já visível em 1 produto(s)")
         self.assertContains(response, "Consumo final já visível em 1 produto(s)")
+
+    @override_settings(HUBX_MARKET_ROOT_DOMAIN="hubx.market", ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver"])
+    def test_admin_product_list_view_renders_tenant_discovery_observability(self):
+        response = self.client.get(reverse("catalog:admin-products-list"), HTTP_HOST="hubx-demo.hubx.market")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Descoberta")
+        self.assertContains(response, "Score 1450")
+        self.assertContains(response, "oferta ativa com destaque editorial")
+        self.assertContains(response, "status 1000")
+        self.assertContains(response, "estoque 320")
+        self.assertContains(response, "sinal 30")
+
+    @override_settings(HUBX_MARKET_ROOT_DOMAIN="hubx.market", ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver"])
+    def test_admin_conversion_analytics_view_renders_tenant_scoped_events(self):
+        tenant = Tenant.objects.get(subdomain="hubx-demo")
+        other_tenant = Tenant.objects.create(
+            name="Hubx Analytics Other Tenant",
+            slug="hubx-analytics-other-tenant",
+            subdomain="hubx-analytics-other-tenant",
+        )
+        StorefrontDiscoveryEventLog.objects.create(
+            tenant=tenant,
+            event_name="catalog.search_performed",
+            path="/catalog/",
+            payload={"query": "runner", "result_count": 1},
+            session_key_hash="tenant-session-hash",
+        )
+        StorefrontDiscoveryEventLog.objects.create(
+            tenant=tenant,
+            event_name="catalog.pdp_cta_intent",
+            path="/products/tenis-hubx-runner-persistido/",
+            payload={
+                "product_slug": "tenis-hubx-runner-persistido",
+                "cta_intent": "add_to_cart",
+                "cta_result": "cart-item-added",
+                "variant_sku": "RUNNER-PERSIST-BLK-42",
+            },
+            session_key_hash="tenant-session-hash",
+        )
+        StorefrontDiscoveryEventLog.objects.create(
+            tenant=other_tenant,
+            event_name="catalog.search_performed",
+            path="/catalog/",
+            payload={"query": "other-tenant", "result_count": 0},
+            session_key_hash="other-session-hash",
+        )
+
+        response = self.client.get(reverse("catalog:admin-conversion-analytics"), HTTP_HOST="hubx-demo.hubx.market")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "pages/templates/admin_conversion_analytics_page.html")
+        self.assertContains(response, "Analytics de conversão")
+        self.assertContains(response, "2 evento(s) tenant-scoped")
+        self.assertContains(response, "Busca realizada")
+        self.assertContains(response, "CTA do PDP")
+        self.assertContains(response, "busca “runner”")
+        self.assertContains(response, "CTA add_to_cart")
+        self.assertContains(response, "SKU RUNNER-PERSIST-BLK-42")
+        self.assertNotContains(response, "other-tenant")
+        self.assertNotContains(response, "tenant-session-hash")
+
+    @override_settings(HUBX_MARKET_ROOT_DOMAIN="hubx.market", ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver"])
+    def test_admin_conversion_analytics_view_filters_by_event_name(self):
+        tenant = Tenant.objects.get(subdomain="hubx-demo")
+        StorefrontDiscoveryEventLog.objects.create(
+            tenant=tenant,
+            event_name="catalog.search_performed",
+            path="/catalog/",
+            payload={"query": "runner", "result_count": 1},
+        )
+        StorefrontDiscoveryEventLog.objects.create(
+            tenant=tenant,
+            event_name="catalog.pdp_cta_intent",
+            path="/products/tenis-hubx-runner-persistido/",
+            payload={"product_slug": "tenis-hubx-runner-persistido", "cta_intent": "add_to_cart"},
+        )
+
+        response = self.client.get(
+            reverse("catalog:admin-conversion-analytics"),
+            {"event_name": "catalog.pdp_cta_intent"},
+            HTTP_HOST="hubx-demo.hubx.market",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "2 evento(s) tenant-scoped")
+        self.assertContains(response, "1 evento(s) neste recorte")
+        self.assertContains(response, "CTA do PDP")
+        self.assertContains(response, "CTA add_to_cart")
+        self.assertNotContains(response, "busca “runner”")
 
     def test_admin_product_detail_view_renders_enriched_persisted_content(self):
         self._create_inventory_recovery()

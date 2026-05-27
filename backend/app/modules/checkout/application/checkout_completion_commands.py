@@ -7,6 +7,7 @@ from typing import Protocol
 from django.db import IntegrityError, connection, transaction
 
 from app.modules.checkout.application.checkout_activation_commands import _safe_decimal
+from app.modules.coupons.application.coupon_redemption_commands import coupon_redemption_commands
 from app.modules.orders.application.order_event_publisher import order_event_publisher
 from app.modules.payments.application.payment_attempt_commands import payment_attempt_commands
 
@@ -47,6 +48,9 @@ def _item_price(item) -> Decimal:
 
 class CheckoutCompletionRepository(Protocol):
     def complete_checkout(self, *, session_key: str) -> tuple[str, str | None]:
+        ...
+
+    def get_inventory_conflicts(self, *, session_key: str) -> list[dict[str, object]]:
         ...
 
 
@@ -100,6 +104,13 @@ class DjangoOrmCheckoutCompletionRepository:
         except Exception:
             return None
 
+    def _product_snapshot_for_item(self, *, tenant_id: int, item) -> tuple[int | None, str]:
+        variant = self._get_variant(tenant_id=tenant_id, sku=_extract_variant_sku(item))
+        product = getattr(variant, "product", None)
+        if product is None:
+            return None, ""
+        return getattr(product, "id", None), str(getattr(product, "slug", "") or "").strip()
+
     def _get_order(self, *, tenant_id: int, order_number: str):
         if self.order_model is None or not tenant_id or not order_number:
             return None
@@ -139,6 +150,83 @@ class DjangoOrmCheckoutCompletionRepository:
                 return "checkout-completion-stock-conflict"
         return None
 
+    def get_inventory_conflicts(self, *, session_key: str) -> list[dict[str, object]]:
+        if not self.is_ready() or not session_key:
+            return []
+        try:
+            session = (
+                self.session_model._default_manager.filter(session_key=session_key)
+                .prefetch_related("items")
+                .first()
+            )
+        except Exception:
+            session = None
+        if session is None:
+            return []
+
+        conflicts: list[dict[str, object]] = []
+        for item in list(getattr(session, "items").all()):
+            variant_sku = _extract_variant_sku(item)
+            requested_quantity = _item_quantity(item)
+            item_id = int(getattr(item, "id", 0) or 0)
+            title = str(getattr(item, "title", "") or "Item do checkout").strip()
+            if not variant_sku:
+                conflicts.append(
+                    {
+                        "item_id": item_id,
+                        "variant_sku": "",
+                        "title": title,
+                        "requested_quantity": requested_quantity,
+                        "available_quantity": 0,
+                        "reason": "inventory-link-missing",
+                    }
+                )
+                continue
+            variant = self._get_variant(tenant_id=int(session.tenant_id), sku=variant_sku)
+            if variant is None:
+                conflicts.append(
+                    {
+                        "item_id": item_id,
+                        "variant_sku": variant_sku,
+                        "title": title,
+                        "requested_quantity": requested_quantity,
+                        "available_quantity": 0,
+                        "reason": "inventory-unavailable",
+                    }
+                )
+                continue
+            product = getattr(variant, "product", None)
+            if product is None or not bool(getattr(product, "is_active", False)) or str(getattr(product, "status", "")) != "active":
+                conflicts.append(
+                    {
+                        "item_id": item_id,
+                        "variant_sku": variant_sku,
+                        "title": title,
+                        "requested_quantity": requested_quantity,
+                        "available_quantity": 0,
+                        "reason": "inventory-unavailable",
+                    }
+                )
+                continue
+            if not bool(getattr(variant, "track_inventory", True)) or bool(getattr(variant, "allow_backorder", False)):
+                continue
+            available_quantity = max(
+                int(getattr(variant, "stock", 0) or 0) - int(getattr(variant, "reserved_stock", 0) or 0),
+                0,
+            )
+            if available_quantity < requested_quantity:
+                conflicts.append(
+                    {
+                        "item_id": item_id,
+                        "variant_sku": variant_sku,
+                        "title": title,
+                        "requested_quantity": requested_quantity,
+                        "available_quantity": available_quantity,
+                        "reason": "stock-conflict",
+                    }
+                )
+        return conflicts
+
     def _validate_session_snapshot_consistency(self, *, session, items: list[object]) -> str | None:
         if not items:
             return "checkout-completion-blocked"
@@ -166,6 +254,11 @@ class DjangoOrmCheckoutCompletionRepository:
 
     def _create_order_from_session(self, *, session, items: list[object]):
         last_error: Exception | None = None
+        promotion_snapshot = dict(getattr(session, "promotion_snapshot", {}) or {})
+        coupon_code = str(getattr(session, "coupon_code", "") or "").strip().upper()
+        if not promotion_snapshot or _safe_decimal(getattr(session, "discount_total", Decimal("0.00"))) <= 0:
+            promotion_snapshot = {}
+            coupon_code = ""
         for _ in range(3):
             order_number = self._next_order_number(tenant_id=int(session.tenant_id))
             try:
@@ -196,14 +289,22 @@ class DjangoOrmCheckoutCompletionRepository:
                         shipping_total=_safe_decimal(getattr(session, "shipping_total", Decimal("0.00"))),
                         discount_total=_safe_decimal(getattr(session, "discount_total", Decimal("0.00"))),
                         total=_safe_decimal(getattr(session, "grand_total", Decimal("0.00"))),
+                        coupon_code=coupon_code,
+                        promotion_snapshot=promotion_snapshot,
                         installments_summary=str(getattr(session, "installments_summary", "") or ""),
                     )
                     for index, item in enumerate(items, start=1):
+                        product_id_snapshot, product_slug_snapshot = self._product_snapshot_for_item(
+                            tenant_id=int(session.tenant_id),
+                            item=item,
+                        )
                         self.order_item_model._default_manager.create(
                             order=order,
                             title=str(getattr(item, "title", "") or ""),
                             subtitle=str(getattr(item, "subtitle", "") or ""),
                             meta=str(getattr(item, "meta", "") or ""),
+                            product_id_snapshot=product_id_snapshot,
+                            product_slug_snapshot=product_slug_snapshot,
                             variant_sku=_extract_variant_sku(item),
                             price_snapshot=_item_price(item),
                             quantity=_item_quantity(item),
@@ -293,6 +394,10 @@ class DjangoOrmCheckoutCompletionRepository:
                     payment_method_code=str(getattr(session, "payment_method_selected", "") or ""),
                     source_session_key=str(getattr(session, "session_key", "") or ""),
                 )
+                coupon_redemption_commands.record_order_coupon_redemption(
+                    tenant_id=int(session.tenant_id),
+                    order_number=str(getattr(order, "number", "") or ""),
+                )
                 order_event_publisher.publish_order_created(
                     tenant_id=int(session.tenant_id),
                     order_number=str(getattr(order, "number", "") or ""),
@@ -320,6 +425,9 @@ class CheckoutCompletionCommandService:
 
     def complete_checkout(self, *, session_key: str) -> tuple[str, str | None]:
         return self.repository.complete_checkout(session_key=session_key)
+
+    def get_inventory_conflicts(self, *, session_key: str) -> list[dict[str, object]]:
+        return self.repository.get_inventory_conflicts(session_key=session_key)
 
 
 checkout_completion_commands = CheckoutCompletionCommandService(

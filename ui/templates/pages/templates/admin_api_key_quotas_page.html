@@ -1,0 +1,22 @@
+{% extends layout_template|default:"layouts/admin_shell.html" %}
+
+{% block page_title %}{{ page_title|default:"Quotas de API keys" }}{% endblock %}
+{% block shell_title %}{% if shell_title %}{{ shell_title }}{% elif page_title %}{{ page_title }}{% else %}Quotas de API keys{% endif %}{% endblock %}
+
+{% block content %}
+<section class="space-y-6">
+    {% with eyebrow=page_eyebrow|default:"API pública" title=page_title|default:"Quotas de API keys" description=page_description|default:"Visibilidade read-only de quotas comerciais por tenant." %}
+        {% include "shared/components/layout/page_header.html" %}
+    {% endwith %}
+
+    <div class="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
+        <p class="text-sm text-[var(--color-text-secondary)]">
+            Esta tela não cria cobrança, plano ou segredo. Ela mostra apenas quota, uso agregado e prefixo público da API key.
+        </p>
+    </div>
+
+    {% with title="Quotas configuradas" description="Listagem tenant-scoped por API key, endpoint e janela." count=table_count columns=columns rows=rows table_id="admin-api-key-quotas-table" empty_title=empty_title empty_description=empty_description %}
+        {% include "shared/components/data_display/data_table.html" %}
+    {% endwith %}
+</section>
+{% endblock %}
