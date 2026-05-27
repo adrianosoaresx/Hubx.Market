@@ -4,7 +4,10 @@ from django.contrib import admin
 from django.urls import include, path
 from django.views.generic import TemplateView
 
+from app.modules.catalog.interfaces.views import StorefrontHomeView
+
 urlpatterns = [
+    path("", StorefrontHomeView.as_view(), name="storefront-home"),
     path("admin/", admin.site.urls),
     path("accounts/", include(("app.modules.accounts.interfaces.urls", "accounts"), namespace="accounts")),
     path("api-keys/", include(("app.modules.api_keys.interfaces.urls", "api_keys"), namespace="api_keys")),

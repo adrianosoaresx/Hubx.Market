@@ -5,20 +5,24 @@ body {
 }
 
 .ds-surface {
-  background-color: var(--color-surface-panel);
-  border: 1px solid var(--color-border-default);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
+  background-color: var(--color-surface-panel, #ffffff);
+  border: 1px solid var(--color-border-default, #e2e8f0);
+  border-radius: var(--radius-md, 0.75rem);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(15, 23, 42, 0.06));
 }
 
 .ds-btn {
+  appearance: none;
+  border: 1px solid transparent;
+  cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  border-radius: var(--radius-md);
+  border-radius: var(--component-button-primary-radius, var(--radius-md, 0.75rem));
   font-weight: 600;
   line-height: 1.2;
+  text-decoration: none;
   transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
 }
 
@@ -26,22 +30,24 @@ body {
 .ds-input:focus-visible,
 .ds-select:focus-visible {
   outline: 2px solid transparent;
-  box-shadow: 0 0 0 4px var(--focus-ring);
+  box-shadow: 0 0 0 4px var(--focus-ring, rgba(79, 70, 229, 0.35));
 }
 
 .ds-btn-primary {
-  background-color: var(--color-action-primary-bg);
-  color: var(--color-action-primary-text);
+  background-color: var(--color-action-primary-bg, #4f46e5);
+  border-color: var(--color-action-primary-bg, #4f46e5);
+  color: var(--color-action-primary-text, #ffffff);
 }
 
 .ds-btn-primary:hover {
-  background-color: var(--color-action-primary-bg-hover);
+  background-color: var(--color-action-primary-bg-hover, #4338ca);
+  border-color: var(--color-action-primary-bg-hover, #4338ca);
 }
 
 .ds-btn-secondary {
-  background-color: var(--color-surface-panel);
-  color: var(--color-text-primary);
-  border: 1px solid var(--color-border-default);
+  background-color: var(--component-button-secondary-bg, var(--color-surface-panel, #ffffff));
+  color: var(--component-button-secondary-text, var(--color-text-primary, #0f172a));
+  border-color: var(--component-button-secondary-border, var(--color-border-default, #e2e8f0));
 }
 
 .ds-btn-sm {

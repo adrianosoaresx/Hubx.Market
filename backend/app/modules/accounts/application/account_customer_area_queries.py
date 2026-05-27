@@ -54,9 +54,9 @@ def _customer_order_next_step(*, status_label: str, payment_status: str, shippin
     lowered_fulfillment = fulfillment_status_label.lower()
     lowered_status = status_label.lower()
     if "cancel" in lowered_status:
-        return "Se quiser continuar comprando depois, você pode voltar ao catálogo quando for um bom momento para iniciar um novo pedido."
+        return "Se quiser continuar comprando depois, você pode voltar à loja quando for um bom momento para iniciar um novo pedido."
     if "entreg" in lowered_shipping or "conclu" in lowered_fulfillment:
-        return "Seu pedido já foi concluído com segurança. Agora vale guardar este histórico na conta e voltar ao catálogo quando fizer sentido iniciar uma nova compra."
+        return "Seu pedido já foi concluído com segurança. Agora vale guardar este histórico na conta e voltar à loja quando fizer sentido iniciar uma nova compra."
     if "trânsito" in lowered_shipping or "enviado" in lowered_status:
         return "Agora vale acompanhar a entrega por aqui e usar este histórico como referência sempre que quiser revisar a compra."
     if "prepar" in lowered_shipping or "separ" in lowered_fulfillment:
@@ -122,7 +122,7 @@ def _customer_orders_continuity_description(*, total_orders: int, persisted: boo
         latest_copy = f" {latest_recent_hint}." if latest_recent_hint else ""
         return (
             f"Você já tem {total_orders} pedidos salvos nesta conta, então ficou mais fácil retomar acompanhamentos, "
-            f"revisar compras anteriores e decidir quando vale voltar ao catálogo.{latest_copy}"
+            f"revisar compras anteriores e decidir quando vale voltar à loja.{latest_copy}"
         )
     latest_copy = f" {latest_recent_hint}." if latest_recent_hint else ""
     return (
@@ -212,18 +212,18 @@ def _return_to_catalog_guidance(*, total_orders: int, status_label: str = "", sh
     lowered_status = status_label.lower()
     lowered_shipping = shipping_status.lower()
     if "cancel" in lowered_status:
-        return "Quando fizer sentido retomar, o catálogo continua sendo o melhor ponto para começar uma nova compra com calma."
+        return "Quando fizer sentido retomar, a loja continua sendo o melhor ponto para começar uma nova compra com calma."
     if "entreg" in lowered_shipping:
-        return "Seu pedido já foi concluído e o catálogo continua disponível para uma próxima compra quando você quiser voltar."
+        return "Seu pedido já foi concluído e a loja continua disponível para uma próxima compra quando você quiser voltar."
     if "trânsito" in lowered_shipping or "enviado" in lowered_status:
         return (
-            "Enquanto a entrega avança, você pode voltar ao catálogo quando quiser explorar a próxima compra sem perder o histórico desta conta."
+            "Enquanto a entrega avança, você pode voltar à loja quando quiser explorar a próxima compra sem perder o histórico desta conta."
         )
     if total_orders > 1:
-        return "Quando quiser comprar de novo, o catálogo continua disponível para você explorar novidades sem perder o histórico já salvo."
+        return "Quando quiser comprar de novo, a loja continua disponível para você explorar novidades sem perder o histórico já salvo."
     if total_orders == 1:
-        return "Quando quiser dar o próximo passo, o catálogo segue disponível para você explorar novos produtos com a conta já preparada."
-    return "Quando estiver pronta para começar, o catálogo continua disponível para explorar produtos e iniciar sua próxima compra."
+        return "Quando quiser dar o próximo passo, a loja segue disponível para você explorar novos produtos com a conta já preparada."
+    return "Quando estiver pronta para começar, a loja continua disponível para explorar produtos e iniciar sua próxima compra."
 
 
 def _return_to_buy_readiness(*, total_orders: int, status_label: str = "", shipping_status: str = "") -> dict[str, str]:
@@ -231,27 +231,27 @@ def _return_to_buy_readiness(*, total_orders: int, status_label: str = "", shipp
     lowered_shipping = shipping_status.lower()
     if "entreg" in lowered_shipping:
         return {
-            "title": "Pronta para voltar ao catálogo",
-            "description": "Este pedido já foi concluído e o histórico ficou salvo na sua conta. Quando fizer sentido, o catálogo continua sendo o melhor ponto para iniciar a próxima compra.",
+            "title": "Pronta para voltar à loja",
+            "description": "Este pedido já foi concluído e o histórico ficou salvo na sua conta. Quando fizer sentido, a loja continua sendo o melhor ponto para iniciar a próxima compra.",
         }
     if "trânsito" in lowered_shipping or "enviado" in lowered_status:
         return {
-            "title": "Catálogo segue disponível",
-            "description": "Enquanto esta entrega avança, você ainda pode voltar ao catálogo quando quiser explorar a próxima compra com o histórico desta conta preservado.",
+            "title": "Loja segue disponível",
+            "description": "Enquanto esta entrega avança, você ainda pode voltar à loja quando quiser explorar a próxima compra com o histórico desta conta preservado.",
         }
     if total_orders > 1:
         return {
             "title": "Conta pronta para uma nova compra",
-            "description": "Seu histórico já está organizado nesta conta, então o catálogo continua disponível para uma nova compra sem perder o contexto dos pedidos anteriores.",
+            "description": "Seu histórico já está organizado nesta conta, então a loja continua disponível para uma nova compra sem perder o contexto dos pedidos anteriores.",
         }
     if total_orders == 1:
         return {
             "title": "Primeira compra já registrada",
-            "description": "Seu primeiro pedido já deixou a conta pronta para um próximo retorno, e o catálogo continua disponível quando você quiser comprar de novo.",
+            "description": "Seu primeiro pedido já deixou a conta pronta para um próximo retorno, e a loja continua disponível quando você quiser comprar de novo.",
         }
     return {
-        "title": "Catálogo disponível",
-        "description": "Quando quiser começar, o catálogo continua disponível para explorar produtos e iniciar sua próxima compra.",
+        "title": "Loja disponível",
+        "description": "Quando quiser começar, a loja continua disponível para explorar produtos e iniciar sua próxima compra.",
     }
 
 

@@ -19,7 +19,7 @@
                 {% if export_href %}
                     {% include "shared/components/actions/button.html" with label=export_label|default:"Exportar" href=export_href variant="secondary" %}
                 {% elif showcase_mode %}
-                    {% include "shared/components/actions/button.html" with label="Exportar" href="#" variant="secondary" %}
+                    {% include "shared/components/actions/button.html" with label="Exportar" href="/ops/customers/" variant="secondary" %}
                 {% endif %}
             </div>
         {% endif %}

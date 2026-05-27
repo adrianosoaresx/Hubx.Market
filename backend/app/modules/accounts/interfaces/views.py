@@ -3,6 +3,7 @@ from __future__ import annotations
 from urllib.parse import urlencode
 
 from django.conf import settings
+from django.contrib.auth import authenticate, get_user_model, login as django_login
 from django.core.paginator import Paginator
 from django.http import HttpResponse, HttpResponseNotFound, HttpResponseRedirect
 from django.middleware.csrf import get_token
@@ -35,13 +36,14 @@ from app.modules.reviews.application.customer_review_submission_commands import 
 )
 from app.modules.reviews.application.customer_review_status_queries import customer_review_status_queries
 from app.modules.reviews.application.review_eligibility_queries import DUPLICATE, review_eligibility_queries
+from app.modules.accounts.models import AccountProfile, OwnerUser
 from .forms import AccountAddressForm
 
 
 def _quick_links() -> list[dict[str, str]]:
     return [
         {"href": reverse("accounts:account-orders"), "label": "Ver pedidos", "description": "Acompanhe status, entrega e histórico."},
-        {"href": reverse("storefront:catalog-list"), "label": "Voltar ao catálogo", "description": "Retome a navegação e inicie a próxima compra."},
+        {"href": reverse("storefront:catalog-list"), "label": "Voltar à loja", "description": "Retome a navegação e inicie a próxima compra."},
         {"href": reverse("accounts:account-addresses"), "label": "Gerenciar endereços", "description": "Atualize entregas e cobrança."},
         {"href": reverse("accounts:account-profile"), "label": "Editar perfil", "description": "Revise dados pessoais e preferências."},
     ]
@@ -307,7 +309,7 @@ def _build_order_detail_feedback_context(request) -> dict[str, object]:
             "variant": "warning",
             "icon": "ℹ️",
             "title": "Não foi possível recriar este pedido",
-            "description": "Nenhum item elegível pôde ser usado para uma nova compra agora. Revise o catálogo para montar uma nova sessão.",
+            "description": "Nenhum item elegível pôde ser usado para uma nova compra agora. Revise a loja para montar uma nova sessão.",
         },
         "payment-retry-unavailable": {
             "variant": "warning",
@@ -611,11 +613,18 @@ class LoginView(TemplateView):
 
     def post(self, request, *args, **kwargs):
         tenant_id = getattr(getattr(request, "tenant", None), "id", None)
+        login_value = request.POST.get("login")
+        password = request.POST.get("password")
+        if not self._login_belongs_to_owner(tenant_id=tenant_id, login_value=login_value):
+            customer_result = self._authenticate_customer(request=request, tenant_id=tenant_id, login_value=login_value, password=password)
+            if customer_result == "customer-login-authenticated":
+                return HttpResponseRedirect(self._safe_next_url() or reverse("accounts:account-overview"))
+
         result = owner_login_commands.authenticate_owner(
             request=request,
             tenant_id=tenant_id,
-            login=request.POST.get("login"),
-            password=request.POST.get("password"),
+            login=login_value,
+            password=password,
             remember_me=request.POST.get("remember_me") in {"1", "on", "true", "True"},
         )
         if result.get("result") == "owner-login-authenticated":
@@ -633,6 +642,36 @@ class LoginView(TemplateView):
         if status_code == 429 and result.get("retry_after_seconds"):
             response["Retry-After"] = str(result["retry_after_seconds"])
         return response
+
+    def _login_belongs_to_owner(self, *, tenant_id: int | None, login_value: object) -> bool:
+        if not tenant_id:
+            return False
+        normalized_login = str(login_value or "").strip()
+        if not normalized_login:
+            return False
+        return OwnerUser.objects.filter(tenant_id=tenant_id, email__iexact=normalized_login, is_active=True).exists()
+
+    def _authenticate_customer(self, *, request, tenant_id: int | None, login_value: object, password: object) -> str:
+        if not tenant_id:
+            return "customer-login-invalid"
+        normalized_login = str(login_value or "").strip()
+        raw_password = str(password or "")
+        if not normalized_login or not raw_password:
+            return "customer-login-invalid"
+        profile = AccountProfile.objects.filter(tenant_id=tenant_id, email__iexact=normalized_login, is_active=True).first()
+        if profile is None:
+            return "customer-login-invalid"
+        user_model = get_user_model()
+        user_record = user_model.objects.filter(email__iexact=normalized_login, is_active=True).first()
+        if user_record is None:
+            return "customer-login-invalid"
+        user = authenticate(request, username=user_record.get_username(), password=raw_password)
+        if user is None:
+            return "customer-login-invalid"
+        django_login(request, user)
+        request.session["hubx_account_profile_id"] = profile.id
+        request.session["hubx_account_session_kind"] = "customer"
+        return "customer-login-authenticated"
 
     def _safe_next_url(self) -> str:
         next_url = str(self.request.POST.get("next") or self.request.GET.get("next") or "").strip()

@@ -33,13 +33,13 @@
                 {% if back_href %}
                     {% include "shared/components/actions/button.html" with label=back_label|default:"Voltar" href=back_href variant="secondary" %}
                 {% elif showcase_mode %}
-                    {% include "shared/components/actions/button.html" with label="Voltar" href="#" variant="secondary" %}
+                    {% include "shared/components/actions/button.html" with label="Voltar" href="/ops/catalog/products/" variant="secondary" %}
                 {% endif %}
 
                 {% if edit_href %}
                     {% include "shared/components/actions/button.html" with label=edit_label|default:"Editar produto" href=edit_href variant="primary" %}
                 {% elif showcase_mode %}
-                    {% include "shared/components/actions/button.html" with label="Editar produto" href="#" variant="primary" %}
+                    {% include "shared/components/actions/button.html" with label="Editar produto" href="/ops/catalog/products/new/" variant="primary" %}
                 {% endif %}
             </div>
         {% endif %}

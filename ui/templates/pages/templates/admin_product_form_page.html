@@ -17,7 +17,7 @@
                 {% if cancel_href %}
                     {% include "shared/components/actions/button.html" with label=cancel_label|default:"Voltar" href=cancel_href variant="secondary" %}
                 {% elif showcase_mode %}
-                    {% include "shared/components/actions/button.html" with label="Voltar" href="#" variant="secondary" %}
+                    {% include "shared/components/actions/button.html" with label="Voltar" href="/ops/catalog/products/" variant="secondary" %}
                 {% endif %}
             {% endif %}
         </div>

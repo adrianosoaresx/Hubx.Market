@@ -81,7 +81,7 @@ class AccountViewTests(TestCase):
         self.assertEqual(overview_payload["recent_orders"][0]["cells"][0], "#1048")
         self.assertEqual(overview_payload["profile_mode"], "missing")
         self.assertIn("ainda não encontramos um perfil persistido", overview_payload["summary_content"].lower())
-        self.assertIn("voltar ao catálogo", overview_payload["page_meta"].lower())
+        self.assertIn("voltar à loja", overview_payload["page_meta"].lower())
 
 
 @override_settings(ALLOWED_HOSTS=["testserver", ".hubx.market", "localhost"])
@@ -131,6 +131,41 @@ class OwnerLoginViewTests(TestCase):
                 entity_id=str(self.owner.id),
             ).exists()
         )
+
+    def test_customer_login_post_authenticates_profile_and_redirects_to_account(self):
+        customer = Customer.objects.create(
+            tenant=self.tenant,
+            slug="cliente-login",
+            full_name="Cliente Login",
+            email="cliente.login@hubx.market",
+        )
+        profile = AccountProfile.objects.create(
+            tenant=self.tenant,
+            customer=customer,
+            email="cliente.login@hubx.market",
+            first_name="Cliente",
+            last_name="Login",
+        )
+        customer_user = User.objects.create_user(
+            username="cliente-login",
+            email="cliente.login@hubx.market",
+            password="secret-pass",
+        )
+
+        response = self.client.post(
+            reverse("accounts:login"),
+            data={
+                "login": "cliente.login@hubx.market",
+                "password": "secret-pass",
+            },
+            HTTP_HOST=f"{self.tenant.subdomain}.hubx.market",
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], reverse("accounts:account-overview"))
+        self.assertEqual(str(self.client.session[SESSION_KEY]), str(customer_user.id))
+        self.assertEqual(self.client.session["hubx_account_profile_id"], profile.id)
+        self.assertEqual(self.client.session["hubx_account_session_kind"], "customer")
 
     @override_settings(OWNER_MFA_REQUIRED=True, OWNER_MFA_SECRET_PROVIDER="env", OWNER_MFA_SECRET_ENV_PREFIX="OWNER_MFA_SECRET_")
     def test_owner_login_with_mfa_required_redirects_to_challenge_without_session(self):
@@ -567,7 +602,7 @@ class AccountPersistedReadTests(TestCase):
         self.assertTemplateUsed(response, "pages/templates/account_overview_page.html")
         self.assertContains(response, "Ana Persistida")
         self.assertContains(response, "qual é o melhor ponto de retorno")
-        self.assertContains(response, "Voltar ao catálogo")
+        self.assertContains(response, "Voltar à loja")
 
     def test_account_query_service_scopes_profile_by_tenant_when_requested(self):
         second_tenant = Tenant.objects.create(
@@ -627,7 +662,7 @@ class AccountOverviewContinuityTests(TestCase):
         self.assertIn("pedido mais recente", overview_payload["activity_content"].lower())
         self.assertIn("confirmação do envio", overview_payload["activity_content"].lower())
         self.assertIn("primeira compra já registrada", overview_payload["page_meta"].lower())
-        self.assertIn("catálogo continua disponível", overview_payload["quick_links_subtitle"].lower())
+        self.assertIn("loja continua disponível", overview_payload["quick_links_subtitle"].lower())
 
     def test_account_overview_view_renders_continuity_context(self):
         response = self.client.get(reverse("accounts:account-overview"))
@@ -641,7 +676,7 @@ class AccountOverviewContinuityTests(TestCase):
         self.assertContains(response, "pedido em preparação")
         self.assertContains(response, "melhor acompanhamento agora")
         self.assertContains(response, "Primeira compra já registrada")
-        self.assertContains(response, "Voltar ao catálogo")
+        self.assertContains(response, "Voltar à loja")
 
     @override_settings(HUBX_MARKET_ROOT_DOMAIN="hubx.market", ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver"])
     def test_account_overview_scopes_order_continuity_by_tenant(self):

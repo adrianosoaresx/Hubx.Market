@@ -32,12 +32,22 @@ class StorefrontViewTests(TestCase):
     def tearDown(self):
         storefront_discovery_analytics.publisher = NoopStorefrontDiscoveryAnalyticsPublisher()
 
+    def test_storefront_home_view_renders_home_template(self):
+        response = self.client.get(reverse("storefront-home"), HTTP_HOST=self.storefront_host)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "pages/templates/home_page.html")
+        self.assertContains(response, "Hubx Storefront Demo")
+        self.assertContains(response, 'href="/"')
+        self.assertContains(response, 'href="/catalog/"')
+        self.assertContains(response, "Produtos para começar")
+
     def test_catalog_list_view_renders_design_system_template(self):
         response = self.client.get(reverse("storefront:catalog-list"), HTTP_HOST=self.storefront_host)
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "pages/templates/catalog_page.html")
-        self.assertContains(response, "Catálogo")
+        self.assertContains(response, "Loja")
         self.assertContains(response, "Tênis Hubx Runner")
         self.assertContains(response, "curadoria leve")
 
@@ -521,9 +531,9 @@ class StorefrontPersistedReadTests(TestCase):
         self.assertEqual(product["catalog_card_decision_signal"], "oferta_editorial")
         self.assertEqual(product["catalog_card_availability_note"], "Preto · 42 pronta para compra imediata.")
         self.assertIn("decidir com confiança", product["catalog_card_click_helper"])
-        self.assertIn("combinação destacada no catálogo continua sendo Preto · 42", product["product_subtitle"])
-        self.assertIn("combinação destacada no catálogo continua sendo Preto · 42", product["short_description"])
-        self.assertIn("combinação destacada no catálogo continua sendo Preto · 42", product["purchase_note"])
+        self.assertIn("combinação destacada na loja continua sendo Preto · 42", product["product_subtitle"])
+        self.assertIn("combinação destacada na loja continua sendo Preto · 42", product["short_description"])
+        self.assertIn("combinação destacada na loja continua sendo Preto · 42", product["purchase_note"])
         self.assertIn("já pode seguir para checkout", product["purchase_note"])
         self.assertIn("decisão segura", product["cta_helper"])
         self.assertEqual(product["pdp_decision_checks"][0]["title"], "Preço confirmado")
@@ -582,7 +592,7 @@ class StorefrontPersistedReadTests(TestCase):
         self.assertContains(detail_response, "oferta disponível para Preto · 42, com economia frente ao valor anterior e parcelamento em até 3x sem juros")
         self.assertContains(detail_response, "Combinação em destaque · Preto · 42, com disponibilidade imediata e compra segura no storefront.")
         self.assertContains(detail_response, "valor percebido mais alto")
-        self.assertContains(detail_response, "A combinação destacada no catálogo continua sendo Preto · 42")
+        self.assertContains(detail_response, "A combinação destacada na loja continua sendo Preto · 42")
         self.assertContains(detail_response, "Adicionar ao carrinho")
         self.assertContains(detail_response, "Comprar agora")
         self.assertContains(detail_response, "decisão segura")
@@ -1305,7 +1315,7 @@ class StorefrontPersistedReadTests(TestCase):
         self.assertEqual(item["stock_label"], "Sem estoque")
         self.assertEqual(item["primary_action_label"], "Avise-me da reposição")
         self.assertTrue(item["primary_action_disabled"])
-        self.assertEqual(item["secondary_action_label"], "Ver catálogo")
+        self.assertEqual(item["secondary_action_label"], "Ver loja")
         self.assertEqual(item["secondary_action_target"], "catalog")
         self.assertEqual(item["badge_label"], "Reposição em acompanhamento · Vermelho · 39")
         self.assertEqual(item["catalog_card_availability_note"], "Vermelho · 39 indisponível no momento.")
@@ -1316,7 +1326,7 @@ class StorefrontPersistedReadTests(TestCase):
         self.assertIn("está sem estoque no momento", item["availability_note"])
         self.assertIn("não segue para checkout agora", item["cta_helper"])
         self.assertIn("acompanhar a reposição com tranquilidade", item["cta_helper"])
-        self.assertIn("próximo passo mais seguro é acompanhar a reposição ou voltar ao catálogo", item["purchase_note"])
+        self.assertIn("próximo passo mais seguro é acompanhar a reposição ou voltar à loja", item["purchase_note"])
         self.assertEqual(item["pdp_decision_checks"][1]["title"], "Sem checkout agora")
         self.assertIn("não está disponível para compra imediata", item["pdp_decision_checks"][1]["description"])
 

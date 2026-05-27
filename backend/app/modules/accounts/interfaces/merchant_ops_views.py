@@ -100,6 +100,7 @@ class MerchantOperationsDashboardView(TemplateView):
                 "page_eyebrow": "Merchant operations",
                 "page_description": "Cockpit operacional personalizado pelas permissões do owner/admin ativo.",
                 "page_actions": _dashboard_actions(nav_items),
+                "admin_nav_items": nav_items,
                 "page_meta": f"Perfil operacional: {request_owner_role(self.request) or 'compatibilidade legada'}",
                 "showcase_mode": False,
                 "kpi_1_title": kpis[0]["title"],

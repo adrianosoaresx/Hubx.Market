@@ -19,7 +19,7 @@
                 {% if create_href %}
                     {% include "shared/components/actions/button.html" with label=create_label|default:"Novo produto" href=create_href variant="primary" %}
                 {% elif showcase_mode %}
-                    {% include "shared/components/actions/button.html" with label="Novo produto" href="#" variant="primary" %}
+                    {% include "shared/components/actions/button.html" with label="Novo produto" href="/ops/catalog/products/new/" variant="primary" %}
                 {% endif %}
             </div>
         {% endif %}

@@ -158,22 +158,22 @@ def _overview_return_to_buy_copy(*, total_orders: int, status_label: str, shippi
     lowered_shipping = str(shipping_status or "").lower()
     if "entreg" in lowered_shipping:
         return {
-            "title": "Pronta para voltar ao catálogo",
-            "description": "Seu pedido já foi concluído e o catálogo continua disponível para uma próxima compra quando você quiser voltar.",
+            "title": "Pronta para voltar à loja",
+            "description": "Seu pedido já foi concluído e a loja continua disponível para uma próxima compra quando você quiser voltar.",
         }
     if "trânsito" in lowered_shipping or "enviado" in lowered_status:
         return {
-            "title": "Catálogo segue disponível",
-            "description": "Enquanto esta entrega avança, o catálogo continua disponível para a próxima compra sem perder o histórico da conta.",
+            "title": "Loja segue disponível",
+            "description": "Enquanto esta entrega avança, a loja continua disponível para a próxima compra sem perder o histórico da conta.",
         }
     if total_orders > 1:
         return {
             "title": "Conta pronta para uma nova compra",
-            "description": "Seu histórico já está organizado nesta conta, e o catálogo continua disponível quando você quiser explorar a próxima compra.",
+            "description": "Seu histórico já está organizado nesta conta, e a loja continua disponível quando você quiser explorar a próxima compra.",
         }
     return {
         "title": "Primeira compra já registrada",
-        "description": "Seu primeiro pedido já deixou a conta pronta para um próximo retorno, e o catálogo continua disponível quando você quiser comprar de novo.",
+        "description": "Seu primeiro pedido já deixou a conta pronta para um próximo retorno, e a loja continua disponível quando você quiser comprar de novo.",
     }
 
 
@@ -181,7 +181,7 @@ def _overview_orders_context(*, tenant_id: int | None = None) -> dict[str, objec
     fallback = {
         "page_description": "Volte à sua conta para localizar pedidos recentes, revisar sua área e retomar a loja com mais contexto.",
         "summary_subtitle": "Veja rapidamente qual é o melhor ponto de retorno da sua conta neste momento.",
-        "page_meta": "Conta pronta para acompanhar pedidos e voltar ao catálogo quando fizer sentido.",
+        "page_meta": "Conta pronta para acompanhar pedidos e voltar à loja quando fizer sentido.",
         "quick_links_subtitle": "Atalhos úteis para acompanhar pedidos, revisar sua conta e voltar à loja sem perder contexto.",
         "recent_orders": [
             {"cells": ["#1048", "Pago", "R$ 324,80", "12/04/2026"]},
@@ -254,7 +254,7 @@ def _overview_orders_context(*, tenant_id: int | None = None) -> dict[str, objec
     page_meta = (
         f'{return_to_buy["title"]} · {return_to_buy["description"]}'
         if return_to_buy["title"] and return_to_buy["description"]
-        else "Conta pronta para acompanhar pedidos e voltar ao catálogo quando fizer sentido."
+        else "Conta pronta para acompanhar pedidos e voltar à loja quando fizer sentido."
     )
     quick_links_subtitle = (
         f'{return_to_buy["description"]} Use os atalhos para acompanhar pedidos, revisar sua conta e voltar à loja sem perder contexto.'

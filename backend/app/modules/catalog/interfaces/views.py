@@ -657,7 +657,7 @@ def _pdp_cart_feedback(value: object) -> dict[str, str]:
             "variant": "warning",
             "icon": "⚠️",
             "title": "Produto indisponível para carrinho",
-            "description": "Esta combinação não está disponível para compra agora. Revise outra variante ou volte ao catálogo.",
+            "description": "Esta combinação não está disponível para compra agora. Revise outra variante ou volte à loja.",
         }
     return {}
 
@@ -1148,7 +1148,7 @@ class CatalogListView(TemplateView):
 
         context.update(
             {
-                "page_title": "Catálogo",
+                "page_title": "Loja",
                 "page_description": page_description,
                 "page_meta": _catalog_reentry_meta(
                     category_label=category_label,
@@ -1190,6 +1190,45 @@ class CatalogListView(TemplateView):
                 "prev_url": page_url(page_obj.previous_page_number()) if page_obj.has_previous() else None,
                 "next_url": page_url(page_obj.next_page_number()) if page_obj.has_next() else None,
                 "page_items": _storefront_page_items(page_obj.number, paginator.num_pages, base_url, query_params),
+            }
+        )
+        return context
+
+
+class StorefrontHomeView(TemplateView):
+    template_name = "pages/templates/home_page.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tenant = _require_storefront_tenant(self.request)
+        tenant_id = getattr(tenant, "id", None)
+        products = storefront_catalog_queries.list_products(tenant_id=tenant_id)
+        featured_products = products[:3]
+        product_ids = [
+            product_id
+            for product_id in (_product_id(product.get("id")) for product in featured_products)
+            if product_id is not None
+        ]
+        review_summaries = product_review_summary_queries.get_product_review_summaries(
+            tenant_id=tenant_id,
+            product_ids=product_ids,
+        )
+
+        context.update(
+            {
+                "page_title": "Início",
+                "hero_title": f"{getattr(tenant, 'name', '') or 'Hubx Market'}",
+                "hero_description": "Descubra produtos em destaque, acompanhe novidades e siga para uma compra segura.",
+                "featured_products": [
+                    _build_storefront_product_card(
+                        product,
+                        active_quick_filter="featured",
+                        review_summary=review_summaries.get(_product_id(product.get("id")) or 0),
+                    )
+                    for product in featured_products
+                ],
+                "catalog_href": reverse("storefront:catalog-list"),
+                "newsletter_href": reverse("storefront_newsletter:newsletter-subscribe"),
             }
         )
         return context
@@ -1390,7 +1429,7 @@ class ProductDetailView(TemplateView):
                 "primary_action_disabled": product.get("primary_action_disabled", False),
                 "secondary_action_label": "Comprar agora"
                 if stock_state != "out_of_stock"
-                else product.get("secondary_action_label", "Ver catálogo"),
+                else product.get("secondary_action_label", "Ver loja"),
                 "secondary_action_href": secondary_action_href if secondary_target == "catalog" else "",
                 "secondary_action_type": "button" if secondary_target == "catalog" else "submit",
                 "secondary_action_name": "intent",

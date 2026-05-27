@@ -406,7 +406,7 @@ class AdminCustomersListView(TemplateView):
                     else "Acompanhe clientes, status da conta e atividade recente."
                 ),
                 "page_meta": page_meta,
-                "export_href": "#export-customers",
+                "export_href": "/ops/customers/",
                 "filter_action": base_url,
                 "search_name": "q",
                 "search_value": search_value,

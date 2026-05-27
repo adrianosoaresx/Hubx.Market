@@ -33,13 +33,13 @@
                 {% if back_href %}
                     {% include "shared/components/actions/button.html" with label=back_label|default:"Voltar" href=back_href variant="secondary" %}
                 {% elif showcase_mode %}
-                    {% include "shared/components/actions/button.html" with label="Voltar" href="#" variant="secondary" %}
+                    {% include "shared/components/actions/button.html" with label="Voltar" href="/ops/orders/" variant="secondary" %}
                 {% endif %}
 
                 {% if primary_href %}
                     {% include "shared/components/actions/button.html" with label=primary_label|default:"Atualizar pedido" href=primary_href variant="primary" %}
                 {% elif showcase_mode %}
-                    {% include "shared/components/actions/button.html" with label="Atualizar pedido" href="#" variant="primary" %}
+                    {% include "shared/components/actions/button.html" with label="Atualizar pedido" href="/ops/orders/" variant="primary" %}
                 {% endif %}
             </div>
         {% endif %}

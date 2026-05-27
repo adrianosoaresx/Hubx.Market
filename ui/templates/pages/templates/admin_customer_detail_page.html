@@ -33,7 +33,7 @@
                 {% if back_href %}
                     {% include "shared/components/actions/button.html" with label=back_label|default:"Voltar" href=back_href variant="secondary" %}
                 {% elif showcase_mode %}
-                    {% include "shared/components/actions/button.html" with label="Voltar" href="#" variant="secondary" %}
+                    {% include "shared/components/actions/button.html" with label="Voltar" href="/ops/customers/" variant="secondary" %}
                 {% endif %}
             </div>
         {% endif %}

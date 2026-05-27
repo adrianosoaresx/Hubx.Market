@@ -633,7 +633,7 @@ class AdminOrdersListView(TemplateView):
                 "table_description": (
                     "Tabela operacional com status, pagamento, prioridade e markers rápidos para exceções de estoque."
                 ),
-                "export_href": "#export-orders",
+                "export_href": "/ops/orders/",
                 "filter_action": base_url,
                 "filter_title": filter_title,
                 "filter_description": filter_description,
