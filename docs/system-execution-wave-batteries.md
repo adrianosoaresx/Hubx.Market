@@ -223,13 +223,13 @@ Objetivo:
 
 Ondas:
 
-1. Shipping Quote Provider Contract Review
-2. Shipping Quote Adapter Skeleton Execution
-3. Shipping Quote Checkout Integration Review
-4. Shipping Quote Checkout Execution
-5. Shipping Quote Failure UX Review
-6. Shipping Quote Observability Execution
-7. Shipping Quote Closure Review
+1. Shipping Quote Provider Contract Review — **concluída**
+2. Shipping Quote Adapter Skeleton Execution — **concluída**
+3. Shipping Quote Checkout Integration Review — **concluída**
+4. Shipping Quote Checkout Execution — **concluída**
+5. Shipping Quote Failure UX Review — **concluída**
+6. Shipping Quote Observability Execution — **concluída**
+7. Shipping Quote Closure Review — **concluída**
 
 Critério de conclusão:
 
@@ -252,13 +252,13 @@ Objetivo:
 
 Ondas:
 
-1. Subscription Domain Contract Review
-2. Subscription Plan Model Execution
-3. Tenant Subscription State Execution
-4. Subscription Admin Read Surface Review
-5. Subscription Admin Read Surface Execution
-6. Subscription Enforcement Boundary Review
-7. Subscriptions Foundation Closure Review
+1. Subscription Domain Contract Review — **concluída**
+2. Subscription Plan Model Execution — **concluída**
+3. Tenant Subscription State Execution — **concluída**
+4. Subscription Admin Read Surface Review — **concluída**
+5. Subscription Admin Read Surface Execution — **concluída**
+6. Subscription Enforcement Boundary Review — **concluída**
+7. Subscriptions Foundation Closure Review — **concluída**
 
 Critério de conclusão:
 
@@ -295,6 +295,18 @@ Critério de conclusão:
 - metadata sensível redigida;
 - queries admin continuam tenant-scoped.
 
+Status:
+
+- **concluída**.
+
+Entregue:
+
+- `payments.refund.approved` e `payments.refund.execution_recorded`;
+- `catalog.product.visibility_updated`;
+- confirmação de cobertura existente de API keys;
+- closure executável `audit_instrumentation_expansion`;
+- testes tenant-scoped e sem segredo/hash/payload provider em metadata.
+
 Próxima bateria automática:
 
 - **Battery G — Notifications Production Delivery**.
@@ -322,6 +334,19 @@ Critério de conclusão:
 - falhas/bounces classificados;
 - logs e métricas confirmados;
 - sem vazamento de dados de customer.
+
+Status:
+
+- **concluída**.
+
+Entregue:
+
+- provider production gate;
+- smoke transacional real via `EmailLog`;
+- evidência sanitizada com recipient mascarado;
+- classificação de bounces/falhas;
+- monitoring/closure por snapshot tenant-scoped;
+- comando `notification_production_delivery`.
 
 Próxima bateria automática:
 
@@ -351,6 +376,18 @@ Critério de conclusão:
 - opt-out respeitado;
 - sem automação complexa prematura.
 
+Status:
+
+- **concluída**.
+
+Entregue:
+
+- segment query de newsletter subscribed;
+- intent `customer.post_purchase.follow_up`;
+- command service para planejar `EmailLog` pós-compra;
+- boundary de opt-out;
+- closure executável `customer_retention_lifecycle`.
+
 Próxima bateria automática:
 
 - **Battery I — Storefront Data-Driven Conversion**.
@@ -377,6 +414,18 @@ Critério de conclusão:
 - baseline mensurável;
 - uma melhoria executada com hipótese clara;
 - sem redesenhar storefront inteiro.
+
+Status:
+
+- **concluída**.
+
+Entregue:
+
+- baseline de eventos discovery/PDP/CTA;
+- funil PDP CTA;
+- revisão de busca/facet sem resultado;
+- contrato e execução do experimento `product_card_priority_v1`;
+- closure executável `storefront_conversion`.
 
 Próxima bateria automática:
 
@@ -405,6 +454,19 @@ Critério de conclusão:
 - smoke checklist executável;
 - runbooks críticos revisados;
 - decisão Go/No-Go objetiva.
+
+Status:
+
+- **concluída**.
+
+Entregue:
+
+- matriz cross-module de readiness;
+- review de runbook gaps;
+- checklist declarativo de smoke produtivo;
+- closure de observabilidade;
+- drill de rollback/incidente;
+- decisão Go/No-Go por `system_production_closure`.
 
 Próxima bateria automática:
 

@@ -7968,3 +7968,108 @@ Consequências:
 - refund permanece manual, unitário e controlado; self-service e batch seguem fora.
 - correção automática de divergência financeira segue fora.
 - a próxima bateria recomendada é Battery D — Shipping Quote Productionization.
+
+## 2026-05-27 — Battery D Shipping Quote Productionization Closure
+
+Decisão:
+
+- concluir a Battery D com quote mínimo tenant-scoped aplicável ao checkout, mantendo provider real externo fora desta etapa.
+
+Consequências:
+
+- `shipping_quote_queries` fornece cotação checkout-ready com carrier, service code, preço, prazo e referência de provider.
+- `checkout_shipping_quote_commands.refresh_quote(...)` aplica a cotação em `CheckoutSession.shipping_methods`, seleção e total.
+- falha de quote por tenant/CEP inválido limpa seleção de entrega e retorna mensagem explícita.
+- `shipping_quote_productionization_queries` fecha contrato, adapter skeleton, integração checkout, UX de falha, observabilidade e closure.
+- a bateria não chama transportadora real, não registra token/header/segredo e não calcula peso/dimensão real.
+- a próxima bateria recomendada é Battery E — Subscriptions & Tenant Billing Foundation.
+
+## 2026-05-27 — Battery E Subscriptions & Tenant Billing Foundation Closure
+
+Decisão:
+
+- concluir a Battery E criando fundação mínima de plano e assinatura SaaS tenant-scoped.
+
+Consequências:
+
+- `SubscriptionPlan` define código, nome, preço mensal, moeda, quota operacional e status.
+- `TenantSubscription` define o estado da assinatura do tenant por plano.
+- `subscription_commands` permite criar/atualizar plano e estado do tenant com audit.
+- `/ops/subscriptions/` expõe leitura tenant-scoped sem provider de cobrança.
+- a bateria não chama Pagar.me, não cobra cartão, não cria invoice real e não acopla pagamentos de pedidos.
+- enforcement de plano fica reservado para trilha própria.
+- a próxima bateria recomendada é Battery F — Audit Instrumentation Expansion.
+
+## 2026-05-27 — Battery F Audit Instrumentation Expansion Closure
+
+Decisão:
+
+- concluir a Battery F ampliando audit trail apenas para ações críticas administrativas/operacionais, sem logging genérico.
+
+Consequências:
+
+- `payments` passa a registrar `refund.approved` quando um refund sai de `requested` para `processing`.
+- `payments` passa a registrar `refund.execution_recorded` após resposta/falha do provider adapter de refund.
+- `catalog` ganha `admin_product_commands.update_product_visibility(...)` para mudança auditável de status/visibilidade.
+- `api_keys` permanece coberto por criação, revogação, quota atualizada e quota excedida.
+- metadata sensível continua redigida: sem segredo, hash, payload provider ou referência externa de pagamento.
+- a próxima bateria recomendada é Battery G — Notifications Production Delivery.
+
+## 2026-05-27 — Battery G Notifications Production Delivery Closure
+
+Decisão:
+
+- concluir a Battery G com produção transacional controlada de notifications, usando `EmailLog` e smoke real sem abrir campanhas/lifecycle.
+
+Consequências:
+
+- `notification_production_delivery_commands.execute_transactional_smoke(...)` cria/reusa `EmailLog` system smoke por tenant e processa pelo pipeline existente.
+- `notification_production_delivery` consolida provider gate, smoke, evidence, failure handling, monitoring e closure.
+- falhas passam a ser classificadas como bounce, rate limit, provider unavailable, authentication ou provider error.
+- evidências operacionais mascaram recipient e não imprimem e-mail de customer em claro.
+- dry-run continua bloqueando smoke real.
+- a próxima bateria recomendada é Battery H — Customer Retention Lifecycle.
+
+## 2026-05-27 — Battery H Customer Retention Lifecycle Closure
+
+Decisão:
+
+- concluir a Battery H com lifecycle mínimo pós-compra baseado em newsletter opt-in, sem campanha recorrente ou automação complexa.
+
+Consequências:
+
+- `newsletter_segment_queries.list_subscribed_segment(...)` expõe segmento consentido tenant-scoped.
+- `customer.post_purchase.follow_up` entra no catálogo de intents.
+- `customer_retention_lifecycle_commands.plan_post_purchase_follow_up(...)` cria/reusa `EmailLog` para pedido elegível quando o e-mail está inscrito.
+- `NewsletterSubscriber.Status.UNSUBSCRIBED` bloqueia criação de log.
+- cross-tenant falha antes de consultar/criar comunicação.
+- a próxima bateria recomendada é Battery I — Storefront Data-Driven Conversion.
+
+## 2026-05-27 — Battery I Storefront Data-Driven Conversion Closure
+
+Decisão:
+
+- concluir a Battery I criando baseline/funil de conversão storefront e executando um experimento leve de prioridade de cards.
+
+Consequências:
+
+- `storefront_conversion_insights` calcula baseline discovery/PDP/CTA, funil PDP e drop-off de busca/facet.
+- `product_card_priority_v1` ajusta `discovery_rank_score` com base em sinais recentes tenant-scoped.
+- sinais positivos de PDP/CTA aumentam prioridade; sinais de indisponibilidade reduzem prioridade.
+- o experimento não altera preço, estoque, checkout, pedido, pagamento ou disponibilidade.
+- a próxima bateria recomendada é Battery J — System Production Closure.
+
+## 2026-05-27 — Battery J System Production Closure
+
+Decisão:
+
+- concluir a Battery J com closure sistêmica declarativa e decisão Go/No-Go para produção real controlada.
+
+Consequências:
+
+- `system_production_closure_queries` consolida matrix, runbooks, smoke, observabilidade, rollback e Go/No-Go.
+- `system_production_closure` permite executar cada review de closure por comando.
+- `GO` exige evidência operacional externa, aceite de riscos residuais e owner de decisão confirmado.
+- `NO-GO` abre bateria corretiva pelo maior blocker.
+- a closure não altera settings, flags, providers, tenants nem dados de domínio.
+- se `GO`, a próxima trilha recomendada é Growth/Commercial Activation Track.

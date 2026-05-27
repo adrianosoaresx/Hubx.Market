@@ -3171,6 +3171,37 @@ Esses riscos são aceitáveis para a fase atual porque a surface é read-only, p
 **Storefront Conversion Optimization Review**
 
 Revisar ganhos de conversão que atuam diretamente no cliente antes de expandir analytics: merchandising na listagem, prova de confiança no PDP, recuperação de carrinho ou fricção entre carrinho e checkout.
+
+## Battery I — Storefront Data-Driven Conversion
+
+Status: **concluída**.
+
+Escopo entregue:
+
+- baseline de conversão por `storefront_conversion_insights.baseline(...)`;
+- funil PDP/CTA por `storefront_conversion_insights.pdp_funnel(...)`;
+- revisão de busca/facet sem resultado por `storefront_conversion_insights.search_facet_dropoff(...)`;
+- experimento `product_card_priority_v1`, que ajusta prioridade de cards com base em sinais recentes de PDP/CTA;
+- closure executável por `storefront_conversion`.
+
+Comando de baseline:
+
+```bash
+python manage.py storefront_conversion --review=baseline --tenant-id=<tenant_id>
+```
+
+Comando de closure:
+
+```bash
+python manage.py storefront_conversion --review=closure --baseline-ready --pdp-funnel-ready --search-facet-dropoff-ready --experiment-contract-ready --experiment-execution-ready --no-full-redesign --docs-updated --decision-recorded
+```
+
+Regras:
+
+- todos os sinais são tenant-scoped;
+- payloads não incluem PII;
+- o experimento só altera ranking de cards, sem redesenhar storefront inteiro;
+- indisponibilidade recente reduz prioridade em vez de mascarar conflito de estoque.
 # API pública de catálogo
 
 ## API Key Public Catalog Products Endpoint Execution

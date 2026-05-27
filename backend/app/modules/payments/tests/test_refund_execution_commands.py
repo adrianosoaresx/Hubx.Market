@@ -4,6 +4,7 @@ from unittest.mock import patch
 from django.test import TestCase
 from django.utils import timezone
 
+from app.modules.audit.models import AuditLog
 from app.modules.orders.models import Order
 from app.modules.payments.application.refund_execution_commands import payment_refund_execution_commands
 from app.modules.payments.infrastructure.provider_adapters import ProviderAdapterError, RefundProviderResponse
@@ -81,6 +82,11 @@ class PaymentRefundExecutionCommandTests(TestCase):
         self.assertEqual(refund.provider_refund_reference, "rf_9911")
         self.assertEqual(refund.metadata["provider_refund"]["status"], "accepted")
         self.assertEqual(refund.metadata["provider_refund"]["payload_snapshot"]["provider_call"], "lite")
+        log = AuditLog.objects.get(module="payments", action="refund.execution_recorded")
+        self.assertEqual(log.tenant, self.tenant)
+        self.assertEqual(log.metadata["provider_result"], "accepted")
+        self.assertFalse(log.metadata["payload_snapshot_included"])
+        self.assertNotIn("payload_snapshot", log.metadata)
 
     def test_execute_refund_records_succeeded_response_without_touching_order_or_attempt(self):
         adapter = StubRefundAdapter(

@@ -17,6 +17,7 @@ from app.modules.accounts.application.admin_permissions import (
     PERMISSION_PAYMENTS_VIEW,
     PERMISSION_REVIEWS_MODERATE,
     PERMISSION_SHIPPING_VIEW,
+    PERMISSION_SUBSCRIPTIONS_VIEW,
 )
 from app.modules.accounts.interfaces.admin_rbac import request_admin_can, request_owner_role, request_tenant_id
 
@@ -39,6 +40,7 @@ NAV_ITEMS = [
     {"label": "Refunds", "href": "/ops/payments/refunds/", "permission": PERMISSION_PAYMENTS_VIEW},
     {"label": "Owners", "href": "/ops/owners/", "permission": PERMISSION_OWNERS_MANAGE},
     {"label": "MFA owners", "href": "/ops/owners/mfa/", "permission": PERMISSION_OWNERS_MANAGE},
+    {"label": "Assinatura", "href": "/ops/subscriptions/", "permission": PERMISSION_SUBSCRIPTIONS_VIEW},
 ]
 
 

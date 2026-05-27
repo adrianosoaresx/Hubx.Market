@@ -384,8 +384,12 @@ Registrar eventos auditáveis administrativos e operacionais.
   - criação de cupom em `coupons.application.admin_coupon_commands`
   - criação/edição de página em `pages.application.admin_page_commands`
   - aprovação/rejeição de avaliação em `reviews.application.admin_review_commands`
+  - aprovação e execução registrada de refund em `payments.application`
+  - criação/revogação/quota/excesso de API key em `api_keys.application`
+  - atualização administrativa de visibilidade de produto em `catalog.application.admin_product_commands`
 - `audit` não deve importar models internos desses módulos nem decidir se a ação é permitida
 - ações bloqueadas por `accounts.application.admin_permissions` não devem registrar evento de domínio executado
+- `metadata` de auditoria não deve carregar segredo, hash, payload de provider ou referência externa sensível quando um identificador operacional menor for suficiente
 
 ---
 
@@ -642,6 +646,38 @@ Gerenciar envio de e-mails e notificações transacionais.
 Para cupons aplicados, `notifications` não deve consultar `coupons` nem recalcular desconto.
 Qualquer copy futura sobre cupom deve ser derivada do snapshot já persistido em `Order`, com CTA para o detalhe do pedido como fonte auditável.
 
+### Produção transacional
+
+- provider gate, smoke, evidência, failure handling e monitoring pertencem a `notifications.application`.
+- smoke produtivo cria/processa `EmailLog` tenant-scoped e não deve consultar dados de `Customer`.
+- outputs operacionais devem mascarar recipient e usar contadores/status, não PII em claro.
+- classificação de bounce/falha é operacional; não altera pedido, pagamento, entrega ou preferências do cliente.
+- lifecycle/campanhas devem entrar em trilha própria e não reaproveitar o smoke como engine de marketing.
+
+### Lifecycle consentido
+
+- `newsletter` é dono do opt-in/opt-out e do segmento consentido.
+- `notifications` é dono do intent e do `EmailLog` pós-compra.
+- `orders` é apenas entidade de elegibilidade; `notifications` não altera status, pagamento ou fulfillment.
+- opt-out (`NewsletterSubscriber.Status.UNSUBSCRIBED`) bloqueia criação de `EmailLog`.
+- o recorte atual não cria campanha recorrente, scoring, frequência, worker novo ou automação de marketing.
+
+## Storefront conversion data-driven
+
+- `catalog` é dono dos eventos brutos de descoberta storefront e do experimento `product_card_priority_v1`.
+- eventos usados para ranking devem permanecer tenant-scoped e sem PII.
+- o experimento pode ajustar prioridade de cards, mas não deve alterar preço, estoque, disponibilidade, checkout ou pedidos.
+- sinais negativos de indisponibilidade devem reduzir prioridade; não devem esconder conflitos ou permitir compra indisponível.
+- analytics avançado, atribuição multi-touch e BI dedicado continuam fora do módulo `catalog` nesta fase.
+
+## System production closure
+
+- `tenants` coordena a closure sistêmica por ser o boundary inicial de resolução multi-tenant.
+- a closure pode agregar sinais declarativos de módulos, runbooks, observabilidade, smoke e rollback.
+- a closure não deve importar detalhes internos arbitrários, executar providers, alterar settings, criar tenants ou mutar dados de commerce.
+- `GO` significa ativação controlada e reversível, não rollout irrestrito.
+- `NO-GO` deve resultar em bateria corretiva mínima pelo maior blocker.
+
 ---
 
 ## 14. pages
@@ -774,6 +810,11 @@ Dono: `payments`
 ## Shipping quote and shipment tracking
 Dono: `shipping`
 
+- quote produtizável pertence a `shipping.application.shipping_quote_queries`.
+- aplicação da quote em sessão pertence a `checkout.application.checkout_shipping_quote_commands`, consumindo contrato público de `shipping`.
+- `shipping` não deve criar pedido nem alterar `Order`; `checkout` apenas atualiza a sessão aberta.
+- transportadora real/token externo seguem fora do adapter skeleton desta bateria.
+
 ## Coupon validation
 Dono: `coupons`
 
@@ -782,6 +823,12 @@ Dono: `reviews`
 
 ## SaaS plan and subscription lifecycle
 Dono: `subscriptions`
+
+- fundação de plano/assinatura pertence a `subscriptions.models.SubscriptionPlan` e `subscriptions.models.TenantSubscription`.
+- comandos de setup pertencem a `subscriptions.application.subscription_commands`.
+- leitura admin pertence a `subscriptions.application.subscription_queries` e `subscriptions.interfaces`.
+- `subscriptions` não deve chamar pagamentos de pedido, checkout, cart ou shipping para decidir plano SaaS.
+- provider de billing real e enforcement de plano exigem trilhas próprias.
 
 ## Email sending
 Dono: `notifications`

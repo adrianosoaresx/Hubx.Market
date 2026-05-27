@@ -384,6 +384,8 @@ Readiness atual:
 - o evento só deve representar refund confirmado pelo provider, com ledger em `succeeded`.
 - a primeira execução do command de refund ainda pode adiar emissão do evento mesmo ao gravar `succeeded`, até que os efeitos cross-module sejam definidos.
 - efeitos em pedido, estoque, cupom e notificação devem ser modelados após essa confirmação.
+- Battery F adiciona `AuditLog` para `refund.approved` e `refund.execution_recorded`, mas isso não equivale a evento de domínio `payment.refunded`.
+- audit de execução de refund não inclui `payload_snapshot` do provider nem `external_reference`; a evidência financeira completa continua no módulo `payments`.
 
 ---
 
@@ -595,6 +597,73 @@ Eventos podem disparar tarefas assíncronas:
 Readiness atual:
 
 - existe um publisher mínimo em `notifications.application.notification_event_bus`
+
+## notification.production_smoke
+
+Origem: notifications
+
+Consumidores:
+- notifications
+
+Descrição:
+Smoke transacional controlado para validar provider real de e-mail por tenant.
+
+Readiness atual:
+
+- Battery G cria/reusa `EmailLog` system smoke tenant-scoped.
+- a entrega só é tentada quando provider readiness permite envio real.
+- evidência operacional usa recipient mascarado e status do `EmailLog`.
+- o evento não representa comunicação de customer nem campanha.
+
+## retention.post_purchase_eligible
+
+Origem: notifications/newsletter
+
+Consumidores:
+- notifications
+
+Descrição:
+Sinal operacional interno para planejar follow-up pós-compra quando o comprador possui opt-in de newsletter no mesmo tenant.
+
+Readiness atual:
+
+- Battery H usa esse source event apenas para `EmailLog` planejado.
+- opt-out em `NewsletterSubscriber` bloqueia criação do log.
+- não há campanha recorrente, scoring, worker novo ou automação complexa.
+
+## catalog.product_card_priority_experiment
+
+Origem: catalog
+
+Consumidores:
+- catalog
+
+Descrição:
+Experimento interno de ranking de cards usando sinais recentes de PDP/CTA já persistidos em `StorefrontDiscoveryEventLog`.
+
+Readiness atual:
+
+- Battery I executa `product_card_priority_v1`.
+- o experimento não cria novo evento persistido; usa os eventos existentes.
+- sinais positivos de PDP/CTA aumentam prioridade de card.
+- sinais de indisponibilidade reduzem prioridade e não alteram estoque/checkout.
+
+## system.production_go_nogo
+
+Origem: tenants
+
+Consumidores:
+- operadores/plataforma
+
+Descrição:
+Decisão declarativa de produção real após matriz, runbooks, smoke, observabilidade e rollback.
+
+Readiness atual:
+
+- Battery J implementa Go/No-Go por command.
+- não há evento persistido nem publish assíncrono nesta fase.
+- `GO` não executa rollout; apenas autoriza próxima trilha controlada.
+- `NO-GO` deve abrir bateria corretiva.
 - ele ainda é in-process e serve como contrato de boundary, não como fila distribuída
 - Celery futuro deve substituir/consumir essa boundary sem acoplar módulos diretamente
 

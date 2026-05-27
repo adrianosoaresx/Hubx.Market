@@ -1,0 +1,22 @@
+{% extends layout_template|default:"layouts/admin_shell.html" %}
+
+{% block page_title %}{{ page_title|default:"Assinatura SaaS" }}{% endblock %}
+{% block shell_title %}{% if shell_title %}{{ shell_title }}{% elif page_title %}{{ page_title }}{% else %}Assinatura SaaS{% endif %}{% endblock %}
+
+{% block content %}
+<section class="space-y-6">
+    {% with eyebrow=page_eyebrow|default:"Platform billing" title=page_title|default:"Assinatura SaaS" description=page_description|default:"Leitura tenant-scoped do plano SaaS." %}
+        {% include "shared/components/layout/page_header.html" %}
+    {% endwith %}
+
+    <div class="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
+        <p class="text-sm text-[var(--color-text-secondary)]">
+            Fundação de billing: esta tela não chama provider, não cobra cartão e não altera pagamentos de pedidos.
+        </p>
+    </div>
+
+    {% with title="Estado da assinatura" description="Plano SaaS atual do tenant resolvido." count=table_count columns=columns rows=rows table_id="admin-subscriptions-table" empty_title=empty_title empty_description=empty_description %}
+        {% include "shared/components/data_display/data_table.html" %}
+    {% endwith %}
+</section>
+{% endblock %}

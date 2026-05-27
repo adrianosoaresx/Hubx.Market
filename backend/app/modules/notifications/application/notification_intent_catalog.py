@@ -76,6 +76,17 @@ _INTENTS: tuple[NotificationIntent, ...] = (
         cta_target="customer_order_detail",
     ),
     NotificationIntent(
+        intent_key="customer.post_purchase.follow_up",
+        source_event="retention.post_purchase_eligible",
+        audience="customer",
+        channel="email",
+        idempotency_key_template=_DEFAULT_IDEMPOTENCY_TEMPLATE,
+        title="Como foi sua experiência?",
+        description="Obrigado pela compra. Se quiser, volte ao pedido para acompanhar histórico e próximos passos.",
+        cta_label="Ver pedido",
+        cta_target="customer_order_detail",
+    ),
+    NotificationIntent(
         intent_key="owner.order.created",
         source_event="order.created",
         audience="owner",

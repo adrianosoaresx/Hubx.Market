@@ -6,6 +6,8 @@ from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone
 
+from app.modules.audit.application.audit_log_commands import audit_log_commands
+
 
 def _string(value: object) -> str:
     return str(value or "").strip()
@@ -101,6 +103,24 @@ class PaymentRefundApprovalCommandService:
             refund.metadata = metadata
             refund.status = self.repository.payment_refund_model.Status.PROCESSING
             self.repository.save_refund(refund)
+            audit_log_commands.record_event(
+                tenant_id=tenant_id,
+                module="payments",
+                action="refund.approved",
+                entity_type="PaymentRefund",
+                entity_id=str(refund.id),
+                actor_label=_string(actor_label),
+                summary=f"Refund {refund.refund_key} aprovado para execução",
+                metadata={
+                    "refund_key": str(refund.refund_key),
+                    "order_id": getattr(refund, "order_id", None),
+                    "amount": f"{_money(getattr(refund, 'amount', '0.00')):.2f}",
+                    "currency_code": _string(getattr(refund, "currency_code", "")),
+                    "provider_code": _string(getattr(refund, "provider_code", "")),
+                    "provider_call": "not-executed",
+                    "approval_contract_version": "refund-approval-v1",
+                },
+            )
             return "refund-approval-ready", refund
 
     def _approval_blockers(self, *, refund, actor_label: str) -> list[str]:

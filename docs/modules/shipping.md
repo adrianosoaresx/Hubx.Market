@@ -1292,3 +1292,45 @@ Não permitido:
 - `cart` apresenta a promessa.
 - `checkout` escolhe e aplica o frete final.
 - `orders` persiste o snapshot transacional do pedido.
+
+## Battery D — Shipping Quote Productionization Closure
+
+- o módulo `shipping` agora possui quote mínimo produtizável para checkout.
+- application services:
+  - `shipping.application.shipping_quote_queries`;
+  - `checkout.application.checkout_shipping_quote_commands`;
+  - `shipping.application.shipping_quote_productionization_queries`.
+- comando:
+  - `python manage.py shipping_quote_productionization --provider-contract-ready --adapter-skeleton-ready --checkout-integration-review-ready --checkout-execution-ready --failure-ux-ready --observability-ready --tenant-scope-confirmed --no-order-without-delivery-confirmed --no-provider-secret-recorded --rollback-plan-ready --docs-updated --decision-recorded`
+
+### Ondas fechadas
+
+1. Shipping Quote Provider Contract Review.
+2. Shipping Quote Adapter Skeleton Execution.
+3. Shipping Quote Checkout Integration Review.
+4. Shipping Quote Checkout Execution.
+5. Shipping Quote Failure UX Review.
+6. Shipping Quote Observability Execution.
+7. Shipping Quote Closure Review.
+
+### Semântica
+
+- `shipping_quote_queries` retorna métodos checkout-ready com carrier, service code, preço e prazo estimado.
+- `checkout_shipping_quote_commands.refresh_quote(...)` aplica a cotação em `CheckoutSession.shipping_methods`.
+- falha de CEP/tenant limpa seleção de frete e preserva mensagem honesta.
+- checkout continua responsável por impedir pedido sem entrega válida.
+
+### Limites explícitos
+
+- adapter atual é skeleton/manual, sem chamada de transportadora real.
+- nenhum token/provider secret é persistido em evidência.
+- não há cotação por peso/dimensões reais nesta bateria.
+- não há label de alta cardinalidade em observabilidade.
+
+### Próxima bateria recomendada
+
+**Battery E — Subscriptions & Tenant Billing Foundation**
+
+Objetivo:
+
+- iniciar fundação de billing SaaS do tenant sem misturar cobrança de loja, pedidos ou frete.

@@ -9,6 +9,7 @@ from app.modules.catalog.application.admin_product_queries import (
     ProductReadRepository,
     admin_product_queries,
 )
+from app.modules.catalog.application.storefront_conversion_insights import storefront_conversion_insights
 
 
 def _safe_int(value: object) -> int:
@@ -901,7 +902,11 @@ class StorefrontCatalogQueryService:
         real_products = self.orm_repository.list_products(tenant_id=tenant_id)
         source = real_products or self.fallback_repository.list_products()
         enriched = [_enrich_product(product) for product in source]
-        return sorted(enriched, key=_discovery_rank_order_key)
+        ranked = sorted(enriched, key=_discovery_rank_order_key)
+        return storefront_conversion_insights.apply_product_card_priority_experiment(
+            tenant_id=tenant_id,
+            products=ranked,
+        )
 
     def get_product(
         self,

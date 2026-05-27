@@ -62,6 +62,23 @@ Platform Owner Access Management:
 - toggle de notificações owner-facing também registra `owner.access_updated`
 - eventos usam `module=accounts` e `entity_type=OwnerUser`
 
+Battery F — Audit Instrumentation Expansion:
+
+- `payments.application.refund_approval_commands.approve_refund(...)` registra `refund.approved`
+- `payments.application.refund_execution_commands.execute_refund(...)` registra `refund.execution_recorded`
+- `catalog.application.admin_product_commands.update_product_visibility(...)` registra `product.visibility_updated`
+- API keys permanecem cobertas por `api_key.created`, `api_key.revoked`, `api_key.quota_upserted` e `api_key.quota_exceeded`
+- metadata de audit não inclui segredo de API, hash, `external_reference` de pagamento ou `payload_snapshot` do provider
+- closure executável:
+  - `python manage.py audit_instrumentation_expansion --critical-inventory-ready --payment-admin-actions-ready --api-key-actions-ready --catalog-admin-actions-ready --evidence-review-ready --metadata-redaction-ready --tenant-scope-confirmed --docs-updated --decision-recorded`
+
+### Regras da expansão
+
+- instrumentação continua explícita por command service.
+- não há middleware global, diff genérico de models, log de leitura ou logging técnico.
+- ações tenant-owned exigem `tenant_id`; cross-tenant deve falhar antes de gravar `AuditLog`.
+- `audit` continua dono do registro persistido, mas cada módulo decide quando uma ação de domínio merece auditoria.
+
 ## Platform Audit Evidence Export Review
 
 - evidências de auditoria agora podem ser exportadas por comando read-only.

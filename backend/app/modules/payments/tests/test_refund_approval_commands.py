@@ -1,6 +1,7 @@
 from django.test import TestCase
 from django.utils import timezone
 
+from app.modules.audit.models import AuditLog
 from app.modules.orders.models import Order
 from app.modules.payments.application.refund_approval_commands import payment_refund_approval_commands
 from app.modules.payments.models import PaymentAttempt, PaymentRefund
@@ -59,6 +60,15 @@ class PaymentRefundApprovalCommandTests(TestCase):
         self.assertEqual(refund.metadata["approval_note"], "Aprovado para execução futura.")
         self.assertEqual(refund.metadata["approval_contract_version"], "refund-approval-v1")
         self.assertEqual(refund.metadata["provider_call"], "not-executed")
+        log = AuditLog.objects.get(module="payments", action="refund.approved")
+        self.assertEqual(log.tenant, self.tenant)
+        self.assertEqual(log.entity_type, "PaymentRefund")
+        self.assertEqual(log.entity_id, str(refund.id))
+        self.assertEqual(log.actor_label, "Ops Ana")
+        self.assertEqual(log.metadata["refund_key"], str(refund.refund_key))
+        self.assertEqual(log.metadata["amount"], "120.00")
+        self.assertEqual(log.metadata["provider_call"], "not-executed")
+        self.assertNotIn("external_reference", log.metadata)
 
         self.order.refresh_from_db()
         self.attempt.refresh_from_db()

@@ -157,3 +157,27 @@ Domínios cobertos:
 - runbook de incidentes de estoque
 - política formal de retenção por domínio
 - métricas de latência e provider error mais ricas para notifications
+
+## Closure sistêmica de produção
+
+Comando:
+
+```bash
+python manage.py system_production_closure --review=go-nogo --readiness-matrix-ready --runbooks-ready --smoke-checklist-ready --observability-ready --rollback-drill-ready --residual-risks-accepted --decision-owner-confirmed --docs-updated --decision-recorded
+```
+
+Ordem mínima:
+
+1. `--review=matrix`
+2. `--review=runbooks`
+3. `--review=smoke`
+4. `--review=observability`
+5. `--review=rollback`
+6. `--review=go-nogo`
+
+Regras:
+
+- não imprimir token, API key, segredo, payload provider sensível ou e-mail de customer em claro.
+- `GO` exige aceite explícito de riscos residuais.
+- `NO-GO` abre bateria corretiva mínima pelo maior blocker.
+- rollback deve existir antes de ativar provider ou gate produtivo.

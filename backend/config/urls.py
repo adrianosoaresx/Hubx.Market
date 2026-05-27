@@ -29,6 +29,7 @@ urlpatterns = [
     path("ops/pages/", include(("app.modules.pages.interfaces.urls", "pages"), namespace="pages")),
     path("ops/reviews/", include(("app.modules.reviews.interfaces.urls", "reviews"), namespace="reviews")),
     path("ops/shipping/", include(("app.modules.shipping.interfaces.urls", "shipping"), namespace="shipping")),
+    path("ops/subscriptions/", include(("app.modules.subscriptions.interfaces.urls", "subscriptions"), namespace="subscriptions")),
     path("pages/", include(("app.modules.pages.interfaces.storefront_urls", "storefront_pages"), namespace="storefront_pages")),
 ]
 

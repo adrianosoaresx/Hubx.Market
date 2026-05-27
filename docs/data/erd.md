@@ -229,6 +229,58 @@ Notas:
 - único por `(tenant, api_key, endpoint, window_start, window_seconds)`.
 - registra uso agregado por janela; não guarda segredo, header, hash ou API key em claro.
 
+## Subscriptions — SubscriptionPlan
+
+`SubscriptionPlan`
+
+- `id`
+- `code`
+- `name`
+- `description`
+- `monthly_price`
+- `currency_code`
+- `included_api_quota`
+- `status`
+- `created_at`
+- `updated_at`
+
+Relacionamentos:
+
+- `SubscriptionPlan 1:N TenantSubscription`
+
+Notas:
+
+- `code` é único.
+- `monthly_price` não pode ser negativo.
+- não representa invoice nem cobrança real.
+
+## Subscriptions — TenantSubscription
+
+`TenantSubscription`
+
+- `id`
+- `tenant_id → tenants.Tenant`
+- `plan_id → subscriptions.SubscriptionPlan`
+- `status`
+- `started_at`
+- `trial_ends_at`
+- `current_period_ends_at`
+- `canceled_at`
+- `external_reference`
+- `notes`
+- `created_at`
+- `updated_at`
+
+Relacionamentos:
+
+- `Tenant 1:1 TenantSubscription`
+- `SubscriptionPlan 1:N TenantSubscription`
+
+Notas:
+
+- guarda estado SaaS do tenant.
+- não acopla pagamentos de pedidos da loja.
+
 ## Accounts — OwnerMfaRecoveryCode
 
 `OwnerMfaRecoveryCode`

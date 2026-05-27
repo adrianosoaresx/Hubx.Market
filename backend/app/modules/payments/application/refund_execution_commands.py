@@ -5,6 +5,7 @@ from decimal import Decimal
 
 from django.utils import timezone
 
+from app.modules.audit.application.audit_log_commands import audit_log_commands
 from app.modules.payments.infrastructure.provider_adapters import (
     ProviderAdapterError,
     RefundProviderContract,
@@ -93,10 +94,12 @@ class PaymentRefundExecutionCommandService:
             refund.status = self.repository.payment_refund_model.Status.FAILED
             refund.failed_at = timezone.now()
             self.repository.save_refund(refund)
+            self._record_execution_audit(refund=refund, result="failed", reason_code=str(exc))
             return "refund-execution-failed", refund
 
         self._apply_provider_response(refund=refund, response=response)
         self.repository.save_refund(refund)
+        self._record_execution_audit(refund=refund, result=_string(getattr(response, "status", "")) or "failed")
         if response.status == "failed":
             return "refund-execution-failed", refund
         if response.status == "succeeded":
@@ -162,6 +165,27 @@ class PaymentRefundExecutionCommandService:
         elif normalized_status == "failed":
             refund.status = self.repository.payment_refund_model.Status.FAILED
             refund.failed_at = timezone.now()
+
+    def _record_execution_audit(self, *, refund, result: str, reason_code: str = "") -> None:
+        audit_log_commands.record_event(
+            tenant_id=getattr(refund, "tenant_id", None),
+            module="payments",
+            action="refund.execution_recorded",
+            entity_type="PaymentRefund",
+            entity_id=str(getattr(refund, "id", "")),
+            actor_label="system",
+            summary=f"Execução de refund {getattr(refund, 'refund_key', '')} registrada como {_string(result)}",
+            metadata={
+                "refund_key": str(getattr(refund, "refund_key", "")),
+                "order_id": getattr(refund, "order_id", None),
+                "amount": f"{_money(getattr(refund, 'amount', '0.00')):.2f}",
+                "currency_code": _string(getattr(refund, "currency_code", "")),
+                "provider_code": _string(getattr(refund, "provider_code", "")),
+                "provider_result": _string(result),
+                "reason_code": _string(reason_code),
+                "payload_snapshot_included": False,
+            },
+        )
 
 
 payment_refund_execution_commands = PaymentRefundExecutionCommandService(

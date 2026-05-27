@@ -58,6 +58,7 @@ class Command(BaseCommand):
             "inventory-side-effects-confirmed",
             "audit-log-confirmed",
             "no-sensitive-payload-recorded",
+            "no-sensitive-material-recorded",
             "webhook-smoke-ready",
             "refund-foundation-closed",
             "sandbox-evidence-captured",

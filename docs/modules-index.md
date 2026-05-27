@@ -41,6 +41,12 @@ Dependências:
 accounts  
 subscriptions
 
+Readiness:
+- tenant resolution por subdomínio;
+- custom domain ainda contract-only;
+- Battery J adiciona closure sistêmica de produção e Go/No-Go por comando `system_production_closure`;
+- closure não altera runtime, settings, providers ou tenants.
+
 ---
 
 ## accounts
@@ -74,7 +80,8 @@ Responsabilidade:
 Gerenciar planos e assinaturas SaaS da plataforma.
 
 Entidades principais:
-Subscription
+SubscriptionPlan
+TenantSubscription
 
 Eventos:
 subscription.activated  
@@ -84,6 +91,13 @@ Dependências:
 tenants
 accounts
 audit
+
+Readiness:
+- modelo `SubscriptionPlan`
+- modelo `TenantSubscription`
+- setup auditável por `subscription_commands`
+- admin read-only em `/ops/subscriptions/`
+- provider de cobrança real e enforcement de plano fora da fundação
 
 Readiness:
 - modelo `ApiKey` tenant-scoped
@@ -142,7 +156,10 @@ Readiness:
 - writer `audit_log_commands.record_event(...)`
 - leitura admin em `/ops/audit/`
 - platform-scope só com opt-in explícito
-- instrumentação automática por módulo ainda futura
+- instrumentação automática/global continua fora de escopo
+- Battery F adiciona ações críticas explícitas: refund aprovado, execução de refund registrada e visibilidade de produto atualizada
+- API keys mantêm auditoria para criação, revogação, quota atualizada e quota excedida
+- metadata sensível de API key/provider/pagamento permanece redigida
 
 ---
 
@@ -204,6 +221,13 @@ catalog.pdp_cta_intent
 
 Dependências:
 tenants
+
+Readiness:
+- produtos/variantes/imagens tenant-scoped;
+- storefront e admin reais;
+- analytics brutos de discovery/PDP/CTA;
+- Battery I adiciona baseline de conversão, funil PDP/CTA, drop-off de busca/facet e experimento `product_card_priority_v1`;
+- o experimento altera ranking de cards com base em sinais recentes, sem redesenhar storefront inteiro.
 
 ---
 
@@ -323,6 +347,12 @@ Dependências:
 orders  
 customers
 
+Readiness:
+- quote mínimo tenant-scoped via `shipping_quote_queries`
+- aplicação de quote no checkout via `checkout_shipping_quote_commands`
+- falha honesta para CEP/tenant inválido
+- closure da Battery D sem transportadora real/token externo
+
 ---
 
 ## coupons
@@ -397,7 +427,7 @@ Responsabilidade:
 Envio de notificações e emails.
 
 Entidades principais:
-Notification
+EmailLog
 
 Consumidores de eventos:
 order.created  
@@ -408,6 +438,15 @@ Dependências:
 orders  
 payments  
 shipping
+
+Readiness:
+- `EmailLog` tenant-scoped
+- processamento assíncrono/dry-run-safe de logs planejados
+- readiness de provider
+- métricas Prometheus por tenant/status
+- Battery G adiciona smoke transacional real, evidência sanitizada, classificação de falhas/bounces e closure de produção
+- Battery H adiciona lifecycle mínimo pós-compra consentido por newsletter opt-in
+- campanhas recorrentes, scoring e segmentação avançada continuam fora
 
 ---
 

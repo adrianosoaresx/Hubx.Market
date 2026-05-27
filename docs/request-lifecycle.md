@@ -270,6 +270,50 @@ Observações:
 
 ---
 
+# Fluxo operacional: shipping quote no checkout
+
+Operação:
+
+Checkout delivery step
+→ tenant resolvido
+→ `checkout_shipping_quote_commands.refresh_quote(...)`
+→ `shipping_quote_queries.get_quote(...)`
+→ opções checkout-ready
+→ atualização de `CheckoutSession.shipping_methods`
+→ seleção/total de frete
+→ payment/review liberados apenas com entrega válida
+
+Observações:
+
+- falha de CEP/tenant retorna estado explícito e limpa seleção de frete.
+- quote skeleton não chama transportadora real nem usa segredo.
+- pedido ainda só nasce após escolha de frete, escolha de pagamento e clique em pagar.
+
+---
+
+# Fluxo operacional: leitura de assinatura SaaS
+
+Request:
+
+GET /ops/subscriptions/
+
+Fluxo:
+
+Request
+→ Tenant resolution
+→ Owner/admin permission `subscriptions.view`
+→ Subscriptions admin view
+→ `subscription_queries.list_tenant_subscriptions`
+→ renderização read-only
+
+Observações:
+
+- a tela não chama provider de cobrança.
+- a tela não altera plano, status ou pagamentos de pedidos.
+- setup/mutação fica em application command e não em view.
+
+---
+
 # Fluxo exemplo: login owner/admin
 
 Request:
@@ -405,6 +449,114 @@ POST /accounts/forgot-password/
 → resposta genérica
 → se owner/user ativo existir no tenant: EmailLog planejado em notifications
 → AuditLog `owner.password_reset_requested`
+
+---
+
+# Fluxo operacional: produção de notifications
+
+Provider gate:
+
+```bash
+python manage.py notification_production_delivery --review=provider-gate --provider-credentials-confirmed --sender-domain-confirmed --rollback-confirmed
+```
+
+Smoke transacional:
+
+```bash
+python manage.py notification_production_delivery --review=smoke --tenant-id=<tenant_id> --recipient-email=<smoke@email>
+```
+
+Fluxo:
+
+Management command
+→ Notifications production delivery command
+→ Provider readiness
+→ criação/reuso de `EmailLog` system smoke tenant-scoped
+→ `notification_delivery_commands.process_email_log`
+→ email backend/provider
+→ `EmailLog.sent` ou `EmailLog.failed`
+→ evidência com recipient mascarado
+
+Observações:
+
+- dry-run habilitado bloqueia smoke real.
+- falha/bounce é classificada para decisão operacional, mas não altera pedidos, clientes ou preferências.
+- evidence/monitoring/closure usam snapshot tenant-scoped de `EmailLog`.
+- nenhum output operacional deve imprimir e-mail de customer em claro.
+
+---
+
+# Fluxo operacional: lifecycle pós-compra consentido
+
+Command:
+
+```bash
+python manage.py customer_retention_lifecycle --review=plan-post-purchase --tenant-id=<tenant_id> --order-id=<order_id>
+```
+
+Fluxo:
+
+Management command
+→ Customer retention lifecycle command
+→ busca `Order` por `tenant_id` + `order_id`
+→ valida status pós-compra elegível
+→ consulta `NewsletterSubscriber` no mesmo tenant por e-mail
+→ se inscrito: cria/reusa `EmailLog` `customer.post_purchase.follow_up`
+→ se descadastrado: retorna opt-out sem criar log
+
+Observações:
+
+- o fluxo não envia e-mail diretamente; apenas planeja `EmailLog`.
+- opt-out bloqueia a comunicação.
+- não há cadência automática, scoring ou campanha recorrente.
+- cross-tenant falha antes de consultar/criar log.
+
+---
+
+# Fluxo storefront: conversão data-driven
+
+Listagem pública:
+
+HTTP Request
+→ Tenant resolution
+→ `CatalogListView`
+→ `storefront_catalog_queries.list_products(tenant_id)`
+→ enrichment de produto/variante
+→ `storefront_conversion_insights.apply_product_card_priority_experiment`
+→ ordenação de cards
+→ template storefront
+→ `storefront_discovery_analytics.record_listing_view`
+
+Observações:
+
+- o experimento usa apenas eventos tenant-scoped de discovery/PDP/CTA.
+- o score altera prioridade visual dos cards, não preço, estoque, disponibilidade ou checkout.
+- payloads de analytics não carregam PII.
+- search/facet drop-off é leitura operacional, não bloqueia request.
+
+---
+
+# Fluxo operacional: System Production Closure
+
+Command:
+
+```bash
+python manage.py system_production_closure --review=go-nogo --readiness-matrix-ready --runbooks-ready --smoke-checklist-ready --observability-ready --rollback-drill-ready --residual-risks-accepted --decision-owner-confirmed --docs-updated --decision-recorded
+```
+
+Fluxo:
+
+Management command
+→ `tenants.application.system_production_closure_queries`
+→ valida sinais declarativos de matrix/runbooks/smoke/observability/rollback
+→ emite decisão `GO` ou `NO-GO`
+→ não altera runtime
+
+Observações:
+
+- `GO` exige evidência operacional externa já capturada.
+- `NO-GO` aponta para bateria corretiva.
+- o comando não executa smoke real, não chama provider e não altera flags/env.
 
 ---
 
@@ -1416,6 +1568,12 @@ Observações:
 - se não existir quota ativa, o fluxo preserva o comportamento anterior.
 - se quota ativa for excedida, a request é bloqueada com `429`, `Retry-After`, audit `api_key.quota_exceeded` e métrica `hubx_api_key_quota_exceeded_total`.
 - a visibilidade admin de quotas roda em `/ops/api-keys/quotas/` como leitura tenant-scoped e não participa do fluxo público de catálogo.
+- audit instrumentation expansion altera apenas commands explícitos já tenant-scoped:
+  - aprovação de refund: tenant resolution/admin context → view ops → `payments.application.refund_approval_commands` → persistência → `audit_log_commands.record_event`
+  - execução de refund: command/service interno → `payments.application.refund_execution_commands` → provider adapter → persistência → `audit_log_commands.record_event`
+  - visibilidade de produto: admin context → `catalog.application.admin_product_commands` → persistência → `audit_log_commands.record_event`
+- API keys continuam registrando eventos em creation/revocation/quota/quota exceeded sem expor segredo/hash.
+- a expansão não cria middleware de auditoria, não loga leituras e não altera responses públicas.
 
 ---
 

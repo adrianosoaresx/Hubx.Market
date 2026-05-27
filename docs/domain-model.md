@@ -228,6 +228,27 @@ Regras:
 - incrementa contador agregado; não armazena API key, header, segredo ou hash.
 - pode referenciar a quota aplicada para rastreabilidade operacional.
 
+### SubscriptionPlan
+Plano SaaS disponível para tenants.
+
+Regras:
+
+- possui `code` único, nome, preço mensal, moeda e status.
+- pode definir quota operacional incluída sem acoplar cobrança real.
+- `archived` preserva histórico e não deve apagar assinaturas existentes.
+- não representa invoice, pagamento de pedido ou cobrança de loja.
+
+### TenantSubscription
+Estado da assinatura SaaS de um tenant.
+
+Regras:
+
+- pertence a exatamente um `Tenant`.
+- referencia um `SubscriptionPlan`.
+- status pode ser `trialing`, `active`, `past_due`, `suspended` ou `canceled`.
+- pode guardar referência externa manual, mas provider de billing real fica fora da fundação.
+- enforcement futuro deve consultar esse estado por application service/contrato explícito.
+
 ## OwnerMfaRecoveryCode
 
 Representa códigos de recuperação de MFA para `OwnerUser`.

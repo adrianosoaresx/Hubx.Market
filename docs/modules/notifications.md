@@ -12,6 +12,74 @@ Gerenciar e-mails e notificações.
 
 ## Regras de negócio
 - envios devem ser assíncronos
+- produção real exige provider fora de dry-run, backend configurado, remetente definido e rollback operacional
+- evidências de entrega devem usar recipient mascarado e contadores, não e-mail de customer em claro
+- falhas devem ser classificadas antes de virar decisão operacional
+
+## Battery G — Notifications Production Delivery
+
+Status: **concluída**.
+
+Escopo entregue:
+
+- gate de provider produtivo via `notification_provider_production_gate_queries`;
+- smoke transacional real via `notification_production_delivery_commands.execute_transactional_smoke(...)`;
+- evidência sanitizada com `recipient` mascarado;
+- classificação de falhas/bounces via `notification_failure_classification`;
+- reviews de evidência, failure handling, monitoring e closure;
+- comando operacional `notification_production_delivery`.
+
+Comando de smoke:
+
+```bash
+python manage.py notification_production_delivery --review=smoke --tenant-id=<tenant_id> --recipient-email=<smoke@email> --smoke-key=<key>
+```
+
+Comando de closure:
+
+```bash
+python manage.py notification_production_delivery --review=closure --tenant-id=<tenant_id> --provider-gate-ready --smoke-execution-ready --evidence-capture-ready --failure-handling-ready --monitoring-ready --docs-updated --decision-recorded
+```
+
+Fora de escopo:
+
+- campanhas;
+- segmentação de lifecycle;
+- unsubscribe/preferências de marketing;
+- provider vendor-specific;
+- envio em massa.
+
+## Battery H — Customer Retention Lifecycle
+
+Status: **concluída**.
+
+Escopo entregue:
+
+- intent `customer.post_purchase.follow_up`;
+- segmentação consentida por `newsletter_segment_queries.list_subscribed_segment(...)`;
+- integração pós-compra por `customer_retention_lifecycle_commands.plan_post_purchase_follow_up(...)`;
+- opt-out respeitado via `NewsletterSubscriber.Status.UNSUBSCRIBED`;
+- closure executável por `customer_retention_lifecycle`.
+
+Comando de planejamento:
+
+```bash
+python manage.py customer_retention_lifecycle --review=plan-post-purchase --tenant-id=<tenant_id> --order-id=<order_id>
+```
+
+Comando de closure:
+
+```bash
+python manage.py customer_retention_lifecycle --review=closure --lifecycle-contract-ready --newsletter-segment-ready --post-purchase-intent-ready --notification-integration-ready --opt-out-boundary-ready --no-complex-automation --docs-updated --decision-recorded
+```
+
+Fora de escopo:
+
+- campanha recorrente;
+- scoring de cliente;
+- cadência automática;
+- segmentação avançada;
+- unsubscribe center completo.
 
 ## Wave BE — Notifications Product Experience Review
 - a revisão do eixo de notificações mostra que o módulo ainda é contrato futuro

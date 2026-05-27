@@ -5847,6 +5847,181 @@ Esta abordagem conclui a Battery C com gates executáveis para produção contro
 - refund self-service, refund em lote e correção financeira automática continuam fora.
 - próximo foco automático é **Battery D — Shipping Quote Productionization**.
 
+## Wave 139 — Battery D Shipping Quote Productionization Closure
+
+Esta abordagem conclui a Battery D com quote mínimo aplicável ao checkout.
+
+### Entregue
+
+- query service `shipping_quote_queries`;
+- adapter skeleton/manual para quote;
+- command service `checkout_shipping_quote_commands`;
+- closure service `shipping_quote_productionization_queries`;
+- comando `shipping_quote_productionization`;
+- testes para quote ready, falha honesta, aplicação no checkout e closure.
+
+### Decisão
+
+- **Battery D concluída** para quote produtizável mínimo.
+- o checkout pode atualizar `shipping_methods` e `shipping_total` a partir de quote tenant-scoped.
+- falha de quote limpa seleção de entrega em vez de mascarar contexto.
+- chamada real de transportadora, token externo e cálculo por peso/dimensão ficam fora.
+
+### Próxima bateria recomendada
+
+**Battery E — Subscriptions & Tenant Billing Foundation**
+
+## Wave 140 — Battery E Subscriptions & Tenant Billing Foundation Closure
+
+Esta abordagem conclui a Battery E tirando `subscriptions` do estado skeleton.
+
+### Entregue
+
+- modelos `SubscriptionPlan` e `TenantSubscription`;
+- migration inicial de subscriptions;
+- command service `subscription_commands`;
+- query service `subscription_queries`;
+- admin read-only `/ops/subscriptions/`;
+- closure service `subscriptions_foundation_queries`;
+- comando `subscriptions_foundation`;
+- testes de modelo, tenant scope, admin surface e closure.
+
+### Decisão
+
+- **Battery E concluída** como fundação de plano/assinatura SaaS.
+- billing provider real segue fora.
+- pagamentos de loja continuam separados de subscription SaaS.
+- enforcement de plano fica documentado como boundary futura.
+
+### Próxima bateria recomendada
+
+**Battery F — Audit Instrumentation Expansion**
+
+## Wave 141 — Battery F Audit Instrumentation Expansion Closure
+
+Esta abordagem conclui a Battery F ampliando auditoria apenas para ações críticas selecionadas.
+
+### Entregue
+
+- eventos `payments.refund.approved` e `payments.refund.execution_recorded`;
+- command `catalog.application.admin_product_commands.update_product_visibility(...)` com `catalog.product.visibility_updated`;
+- confirmação de cobertura API key para criação, revogação, quota e quota excedida;
+- query service `audit_instrumentation_expansion_queries`;
+- comando `audit_instrumentation_expansion`;
+- testes para tenant scope, redaction e closure.
+
+### Decisão
+
+- **Battery F concluída** sem middleware global, diff genérico de model ou log de leitura.
+- metadata sensível fica redigida: sem segredo/hash de API key, sem `payload_snapshot` provider e sem `external_reference`.
+- `audit` permanece dono do registro, enquanto cada módulo decide ações de domínio auditáveis.
+
+### Próxima bateria recomendada
+
+**Battery G — Notifications Production Delivery**
+
+## Wave 142 — Battery G Notifications Production Delivery Closure
+
+Esta abordagem conclui a Battery G validando produção transacional de notifications sem abrir campanhas.
+
+### Entregue
+
+- query services de provider gate, delivery evidence, failure handling, monitoring e closure;
+- command service `notification_production_delivery_commands.execute_transactional_smoke(...)`;
+- comando `notification_production_delivery`;
+- classificação operacional de bounce/falhas;
+- smoke real usando `EmailLog` e provider readiness;
+- testes para provider gate, smoke, redaction, failure classification e closure.
+
+### Decisão
+
+- **Battery G concluída** para delivery transacional produtivo controlado.
+- evidências não imprimem e-mail de customer em claro.
+- falha/bounce é classificação operacional e não altera domínio de pedidos/clientes.
+- lifecycle/campanhas seguem para bateria própria.
+
+### Próxima bateria recomendada
+
+**Battery H — Customer Retention Lifecycle**
+
+## Wave 143 — Battery H Customer Retention Lifecycle Closure
+
+Esta abordagem conclui a Battery H com lifecycle mínimo pós-compra consentido.
+
+### Entregue
+
+- segment query `newsletter_segment_queries.list_subscribed_segment(...)`;
+- intent `customer.post_purchase.follow_up`;
+- command `customer_retention_lifecycle_commands.plan_post_purchase_follow_up(...)`;
+- comando `customer_retention_lifecycle`;
+- closure query `customer_retention_lifecycle_closure_queries`;
+- testes de segmento, opt-out, idempotência, cross-tenant e closure.
+
+### Decisão
+
+- **Battery H concluída** sem campanha recorrente, scoring ou cadência automática.
+- newsletter continua dono de consentimento.
+- notifications cria apenas `EmailLog` planejado para pós-compra elegível.
+- opt-out bloqueia criação de log.
+
+### Próxima bateria recomendada
+
+**Battery I — Storefront Data-Driven Conversion**
+
+## Wave 144 — Battery I Storefront Data-Driven Conversion Closure
+
+Esta abordagem conclui a Battery I usando analytics existentes para priorização leve do storefront.
+
+### Entregue
+
+- query service `storefront_conversion_insights`;
+- baseline de discovery/PDP/CTA;
+- funil PDP CTA por produto;
+- revisão de drop-off de busca/facet sem resultado;
+- experimento `product_card_priority_v1` aplicado em `storefront_catalog_queries.list_products(...)`;
+- comando `storefront_conversion`;
+- closure query `storefront_conversion_closure_queries`;
+- testes de baseline, funil, drop-off, ranking e closure.
+
+### Decisão
+
+- **Battery I concluída** sem redesenhar storefront inteiro.
+- ranking de cards pode receber delta por sinais recentes tenant-scoped.
+- o experimento não altera preço, estoque, disponibilidade, checkout ou pedido.
+- sinais de indisponibilidade reduzem prioridade em vez de mascarar conflito.
+
+### Próxima bateria recomendada
+
+**Battery J — System Production Closure**
+
+## Wave 145 — Battery J System Production Closure
+
+Esta abordagem conclui a sequência A–J com uma decisão objetiva de produção real.
+
+### Entregue
+
+- query service `system_production_closure_queries`;
+- matriz cross-module de readiness;
+- reviews de runbooks, smoke, observabilidade e rollback;
+- comando `system_production_closure`;
+- decisão Go/No-Go;
+- testes focados para matrix, blockers, smoke, Go/No-Go e comando.
+
+### Decisão
+
+- **Battery J concluída** como closure sistêmica declarativa.
+- `GO` exige evidência operacional externa e aceite de riscos residuais.
+- `NO-GO` abre bateria corretiva mínima pelo maior blocker.
+- o comando não altera runtime, providers, flags/env, tenants ou dados de commerce.
+
+### Próxima trilha se GO
+
+**Growth/Commercial Activation Track**
+
+### Próxima trilha se NO-GO
+
+**Production Corrective Battery**
+
 ## Wave 124 — System Execution Wave Batteries Review
 
 Esta abordagem pausa a execução linear de waves e consolida o planejamento em baterias autocontidas.
