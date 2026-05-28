@@ -1574,6 +1574,51 @@ Observações:
   - visibilidade de produto: admin context → `catalog.application.admin_product_commands` → persistência → `audit_log_commands.record_event`
 - API keys continuam registrando eventos em creation/revocation/quota/quota exceeded sem expor segredo/hash.
 - a expansão não cria middleware de auditoria, não loga leituras e não altera responses públicas.
+- platform tenant admin surface futura deve seguir: request `/ops/platform/tenants/` → autenticação owner/platform → RBAC platform permission → application service de `tenants` → persistência/audit quando houver write → response.
+- essa surface não deve derivar autorização de `request.tenant`; o tenant alvo é dado operacional explícito e não contexto da loja atual.
+- edição de `custom_domain` nessa surface continua cadastro contract-only e não altera o middleware de resolução HTTP.
+- a execução read-only atual segue: request `/ops/platform/tenants/` → ops gate/RBAC quando habilitado → `tenants.application.platform_tenant_admin_queries` → template admin read-only.
+- como não há write, a tela não registra `AuditLog` e não emite evento.
+- o detalhe read-only segue o mesmo fluxo e resolve o tenant alvo por `tenant_slug` explícito, sem consultar dados tenant-owned de commerce.
+- o create futuro deve seguir: request `/ops/platform/tenants/new/` → ops gate/RBAC platform → command service de `tenants` → validação de slug/subdomain/reservados → persistência de `Tenant` → `AuditLog` platform-scope explícito → redirect para detalhe.
+- falhas de validação no create não devem criar owner, catálogo, billing, sessão, custom-domain resolver ou qualquer side effect em outros módulos.
+- o command service atual de criação usa permissão `platform.tenants.manage` e reverte a transação se `AuditLog` platform-scope não for persistido.
+- a surface HTTP de criação já implementa esse ciclo: GET renderiza formulário para roles com manage, POST delega ao command service, sucesso redireciona para detalhe e falhas retornam 400.
+- state management futuro deve seguir: request `/ops/platform/tenants/<tenant_slug>/state/` → ops gate/RBAC platform → command service de `tenants` → atualização de `is_active` ou `maintenance_mode` → `AuditLog` platform-scope → redirect para detalhe.
+- state management não deve alterar slug, subdomain, custom_domain, commerce, owners, billing, redirects, resolver HTTP ou notificações.
+- o command service atual de state management já executa essa atualização transacionalmente e reverte se `AuditLog` platform-scope não persistir.
+- a surface HTTP atual de state management implementa o POST fino, renderizando botões condicionais no detalhe e delegando todo write ao command service.
+- custom domain update futuro deve seguir: request `/ops/platform/tenants/<tenant_slug>/custom-domain/` → ops gate/RBAC platform → command service de `tenants` → normalização/unicidade → persistência de `custom_domain` → `AuditLog` platform-scope → redirect para detalhe.
+- custom domain update não deve ativar resolver HTTP, validar DNS, provisionar TLS, criar redirect ou publicar domínio como ativo.
+- o command service atual de custom domain já normaliza, valida formato mínimo, bloqueia duplicidade, permite limpar o campo e reverte a transação se `AuditLog` platform-scope não for persistido.
+- a surface HTTP atual de custom domain implementa esse POST fino no detalhe do tenant e delega todo write ao command service.
+- o closure da trilha mantém o lifecycle restrito a ops internos: request `/ops/platform/tenants/...` → ops gate/RBAC → query/command service de `tenants` → ORM/AuditLog quando houver write → redirect/render, sem bootstrap automático, DNS/TLS, resolver custom-domain ou side effects em commerce.
+- Owner Bootstrap futuro deve seguir: request `/ops/platform/tenants/<tenant_slug>/owner-bootstrap/` → ops gate/RBAC platform → command service orquestrador de `tenants` → service de `accounts` para OwnerUser/convite → `AuditLog` platform-scope → redirect para detalhe.
+- Custom Domain Runtime Resolver futuro deve seguir: HTTP request → middleware → resolução por subdomínio preservada → quando habilitado, match exato por `custom_domain` de tenant ativo → sem fallback global → view; DNS/TLS seguem validações externas.
+- Owner Bootstrap Command atual executa esse fluxo por service/CLI, ainda sem surface HTTP dedicada.
+- Custom Domain Runtime Resolver atual executa esse fluxo no middleware somente quando `HUBX_MARKET_CUSTOM_DOMAIN_RESOLVER_ENABLED=True`; com a flag desligada, `custom_domain` continua cadastro contract-only.
+- Owner Bootstrap Admin Surface futura deve seguir: detalhe platform-only → action POST sem senha → command service de `tenants` → service de `accounts` → AuditLog → redirect para detalhe.
+- Custom Domain Runtime Evidence futura deve capturar smoke flag off/on, tenant inativo, safe miss e rollback antes de ativação em staging/produção.
+- Owner Bootstrap Admin Surface atual executa esse lifecycle via POST `/ops/platform/tenants/<tenant_slug>/owner-bootstrap/` e retorna ao detalhe.
+- Custom Domain Runtime Activation Runbook atual apenas emite checklist/comandos; ativação real continua controlada por setting de ambiente e evidência externa.
+- Owner Bootstrap Admin Surface Closure não adiciona novo runtime; apenas confirma form, POST, permissão, blocked state, audit e ausência de senha.
+- Custom Domain Runtime Staging Evidence não altera middleware; apenas confirma smoke flag off/on, tenant inativo, safe miss e rollback antes de production gate.
+- Owner Bootstrap Production Evidence não altera runtime; confirma tenant alvo, owner/user, senha inutilizável, auditorias e ausência de sessão automática.
+- Custom Domain Runtime Production Gate não ativa produção; retorna GO/NO-GO para etapa posterior de activation evidence.
+- Owner Bootstrap Production Closure não altera runtime; fecha a trilha após evidência produtiva e handoff.
+- Custom Domain Runtime Production Activation Evidence confirma pós-ativação, smokes e rollback pronto; a mudança real de flag continua externa ao comando.
+- Custom Domain Runtime Production Closure não altera runtime; confirma activation evidence, resolver source, rollback, monitoramento e handoff.
+- Store Management Track Closure não adiciona request flow; consolida a trilha e retorna para re-seleção de ROI.
+- System ROI Re-Selection continua fora do runtime HTTP; compõe a closure de Platform Store Management e recomenda a próxima trilha sem alterar tenant resolution, providers, flags, sessões ou dados de commerce.
+- A recomendação atual favorece validação funcional de storefront/admin quando há regressão visual confirmada; a execução dessa validação deve ocorrer em trilha própria de smoke/browser/templates.
+- System Validation Pass 2 executa GETs de leitura via `django.test.Client`: host tenant-scoped → middleware de tenant → views/templates públicas/admin → verificação de status e marcadores HTML.
+- O smoke não cria sessão salvo quando `--owner-email` for explicitamente fornecido para reutilizar usuário existente; não executa POST, não altera dados e não chama providers.
+- Platform Self-Service Tenant Onboarding segue: request `/ops/platform/onboarding/...` → tenant/owner context → RBAC platform → `tenants.application.tenant_onboarding_commands` → `TenantOnboarding` draft/step → audit platform-scope.
+- A conclusão segue: onboarding ready → `platform_tenant_admin_commands.create_tenant(...)` → `subscription_commands.set_tenant_subscription(...)` → `platform_tenant_admin_commands.bootstrap_owner(...)` → audit completion → redirect para a jornada/loja criada.
+- O fluxo não chama provider de billing, DNS/TLS, pagamentos de pedido, frete ou catálogo.
+- Platform Owner Context permite que `/ops/platform/...` use o portal central `hubx.market`, resolvendo `request.owner_user` por e-mail autenticado e permissão `platform.tenants.view`.
+- Login central em `hubx.market` direciona platform owner/admin para `/ops/platform/tenants/`, owner de loja única para `https?://{loja}.hubx.market/ops/` e owners multi-loja para `/accounts/select-store/`.
+- Login tenant-owned em `{loja}.hubx.market` continua respeitando `request.tenant` para storefront, customers e admin da loja.
 
 ---
 

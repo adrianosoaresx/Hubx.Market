@@ -1,0 +1,56 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}{{ page_title|default:"Hubx Market" }}{% endblock %}
+
+{% block body %}
+<div class="min-h-screen bg-[var(--color-surface-page)]">
+    <header class="border-b border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
+        <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
+            <a href="/" class="text-lg font-semibold text-[var(--color-text-primary)]">Hubx Market</a>
+            <nav class="flex items-center gap-3 text-sm text-[var(--color-text-secondary)]" aria-label="Portal central">
+                <a href="{{ login_href }}" class="rounded-lg px-3 py-2 hover:bg-slate-100 hover:text-[var(--color-text-primary)]">Entrar</a>
+                <a href="{{ platform_tenants_href }}" class="rounded-lg px-3 py-2 hover:bg-slate-100 hover:text-[var(--color-text-primary)]">Admin de lojas</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="mx-auto max-w-7xl px-6 py-14">
+        <section class="grid gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)] lg:items-center">
+            <div class="space-y-6">
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-action-primary-bg)]">Portal central</p>
+                <h1 class="max-w-3xl text-4xl font-semibold tracking-tight text-[var(--color-text-primary)] md:text-5xl">
+                    Uma entrada para operar lojas, onboarding e administração SaaS.
+                </h1>
+                <p class="max-w-2xl text-base text-[var(--color-text-secondary)]">
+                    Entre com sua conta Hubx. A plataforma direciona você para o admin de lojas, para a loja que administra ou para seleção de loja quando houver múltiplos vínculos.
+                </p>
+                <div class="flex flex-wrap gap-3">
+                    <a class="ds-btn-primary" href="{{ login_href }}">Entrar no portal</a>
+                    <a class="ds-btn-secondary" href="{{ platform_onboarding_href }}">Onboarding de lojas</a>
+                </div>
+            </div>
+
+            <aside class="ds-surface space-y-5 p-6">
+                <div>
+                    <p class="text-sm font-semibold text-[var(--color-text-primary)]">Roteamento pós-login</p>
+                    <p class="mt-1 text-sm text-[var(--color-text-secondary)]">O destino depende do papel e dos vínculos do usuário.</p>
+                </div>
+                <div class="space-y-3 text-sm">
+                    <div class="rounded-2xl border border-[var(--color-border-subtle)] p-4">
+                        <p class="font-semibold text-[var(--color-text-primary)]">Platform owner/admin</p>
+                        <p class="mt-1 text-[var(--color-text-secondary)]">Vai para admin de lojas e onboarding SaaS.</p>
+                    </div>
+                    <div class="rounded-2xl border border-[var(--color-border-subtle)] p-4">
+                        <p class="font-semibold text-[var(--color-text-primary)]">Owner de uma loja</p>
+                        <p class="mt-1 text-[var(--color-text-secondary)]">Vai direto para o admin tenant-owned da loja.</p>
+                    </div>
+                    <div class="rounded-2xl border border-[var(--color-border-subtle)] p-4">
+                        <p class="font-semibold text-[var(--color-text-primary)]">Owner multi-loja</p>
+                        <p class="mt-1 text-[var(--color-text-secondary)]">Escolhe qual loja deseja administrar.</p>
+                    </div>
+                </div>
+            </aside>
+        </section>
+    </main>
+</div>
+{% endblock %}

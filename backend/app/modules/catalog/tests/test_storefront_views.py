@@ -1,3 +1,4 @@
+from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from urllib.parse import urlencode
@@ -41,6 +42,22 @@ class StorefrontViewTests(TestCase):
         self.assertContains(response, 'href="/"')
         self.assertContains(response, 'href="/catalog/"')
         self.assertContains(response, "Produtos para começar")
+        self.assertContains(response, "Entrar")
+
+    def test_storefront_navbar_shows_logout_for_authenticated_user(self):
+        user = get_user_model().objects.create_user(
+            username="navbar.customer@hubx.market",
+            email="navbar.customer@hubx.market",
+            password="secret-pass",
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("storefront-home"), HTTP_HOST=self.storefront_host)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'action="/accounts/logout/"')
+        self.assertContains(response, "Sair")
+        self.assertNotContains(response, '<a href="/accounts/login/" class="rounded-lg')
 
     def test_catalog_list_view_renders_design_system_template(self):
         response = self.client.get(reverse("storefront:catalog-list"), HTTP_HOST=self.storefront_host)
@@ -175,13 +192,13 @@ class StorefrontViewTests(TestCase):
         self.assertContains(response, "Mochila Hubx Urban")
         self.assertNotContains(response, "Tênis Hubx Runner")
 
-    def test_catalog_list_view_applies_offer_facet_and_preserves_pagination(self):
+    def test_catalog_list_view_applies_offer_facet(self):
         response = self.client.get(reverse("storefront:catalog-list"), {"offer": "1"}, HTTP_HOST=self.storefront_host)
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Somente ofertas")
         self.assertContains(response, "facets: somente ofertas")
-        self.assertIn("offer=1", response.context["next_url"])
+        self.assertIsNone(response.context["next_url"])
 
     def test_catalog_list_view_ignores_invalid_facet_values(self):
         response = self.client.get(
@@ -194,7 +211,7 @@ class StorefrontViewTests(TestCase):
         self.assertNotContains(response, "facets:")
         self.assertEqual(
             [product["title"] for product in response.context["products"]],
-            ["Tênis Hubx Runner", "Mochila Hubx Urban"],
+            ["Tênis Hubx Runner", "Mochila Hubx Urban", "Camiseta Hubx Performance"],
         )
 
     def test_catalog_list_view_records_discovery_analytics_events(self):
@@ -322,7 +339,7 @@ class StorefrontViewTests(TestCase):
         self.assertContains(response, "ordenação: Menor preço")
         self.assertEqual(
             [product["title"] for product in response.context["products"]],
-            ["Camiseta Hubx Performance", "Mochila Hubx Urban"],
+            ["Camiseta Hubx Performance", "Mochila Hubx Urban", "Tênis Hubx Runner"],
         )
 
     def test_catalog_list_view_applies_public_sort_by_highest_price(self):
@@ -332,19 +349,19 @@ class StorefrontViewTests(TestCase):
         self.assertContains(response, "ordenação: Maior preço")
         self.assertEqual(
             [product["title"] for product in response.context["products"]],
-            ["Tênis Hubx Runner", "Mochila Hubx Urban"],
+            ["Tênis Hubx Runner", "Mochila Hubx Urban", "Camiseta Hubx Performance"],
         )
 
-    def test_catalog_list_view_applies_public_sort_by_name_and_preserves_pagination(self):
+    def test_catalog_list_view_applies_public_sort_by_name(self):
         response = self.client.get(reverse("storefront:catalog-list"), {"sort": "name_asc"}, HTTP_HOST=self.storefront_host)
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "ordenação: Nome A-Z")
         self.assertEqual(
             [product["title"] for product in response.context["products"]],
-            ["Camiseta Hubx Performance", "Mochila Hubx Urban"],
+            ["Camiseta Hubx Performance", "Mochila Hubx Urban", "Tênis Hubx Runner"],
         )
-        self.assertIn("sort=name_asc", response.context["next_url"])
+        self.assertIsNone(response.context["next_url"])
 
     def test_catalog_list_view_falls_back_to_recommended_for_invalid_sort(self):
         response = self.client.get(reverse("storefront:catalog-list"), {"sort": "rating_desc"}, HTTP_HOST=self.storefront_host)
@@ -353,7 +370,7 @@ class StorefrontViewTests(TestCase):
         self.assertNotContains(response, "ordenação: rating_desc")
         self.assertEqual(
             [product["title"] for product in response.context["products"]],
-            ["Tênis Hubx Runner", "Mochila Hubx Urban"],
+            ["Tênis Hubx Runner", "Mochila Hubx Urban", "Camiseta Hubx Performance"],
         )
 
     def test_catalog_list_view_shows_quick_filter_empty_state_for_backorder(self):

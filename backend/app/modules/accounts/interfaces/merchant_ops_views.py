@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from django.http import HttpResponseRedirect
 from django.utils.html import format_html, format_html_join
 from django.views.generic import TemplateView
 
@@ -15,6 +16,7 @@ from app.modules.accounts.application.admin_permissions import (
     PERMISSION_OWNERS_MANAGE,
     PERMISSION_PAGES_MANAGE,
     PERMISSION_PAYMENTS_VIEW,
+    PERMISSION_PLATFORM_TENANTS_VIEW,
     PERMISSION_REVIEWS_MODERATE,
     PERMISSION_SHIPPING_VIEW,
     PERMISSION_SUBSCRIPTIONS_VIEW,
@@ -41,6 +43,8 @@ NAV_ITEMS = [
     {"label": "Owners", "href": "/ops/owners/", "permission": PERMISSION_OWNERS_MANAGE},
     {"label": "MFA owners", "href": "/ops/owners/mfa/", "permission": PERMISSION_OWNERS_MANAGE},
     {"label": "Assinatura", "href": "/ops/subscriptions/", "permission": PERMISSION_SUBSCRIPTIONS_VIEW},
+    {"label": "Onboarding de lojas", "href": "/ops/platform/onboarding/", "permission": PERMISSION_PLATFORM_TENANTS_VIEW},
+    {"label": "Lojas", "href": "/ops/platform/tenants/", "permission": PERMISSION_PLATFORM_TENANTS_VIEW},
 ]
 
 
@@ -59,6 +63,10 @@ def _allowed_nav_items(request) -> list[dict[str, str]]:
         item
         for item in NAV_ITEMS
         if request_admin_can(request, str(item["permission"]))
+        and (
+            not str(item["href"]).startswith("/ops/platform/")
+            or getattr(request, "tenant", None) is None
+        )
     ]
 
 
@@ -84,6 +92,11 @@ def _task_action_cell(task: dict[str, object]) -> str:
 
 class MerchantOperationsDashboardView(TemplateView):
     template_name = "pages/templates/admin_dashboard_page.html"
+
+    def get(self, request, *args, **kwargs):
+        if getattr(request, "tenant", None) is None and request_admin_can(request, PERMISSION_PLATFORM_TENANTS_VIEW):
+            return HttpResponseRedirect("/ops/platform/tenants/")
+        return super().get(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

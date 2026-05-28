@@ -517,3 +517,6 @@ Motivo:
 Status da re-seleção:
 
 - `System ROI Post-Quota Re-Selection Review` recomenda **Payments Production Readiness Review** quando provider produtivo, refund e conciliação ainda forem blockers.
+- após Platform Store Management closure, `system_roi_reselection` recomenda **System Validation Pass 2 — Storefront/Admin Smoke & Template Regression** quando regressões visíveis de navegação/templates estiverem confirmadas antes de novas expansões.
+- `system_template_regression_smoke` executa a primeira validação dessa trilha e bloqueia retorno de `/orders/`, ausência do botão de login e 404 em `/accounts/account/orders/`.
+- o próximo salto de produto adiciona **Platform Self-Service Tenant Onboarding MVP** em `/ops/platform/onboarding/`, ainda sem billing real, upload de logo, DNS/TLS automático ou self-service público do lojista.

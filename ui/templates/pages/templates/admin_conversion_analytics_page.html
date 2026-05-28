@@ -4,13 +4,15 @@
 {% block shell_title %}{{ page_title|default:"Analytics de conversão" }}{% endblock %}
 
 {% block content %}
-<section class="space-y-6">
-    {% with eyebrow=page_eyebrow|default:"Catálogo" title=page_title description=page_description %}
-        {% include "shared/components/layout/page_header.html" %}
-    {% endwith %}
+<section class="admin-ops-page admin-conversion-analytics-page space-y-6">
+    <div class="admin-ops-hero">
+        {% with eyebrow=page_eyebrow|default:"Catálogo" title=page_title description=page_description %}
+            {% include "shared/components/layout/page_header.html" %}
+        {% endwith %}
+    </div>
 
     {% if page_note %}
-        <p class="rounded-xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] px-4 py-3 text-sm text-[var(--color-text-secondary)]">
+        <p class="admin-ops-panel rounded-xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] px-4 py-3 text-sm text-[var(--color-text-secondary)]">
             {{ page_note }}
         </p>
     {% endif %}
@@ -22,7 +24,7 @@
     {% endif %}
 
     {% if summary_cards %}
-        <div class="grid gap-4 md:grid-cols-3">
+        <div class="admin-ops-kpi-grid grid gap-4 md:grid-cols-3">
             {% for card in summary_cards %}
                 {% include "shared/components/data_display/card.html" with title=card.title content=card.content %}
             {% endfor %}

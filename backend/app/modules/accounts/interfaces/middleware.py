@@ -19,6 +19,7 @@ from app.modules.accounts.application.admin_permissions import (
     PERMISSION_OWNERS_MANAGE,
     PERMISSION_PAGES_MANAGE,
     PERMISSION_PAYMENTS_VIEW,
+    PERMISSION_PLATFORM_TENANTS_VIEW,
     PERMISSION_REVIEWS_MODERATE,
     PERMISSION_SHIPPING_VIEW,
     admin_permissions,
@@ -37,9 +38,20 @@ OPS_PERMISSION_PREFIXES = (
     ("/ops/orders/", PERMISSION_ORDERS_VIEW),
     ("/ops/payments/", PERMISSION_PAYMENTS_VIEW),
     ("/ops/pages/", PERMISSION_PAGES_MANAGE),
+    ("/ops/platform/onboarding/", PERMISSION_PLATFORM_TENANTS_VIEW),
+    ("/ops/platform/tenants/", PERMISSION_PLATFORM_TENANTS_VIEW),
     ("/ops/reviews/", PERMISSION_REVIEWS_MODERATE),
     ("/ops/shipping/", PERMISSION_SHIPPING_VIEW),
 )
+
+PLATFORM_OWNER_ROLE_PRIORITY = {
+    "owner": 0,
+    "admin": 1,
+}
+
+
+def _platform_tenant_slug() -> str:
+    return str(getattr(settings, "HUBX_PLATFORM_TENANT_SLUG", "platform-system") or "platform-system").strip().lower()
 
 
 class OwnerContextMiddleware:
@@ -76,6 +88,49 @@ class OwnerContextMiddleware:
         return path == "/ops" or path.startswith("/ops/")
 
 
+class PlatformOwnerContextMiddleware:
+    """Attach a platform-capable owner for /ops/platform without requiring a tenant host."""
+
+    def __init__(self, get_response: Callable):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if not self._should_resolve(request) or getattr(request, "owner_user", None) is not None:
+            return self.get_response(request)
+
+        user = getattr(request, "user", None)
+        user_email = str(getattr(user, "email", "") or "").strip()
+        if not user_email or not getattr(user, "is_authenticated", False):
+            return self.get_response(request)
+
+        try:
+            from app.modules.accounts.models import OwnerUser
+        except Exception:
+            return self.get_response(request)
+
+        candidates = [
+            owner
+            for owner in OwnerUser.objects.filter(email__iexact=user_email, is_active=True).select_related("tenant")
+            if str(getattr(owner.tenant, "slug", "") or "").strip().lower() == _platform_tenant_slug()
+            and admin_permissions.check(role=owner.role, permission=PERMISSION_PLATFORM_TENANTS_VIEW).allowed
+        ]
+        request.owner_user = sorted(
+            candidates,
+            key=lambda owner: (
+                PLATFORM_OWNER_ROLE_PRIORITY.get(str(owner.role or "").strip().lower(), 50),
+                owner.tenant_id or 0,
+                owner.id,
+            ),
+        )[0] if candidates else None
+        return self.get_response(request)
+
+    def _should_resolve(self, request) -> bool:
+        path = str(getattr(request, "path", "") or "")
+        if (path == "/ops" or path == "/ops/") and getattr(request, "tenant", None) is None:
+            return True
+        return path == "/ops/platform" or path.startswith("/ops/platform/")
+
+
 class OpsAuthenticationGateMiddleware:
     """Optionally require an authenticated active owner for ops surfaces."""
 
@@ -85,6 +140,9 @@ class OpsAuthenticationGateMiddleware:
     def __call__(self, request):
         if not self._is_enabled() or not self._should_gate(request):
             return self.get_response(request)
+
+        if self._is_platform_path(request) and getattr(request, "tenant", None) is not None:
+            raise PermissionDenied("Platform access must use central host")
 
         user = getattr(request, "user", None)
         if not getattr(user, "is_authenticated", False):
@@ -121,6 +179,10 @@ class OpsAuthenticationGateMiddleware:
     def _should_gate(self, request) -> bool:
         path = str(getattr(request, "path", "") or "")
         return path == "/ops" or path.startswith("/ops/")
+
+    def _is_platform_path(self, request) -> bool:
+        path = str(getattr(request, "path", "") or "")
+        return path == "/ops/platform" or path.startswith("/ops/platform/")
 
     def _login_url(self, request) -> str:
         login_url = reverse("accounts:login")

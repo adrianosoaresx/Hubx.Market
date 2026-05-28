@@ -19,6 +19,7 @@ from app.modules.accounts.application.account_customer_area_queries import (
     account_customer_area_queries,
 )
 from app.modules.accounts.application.owner_login_commands import owner_login_commands
+from app.modules.accounts.application.post_login_redirects import post_login_redirects
 from app.modules.accounts.application.owner_access_recovery_commands import owner_access_recovery_commands
 from app.modules.accounts.application.owner_access_metrics_queries import owner_access_metrics_queries
 from app.modules.accounts.application.owner_mfa_provider_health_metrics_queries import owner_mfa_provider_health_metrics_queries
@@ -615,20 +616,24 @@ class LoginView(TemplateView):
         tenant_id = getattr(getattr(request, "tenant", None), "id", None)
         login_value = request.POST.get("login")
         password = request.POST.get("password")
+        safe_next_url = self._safe_next_url()
+        owner_tenant_id = tenant_id or post_login_redirects.get_owner_login_tenant_id(email=login_value, next_url=safe_next_url)
         if not self._login_belongs_to_owner(tenant_id=tenant_id, login_value=login_value):
             customer_result = self._authenticate_customer(request=request, tenant_id=tenant_id, login_value=login_value, password=password)
             if customer_result == "customer-login-authenticated":
-                return HttpResponseRedirect(self._safe_next_url() or reverse("accounts:account-overview"))
+                decision = post_login_redirects.decide_customer_redirect(email=login_value, safe_next_url=safe_next_url)
+                return HttpResponseRedirect(decision.url)
 
         result = owner_login_commands.authenticate_owner(
             request=request,
-            tenant_id=tenant_id,
+            tenant_id=owner_tenant_id,
             login=login_value,
             password=password,
             remember_me=request.POST.get("remember_me") in {"1", "on", "true", "True"},
         )
         if result.get("result") == "owner-login-authenticated":
-            return HttpResponseRedirect(self._safe_next_url() or reverse("merchant_ops:admin-dashboard"))
+            decision = post_login_redirects.decide_owner_redirect(email=login_value, safe_next_url=safe_next_url)
+            return HttpResponseRedirect(decision.url)
         if result.get("result") == "owner-login-mfa-challenge-required":
             return HttpResponseRedirect(reverse("accounts:owner-mfa-challenge"))
 
@@ -752,6 +757,32 @@ class LogoutView(View):
 
     def get(self, request, *args, **kwargs):
         return HttpResponseRedirect(reverse("accounts:login"))
+
+
+class StoreSelectionView(TemplateView):
+    template_name = "pages/templates/store_selection_page.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = getattr(self.request, "user", None)
+        email = str(getattr(user, "email", "") or getattr(user, "username", "") or "")
+        choices = post_login_redirects.list_owner_store_choices(email=email)
+        context.update(
+            {
+                "page_title": "Escolha a loja",
+                "page_description": "Você administra mais de uma loja. Selecione o ambiente operacional que deseja acessar.",
+                "choices": choices,
+                "empty_title": "Nenhuma loja ativa encontrada",
+                "empty_description": "Este usuário não possui vínculo owner/admin ativo em lojas disponíveis.",
+            }
+        )
+        context.update(kwargs)
+        return context
+
+    def get(self, request, *args, **kwargs):
+        if not getattr(request.user, "is_authenticated", False):
+            return HttpResponseRedirect(f"{reverse('accounts:login')}?next={request.path}")
+        return super().get(request, *args, **kwargs)
 
 
 class OwnerAccessMetricsView(View):

@@ -3,15 +3,17 @@
 {% block title %}{{ page_title|default:"Meu perfil" }}{% endblock %}
 
 {% block content %}
-<section class="space-y-6">
-    {% with eyebrow=eyebrow|default:"Customer Area" title=page_title|default:"Meu perfil" description=page_description|default:"Atualize seus dados pessoais, contato e preferências da conta." %}
-        {% include "shared/components/layout/page_header.html" %}
-    {% endwith %}
+<section class="customer-area-page customer-profile-page space-y-6">
+    <div class="customer-area-hero">
+        {% with eyebrow=eyebrow|default:"Customer Area" title=page_title|default:"Meu perfil" description=page_description|default:"Atualize seus dados pessoais, contato e preferências da conta." %}
+            {% include "shared/components/layout/page_header.html" %}
+        {% endwith %}
+    </div>
 
     <form method="{{ form_method|default:'post' }}" action="{{ form_action|default:request.path }}" class="space-y-6">
         {% csrf_token %}
 
-        <section class="ds-surface space-y-6 p-6">
+        <section class="customer-area-panel ds-surface space-y-6 p-6">
             <header class="space-y-1">
                 <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">{{ personal_info_title|default:"Informações pessoais" }}</h2>
                 <p class="text-sm text-[var(--color-text-secondary)]">{{ personal_info_description|default:"Dados básicos da conta do cliente." }}</p>
@@ -28,7 +30,7 @@
             </div>
         </section>
 
-        <section class="ds-surface space-y-6 p-6">
+        <section class="customer-area-panel ds-surface space-y-6 p-6">
             <header class="space-y-1">
                 <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">{{ preferences_title|default:"Preferências" }}</h2>
                 <p class="text-sm text-[var(--color-text-secondary)]">{{ preferences_description|default:"Defina como deseja receber novidades e atualizações." }}</p>

@@ -5,15 +5,21 @@
 {% block body_class %}bg-slate-50{% endblock %}
 
 {% block body %}
-<div class="min-h-screen lg:grid lg:grid-cols-[16rem_minmax(0,1fr)]">
-    <aside class="border-r border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-6">
+<div class="admin-ops-shell min-h-screen lg:grid lg:grid-cols-[16rem_minmax(0,1fr)]">
+    <aside class="admin-ops-sidebar border-r border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-6">
         <div class="mb-8">
-            <a href="/ops/" class="text-lg font-semibold text-[var(--color-text-primary)]">Hubx Market</a>
+            {% if is_platform_admin_shell %}
+                <a href="/" class="text-lg font-semibold text-[var(--color-text-primary)]">Hubx Market</a>
+                <p class="mt-1 text-xs text-[var(--color-text-secondary)]">Platform admin</p>
+            {% else %}
+                <a href="/ops/" class="text-lg font-semibold text-[var(--color-text-primary)]">Hubx Market</a>
+                <p class="mt-1 text-xs text-[var(--color-text-secondary)]">Admin da loja</p>
+            {% endif %}
         </div>
         {% include "shared/partials/sidebar.html" %}
     </aside>
-    <div class="min-w-0">
-        <header class="border-b border-[var(--color-border-default)] bg-[var(--color-surface-panel)] px-6 py-4">
+    <div class="admin-ops-main min-w-0">
+        <header class="admin-ops-topbar border-b border-[var(--color-border-default)] bg-[var(--color-surface-panel)] px-6 py-4">
             <div class="mx-auto flex max-w-7xl items-center justify-between gap-4">
                 <div>
                     <p class="text-sm text-[var(--color-text-secondary)]">Admin SaaS</p>
@@ -22,7 +28,7 @@
                 {% include "shared/partials/navbar.html" %}
             </div>
         </header>
-        <main class="mx-auto max-w-7xl px-6 py-8">
+        <main class="admin-ops-content mx-auto max-w-7xl px-6 py-8">
             {% block content %}{% endblock %}
         </main>
     </div>

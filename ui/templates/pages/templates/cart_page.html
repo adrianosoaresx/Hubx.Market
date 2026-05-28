@@ -3,21 +3,21 @@
 {% block page_title %}{{ page_title|default:"Carrinho" }}{% endblock %}
 
 {% block content %}
-<section class="space-y-8">
-    <header class="space-y-3">
+<section class="cart-checkout-page space-y-8">
+    <header class="storefront-hero cart-page-hero space-y-3">
         <div class="space-y-2">
-            <h1 class="text-3xl font-semibold tracking-tight text-[var(--color-text-primary)]">
+            <h1 class="storefront-hero-title text-3xl font-semibold tracking-tight text-[var(--color-text-primary)]">
                 {{ page_title|default:"Carrinho" }}
             </h1>
             {% if page_description %}
-                <p class="max-w-3xl text-base text-[var(--color-text-secondary)]">{{ page_description }}</p>
+                <p class="storefront-hero-description max-w-3xl text-base text-[var(--color-text-secondary)]">{{ page_description }}</p>
             {% endif %}
         </div>
     </header>
 
     {% if cart_items %}
-        <div class="grid gap-8 lg:grid-cols-[minmax(0,1.5fr)_minmax(22rem,26rem)]">
-            <section class="space-y-4">
+        <div class="cart-checkout-layout grid gap-8 lg:grid-cols-[minmax(0,1.5fr)_minmax(22rem,26rem)]">
+            <section class="cart-items-stack space-y-4">
                 {% for item in cart_items %}
                     <form method="post" action="">
                         {% csrf_token %}
@@ -31,12 +31,12 @@
                 {% endfor %}
             </section>
 
-            <aside class="space-y-6">
+            <aside class="cart-checkout-sidebar space-y-6">
                 {% with title="Resumo do carrinho" description=summary_description note=summary_note items=cart_items subtotal=subtotal discount=discount_total total=total %}
                     {% include "shared/components/composite/order_summary.html" %}
                 {% endwith %}
                 {% if delivery_promise.items %}
-                    <section class="space-y-4 rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-4" aria-label="Promessa de entrega">
+                    <section class="cart-checkout-panel space-y-4 rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-4" aria-label="Promessa de entrega">
                         <header class="space-y-1">
                             <h2 class="text-sm font-semibold text-[var(--color-text-primary)]">{{ delivery_promise.title }}</h2>
                             <p class="text-xs leading-5 text-[var(--color-text-secondary)]">{{ delivery_promise.description }}</p>
@@ -62,7 +62,7 @@
                     </section>
                 {% endif %}
                 {% if conversion_readiness_items %}
-                    <section class="space-y-4 rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-4" aria-label="Próximo passo seguro">
+                    <section class="cart-checkout-panel space-y-4 rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-4" aria-label="Próximo passo seguro">
                         <header class="space-y-1">
                             <h2 class="text-sm font-semibold text-[var(--color-text-primary)]">{{ conversion_readiness_title }}</h2>
                             <p class="text-xs leading-5 text-[var(--color-text-secondary)]">{{ conversion_readiness_description }}</p>
@@ -79,7 +79,7 @@
                         </div>
                     </section>
                 {% endif %}
-                <section class="space-y-4 rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-4" aria-label="Cupom">
+                <section class="cart-checkout-panel space-y-4 rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-4" aria-label="Cupom">
                     <header class="space-y-1">
                         <h2 class="text-sm font-semibold text-[var(--color-text-primary)]">Cupom</h2>
                         <p class="text-xs leading-5 text-[var(--color-text-secondary)]">
@@ -112,14 +112,14 @@
                     {% endif %}
                 </section>
                 {% if checkout_action_enabled %}
-                    <form method="post" action="" class="rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-4">
+                    <form method="post" action="" class="cart-checkout-panel rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-4">
                         {% csrf_token %}
                         <button class="ds-btn ds-btn-primary ds-btn-md w-full" type="submit" name="cart_intent" value="checkout">
                             <span>Ir para checkout</span>
                         </button>
                     </form>
                 {% endif %}
-                <div class="rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-4">
+                <div class="cart-checkout-panel rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-4">
                     {{ continue_shopping_action }}
                 </div>
             </aside>

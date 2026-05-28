@@ -29,6 +29,7 @@ class TenantSubdomainMiddleware:
     def __call__(self, request):
         host = request.get_host().split(":")[0].lower()
         request.tenant = None  # default
+        request.tenant_resolution_source = ""
 
         # local / test hosts: ignore
         if host in LOCAL_HOSTS:
@@ -55,7 +56,14 @@ class TenantSubdomainMiddleware:
                 raise Http404("Tenant not found")
             else:
                 request.tenant = tenant
+                request.tenant_resolution_source = "subdomain"
                 return self.get_response(request)
 
-        # Any other host (e.g., custom domain) not supported yet -> ignore
+        if bool(getattr(settings, "HUBX_MARKET_CUSTOM_DOMAIN_RESOLVER_ENABLED", False)):
+            tenant = Tenant.objects.filter(custom_domain__iexact=host, is_active=True).first()
+            if tenant is not None:
+                request.tenant = tenant
+                request.tenant_resolution_source = "custom_domain"
+                return self.get_response(request)
+
         return self.get_response(request)

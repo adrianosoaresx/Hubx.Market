@@ -4,12 +4,14 @@
 {% block shell_title %}{% if shell_title %}{{ shell_title }}{% elif page_title %}{{ page_title }}{% else %}Pedidos{% endif %}{% endblock %}
 
 {% block content %}
-<section class="space-y-6">
-    {% with eyebrow=page_eyebrow|default:"Pedidos" title=page_title|default:"Pedidos" description=page_description|default:"Acompanhe a operação de pedidos, pagamentos e expedição." meta=page_meta %}
-        {% include "shared/components/layout/page_header.html" %}
-    {% endwith %}
+<section class="admin-ops-page admin-orders-page space-y-6">
+    <div class="admin-ops-hero">
+        {% with eyebrow=page_eyebrow|default:"Pedidos" title=page_title|default:"Pedidos" description=page_description|default:"Acompanhe a operação de pedidos, pagamentos e expedição." meta=page_meta %}
+            {% include "shared/components/layout/page_header.html" %}
+        {% endwith %}
+    </div>
 
-    <div class="flex flex-wrap items-center justify-between gap-3">
+    <div class="admin-ops-toolbar flex flex-wrap items-center justify-between gap-3">
         {% if page_actions %}
             <div class="flex flex-wrap gap-3">
                 {{ page_actions }}

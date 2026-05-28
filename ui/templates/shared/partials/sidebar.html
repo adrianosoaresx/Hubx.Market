@@ -1,6 +1,14 @@
-<nav class="space-y-2 text-sm">
-    <a href="/ops/" class="block rounded-lg px-3 py-2 text-[var(--color-text-primary)] hover:bg-slate-100">Dashboard</a>
-    {% for item in admin_nav_items %}
-        <a href="{{ item.href }}" class="block rounded-lg px-3 py-2 text-[var(--color-text-primary)] hover:bg-slate-100">{{ item.label }}</a>
-    {% endfor %}
+<nav class="admin-ops-nav space-y-2 text-sm">
+    {% if is_platform_admin_shell %}
+        <a href="/ops/platform/tenants/" class="block rounded-lg px-3 py-2 text-[var(--color-text-primary)] hover:bg-slate-100">Lojas</a>
+        <a href="/ops/platform/onboarding/" class="block rounded-lg px-3 py-2 text-[var(--color-text-primary)] hover:bg-slate-100">Onboarding</a>
+        <a href="/" class="block rounded-lg px-3 py-2 text-[var(--color-text-primary)] hover:bg-slate-100">Portal central</a>
+    {% else %}
+        <a href="/ops/" class="block rounded-lg px-3 py-2 text-[var(--color-text-primary)] hover:bg-slate-100">Dashboard</a>
+        {% for item in admin_nav_items %}
+            {% if "/ops/platform/" not in item.href %}
+                <a href="{{ item.href }}" class="block rounded-lg px-3 py-2 text-[var(--color-text-primary)] hover:bg-slate-100">{{ item.label }}</a>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
 </nav>

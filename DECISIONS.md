@@ -8073,3 +8073,16 @@ Consequências:
 - `NO-GO` abre bateria corretiva pelo maior blocker.
 - a closure não altera settings, flags, providers, tenants nem dados de domínio.
 - se `GO`, a próxima trilha recomendada é Growth/Commercial Activation Track.
+
+## 2026-05-28 — Platform Self-Service Tenant Onboarding MVP
+
+Decisão:
+
+- criar o primeiro portal self-service de lojas como wizard operacional em `/ops/platform/onboarding/`, restrito a platform owner/admin.
+
+Consequências:
+
+- `TenantOnboarding` passa a guardar rascunho, progresso, blockers e conclusão da jornada.
+- a conclusão orquestra criação de tenant, assinatura interna trialing e owner inicial por services existentes.
+- billing real, DNS/TLS automático, upload de logo, catálogo demo, frete, pagamentos e impersonação ficam fora do MVP.
+- o portal usa RBAC platform, Design System admin e AuditLog platform-scope.

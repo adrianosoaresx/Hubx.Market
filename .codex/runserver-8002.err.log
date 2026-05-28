@@ -1,0 +1,222 @@
+Not Found: /
+[28/May/2026 14:47:12] "GET / HTTP/1.1" 404 2362
+Not Found: /favicon.ico
+[28/May/2026 14:47:12] "GET /favicon.ico HTTP/1.1" 404 7928
+[28/May/2026 14:51:25] "GET /accounts/login/ HTTP/1.1" 200 5552
+[28/May/2026 14:51:25] "GET /static/css/app.css HTTP/1.1" 200 52640
+[28/May/2026 14:51:25] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[28/May/2026 14:51:25] "GET /static/js/app.js HTTP/1.1" 200 116
+[28/May/2026 14:51:25] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+Not Found: /favicon.ico
+[28/May/2026 14:51:25] "GET /favicon.ico HTTP/1.1" 404 7930
+Not Found: /
+[28/May/2026 14:52:08] "GET / HTTP/1.1" 404 2362
+Not Found: /
+[28/May/2026 14:52:26] "GET / HTTP/1.1" 404 2364
+Not Found: /favicon.ico
+[28/May/2026 14:52:26] "GET /favicon.ico HTTP/1.1" 404 7930
+[28/May/2026 14:53:51] "GET / HTTP/1.1" 200 15514
+[28/May/2026 14:53:51] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[28/May/2026 14:53:51] "GET /static/css/app.css HTTP/1.1" 200 52640
+[28/May/2026 14:53:51] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[28/May/2026 14:53:51] "GET /static/js/app.js HTTP/1.1" 200 116
+Invalid HTTP_HOST header: 'hubx-demo.localhost:8002'. You may need to add 'hubx-demo.localhost' to ALLOWED_HOSTS.
+Traceback (most recent call last):
+  File "C:\Python310\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Python310\lib\site-packages\django\utils\deprecation.py", line 119, in __call__
+    response = self.process_request(request)
+  File "C:\Python310\lib\site-packages\django\middleware\common.py", line 48, in process_request
+    host = request.get_host()
+  File "C:\Python310\lib\site-packages\django\http\request.py", line 202, in get_host
+    raise DisallowedHost(msg)
+django.core.exceptions.DisallowedHost: Invalid HTTP_HOST header: 'hubx-demo.localhost:8002'. You may need to add 'hubx-demo.localhost' to ALLOWED_HOSTS.
+Invalid HTTP_HOST header: 'hubx-demo.localhost:8002'. You may need to add 'hubx-demo.localhost' to ALLOWED_HOSTS.
+Traceback (most recent call last):
+  File "C:\Python310\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Python310\lib\site-packages\django\utils\deprecation.py", line 119, in __call__
+    response = self.process_request(request)
+  File "C:\Python310\lib\site-packages\django\middleware\common.py", line 48, in process_request
+    host = request.get_host()
+  File "C:\Python310\lib\site-packages\django\http\request.py", line 202, in get_host
+    raise DisallowedHost(msg)
+django.core.exceptions.DisallowedHost: Invalid HTTP_HOST header: 'hubx-demo.localhost:8002'. You may need to add 'hubx-demo.localhost' to ALLOWED_HOSTS.
+[28/May/2026 14:53:51] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.svg HTTP/1.1" 400 82276
+[28/May/2026 14:53:51] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.svg HTTP/1.1" 400 82309
+Invalid HTTP_HOST header: 'hubx-demo.localhost:8002'. You may need to add 'hubx-demo.localhost' to ALLOWED_HOSTS.
+Traceback (most recent call last):
+  File "C:\Python310\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "C:\Python310\lib\site-packages\django\utils\deprecation.py", line 119, in __call__
+    response = self.process_request(request)
+  File "C:\Python310\lib\site-packages\django\middleware\common.py", line 48, in process_request
+    host = request.get_host()
+  File "C:\Python310\lib\site-packages\django\http\request.py", line 202, in get_host
+    raise DisallowedHost(msg)
+django.core.exceptions.DisallowedHost: Invalid HTTP_HOST header: 'hubx-demo.localhost:8002'. You may need to add 'hubx-demo.localhost' to ALLOWED_HOSTS.
+[28/May/2026 14:53:51] "GET /media/demo-catalog/hubx-demo/tenis-hubx-runner-persistido-1.svg HTTP/1.1" 400 82342
+Not Found: /favicon.ico
+[28/May/2026 14:53:51] "GET /favicon.ico HTTP/1.1" 404 7940
+[28/May/2026 14:54:00] "GET /accounts/login/ HTTP/1.1" 200 5552
+[28/May/2026 14:54:29] "POST /accounts/login/ HTTP/1.1" 302 0
+[28/May/2026 14:54:29] "GET /ops/platform/tenants/ HTTP/1.1" 200 13857
+[28/May/2026 14:54:58] "GET /ops/platform/tenants/ HTTP/1.1" 200 13857
+[28/May/2026 14:55:00] "GET /ops/platform/tenants/ HTTP/1.1" 200 13857
+[28/May/2026 14:55:02] "GET /ops/ HTTP/1.1" 200 27011
+[28/May/2026 14:55:49] "GET /ops/ HTTP/1.1" 200 27011
+[28/May/2026 14:55:59] "GET /ops/pages/ HTTP/1.1" 200 8393
+[28/May/2026 14:56:07] "GET /ops/ HTTP/1.1" 200 27011
+[28/May/2026 14:56:18] "GET /ops/platform/onboarding/ HTTP/1.1" 200 6481
+[28/May/2026 14:56:23] "GET /ops/platform/onboarding/new/ HTTP/1.1" 200 5575
+[28/May/2026 14:56:43] "GET /ops/ HTTP/1.1" 200 27011
+[28/May/2026 14:56:55] "GET /ops/ HTTP/1.1" 200 27011
+[28/May/2026 14:57:55] "GET /ops/ HTTP/1.1" 200 27011
+[28/May/2026 15:11:51] "GET /accounts/login/?next=/ops/platform/tenants/ HTTP/1.1" 200 5638
+[28/May/2026 15:11:51] "GET /static/css/app.css HTTP/1.1" 200 52640
+[28/May/2026 15:11:51] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[28/May/2026 15:11:51] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[28/May/2026 15:11:51] "GET /static/js/app.js HTTP/1.1" 200 116
+[28/May/2026 15:12:25] "POST /accounts/login/ HTTP/1.1" 302 0
+[28/May/2026 15:12:25] "GET /ops/platform/tenants/ HTTP/1.1" 200 14879
+Forbidden (Permission denied): /ops/
+Traceback (most recent call last):
+  File "C:\Python310\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "X:\Projeto\Hubx.market\backend\app\modules\accounts\interfaces\middleware.py", line 144, in __call__
+    raise PermissionDenied("Owner access required")
+django.core.exceptions.PermissionDenied: Owner access required
+[28/May/2026 15:12:30] "GET /ops/ HTTP/1.1" 403 135
+[28/May/2026 15:12:34] "GET /ops/platform/tenants/ HTTP/1.1" 200 14879
+Forbidden (Permission denied): /ops/
+Traceback (most recent call last):
+  File "C:\Python310\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "X:\Projeto\Hubx.market\backend\app\modules\accounts\interfaces\middleware.py", line 144, in __call__
+    raise PermissionDenied("Owner access required")
+django.core.exceptions.PermissionDenied: Owner access required
+[28/May/2026 15:12:39] "GET /ops/ HTTP/1.1" 403 135
+[28/May/2026 15:17:21] "GET /ops/platform/tenants/ HTTP/1.1" 302 0
+[28/May/2026 15:17:21] "GET /accounts/login/?next=%2Fops%2Fplatform%2Ftenants%2F HTTP/1.1" 200 5638
+[28/May/2026 15:17:21] "GET /static/css/app.css HTTP/1.1" 200 52640
+[28/May/2026 15:17:21] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[28/May/2026 15:17:21] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[28/May/2026 15:17:21] "GET /static/js/app.js HTTP/1.1" 200 116
+Not Found: /favicon.ico
+[28/May/2026 15:17:21] "GET /favicon.ico HTTP/1.1" 404 7928
+[28/May/2026 15:17:27] "POST /accounts/login/ HTTP/1.1" 302 0
+[28/May/2026 15:17:27] "GET /ops/platform/tenants/ HTTP/1.1" 200 14879
+Forbidden (Permission denied): /ops/
+Traceback (most recent call last):
+  File "C:\Python310\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "X:\Projeto\Hubx.market\backend\app\modules\accounts\interfaces\middleware.py", line 144, in __call__
+    raise PermissionDenied("Owner access required")
+django.core.exceptions.PermissionDenied: Owner access required
+[28/May/2026 15:17:29] "GET /ops/ HTTP/1.1" 403 135
+[28/May/2026 15:17:34] "GET /ops/platform/tenants/ HTTP/1.1" 200 14879
+[28/May/2026 15:17:34] "GET /static/css/app.css HTTP/1.1" 200 52640
+[28/May/2026 15:17:34] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[28/May/2026 15:17:34] "GET /static/js/app.js HTTP/1.1" 200 116
+[28/May/2026 15:17:34] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+Not Found: /favicon.ico
+[28/May/2026 15:17:34] "GET /favicon.ico HTTP/1.1" 404 7928
+[28/May/2026 15:17:36] "GET /ops/platform/tenants/ HTTP/1.1" 200 14879
+[28/May/2026 15:17:36] "GET /static/css/app.css HTTP/1.1" 200 52640
+[28/May/2026 15:17:36] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[28/May/2026 15:17:36] "GET /static/js/app.js HTTP/1.1" 200 116
+[28/May/2026 15:17:36] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+Not Found: /favicon.ico
+[28/May/2026 15:17:36] "GET /favicon.ico HTTP/1.1" 404 7928
+[28/May/2026 15:17:38] "GET /ops/platform/tenants/ HTTP/1.1" 200 14879
+[28/May/2026 15:17:38] "GET /static/css/app.css HTTP/1.1" 200 52640
+[28/May/2026 15:17:38] "GET /static/js/app.js HTTP/1.1" 200 116
+[28/May/2026 15:17:38] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[28/May/2026 15:17:38] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+Not Found: /favicon.ico
+[28/May/2026 15:17:38] "GET /favicon.ico HTTP/1.1" 404 7928
+[28/May/2026 15:17:38] "GET /ops/platform/tenants/ HTTP/1.1" 200 14879
+[28/May/2026 15:17:38] "GET /static/css/app.css HTTP/1.1" 200 52640
+[28/May/2026 15:17:38] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[28/May/2026 15:17:38] "GET /static/js/app.js HTTP/1.1" 200 116
+[28/May/2026 15:17:38] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+Not Found: /favicon.ico
+[28/May/2026 15:17:38] "GET /favicon.ico HTTP/1.1" 404 7928
+[28/May/2026 15:17:38] "GET /ops/platform/tenants/ HTTP/1.1" 200 14879
+[28/May/2026 15:17:38] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[28/May/2026 15:17:38] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[28/May/2026 15:17:38] "GET /static/js/app.js HTTP/1.1" 200 116
+[28/May/2026 15:17:38] "GET /static/css/app.css HTTP/1.1" 200 52640
+Not Found: /favicon.ico
+[28/May/2026 15:17:38] "GET /favicon.ico HTTP/1.1" 404 7928
+[28/May/2026 15:17:38] "GET /ops/platform/tenants/ HTTP/1.1" 200 14879
+[28/May/2026 15:17:38] "GET /static/css/app.css HTTP/1.1" 200 52640
+[28/May/2026 15:17:38] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[28/May/2026 15:17:38] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[28/May/2026 15:17:38] "GET /static/js/app.js HTTP/1.1" 200 116
+Not Found: /favicon.ico
+[28/May/2026 15:17:38] "GET /favicon.ico HTTP/1.1" 404 7928
+[28/May/2026 15:17:38] "GET /ops/platform/tenants/ HTTP/1.1" 200 14879
+[28/May/2026 15:17:39] "GET /static/css/app.css HTTP/1.1" 200 52640
+[28/May/2026 15:17:39] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[28/May/2026 15:17:39] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[28/May/2026 15:17:39] "GET /static/js/app.js HTTP/1.1" 200 116
+Not Found: /favicon.ico
+[28/May/2026 15:17:39] "GET /favicon.ico HTTP/1.1" 404 7928
+[28/May/2026 15:17:39] "GET /ops/platform/tenants/ HTTP/1.1" 200 14879
+[28/May/2026 15:17:39] "GET /static/css/app.css HTTP/1.1" 200 52640
+[28/May/2026 15:17:39] "GET /static/js/app.js HTTP/1.1" 200 116
+[28/May/2026 15:17:39] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[28/May/2026 15:17:39] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+Not Found: /favicon.ico
+[28/May/2026 15:17:39] "GET /favicon.ico HTTP/1.1" 404 7928
+[28/May/2026 15:17:39] "GET /ops/platform/tenants/ HTTP/1.1" 200 14879
+[28/May/2026 15:17:39] "GET /static/css/app.css HTTP/1.1" 200 52640
+[28/May/2026 15:17:39] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[28/May/2026 15:17:39] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[28/May/2026 15:17:39] "GET /static/js/app.js HTTP/1.1" 200 116
+Not Found: /favicon.ico
+[28/May/2026 15:17:39] "GET /favicon.ico HTTP/1.1" 404 7928
+[28/May/2026 15:17:39] "GET /ops/platform/tenants/ HTTP/1.1" 200 14879
+[28/May/2026 15:17:39] "GET /static/css/app.css HTTP/1.1" 200 52640
+[28/May/2026 15:17:39] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[28/May/2026 15:17:39] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[28/May/2026 15:17:39] "GET /static/js/app.js HTTP/1.1" 200 116
+Not Found: /favicon.ico
+[28/May/2026 15:17:39] "GET /favicon.ico HTTP/1.1" 404 7928
+[28/May/2026 15:17:39] "GET /ops/platform/tenants/ HTTP/1.1" 200 14879
+[28/May/2026 15:17:39] "GET /static/css/app.css HTTP/1.1" 200 52640
+[28/May/2026 15:17:39] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[28/May/2026 15:17:39] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[28/May/2026 15:17:39] "GET /static/js/app.js HTTP/1.1" 200 116
+Not Found: /favicon.ico
+[28/May/2026 15:17:39] "GET /favicon.ico HTTP/1.1" 404 7928
+[28/May/2026 15:17:39] "GET /ops/platform/tenants/ HTTP/1.1" 200 14879
+[28/May/2026 15:17:39] "GET /static/css/app.css HTTP/1.1" 200 52640
+[28/May/2026 15:17:39] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[28/May/2026 15:17:39] "GET /static/js/app.js HTTP/1.1" 200 116
+[28/May/2026 15:17:39] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+Not Found: /favicon.ico
+[28/May/2026 15:17:39] "GET /favicon.ico HTTP/1.1" 404 7928
+Forbidden (Permission denied): /ops/
+Traceback (most recent call last):
+  File "C:\Python310\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "X:\Projeto\Hubx.market\backend\app\modules\accounts\interfaces\middleware.py", line 144, in __call__
+    raise PermissionDenied("Owner access required")
+django.core.exceptions.PermissionDenied: Owner access required
+[28/May/2026 15:17:49] "GET /ops/ HTTP/1.1" 403 135
+Not Found: /catalog/
+[28/May/2026 15:18:31] "GET /catalog/ HTTP/1.1" 404 3422
+[28/May/2026 15:18:37] "GET /accounts/account/orders/ HTTP/1.1" 200 7899
+[28/May/2026 15:19:54] "GET /ops/platform/tenants/ HTTP/1.1" 200 14879
+Forbidden (Permission denied): /ops/
+Traceback (most recent call last):
+  File "C:\Python310\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "X:\Projeto\Hubx.market\backend\app\modules\accounts\interfaces\middleware.py", line 144, in __call__
+    if getattr(request, "owner_user", None) is None:
+django.core.exceptions.PermissionDenied: Owner access required
+[28/May/2026 15:19:56] "GET /ops/ HTTP/1.1" 403 135
+Not Found: /
+[28/May/2026 15:29:50] "GET / HTTP/1.1" 404 2362

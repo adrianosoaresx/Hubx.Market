@@ -336,6 +336,53 @@ Gerenciar lojas, subdomínios, branding, modo manutenção, configurações do t
 ### Observação
 `tenants` é o núcleo do contexto SaaS.
 
+### Platform Store Management
+
+- a gerência de lojas/tenants pertence a `tenants`, não a módulos tenant-owned de commerce.
+- a primeira surface recomendada é `/ops/platform/tenants/`, com escopo platform-only.
+- essa surface não deve reutilizar `request.tenant` como autorização; ela deve exigir contexto de platform owner/admin.
+- ações iniciais permitidas: listar, detalhar, criar tenant, ativar/desativar, alternar manutenção e editar `custom_domain` como cadastro.
+- ações fora do recorte inicial: deletar tenant, impersonar owner/customer, editar dados internos de catálogo/pedidos/pagamentos/clientes e ativar resolução HTTP por `custom_domain`.
+- writes sensíveis devem passar por application services de `tenants` e registrar `AuditLog` platform-scope ou tenant-targeted com opt-in explícito.
+- `custom_domain` continua contract-only até uma wave própria alterar o resolver HTTP.
+- a execução read-only inicial de `/ops/platform/tenants/` lista apenas metadados operacionais de `Tenant` e não lê dados internos de commerce.
+- a permissão inicial da surface é `platform.tenants.view`, restrita a roles administrativas completas na matriz atual.
+- o detalhe read-only `/ops/platform/tenants/<tenant_slug>/` pode ler apenas cadastro operacional de `Tenant` e deve retornar `404` para slug inexistente.
+- a criação futura `/ops/platform/tenants/new/` deve ficar em `tenants.application`, validar `name`, `slug`, `subdomain`, bloquear subdomínios reservados e registrar `AuditLog` platform-scope explícito.
+- criar tenant não deve criar owner, catálogo demo, billing, custom-domain resolver ou sessão/impersonação na mesma operação.
+- a execução do command de criação exige `platform.tenants.manage`; `platform.tenants.view` permanece apenas para leitura.
+- se `AuditLog` platform-scope não registrar, a criação de tenant deve ser revertida.
+- a surface HTTP `/ops/platform/tenants/new/` deve permanecer fina: renderiza formulário, repassa payload/ator/role e delega o write para `platform_tenant_admin_commands`.
+- mudanças de estado futuras devem ficar em `/ops/platform/tenants/<tenant_slug>/state/`, aceitar apenas `activate`, `deactivate`, `maintenance-on` e `maintenance-off`.
+- `is_active` afeta o resolver por subdomínio; `maintenance_mode` é flag operacional e não deve encerrar fluxos de commerce por si só.
+- a execução de state command altera apenas `is_active` ou `maintenance_mode`, registra `AuditLog` platform-scope e não toca slug/subdomain/custom_domain ou módulos de commerce.
+- a surface HTTP de state management deve permanecer como action view fina: recebe `action`, delega a `platform_tenant_admin_commands.update_tenant_state(...)` e redireciona para o detalhe.
+- a execução do command de `custom_domain` exige `platform.tenants.manage`, normaliza/persiste apenas `Tenant.custom_domain`, bloqueia duplicidade entre tenants, registra `AuditLog` platform-scope e não altera middleware, resolver HTTP, DNS, TLS, redirects ou subdomain principal.
+- a surface HTTP de `custom_domain` deve permanecer como action view fina: recebe o campo, delega a `platform_tenant_admin_commands.update_custom_domain(...)`, redireciona para o detalhe e não adiciona side effects fora de `tenants`.
+- o closure do recorte inicial considera a surface pronta apenas para operação interna controlada de cadastro/estado; bootstrap de owner, resolver runtime de custom domain, DNS/TLS, billing, impersonação e deleção seguem fora de `tenants` ops inicial.
+- Owner Bootstrap futuro deve ser orquestrado por `tenants`, mas persistência/convite de `OwnerUser` pertence a `accounts`; a ação não pode criar `Customer`, senha manual, sessão automática, catálogo, billing ou impersonação.
+- Custom Domain Runtime Resolver futuro pertence a `tenants`/middleware de resolução; deve usar match exato de `custom_domain`, preservar subdomínio como caminho compatível, bloquear fallback global e manter DNS/TLS fora do código.
+- Owner Bootstrap Command executado em `tenants` apenas orquestra RBAC/tenant/audit platform-scope; criação de `OwnerUser`/`User` continua em `accounts.application.initial_owner_provisioning_commands`.
+- Custom Domain Runtime Resolver executado no middleware de `tenants` fica atrás de `HUBX_MARKET_CUSTOM_DOMAIN_RESOLVER_ENABLED`, resolve apenas tenant ativo por match exato e não adiciona DNS/TLS/redirects.
+- Owner Bootstrap Admin Surface futura deve permanecer como action view fina no detalhe platform-only, sem campo de senha e sem side effects em commerce.
+- Custom Domain Runtime Evidence futura deve validar flag on/off, tenant inativo, safe miss e rollback antes de qualquer rollout de ambiente.
+- Owner Bootstrap Admin Surface executada mantém view fina: renderiza formulário/estado no detalhe e delega o write para `platform_tenant_admin_commands.bootstrap_owner(...)`.
+- Custom Domain Runtime Activation Runbook é evidência operacional declarativa; não altera settings, DNS, TLS ou tenants por si só.
+- Owner Bootstrap Admin Surface Closure fecha apenas uso interno controlado; evidência produtiva e convite real continuam trilhas próprias.
+- Custom Domain Runtime Staging Evidence é pacote declarativo de smoke/rollback; production gate ainda deve decidir rollout por ambiente.
+- Owner Bootstrap Production Evidence é declarativa e não cria owner por si só; apenas confirma artefatos de produção já capturados.
+- Custom Domain Runtime Production Gate decide GO/NO-GO sem alterar flag, DNS, TLS ou middleware.
+- Owner Bootstrap Production Closure fecha a trilha sem novo runtime, exigindo evidência produtiva e handoff operacional.
+- Custom Domain Runtime Production Activation Evidence registra ativação pós-GO, mas não executa mudança de ambiente automaticamente.
+- Custom Domain Runtime Production Closure fecha o runtime sem mover DNS/TLS para o app; rollback segue por flag.
+- Store Management Track Closure consolida tenants/accounts/middleware sem alterar fronteiras de commerce.
+- System ROI Re-Selection pertence a `tenants.application.system_roi_reselection_queries` porque consolida a closure platform/multi-tenant e apenas recomenda a próxima trilha.
+- System ROI Re-Selection não deve implementar validação funcional, acionar providers, alterar runtime, criar tenants, tocar dados de commerce ou substituir as closures específicas de payments/shipping/ops.
+- System Validation Pass 2 pertence a `tenants.application.system_template_regression_smoke` como smoke sistêmico de rotas, mas só pode fazer leituras GET e checar marcadores de template/link.
+- System Validation Pass 2 não deve corrigir templates, criar massa, forçar login produtivo, acionar providers, alterar permissões, mudar tenant resolution ou atravessar regras internas de commerce.
+- Platform Self-Service Tenant Onboarding pertence a `tenants` como orquestrador platform-scope, mas deve chamar `subscriptions`, `accounts` e `audit` por application services explícitos.
+- O onboarding self-service não deve criar billing real, invoice, catálogo demo, frete, pagamento, impersonação, DNS/TLS automático, upload de logo ou dados tenant-owned de commerce.
+
 ---
 
 ## 3. catalog

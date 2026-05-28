@@ -3,17 +3,19 @@
 {% block title %}{{ page_title|default:"Meus endereços" }}{% endblock %}
 
 {% block content %}
-<section class="space-y-6">
-    {% with eyebrow=eyebrow|default:"Customer Area" title=page_title|default:"Meus endereços" description=page_description|default:"Gerencie endereços de entrega e cobrança da sua conta." actions=page_actions %}
-        {% include "shared/components/layout/page_header.html" %}
-    {% endwith %}
+<section class="customer-area-page customer-addresses-page space-y-6">
+    <div class="customer-area-hero">
+        {% with eyebrow=eyebrow|default:"Customer Area" title=page_title|default:"Meus endereços" description=page_description|default:"Gerencie endereços de entrega e cobrança da sua conta." actions=page_actions %}
+            {% include "shared/components/layout/page_header.html" %}
+        {% endwith %}
+    </div>
 
     {% if address_feedback %}
         {% include "shared/components/feedback/alert.html" with variant=address_feedback.variant icon=address_feedback.icon title=address_feedback.title description=address_feedback.description %}
     {% endif %}
 
     {% if address_form %}
-        <section id="address-management" class="ds-surface space-y-6 p-6">
+        <section id="address-management" class="customer-area-panel ds-surface space-y-6 p-6">
             <div class="space-y-2">
                 <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">{{ address_form_title|default:"Gerenciar endereço" }}</h2>
                 <p class="text-sm text-[var(--color-text-secondary)]">{{ address_form_description|default:"Atualize os dados do endereço." }}</p>
@@ -48,7 +50,7 @@
     {% endif %}
 
     {% if address_delete %}
-        <section id="address-management" class="ds-surface space-y-6 p-6">
+        <section id="address-management" class="customer-area-panel ds-surface space-y-6 p-6">
             <div class="space-y-2">
                 <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">Remover endereço</h2>
                 <p class="text-sm text-[var(--color-text-secondary)]">Confirme a remoção do endereço salvo abaixo.</p>
@@ -65,7 +67,7 @@
     {% endif %}
 
     {% if addresses %}
-        <div class="grid gap-6 xl:grid-cols-2">
+        <div class="customer-address-grid grid gap-6 xl:grid-cols-2">
             {% for address in addresses %}
                 {% with title=address.title|default:"Endereço salvo" subtitle=address.subtitle content=address.content footer=address.footer actions=address.actions %}
                     {% include "shared/components/data_display/card.html" %}
@@ -73,7 +75,7 @@
             {% endfor %}
         </div>
     {% elif showcase_mode %}
-        <div class="grid gap-6 xl:grid-cols-2">
+        <div class="customer-address-grid grid gap-6 xl:grid-cols-2">
             <section class="ds-surface p-6">
                 <div class="space-y-4">
                     {% include "shared/components/data_display/card.html" with

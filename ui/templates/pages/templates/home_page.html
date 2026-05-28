@@ -3,26 +3,26 @@
 {% block page_title %}{{ page_title|default:"Início" }}{% endblock %}
 
 {% block content %}
-<section class="space-y-10">
-    <section class="ds-surface overflow-hidden p-8 lg:p-10">
-        <div class="grid gap-8 lg:grid-cols-[minmax(0,1.4fr)_minmax(18rem,0.8fr)] lg:items-center">
+<section class="home-page space-y-10">
+    <section class="home-hero ds-surface overflow-hidden p-8 lg:p-10">
+        <div class="home-hero-grid grid gap-8 lg:grid-cols-[minmax(0,1.4fr)_minmax(18rem,0.8fr)] lg:items-center">
             <div class="space-y-6">
                 <div class="space-y-3">
                     <p class="text-sm font-medium uppercase tracking-wide text-[var(--color-text-secondary)]">Storefront</p>
-                    <h1 class="max-w-3xl text-4xl font-semibold tracking-tight text-[var(--color-text-primary)]">
+                    <h1 class="home-hero-title max-w-3xl text-4xl font-semibold tracking-tight text-[var(--color-text-primary)]">
                         {{ hero_title|default:"Hubx Market" }}
                     </h1>
-                    <p class="max-w-2xl text-base text-[var(--color-text-secondary)]">
+                    <p class="home-hero-description max-w-2xl text-base text-[var(--color-text-secondary)]">
                         {{ hero_description|default:"Descubra produtos selecionados e finalize sua compra com segurança." }}
                     </p>
                 </div>
-                <div class="flex flex-wrap gap-3">
+                <div class="home-hero-actions flex flex-wrap gap-3">
                     {% include "shared/components/actions/button.html" with label="Ver loja" href=catalog_href|default:"/catalog/" variant="primary" %}
                     {% include "shared/components/actions/button.html" with label="Receber novidades" href=newsletter_href|default:"/newsletter/" variant="secondary" %}
                     {% include "shared/components/actions/button.html" with label="Entrar" href="/accounts/login/" variant="secondary" %}
                 </div>
             </div>
-            <div class="rounded-3xl border border-[var(--color-border-default)] bg-slate-50 p-6">
+            <div class="home-trust-card rounded-3xl border border-[var(--color-border-default)] bg-slate-50 p-6">
                 <p class="text-sm font-medium text-[var(--color-text-primary)]">Compra segura</p>
                 <p class="mt-2 text-sm text-[var(--color-text-secondary)]">
                     Loja tenant-scoped, carrinho persistente e checkout preparado para pagamento.
@@ -31,7 +31,7 @@
         </div>
     </section>
 
-    <section class="space-y-4">
+    <section class="home-featured-section space-y-4">
         <div class="flex flex-wrap items-end justify-between gap-3">
             <div>
                 <p class="text-sm font-medium text-[var(--color-text-secondary)]">Destaques</p>
@@ -41,7 +41,7 @@
         </div>
 
         {% if featured_products %}
-            <div class="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+            <div class="storefront-product-grid">
                 {% for product in featured_products %}
                     {% include "shared/components/composite/product_card.html" with href=product.href image_url=product.image_url image_alt=product.image_alt eyebrow=product.eyebrow title=product.title subtitle=product.subtitle badge_label=product.badge_label badge_variant=product.badge_variant price=product.price compare_price=product.compare_price price_helper=product.price_helper meta=product.meta variant_summary=product.variant_summary curation_note=product.curation_note availability_note=product.availability_note review_summary=product.review_summary click_helper=product.click_helper stock_state=product.stock_state stock_helper=product.stock_helper clickable=product.clickable %}
                 {% endfor %}

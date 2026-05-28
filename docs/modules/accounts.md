@@ -98,6 +98,12 @@ Fora de escopo atual:
 - remoção física de owner;
 - ativação default obrigatória do gate em todos os ambientes.
 
+## Integração com Platform Self-Service
+
+- o portal `/ops/platform/onboarding/` captura owner inicial, mas a persistência continua em `accounts`;
+- a conclusão delega para o bootstrap existente de owner, sem senha manual, sem login automático e sem impersonação;
+- no MVP, o usuário alvo é platform owner/admin operando a criação da loja, não o lojista em self-service público.
+
 ## Integração UI
 - views HTTP devem permanecer finas em `interfaces/`
 - templates oficiais do Design System podem ser usados como contrato de apresentação para login, cadastro, recuperação e visão geral da conta
@@ -4383,3 +4389,27 @@ Fora de escopo atual:
 - sem alterar flags/env.
 - sem reimprimir evidência auditável.
 - sem criar evento novo.
+
+## Platform Store Management Permission Integration
+- a matriz RBAC de `/ops/` passa a incluir a permissão `platform.tenants.view`.
+- a matriz RBAC de `/ops/` passa a incluir a permissão `platform.tenants.manage` para writes de tenant.
+- roles `owner` e `admin` recebem a permissão por `FULL_ADMIN_PERMISSIONS`.
+- `OpsAuthenticationGateMiddleware` mapeia `/ops/platform/tenants/` para `platform.tenants.view` quando o gate está ativo; writes ainda são revalidados pelo command service com `platform.tenants.manage`.
+- o readiness de produção RBAC passa a exigir essa permissão no conjunto mínimo validado.
+
+### Escopo deliberado
+- sem criar modelo `PlatformUser`.
+- sem alterar login/session.
+- sem abrir writes de tenant.
+- sem permitir impersonação ou bypass cross-tenant.
+
+## Platform Owner Context Middleware
+
+`PlatformOwnerContextMiddleware` permite que rotas `/ops/platform/...` sejam acessadas pelo portal central `hubx.market` sem depender de uma loja específica no host.
+
+- login comum de loja continua tenant-scoped por subdomínio;
+- login central pode direcionar `OwnerUser` com permissão platform para `/ops/platform/tenants/`;
+- login com `next=/ops/platform/...` preserva o destino platform quando a role permite;
+- owners sem permissão platform vão para a loja única que administram ou para `/accounts/select-store/`;
+- após a sessão, `/ops/platform/...` resolve `request.owner_user` por e-mail ativo e permissão `platform.tenants.view`;
+- superfícies comerciais tenant-owned continuam dependentes de `request.tenant`.

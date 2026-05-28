@@ -52,6 +52,13 @@ Gerenciar planos e assinaturas SaaS.
 - **No-Go para acoplar pagamentos de pedido/loja ao plano SaaS**.
 - enforcement futuro deve consumir `TenantSubscription` por contrato explícito, não por queries espalhadas.
 
+## Integração com Platform Self-Service
+
+- o portal `/ops/platform/onboarding/` consome `SubscriptionPlan` ativo como contrato interno de billing;
+- ao concluir uma jornada, `TenantSubscription` é criada em `trialing`;
+- não há provider de cobrança, invoice real, checkout de assinatura ou enforcement de plano no MVP;
+- pagamentos de pedidos continuam pertencendo a `payments`, sem acoplamento com billing SaaS.
+
 ### Próxima bateria recomendada
 
 **Battery F — Audit Instrumentation Expansion**

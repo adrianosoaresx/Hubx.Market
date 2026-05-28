@@ -4,12 +4,14 @@
 {% block shell_title %}{% if shell_title %}{{ shell_title }}{% elif page_title %}{{ page_title }}{% else %}Cupons{% endif %}{% endblock %}
 
 {% block content %}
-<section class="space-y-6">
-    {% with eyebrow=page_eyebrow|default:"Promoções" title=page_title|default:"Cupons" description=page_description|default:"Gerencie cupons simples por tenant." %}
-        {% include "shared/components/layout/page_header.html" %}
-    {% endwith %}
+<section class="admin-ops-page admin-coupons-page space-y-6">
+    <div class="admin-ops-hero">
+        {% with eyebrow=page_eyebrow|default:"Promoções" title=page_title|default:"Cupons" description=page_description|default:"Gerencie cupons simples por tenant." %}
+            {% include "shared/components/layout/page_header.html" %}
+        {% endwith %}
+    </div>
 
-    <div class="flex flex-wrap items-center justify-between gap-3">
+    <div class="admin-ops-toolbar flex flex-wrap items-center justify-between gap-3">
         {% if create_href %}
             {% include "shared/components/actions/button.html" with label="Novo cupom" href=create_href variant="primary" %}
         {% endif %}

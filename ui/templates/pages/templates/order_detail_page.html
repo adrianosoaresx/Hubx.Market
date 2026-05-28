@@ -3,23 +3,25 @@
 {% block title %}{{ page_title|default:"Detalhes do pedido" }}{% endblock %}
 
 {% block content %}
-<section class="space-y-6">
-    {% with eyebrow=eyebrow|default:"Customer Area" title=page_title|default:"Pedido #1024" description=page_description|default:"Resumo do pedido, status atual e histórico de movimentações." meta=page_meta actions=page_actions %}
-        {% include "shared/components/layout/page_header.html" %}
-    {% endwith %}
+<section class="customer-area-page customer-order-detail-page space-y-6">
+    <div class="customer-area-hero">
+        {% with eyebrow=eyebrow|default:"Customer Area" title=page_title|default:"Pedido #1024" description=page_description|default:"Resumo do pedido, status atual e histórico de movimentações." meta=page_meta actions=page_actions %}
+            {% include "shared/components/layout/page_header.html" %}
+        {% endwith %}
+    </div>
 
     {% if page_feedback %}
         {% include "shared/components/feedback/alert.html" with variant=page_feedback.variant icon=page_feedback.icon title=page_feedback.title description=page_feedback.description %}
     {% endif %}
 
-    <div class="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_24rem]">
+    <div class="customer-order-detail-layout grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_24rem]">
         <div class="space-y-6">
-            <section class="grid gap-6 md:grid-cols-2">
+            <section class="customer-order-summary-grid grid gap-6 md:grid-cols-2">
                 {% with title=summary_title|default:"Resumo do pedido" subtitle=summary_subtitle|default:"Informações principais da compra." content=summary_content|default:"Pedido realizado com sucesso e aguardando atualização logística." %}
                     {% include "shared/components/data_display/card.html" %}
                 {% endwith %}
 
-                <section class="ds-surface p-6">
+                <section class="customer-area-panel ds-surface p-6">
                     <div class="space-y-3">
                         <div class="flex items-center justify-between gap-3">
                             <h3 class="text-base font-semibold text-[var(--color-text-primary)]">{{ status_title|default:"Status atual" }}</h3>
@@ -34,7 +36,7 @@
                 </section>
             </section>
 
-            <section class="space-y-4">
+            <section class="customer-area-panel space-y-4">
                 <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">{{ items_title|default:"Itens do pedido" }}</h2>
                 {% with title=order_summary_title|default:"Resumo da compra" description=order_summary_description|default:"Itens, totais e condições do pedido." items=order_items subtotal=subtotal shipping=shipping discount=discount installments=installments total=total note=summary_note actions=order_review_actions showcase_mode=showcase_mode %}
                     {% include "shared/components/composite/order_summary.html" %}
@@ -56,7 +58,7 @@
             </section>
         </div>
 
-        <aside class="space-y-6">
+        <aside class="customer-area-aside space-y-6">
             {% if delivery_tracking_visible %}
                 {% include "shared/components/feedback/alert.html" with variant=delivery_tracking_variant icon=delivery_tracking_icon title=delivery_tracking_title description=delivery_tracking_description %}
                 {% if delivery_tracking_url %}

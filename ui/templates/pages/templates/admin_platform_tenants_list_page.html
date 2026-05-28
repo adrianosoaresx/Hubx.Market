@@ -1,0 +1,42 @@
+{% extends "layouts/admin_shell.html" %}
+
+{% block page_title %}{{ page_title|default:"Lojas" }}{% endblock %}
+{% block shell_title %}{{ page_title|default:"Lojas" }}{% endblock %}
+
+{% block content %}
+<section class="admin-ops-page admin-platform-tenants-page space-y-8">
+    <div class="admin-ops-hero">
+        {% include "shared/components/layout/page_header.html" with eyebrow=page_eyebrow title=page_title description=page_description %}
+        {% if page_meta %}
+            <p class="mt-3 text-sm text-[var(--color-text-secondary)]">{{ page_meta }}</p>
+        {% endif %}
+        {% if create_href %}
+            <div class="mt-5">
+                <a class="ds-btn-primary" href="{{ create_href }}">Criar loja</a>
+            </div>
+        {% endif %}
+    </div>
+
+    <section class="admin-ops-kpi-grid grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+        {% include "shared/components/data_display/chart_card.html" with title="Total de lojas" description="Tenants cadastrados" value=summary.total delta="read-only" trend="neutral" meta="Platform scope" showcase_mode=False %}
+        {% include "shared/components/data_display/chart_card.html" with title="Ativas" description="Lojas fora de manutenção" value=summary.active delta="operacionais" trend="positive" meta="Sem mutação nesta tela" showcase_mode=False %}
+        {% include "shared/components/data_display/chart_card.html" with title="Manutenção" description="maintenance_mode ligado" value=summary.maintenance delta="atenção" trend="negative" meta="Resolver por wave futura" showcase_mode=False %}
+        {% include "shared/components/data_display/chart_card.html" with title="Inativas" description="is_active desligado" value=summary.inactive delta="bloqueadas" trend="neutral" meta="Sem deleção" showcase_mode=False %}
+    </section>
+
+    <section class="admin-ops-panel ds-surface p-6">
+        {% include "shared/components/data_display/data_table.html" with title="Inventário de lojas" description="Leitura operacional dos tenants, subdomínios, domínios customizados e status." count=table_count columns=columns rows=rows table_id="platform-tenants-table" empty_title=empty_title empty_description=empty_description showcase_mode=False %}
+    </section>
+
+    <section class="admin-ops-panel ds-surface p-6">
+        <div class="space-y-3">
+            <p class="text-sm font-medium text-[var(--color-text-primary)]">Guardrails desta execução</p>
+            <ul class="space-y-2 text-sm text-[var(--color-text-secondary)]">
+                {% for note in contract_notes %}
+                    <li>• {{ note }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </section>
+</section>
+{% endblock %}

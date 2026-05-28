@@ -9,7 +9,8 @@ from app.modules.tenants.models import Tenant
 
 def tenant_probe_view(request):
     tenant = getattr(request, "tenant", None)
-    return HttpResponse(tenant.subdomain if tenant else "none")
+    source = getattr(request, "tenant_resolution_source", "")
+    return HttpResponse(f"{tenant.subdomain}:{source}" if tenant else "none")
 
 
 urlpatterns = [
@@ -36,7 +37,7 @@ class TenantModelTests(TestCase):
 
 @override_settings(
     HUBX_MARKET_ROOT_DOMAIN="hubx.market",
-    ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver", "shop.example.com"],
+    ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver", "shop.example.com", "unknown.example.com"],
     ROOT_URLCONF="app.modules.tenants.tests.test_tenant_and_middleware",
 )
 class TenantMiddlewareTests(TestCase):
@@ -44,7 +45,7 @@ class TenantMiddlewareTests(TestCase):
         Tenant.objects.create(name="Loja X", slug="lojax", subdomain="lojax")
         response = self.client.get("/tenant-probe/", HTTP_HOST="lojax.hubx.market")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.content.decode(), "lojax")
+        self.assertEqual(response.content.decode(), "lojax:subdomain")
 
     def test_ignores_reserved_host_and_sets_tenant_none(self):
         response = self.client.get("/tenant-probe/", HTTP_HOST="www.hubx.market")
@@ -95,6 +96,45 @@ class TenantMiddlewareTests(TestCase):
         )
 
         response = self.client.get("/tenant-probe/", HTTP_HOST="shop.example.com")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content.decode(), "none")
+
+    @override_settings(HUBX_MARKET_CUSTOM_DOMAIN_RESOLVER_ENABLED=True)
+    def test_custom_domain_resolves_active_tenant_when_feature_enabled(self):
+        Tenant.objects.create(
+            name="Loja Custom Runtime",
+            slug="loja-custom-runtime",
+            subdomain="lojacustomruntime",
+            custom_domain="shop.example.com",
+            is_active=True,
+        )
+
+        response = self.client.get("/tenant-probe/", HTTP_HOST="shop.example.com")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content.decode(), "lojacustomruntime:custom_domain")
+
+    @override_settings(HUBX_MARKET_CUSTOM_DOMAIN_RESOLVER_ENABLED=True)
+    def test_custom_domain_resolver_ignores_inactive_tenant(self):
+        Tenant.objects.create(
+            name="Loja Custom Inativa",
+            slug="loja-custom-inativa",
+            subdomain="lojacustominativa",
+            custom_domain="shop.example.com",
+            is_active=False,
+        )
+
+        response = self.client.get("/tenant-probe/", HTTP_HOST="shop.example.com")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content.decode(), "none")
+
+    @override_settings(HUBX_MARKET_CUSTOM_DOMAIN_RESOLVER_ENABLED=True)
+    def test_custom_domain_resolver_keeps_safe_miss_without_global_fallback(self):
+        Tenant.objects.create(name="Outra Loja", slug="outra-loja", subdomain="outra-loja")
+
+        response = self.client.get("/tenant-probe/", HTTP_HOST="unknown.example.com")
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content.decode(), "none")

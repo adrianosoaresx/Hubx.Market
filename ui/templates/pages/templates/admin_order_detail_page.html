@@ -4,12 +4,14 @@
 {% block shell_title %}{% if shell_title %}{{ shell_title }}{% elif page_title %}{{ page_title }}{% else %}Detalhes do pedido{% endif %}{% endblock %}
 
 {% block content %}
-<section class="space-y-6">
-    {% with eyebrow=page_eyebrow|default:"Pedidos" title=page_title|default:"Pedido" description=page_description|default:"Resumo operacional do pedido, dados do cliente e histórico de movimentações." meta=page_meta %}
-        {% include "shared/components/layout/page_header.html" %}
-    {% endwith %}
+<section class="admin-ops-page admin-order-detail-page space-y-6">
+    <div class="admin-ops-hero">
+        {% with eyebrow=page_eyebrow|default:"Pedidos" title=page_title|default:"Pedido" description=page_description|default:"Resumo operacional do pedido, dados do cliente e histórico de movimentações." meta=page_meta %}
+            {% include "shared/components/layout/page_header.html" %}
+        {% endwith %}
+    </div>
 
-    <div class="flex flex-wrap items-center justify-between gap-3">
+    <div class="admin-ops-toolbar flex flex-wrap items-center justify-between gap-3">
         <div class="flex flex-wrap items-center gap-3">
             {% if order_status_label %}
                 {% include "shared/components/data_display/badge.html" with label=order_status_label variant=order_status_variant|default:"paid" %}
@@ -45,14 +47,14 @@
         {% endif %}
     </div>
 
-    <div class="grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(22rem,1fr)]">
+    <div class="admin-ops-detail-layout grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(22rem,1fr)]">
         <div class="space-y-6">
-            <div class="grid gap-6 md:grid-cols-2">
+            <div class="admin-ops-summary-grid grid gap-6 md:grid-cols-2">
                 {% with title=summary_title|default:"Resumo do pedido" subtitle=summary_subtitle|default:"Informações principais da operação." content=summary_content|default:"Pedido confirmado com pagamento aprovado e separação em andamento." %}
                     {% include "shared/components/data_display/card.html" %}
                 {% endwith %}
 
-                <section class="ds-surface p-6">
+                <section class="admin-ops-panel ds-surface p-6">
                     <div class="space-y-3">
                         <div class="flex items-center justify-between gap-3">
                             <h3 class="text-base font-semibold text-[var(--color-text-primary)]">{{ status_title|default:"Status atual" }}</h3>
@@ -71,7 +73,7 @@
                 </section>
             </div>
 
-            <div class="grid gap-6 md:grid-cols-2">
+            <div class="admin-ops-summary-grid grid gap-6 md:grid-cols-2">
                 {% with title=customer_title|default:"Cliente" subtitle=customer_subtitle|default:"Dados principais para atendimento." content=customer_content|default:"Ana Souza · ana@hubx.market · (11) 99999-0000" %}
                     {% include "shared/components/data_display/card.html" %}
                 {% endwith %}
@@ -81,7 +83,7 @@
                 {% endwith %}
             </div>
 
-            <div class="grid gap-6 md:grid-cols-2">
+            <div class="admin-ops-summary-grid grid gap-6 md:grid-cols-2">
                 {% with title=shipping_title|default:"Entrega" subtitle=shipping_subtitle|default:"Dados logísticos principais." content=shipping_content|default:"Rua das Laranjeiras, 100 · São Paulo/SP · Transportadora padrão." %}
                     {% include "shared/components/data_display/card.html" %}
                 {% endwith %}
@@ -102,7 +104,7 @@
             {% endif %}
         </div>
 
-        <aside class="space-y-6">
+        <aside class="admin-ops-aside space-y-6">
             {% with title=activity_title|default:"Linha do tempo" description=activity_description|default:"Acompanhe atualizações importantes do pedido." items=activity_items empty_title=activity_empty_title|default:"Sem atualizações ainda" empty_description=activity_empty_description|default:"Eventos do pedido aparecerão aqui." showcase_mode=showcase_mode %}
                 {% include "shared/components/data_display/activity_feed.html" %}
             {% endwith %}

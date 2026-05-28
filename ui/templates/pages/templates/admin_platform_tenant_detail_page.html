@@ -1,0 +1,154 @@
+{% extends "layouts/admin_shell.html" %}
+
+{% block page_title %}{{ page_title|default:"Detalhe da loja" }}{% endblock %}
+{% block shell_title %}{{ page_title|default:"Detalhe da loja" }}{% endblock %}
+
+{% block content %}
+<section class="admin-ops-page admin-platform-tenant-detail-page space-y-8">
+    <div class="admin-ops-hero">
+        {% include "shared/components/layout/page_header.html" with eyebrow=page_eyebrow title=page_title description=page_description %}
+        {% if page_meta %}
+            <p class="mt-3 text-sm text-[var(--color-text-secondary)]">{{ page_meta }}</p>
+        {% endif %}
+        <div class="mt-5">
+            <a class="ds-btn-secondary" href="{{ back_href }}">Voltar para lojas</a>
+        </div>
+    </div>
+
+    {% if tenant %}
+        <section class="admin-ops-panel ds-surface p-6">
+            <div class="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                    <p class="text-sm text-[var(--color-text-secondary)]">Tenant</p>
+                    <h2 class="mt-1 text-2xl font-semibold text-[var(--color-text-primary)]">{{ tenant.name }}</h2>
+                    <p class="mt-2 text-sm text-[var(--color-text-secondary)]">{{ tenant.storefront_host }}</p>
+                </div>
+                <div>{{ status_badge }}</div>
+            </div>
+        </section>
+
+        {% if can_manage_platform_tenants %}
+            <section class="admin-ops-panel ds-surface p-6">
+                <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.9fr)]">
+                    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div class="space-y-1">
+                            <h3 class="text-sm font-semibold text-[var(--color-text-primary)]">Ações de estado</h3>
+                            <p class="text-sm text-[var(--color-text-secondary)]">Altere apenas ativo/manutenção. Cada ação registra AuditLog platform-scope.</p>
+                        </div>
+                        <div class="flex flex-wrap gap-3">
+                            {% for action in state_actions %}
+                                <form method="post" action="{{ state_action_url }}" class="m-0">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="{{ action.action }}">
+                                    {% include "shared/components/actions/button.html" with label=action.label variant=action.variant type="submit" %}
+                                </form>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <form method="post" action="{{ custom_domain_action_url }}" class="space-y-3 rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-surface-muted)] p-4">
+                        {% csrf_token %}
+                        <div class="space-y-1">
+                            <label class="text-sm font-semibold text-[var(--color-text-primary)]" for="custom-domain">Domínio customizado</label>
+                            <p class="text-xs text-[var(--color-text-secondary)]">Cadastro contract-only: não ativa DNS, TLS ou resolução HTTP.</p>
+                        </div>
+                        <input
+                            id="custom-domain"
+                            class="ds-input"
+                            name="custom_domain"
+                            type="text"
+                            value="{{ custom_domain_value }}"
+                            placeholder="loja.exemplo.com"
+                            autocomplete="off"
+                        >
+                        <div class="flex flex-wrap gap-3">
+                            {% include "shared/components/actions/button.html" with label="Salvar domínio" variant="primary" type="submit" %}
+                            <button class="ds-btn-secondary" type="submit" name="custom_domain" value="">Limpar domínio</button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+
+            <section class="admin-ops-panel ds-surface p-6">
+                <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.9fr)]">
+                    <div class="space-y-2">
+                        <h3 class="text-sm font-semibold text-[var(--color-text-primary)]">Owner inicial</h3>
+                        <p class="text-sm text-[var(--color-text-secondary)]">Provisiona o primeiro OwnerUser da loja sem coletar senha. O acesso segue por convite/recuperação.</p>
+                        {% if not owner_bootstrap_available %}
+                            <p class="rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-surface-muted)] px-4 py-3 text-sm text-[var(--color-text-secondary)]">Bootstrap indisponível: este tenant já possui owner ativo.</p>
+                        {% endif %}
+                    </div>
+
+                    {% if owner_bootstrap_available %}
+                        <form method="post" action="{{ owner_bootstrap_action_url }}" class="space-y-3 rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-surface-muted)] p-4">
+                            {% csrf_token %}
+                            <div class="space-y-1">
+                                <label class="text-sm font-semibold text-[var(--color-text-primary)]" for="owner-email">E-mail do owner</label>
+                                <p class="text-xs text-[var(--color-text-secondary)]">Sem senha manual, sem login automático e sem impersonação.</p>
+                            </div>
+                            <input id="owner-email" class="ds-input" name="owner_email" type="email" placeholder="owner@exemplo.com" autocomplete="email" required>
+                            <input class="ds-input" name="owner_name" type="text" placeholder="Nome do responsável" autocomplete="name">
+                            <select class="ds-input" name="owner_role">
+                                <option value="owner">Owner</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                            {% include "shared/components/actions/button.html" with label="Provisionar owner" variant="primary" type="submit" %}
+                        </form>
+                    {% endif %}
+                </div>
+            </section>
+        {% endif %}
+
+        <section class="grid gap-6 lg:grid-cols-3">
+            <div class="admin-ops-panel ds-surface p-6">
+                <h3 class="text-sm font-semibold text-[var(--color-text-primary)]">Identidade</h3>
+                <dl class="mt-4 space-y-3 text-sm">
+                    {% for row in identity_rows %}
+                        <div>
+                            <dt class="text-[var(--color-text-secondary)]">{{ row.label }}</dt>
+                            <dd class="font-medium text-[var(--color-text-primary)]">{{ row.value }}</dd>
+                        </div>
+                    {% endfor %}
+                </dl>
+            </div>
+
+            <div class="admin-ops-panel ds-surface p-6">
+                <h3 class="text-sm font-semibold text-[var(--color-text-primary)]">Roteamento</h3>
+                <dl class="mt-4 space-y-3 text-sm">
+                    {% for row in routing_rows %}
+                        <div>
+                            <dt class="text-[var(--color-text-secondary)]">{{ row.label }}</dt>
+                            <dd class="font-medium text-[var(--color-text-primary)]">{{ row.value }}</dd>
+                        </div>
+                    {% endfor %}
+                </dl>
+            </div>
+
+            <div class="admin-ops-panel ds-surface p-6">
+                <h3 class="text-sm font-semibold text-[var(--color-text-primary)]">Estado</h3>
+                <dl class="mt-4 space-y-3 text-sm">
+                    {% for row in state_rows %}
+                        <div>
+                            <dt class="text-[var(--color-text-secondary)]">{{ row.label }}</dt>
+                            <dd class="font-medium text-[var(--color-text-primary)]">{{ row.value }}</dd>
+                        </div>
+                    {% endfor %}
+                </dl>
+            </div>
+        </section>
+
+        <section class="admin-ops-panel ds-surface p-6">
+            <div class="space-y-3">
+                <p class="text-sm font-medium text-[var(--color-text-primary)]">Guardrails deste detalhe</p>
+                <ul class="space-y-2 text-sm text-[var(--color-text-secondary)]">
+                    {% for note in contract_notes %}
+                        <li>• {{ note }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </section>
+    {% else %}
+        {% include "shared/components/feedback/empty_state.html" with title=empty_title description=empty_description %}
+    {% endif %}
+</section>
+{% endblock %}

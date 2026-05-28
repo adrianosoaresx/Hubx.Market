@@ -100,18 +100,35 @@ def _tenant_missing_empty_state(*, tenant_id: int | None, search_value: str, sta
 
 
 def _page_items(page_number: int, total_pages: int, base_url: str) -> list[dict[str, object]]:
-    return [{"number": number, "url": f"{base_url}?page={number}"} for number in range(1, total_pages + 1)]
+    return _compact_page_items(
+        page_number=page_number,
+        total_pages=total_pages,
+        url_for_page=lambda number: f"{base_url}?page={number}",
+    )
 
 
 def _storefront_page_items(page_number: int, total_pages: int, base_url: str, query_params: list[str]) -> list[dict[str, object]]:
     suffix = "&".join(query_params)
-    return [
-        {
-            "number": number,
-            "url": f"{base_url}?{suffix + '&' if suffix else ''}page={number}",
-        }
-        for number in range(1, total_pages + 1)
-    ]
+    return _compact_page_items(
+        page_number=page_number,
+        total_pages=total_pages,
+        url_for_page=lambda number: f"{base_url}?{suffix + '&' if suffix else ''}page={number}",
+    )
+
+
+def _compact_page_items(*, page_number: int, total_pages: int, url_for_page) -> list[dict[str, object]]:
+    if total_pages <= 7:
+        return [{"number": number, "url": url_for_page(number)} for number in range(1, total_pages + 1)]
+    visible_numbers = {1, total_pages}
+    visible_numbers.update(range(max(2, page_number - 1), min(total_pages, page_number + 1) + 1))
+    items: list[dict[str, object]] = []
+    previous_number = 0
+    for number in sorted(visible_numbers):
+        if previous_number and number - previous_number > 1:
+            items.append({"is_ellipsis": True})
+        items.append({"number": number, "url": url_for_page(number)})
+        previous_number = number
+    return items
 
 
 def _storefront_category_options() -> list[dict[str, str]]:
@@ -461,7 +478,7 @@ def _build_catalog_quick_filter_select(*, selected: str) -> str:
         ]
     )
     return format_html(
-        '<div class="w-full lg:w-56">'
+        '<div class="min-w-0">'
         '<div class="space-y-2">'
         '<label for="quick_filter" class="block text-sm font-medium text-[var(--color-text-primary)]">Filtro rápido</label>'
         '<select id="quick_filter" name="quick_filter" class="ds-select">{}</select>'
@@ -478,7 +495,7 @@ def _build_catalog_sort_select(*, selected: str) -> str:
         for option in CATALOG_SORT_OPTIONS
     ]
     return format_html(
-        '<div class="w-full lg:w-56">'
+        '<div class="min-w-0">'
         '<div class="space-y-2">'
         '<label for="sort" class="block text-sm font-medium text-[var(--color-text-primary)]">Ordenar por</label>'
         '<select id="sort" name="sort" class="ds-select">{}</select>'
@@ -500,7 +517,7 @@ def _build_catalog_availability_select(*, selected: str) -> str:
         ]
     )
     return format_html(
-        '<div class="w-full lg:w-56">'
+        '<div class="min-w-0">'
         '<div class="space-y-2">'
         '<label for="availability" class="block text-sm font-medium text-[var(--color-text-primary)]">Disponibilidade</label>'
         '<select id="availability" name="availability" class="ds-select">{}</select>'
@@ -512,7 +529,7 @@ def _build_catalog_availability_select(*, selected: str) -> str:
 
 def _build_catalog_offer_select(*, selected: bool) -> str:
     return format_html(
-        '<div class="w-full lg:w-48">'
+        '<div class="min-w-0">'
         '<div class="space-y-2">'
         '<label for="offer" class="block text-sm font-medium text-[var(--color-text-primary)]">Oferta</label>'
         '<select id="offer" name="offer" class="ds-select">'
@@ -527,7 +544,7 @@ def _build_catalog_offer_select(*, selected: bool) -> str:
 
 def _build_catalog_price_input(*, name: str, label: str, value: str) -> str:
     return format_html(
-        '<div class="w-full lg:w-40">'
+        '<div class="min-w-0">'
         '<div class="space-y-2">'
         '<label for="{}" class="block text-sm font-medium text-[var(--color-text-primary)]">{}</label>'
         '<input id="{}" name="{}" value="{}" inputmode="decimal" placeholder="0,00" class="ds-input" />'
@@ -1046,7 +1063,7 @@ class CatalogListView(TemplateView):
         products = _apply_catalog_quick_filter(products, quick_filter)
         products = _apply_catalog_sort(products, sort_value)
 
-        paginator = Paginator(products, 2)
+        paginator = Paginator(products, 9)
         page_obj = paginator.get_page(page_number)
         page_product_ids = [
             product_id
@@ -1146,6 +1163,17 @@ class CatalogListView(TemplateView):
         if quick_filter_empty_state and not products:
             empty_title, empty_description = quick_filter_empty_state
 
+        filters_open = bool(
+            search_value
+            or category_selected
+            or availability
+            or offer_only
+            or price_min is not None
+            or price_max is not None
+            or quick_filter_label
+            or sort_value != "recommended"
+        )
+
         context.update(
             {
                 "page_title": "Loja",
@@ -1158,6 +1186,7 @@ class CatalogListView(TemplateView):
                 "results_meta": results_meta,
                 "filter_action": base_url,
                 "filter_description": filter_description,
+                "filters_open": filters_open,
                 "active_quick_filter_label": quick_filter_label,
                 "extra_filters": _build_catalog_storefront_extra_filters(
                     quick_filter=quick_filter,
@@ -1198,8 +1227,24 @@ class CatalogListView(TemplateView):
 class StorefrontHomeView(TemplateView):
     template_name = "pages/templates/home_page.html"
 
+    def get_template_names(self):
+        if getattr(self.request, "tenant", None) is None:
+            return ["pages/templates/portal_home_page.html"]
+        return super().get_template_names()
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        if getattr(self.request, "tenant", None) is None:
+            context.update(
+                {
+                    "page_title": "Hubx Market",
+                    "page_description": "Portal central para entrar, administrar lojas e acessar o onboarding SaaS.",
+                    "login_href": "/accounts/login/",
+                    "platform_tenants_href": "/ops/platform/tenants/",
+                    "platform_onboarding_href": "/ops/platform/onboarding/",
+                }
+            )
+            return context
         tenant = _require_storefront_tenant(self.request)
         tenant_id = getattr(tenant, "id", None)
         products = storefront_catalog_queries.list_products(tenant_id=tenant_id)

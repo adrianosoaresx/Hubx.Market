@@ -1,51 +1,67 @@
-<form
-    method="{{ method|default:'get' }}"
-    action="{{ action|default:request.path }}"
-    {% if hx_get %}hx-get="{{ hx_get }}"{% endif %}
-    {% if hx_post %}hx-post="{{ hx_post }}"{% endif %}
-    {% if hx_target %}hx-target="{{ hx_target }}"{% endif %}
-    {% if hx_swap %}hx-swap="{{ hx_swap }}"{% endif %}
-    class="ds-surface flex flex-col gap-4 p-4"
->
+{% if accordion %}
+<details class="ds-surface group overflow-hidden" {% if accordion_open %}open{% endif %}>
+    <summary class="flex cursor-pointer list-none items-start justify-between gap-4 p-4">
+        <span class="space-y-1">
+            {% if title %}<span class="block text-base font-semibold text-[var(--color-text-primary)]">{{ title }}</span>{% endif %}
+            {% if description %}<span class="block text-sm text-[var(--color-text-secondary)]">{{ description }}</span>{% endif %}
+        </span>
+        <span class="mt-1 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[var(--color-border-default)] text-[var(--color-text-secondary)] transition group-open:rotate-180">⌄</span>
+    </summary>
+    <div class="border-t border-[var(--color-border-default)] p-4">
+{% else %}
+<div class="ds-surface p-4">
     {% if title or description %}
-        <div class="space-y-1">
+        <div class="mb-4 space-y-1">
             {% if title %}<h3 class="text-base font-semibold text-[var(--color-text-primary)]">{{ title }}</h3>{% endif %}
             {% if description %}<p class="text-sm text-[var(--color-text-secondary)]">{{ description }}</p>{% endif %}
         </div>
     {% endif %}
+{% endif %}
+        <form
+            method="{{ method|default:'get' }}"
+            action="{{ action|default:request.path }}"
+            {% if hx_get %}hx-get="{{ hx_get }}"{% endif %}
+            {% if hx_post %}hx-post="{{ hx_post }}"{% endif %}
+            {% if hx_target %}hx-target="{{ hx_target }}"{% endif %}
+            {% if hx_swap %}hx-swap="{{ hx_swap }}"{% endif %}
+            class="space-y-4"
+        >
+            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                {% if search_name %}
+                    <div class="min-w-0">
+                        {% include "shared/components/forms/input.html" with name=search_name value=search_value placeholder=search_placeholder|default:"Buscar..." label=search_label|default:"Buscar" %}
+                    </div>
+                {% endif %}
 
-    <div class="flex flex-col gap-4 lg:flex-row lg:items-end">
-        {% if search_name %}
-            <div class="min-w-0 flex-1">
-                {% include "shared/components/forms/input.html" with name=search_name value=search_value placeholder=search_placeholder|default:"Buscar..." label=search_label|default:"Buscar" %}
-            </div>
-        {% endif %}
+                {% if status_options %}
+                    <div class="min-w-0">
+                        {% include "shared/components/forms/select.html" with name=status_name|default:"status" selected=status_selected placeholder=status_placeholder|default:"Todos os status" options=status_options label=status_label|default:"Status" %}
+                    </div>
+                {% endif %}
 
-        {% if status_options %}
-            <div class="w-full lg:w-56">
-                {% include "shared/components/forms/select.html" with name=status_name|default:"status" selected=status_selected placeholder=status_placeholder|default:"Todos os status" options=status_options label=status_label|default:"Status" %}
-            </div>
-        {% endif %}
-
-        {% if extra_filters %}
-            <div class="flex flex-wrap gap-3">
-                {{ extra_filters }}
-            </div>
-        {% endif %}
-
-        {% if show_actions != False %}
-            <div class="flex flex-wrap gap-3">
-                {% include "shared/components/actions/button.html" with label=submit_label|default:"Aplicar filtros" variant="primary" type="submit" %}
-                {% if reset_url %}
-                    {% include "shared/components/actions/button.html" with label=reset_label|default:"Limpar" variant="secondary" href=reset_url %}
+                {% if extra_filters %}
+                    {{ extra_filters }}
                 {% endif %}
             </div>
-        {% endif %}
-    </div>
 
-    {% if hx_target %}
-        <div class="htmx-indicator">
-            {% include "shared/partials/loading_indicator.html" %}
-        </div>
-    {% endif %}
-</form>
+            {% if show_actions != False %}
+                <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                    {% include "shared/components/actions/button.html" with label=submit_label|default:"Aplicar filtros" variant="primary" type="submit" %}
+                    {% if reset_url %}
+                        {% include "shared/components/actions/button.html" with label=reset_label|default:"Limpar" variant="secondary" href=reset_url %}
+                    {% endif %}
+                </div>
+            {% endif %}
+
+            {% if hx_target %}
+                <div class="htmx-indicator">
+                    {% include "shared/partials/loading_indicator.html" %}
+                </div>
+            {% endif %}
+        </form>
+{% if accordion %}
+    </div>
+</details>
+{% else %}
+</div>
+{% endif %}

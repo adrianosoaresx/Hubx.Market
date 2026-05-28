@@ -8,16 +8,16 @@
         {% include "shared/components/navigation/breadcrumb.html" with items=breadcrumbs %}
     {% endif %}
 
-    <header class="space-y-3">
+    <header class="storefront-hero space-y-3">
         {% if eyebrow %}
             <p class="text-xs font-medium uppercase tracking-wide text-[var(--color-text-secondary)]">{{ eyebrow }}</p>
         {% endif %}
         <div class="space-y-2">
-            <h1 class="text-3xl font-semibold tracking-tight text-[var(--color-text-primary)]">
+            <h1 class="storefront-hero-title text-3xl font-semibold tracking-tight text-[var(--color-text-primary)]">
                 {{ page_title|default:"Loja" }}
             </h1>
             {% if page_description %}
-                <p class="max-w-3xl text-base text-[var(--color-text-secondary)]">{{ page_description }}</p>
+                <p class="storefront-hero-description max-w-3xl text-base text-[var(--color-text-secondary)]">{{ page_description }}</p>
             {% endif %}
         </div>
         {% if page_meta %}
@@ -28,13 +28,13 @@
         {% endif %}
     </header>
 
-    {% with method=filter_method|default:"get" action=filter_action hx_get=hx_get hx_post=hx_post hx_target=hx_target hx_swap=hx_swap|default:"innerHTML" title=filter_title|default:"Filtrar produtos" description=filter_description search_name=search_name|default:"q" search_value=search_value search_label=search_label|default:"Buscar" search_placeholder=search_placeholder|default:"Busque por nome, marca ou SKU" status_name=status_name status_selected=status_selected status_label=status_label status_placeholder=status_placeholder status_options=status_options extra_filters=extra_filters submit_label=submit_label|default:"Aplicar" reset_url=reset_url reset_label=reset_label|default:"Limpar" show_actions=show_filter_actions %}
+    {% with method=filter_method|default:"get" action=filter_action hx_get=hx_get hx_post=hx_post hx_target=hx_target hx_swap=hx_swap|default:"innerHTML" title=filter_title|default:"Filtrar produtos" description=filter_description search_name=search_name|default:"q" search_value=search_value search_label=search_label|default:"Buscar" search_placeholder=search_placeholder|default:"Busque por nome, marca ou SKU" status_name=status_name status_selected=status_selected status_label=status_label status_placeholder=status_placeholder status_options=status_options extra_filters=extra_filters submit_label=submit_label|default:"Aplicar" reset_url=reset_url reset_label=reset_label|default:"Limpar" show_actions=show_filter_actions accordion=True accordion_open=filters_open %}
         {% include "shared/components/composite/filter_bar.html" %}
     {% endwith %}
 
     {% if products %}
         <div {% if hx_target_id %}id="{{ hx_target_id }}"{% endif %} class="space-y-6">
-            <div class="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+            <div class="storefront-product-grid">
                 {% for product in products %}
 {% with href=product.href image_url=product.image_url image_alt=product.image_alt eyebrow=product.eyebrow title=product.title subtitle=product.subtitle badge_label=product.badge_label badge_variant=product.badge_variant price=product.price compare_price=product.compare_price price_helper=product.price_helper meta=product.meta variant_summary=product.variant_summary curation_note=product.curation_note availability_note=product.availability_note review_summary=product.review_summary click_helper=product.click_helper stock_state=product.stock_state stock_label=product.stock_label stock_helper=product.stock_helper actions=product.actions clickable=product.clickable %}
                         {% include "shared/components/composite/product_card.html" %}
@@ -48,7 +48,7 @@
         </div>
     {% elif showcase_mode %}
         <div {% if hx_target_id %}id="{{ hx_target_id }}"{% endif %} class="space-y-6">
-            <div class="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+            <div class="storefront-product-grid">
                 {% include "shared/components/composite/product_card.html" with href="/catalog/" image_url="https://placehold.co/400x400" title="Tênis Hubx Runner" subtitle="Calçado esportivo" badge_label="Novo" badge_variant="info" price="R$ 299,90" compare_price="R$ 349,90" meta="SKU HR-100" stock_state="in_stock" stock_helper="Entrega imediata" clickable=True %}
                 {% include "shared/components/composite/product_card.html" with href="/catalog/" image_url="https://placehold.co/400x400" title="Jaqueta Urban Pro" subtitle="Moda casual" badge_label="Oferta" badge_variant="warning" price="R$ 249,90" compare_price="R$ 319,90" meta="SKU JP-220" stock_state="low_stock" stock_helper="Últimas unidades" clickable=True %}
                 {% include "shared/components/composite/product_card.html" with href="/catalog/" image_url="https://placehold.co/400x400" title="Mochila Trail Pack" subtitle="Acessórios" badge_label="Sob encomenda" badge_variant="neutral" price="R$ 189,90" meta="SKU MT-310" stock_state="backorder" stock_helper="Envio em até 7 dias" clickable=True %}

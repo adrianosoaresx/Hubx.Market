@@ -13,10 +13,10 @@
     </header>
 
     <main class="mx-auto max-w-7xl px-6 py-8">
-        <div class="grid gap-6 lg:grid-cols-[15rem_minmax(0,1fr)]">
-            <aside class="ds-surface h-fit p-4">
+        <div class="customer-area-layout grid gap-6 lg:grid-cols-[15rem_minmax(0,1fr)]">
+            <aside class="customer-area-sidebar ds-surface h-fit p-4">
                 {% block account_sidebar %}
-                    <nav class="space-y-2 text-sm">
+                    <nav class="customer-area-nav space-y-2 text-sm">
                         <a href="/accounts/account/" class="block rounded-lg px-3 py-2 text-[var(--color-text-primary)] hover:bg-slate-50">Visão geral</a>
                         <a href="/accounts/account/orders/" class="block rounded-lg px-3 py-2 text-[var(--color-text-secondary)] hover:bg-slate-50 hover:text-[var(--color-text-primary)]">Pedidos</a>
                         <a href="/accounts/account/addresses/" class="block rounded-lg px-3 py-2 text-[var(--color-text-secondary)] hover:bg-slate-50 hover:text-[var(--color-text-primary)]">Endereços</a>
@@ -25,7 +25,7 @@
                 {% endblock %}
             </aside>
 
-            <section class="min-w-0">
+            <section class="customer-area-content min-w-0">
                 {% block content %}{% endblock %}
             </section>
         </div>

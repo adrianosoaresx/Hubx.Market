@@ -16,6 +16,7 @@ def owner_probe_view(request):
 
 urlpatterns = [
     path("ops/owner-probe/", owner_probe_view),
+    path("ops/platform/onboarding/probe/", owner_probe_view),
     path("accounts/owner-probe/", owner_probe_view),
 ]
 
@@ -27,6 +28,7 @@ urlpatterns = [
 )
 class OwnerContextMiddlewareTests(TestCase):
     def setUp(self):
+        self.platform_tenant = Tenant.objects.create(name="Hubx Platform", slug="platform-system", subdomain="platform-system")
         self.tenant = Tenant.objects.create(name="Loja Owner Context", slug="loja-owner-context", subdomain="loja-owner-context")
         self.host = f"{self.tenant.subdomain}.hubx.market"
 
@@ -59,6 +61,79 @@ class OwnerContextMiddlewareTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content.decode(), "none")
+
+    @override_settings(HUBX_MARKET_ROOT_DOMAIN="hubx.market", ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver"])
+    def test_resolves_platform_owner_on_central_host(self):
+        OwnerUser.objects.create(
+            tenant=self.platform_tenant,
+            email="platform.context@hubx.market",
+            role="owner",
+            is_active=True,
+        )
+        user = User.objects.create_user(username="platform-context", email="platform.context@hubx.market", password="secret")
+        self.client.force_login(user)
+
+        response = self.client.get("/ops/platform/onboarding/probe/", HTTP_HOST="hubx.market")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content.decode(), "platform.context@hubx.market:owner")
+
+    @override_settings(
+        HUBX_MARKET_ROOT_DOMAIN="hubx.market",
+        ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver"],
+        HUBX_OPS_AUTH_GATE_ENFORCED=True,
+    )
+    def test_store_owner_on_central_host_is_not_platform_owner(self):
+        OwnerUser.objects.create(
+            tenant=self.tenant,
+            email="store.context@hubx.market",
+            role="owner",
+            is_active=True,
+        )
+        user = User.objects.create_user(username="store-context", email="store.context@hubx.market", password="secret")
+        self.client.force_login(user)
+
+        response = self.client.get("/ops/platform/onboarding/probe/", HTTP_HOST="hubx.market")
+
+        self.assertEqual(response.status_code, 403)
+
+    @override_settings(
+        HUBX_MARKET_ROOT_DOMAIN="hubx.market",
+        ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver"],
+        HUBX_OPS_AUTH_GATE_ENFORCED=True,
+    )
+    def test_platform_surface_is_not_served_from_store_host(self):
+        OwnerUser.objects.create(
+            tenant=self.tenant,
+            email="owner.context@hubx.market",
+            role="owner",
+            is_active=True,
+        )
+        user = User.objects.create_user(username="owner-context-platform", email="owner.context@hubx.market", password="secret")
+        self.client.force_login(user)
+
+        response = self.client.get("/ops/platform/onboarding/probe/", HTTP_HOST=self.host)
+
+        self.assertEqual(response.status_code, 403)
+
+    @override_settings(
+        HUBX_MARKET_ROOT_DOMAIN="hubx.market",
+        ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver"],
+        HUBX_OPS_AUTH_GATE_ENFORCED=True,
+    )
+    def test_platform_gate_denies_non_platform_role_without_tenant_host(self):
+        OwnerUser.objects.create(
+            tenant=self.tenant,
+            email="viewer.context@hubx.market",
+            role="viewer",
+            is_active=True,
+        )
+        user = User.objects.create_user(username="viewer-context", email="viewer.context@hubx.market", password="secret")
+        self.client.force_login(user)
+
+        response = self.client.get("/ops/platform/onboarding/probe/", HTTP_HOST="hubx.market")
+
+        self.assertEqual(response.status_code, 403)
 
     def test_ignores_inactive_or_cross_tenant_owner(self):
         other_tenant = Tenant.objects.create(name="Outra Owner Context", slug="outra-owner-context", subdomain="outra-owner-context")

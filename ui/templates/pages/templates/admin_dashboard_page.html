@@ -4,23 +4,25 @@
 {% block shell_title %}{{ shell_title|default:page_title|default:"Dashboard" }}{% endblock %}
 
 {% block content %}
-<section class="space-y-8">
-    {% include "shared/components/layout/page_header.html" with eyebrow=page_eyebrow|default:"Admin" title=page_title|default:"Dashboard" description=page_description|default:"Visão geral de performance, atividade recente e operação." actions=page_actions %}
+<section class="admin-ops-page admin-dashboard-page space-y-8">
+    <div class="admin-ops-hero">
+        {% include "shared/components/layout/page_header.html" with eyebrow=page_eyebrow|default:"Admin" title=page_title|default:"Dashboard" description=page_description|default:"Visão geral de performance, atividade recente e operação." actions=page_actions %}
+    </div>
 
-    <section class="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+    <section class="admin-ops-kpi-grid grid gap-6 md:grid-cols-2 xl:grid-cols-4">
         {% include "shared/components/data_display/chart_card.html" with title=kpi_1_title|default:"GMV" description=kpi_1_description|default:"Volume bruto no período" value=kpi_1_value|default:"R$ 128.900" delta=kpi_1_delta|default:"+18,3%" trend=kpi_1_trend|default:"positive" meta=kpi_1_meta|default:"Últimos 30 dias" showcase_mode=showcase_mode %}
         {% include "shared/components/data_display/chart_card.html" with title=kpi_2_title|default:"Pedidos" description=kpi_2_description|default:"Pedidos confirmados" value=kpi_2_value|default:"1.248" delta=kpi_2_delta|default:"+9,4%" trend=kpi_2_trend|default:"positive" meta=kpi_2_meta|default:"Últimos 30 dias" showcase_mode=showcase_mode %}
         {% include "shared/components/data_display/chart_card.html" with title=kpi_3_title|default:"Ticket médio" description=kpi_3_description|default:"Valor médio por pedido" value=kpi_3_value|default:"R$ 103,28" delta=kpi_3_delta|default:"-1,8%" trend=kpi_3_trend|default:"negative" meta=kpi_3_meta|default:"Últimos 30 dias" showcase_mode=showcase_mode %}
         {% include "shared/components/data_display/chart_card.html" with title=kpi_4_title|default:"Conversão" description=kpi_4_description|default:"Sessões para compra" value=kpi_4_value|default:"3,7%" delta=kpi_4_delta|default:"+0,6 pp" trend=kpi_4_trend|default:"positive" meta=kpi_4_meta|default:"Últimos 30 dias" showcase_mode=showcase_mode %}
     </section>
 
-    <section class="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(20rem,1fr)]">
+    <section class="admin-ops-dashboard-grid grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(20rem,1fr)]">
         {% include "shared/components/data_display/chart_card.html" with title=chart_title|default:"Performance de vendas" description=chart_description|default:"Resumo visual do período selecionado." value=chart_value|default:"R$ 128.900" delta=chart_delta|default:"+18,3%" trend=chart_trend|default:"positive" meta=chart_meta|default:"Atualizado há 5 minutos" chart=chart_markup footer=chart_footer|default:"Compare com períodos anteriores para análise de tendência." showcase_mode=True %}
 
         {% include "shared/components/data_display/activity_feed.html" with title=activity_title|default:"Atividade recente" description=activity_description|default:"Eventos operacionais e notificações recentes." items=activity_items empty_title=activity_empty_title empty_description=activity_empty_description showcase_mode=True %}
     </section>
 
-    <section class="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(20rem,1fr)]">
+    <section class="admin-ops-dashboard-grid grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(20rem,1fr)]">
         <div class="space-y-6">
             {% include "shared/components/data_display/data_table.html" with title=table_title|default:"Operação" description=table_description|default:"Bloco reutilizável para listagens operacionais." count=table_count columns=table_columns rows=table_rows table_id=table_id|default:"admin-dashboard-table" actions=table_actions selection_count=selection_count bulk_actions=bulk_actions page=page total_pages=total_pages prev_url=prev_url next_url=next_url page_items=page_items empty_title=table_empty_title|default:"Nenhum registro operacional" empty_description=table_empty_description|default:"Use esta área para pedidos, clientes, tickets ou qualquer fila operacional." empty_primary_action=table_empty_primary_action empty_secondary_action=table_empty_secondary_action hx_target_id=hx_target_id showcase_mode=showcase_mode %}
         </div>

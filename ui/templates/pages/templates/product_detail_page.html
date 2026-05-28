@@ -12,14 +12,14 @@
         {% include "shared/components/feedback/alert.html" with variant=pdp_feedback.variant icon=pdp_feedback.icon title=pdp_feedback.title description=pdp_feedback.description %}
     {% endif %}
 
-    <div class="grid gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(22rem,1fr)] lg:items-start">
+    <div class="storefront-pdp-layout grid gap-8 lg:grid-cols-[minmax(0,1.15fr)_minmax(22rem,1fr)] lg:items-start">
         <div class="space-y-6">
             {% with title=product_title items=product_gallery_items images=product_images main_image_url=main_image_url main_image_alt=main_image_alt showcase_mode=showcase_mode %}
                 {% include "shared/components/commerce/product_gallery.html" %}
             {% endwith %}
         </div>
 
-        <div class="space-y-6">
+        <div class="storefront-pdp-info space-y-6">
             <header class="space-y-4">
                 {% if eyebrow %}
                     <p class="text-xs font-medium uppercase tracking-wide text-[var(--color-text-secondary)]">{{ eyebrow }}</p>
@@ -129,7 +129,7 @@
             <form
                 method="{{ form_method|default:'post' }}"
                 action="{{ form_action|default:'' }}"
-                class="space-y-6 rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-6"
+                class="storefront-pdp-purchase-card space-y-6 rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-6"
             >
                 {% csrf_token %}
                 {% if cart_idempotency_key %}

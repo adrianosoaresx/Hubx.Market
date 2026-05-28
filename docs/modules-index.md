@@ -46,6 +46,37 @@ Readiness:
 - custom domain ainda contract-only;
 - Battery J adiciona closure sistêmica de produção e Go/No-Go por comando `system_production_closure`;
 - closure não altera runtime, settings, providers ou tenants.
+- Platform Store Management define contrato inicial para `/ops/platform/tenants/`, ainda sem surface HTTP implementada.
+- Platform Store Management read-only implementa `/ops/platform/tenants/` com inventário operacional e permissão `platform.tenants.view`.
+- Tenant Create Contract fixa `/ops/platform/tenants/new/` como write platform-only mínimo, sem owner/bootstrap/billing automático.
+- Tenant Create Command implementa criação auditável via `platform_tenant_admin_commands`, exigindo `platform.tenants.manage`.
+- Tenant Create Admin Surface conecta `/ops/platform/tenants/new/` ao command service e redireciona sucesso para o detalhe read-only.
+- Tenant State Management Contract fixa ações `activate`, `deactivate`, `maintenance-on` e `maintenance-off`, ainda sem command execution.
+- Tenant State Command implementa essas ações com audit platform-scope obrigatório e sem side effects em commerce.
+- Tenant State Admin Surface expõe essas ações no detalhe do tenant via POST fino e redirect para o detalhe.
+- Custom Domain Update Contract fixa edição contract-only de `custom_domain`, sem resolver HTTP/DNS/TLS.
+- Custom Domain Command implementa atualização/limpeza auditável de `custom_domain`, com normalização e unicidade entre tenants.
+- Custom Domain Admin Surface expõe o POST no detalhe platform-only do tenant sem ativar resolver HTTP.
+- Tenant Ops Closure fecha o recorte inicial como operação interna controlada, mantendo owner bootstrap e custom-domain runtime como trilhas futuras.
+- Owner Bootstrap Review define bootstrap invitation-only de `OwnerUser`, orquestrado por `tenants` e persistido por `accounts`.
+- Custom Domain Runtime Resolver Review define ativação futura de `custom_domain` por match exato no middleware, sem DNS/TLS automáticos.
+- Owner Bootstrap Command implementa orquestração platform-only para primeiro owner, delegando persistência a `accounts`.
+- Custom Domain Runtime Resolver implementa resolução por `custom_domain` atrás de flag, sem fallback global.
+- Owner Bootstrap Admin Surface Review define a action HTTP futura no detalhe do tenant sem campo de senha.
+- Custom Domain Runtime Resolver Admin Evidence Review define evidências mínimas de flag on/off, safe miss, inativo e rollback.
+- Owner Bootstrap Admin Surface Execution expõe o form no detalhe platform-only e delega o write para o command service.
+- Custom Domain Runtime Resolver Activation Runbook gera checklist operacional, sem mudar ambiente automaticamente.
+- Owner Bootstrap Admin Surface Closure fecha a surface para uso interno controlado.
+- Custom Domain Runtime Staging Activation Evidence prepara o gate produtivo com evidências declarativas.
+- Owner Bootstrap Production Evidence define evidência produtiva declarativa para owner inicial.
+- Custom Domain Runtime Production Gate Review retorna GO/NO-GO antes de ativação real.
+- Owner Bootstrap Production Closure fecha a trilha produtiva de owner inicial.
+- Custom Domain Runtime Production Activation Evidence registra evidência pós-GO de ativação por flag.
+- Custom Domain Runtime Production Closure fecha o runtime produtivo de domínio customizado com rollback por flag.
+- Store Management Track Closure encerra a trilha Platform Store Management e retorna para re-seleção de ROI.
+- System ROI Re-Selection executável em `tenants` recomenda `System Validation Pass 2 — Storefront/Admin Smoke & Template Regression` quando há regressão visível confirmada.
+- System Validation Pass 2 adiciona `system_template_regression_smoke` para validar Home, Loja, Login, Meus pedidos, `/ops/` e `/ops/platform/tenants/` contra 404/link legado/template quebrado.
+- Platform Self-Service Tenant Onboarding adiciona `/ops/platform/onboarding/` com wizard controlado para loja, plano interno, owner, branding mínimo, domínio e conclusão auditável.
 
 ---
 

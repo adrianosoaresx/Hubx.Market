@@ -1,0 +1,36 @@
+{% extends "layouts/auth.html" %}
+
+{% block title %}{{ page_title|default:"Escolha a loja" }}{% endblock %}
+
+{% block content %}
+<section class="space-y-6">
+    <section class="ds-surface p-8">
+        <div class="space-y-2">
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-action-primary-bg)]">Portal central</p>
+            <h1 class="text-2xl font-semibold text-[var(--color-text-primary)]">{{ page_title|default:"Escolha a loja" }}</h1>
+            <p class="text-sm text-[var(--color-text-secondary)]">{{ page_description }}</p>
+        </div>
+    </section>
+
+    {% if choices %}
+        <section class="space-y-4">
+            {% for choice in choices %}
+                <article class="ds-surface p-6">
+                    <div class="flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                            <p class="text-sm text-[var(--color-text-secondary)]">{{ choice.subdomain }}.hubx.market · {{ choice.role }}</p>
+                            <h2 class="mt-1 text-lg font-semibold text-[var(--color-text-primary)]">{{ choice.name }}</h2>
+                        </div>
+                        <div class="flex flex-wrap gap-3">
+                            <a class="ds-btn-primary" href="{{ choice.ops_url }}">Administrar loja</a>
+                            <a class="ds-btn-secondary" href="{{ choice.storefront_url }}">Ver storefront</a>
+                        </div>
+                    </div>
+                </article>
+            {% endfor %}
+        </section>
+    {% else %}
+        {% include "shared/components/feedback/empty_state.html" with title=empty_title description=empty_description %}
+    {% endif %}
+</section>
+{% endblock %}

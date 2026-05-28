@@ -18,6 +18,7 @@ from .views import (
     OwnerMfaProviderHealthMetricsView,
     RegisterView,
     ResetPasswordView,
+    StoreSelectionView,
 )
 
 
@@ -28,6 +29,7 @@ urlpatterns = [
     path("login/", LoginView.as_view(), name="login"),
     path("login/mfa/", OwnerMfaChallengeView.as_view(), name="owner-mfa-challenge"),
     path("logout/", LogoutView.as_view(), name="logout"),
+    path("select-store/", StoreSelectionView.as_view(), name="select-store"),
     path("metrics/owner-access/", OwnerAccessMetricsView.as_view(), name="owner-access-metrics"),
     path("metrics/owner-mfa-provider-health/", OwnerMfaProviderHealthMetricsView.as_view(), name="owner-mfa-provider-health-metrics"),
     path("register/", RegisterView.as_view(), name="register"),

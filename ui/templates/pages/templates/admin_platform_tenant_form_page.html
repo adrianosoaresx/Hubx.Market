@@ -1,0 +1,91 @@
+{% extends "layouts/admin_shell.html" %}
+
+{% block page_title %}{{ page_title|default:"Nova loja" }}{% endblock %}
+{% block shell_title %}{{ page_title|default:"Nova loja" }}{% endblock %}
+
+{% block content %}
+<section class="admin-ops-page admin-platform-tenant-form-page space-y-8">
+    <div class="admin-ops-hero">
+        {% include "shared/components/layout/page_header.html" with eyebrow=page_eyebrow title=page_title description=page_description %}
+        {% if page_meta %}
+            <p class="mt-3 text-sm text-[var(--color-text-secondary)]">{{ page_meta }}</p>
+        {% endif %}
+    </div>
+
+    {% if can_manage_platform_tenants %}
+        {% if form_error %}
+            <div class="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{{ form_error }}</div>
+        {% endif %}
+
+        <form method="post" action="{{ form_action }}" class="space-y-6">
+            {% csrf_token %}
+
+            <section class="admin-ops-panel ds-surface space-y-6 p-6">
+                <div class="space-y-1">
+                    <h2 class="text-base font-semibold text-[var(--color-text-primary)]">Cadastro mínimo</h2>
+                    <p class="text-sm text-[var(--color-text-secondary)]">Cria somente o tenant. Bootstrap de owner, catálogo e billing fica para waves próprias.</p>
+                </div>
+
+                <div class="grid gap-6 md:grid-cols-2">
+                    {% with name="name" label="Nome da loja" value=values.name placeholder="Nova Loja" required=True invalid=errors.name error_text=errors.name %}
+                        {% include "shared/components/forms/input.html" %}
+                    {% endwith %}
+
+                    {% with name="slug" label="Slug do tenant" value=values.slug placeholder="nova-loja" required=True invalid=errors.slug error_text=errors.slug help_text="Identificador interno único." %}
+                        {% include "shared/components/forms/input.html" %}
+                    {% endwith %}
+
+                    {% with name="subdomain" label="Subdomínio" value=values.subdomain placeholder="nova-loja" required=True invalid=errors.subdomain error_text=errors.subdomain help_text="Será usado como subdomínio sob o domínio raiz." %}
+                        {% include "shared/components/forms/input.html" %}
+                    {% endwith %}
+
+                    {% with name="custom_domain" label="Domínio customizado" value=values.custom_domain placeholder="loja.exemplo.com" invalid=errors.custom_domain error_text=errors.custom_domain help_text="Contract-only: não ativa resolução HTTP nesta etapa." %}
+                        {% include "shared/components/forms/input.html" %}
+                    {% endwith %}
+                </div>
+            </section>
+
+            <section class="admin-ops-panel ds-surface space-y-6 p-6">
+                <div class="space-y-1">
+                    <h2 class="text-base font-semibold text-[var(--color-text-primary)]">Estado inicial</h2>
+                    <p class="text-sm text-[var(--color-text-secondary)]">Use manutenção para preparar a loja antes de abrir para tráfego real.</p>
+                </div>
+
+                <div class="grid gap-4 md:grid-cols-2">
+                    <label class="flex items-start gap-3 rounded-2xl border border-[var(--color-border-default)] p-4">
+                        <input type="hidden" name="is_active" value="0">
+                        <input type="checkbox" name="is_active" value="1" class="mt-1" {% if values.is_active %}checked{% endif %}>
+                        <span>
+                            <span class="block text-sm font-medium text-[var(--color-text-primary)]">Criar ativa</span>
+                            <span class="block text-sm text-[var(--color-text-secondary)]">Quando desligado, o tenant não resolve como loja ativa.</span>
+                        </span>
+                    </label>
+
+                    <label class="flex items-start gap-3 rounded-2xl border border-[var(--color-border-default)] p-4">
+                        <input type="checkbox" name="maintenance_mode" class="mt-1" {% if values.maintenance_mode %}checked{% endif %}>
+                        <span>
+                            <span class="block text-sm font-medium text-[var(--color-text-primary)]">Modo manutenção</span>
+                            <span class="block text-sm text-[var(--color-text-secondary)]">Marca a loja como em preparação operacional.</span>
+                        </span>
+                    </label>
+                </div>
+            </section>
+
+            <section class="admin-ops-panel ds-surface p-6">
+                <div class="space-y-3">
+                    <p class="text-sm font-medium text-[var(--color-text-primary)]">Guardrails desta criação</p>
+                    <ul class="space-y-2 text-sm text-[var(--color-text-secondary)]">
+                        {% for note in contract_notes %}
+                            <li>• {{ note }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </section>
+
+            {% include "shared/components/forms/form_actions.html" with primary_label="Criar loja" secondary_label="Cancelar" secondary_href=cancel_href %}
+        </form>
+    {% else %}
+        {% include "shared/components/feedback/empty_state.html" with title=empty_title description=empty_description %}
+    {% endif %}
+</section>
+{% endblock %}

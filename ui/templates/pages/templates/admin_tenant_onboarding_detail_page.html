@@ -1,0 +1,170 @@
+{% extends "layouts/admin_shell.html" %}
+
+{% block page_title %}{{ page_title|default:"Wizard de onboarding" }}{% endblock %}
+{% block shell_title %}{{ page_title|default:"Wizard de onboarding" }}{% endblock %}
+
+{% block content %}
+<section class="admin-ops-page admin-tenant-onboarding-detail-page space-y-8">
+    <div class="admin-ops-hero">
+        {% include "shared/components/layout/page_header.html" with eyebrow=page_eyebrow title=page_title description=page_description %}
+        {% if page_meta %}
+            <p class="mt-3 text-sm text-[var(--color-text-secondary)]">{{ page_meta }}</p>
+        {% endif %}
+        <div class="mt-5 flex flex-wrap gap-3">
+            <a class="ds-btn-secondary" href="{{ back_href }}">Voltar para jornadas</a>
+            {% if onboarding.tenant_detail_href %}
+                <a class="ds-btn-primary" href="{{ onboarding.tenant_detail_href }}">Abrir loja criada</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <section class="admin-ops-panel ds-surface p-6">
+        <div class="flex flex-wrap items-start justify-between gap-4">
+            <div>
+                <p class="text-sm text-[var(--color-text-secondary)]">Jornada #{{ onboarding.id }}</p>
+                <h2 class="mt-1 text-2xl font-semibold text-[var(--color-text-primary)]">{{ onboarding.store_name|default:"Loja em rascunho" }}</h2>
+                <p class="mt-2 text-sm text-[var(--color-text-secondary)]">Progresso {{ onboarding.progress }}% · próximo passo: {{ onboarding.next_step }}</p>
+            </div>
+            <div>{{ status_badge }}</div>
+        </div>
+        <div class="mt-5 h-2 rounded-full bg-slate-100">
+            <div class="h-2 rounded-full bg-[var(--color-action-primary-bg)]" style="width: {{ onboarding.progress }}%"></div>
+        </div>
+    </section>
+
+    {% if onboarding.blockers %}
+        <section class="admin-ops-panel rounded-2xl border border-red-200 bg-red-50 p-6">
+            <h3 class="text-sm font-semibold text-red-800">Blockers atuais</h3>
+            <ul class="mt-3 space-y-2 text-sm text-red-700">
+                {% for blocker in onboarding.blockers %}
+                    <li>• {{ blocker }}</li>
+                {% endfor %}
+            </ul>
+        </section>
+    {% endif %}
+
+    <section class="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
+        <div class="space-y-6">
+            <section class="admin-ops-panel ds-surface p-6">
+                <h3 class="text-base font-semibold text-[var(--color-text-primary)]">1. Dados da loja</h3>
+                <form method="post" action="{{ step_action_base }}store/" class="mt-4 grid gap-4 md:grid-cols-3">
+                    {% csrf_token %}
+                    <input class="ds-input" name="store_name" value="{{ onboarding.store_name }}" placeholder="Nome da loja" required>
+                    <input class="ds-input" name="store_slug" value="{{ onboarding.store_slug }}" placeholder="slug-da-loja" required>
+                    <input class="ds-input" name="store_subdomain" value="{{ onboarding.store_subdomain }}" placeholder="subdominio" required>
+                    <div class="md:col-span-3">
+                        {% include "shared/components/actions/button.html" with label="Salvar dados da loja" variant="primary" type="submit" %}
+                    </div>
+                </form>
+            </section>
+
+            <section class="admin-ops-panel ds-surface p-6">
+                <h3 class="text-base font-semibold text-[var(--color-text-primary)]">2. Plano interno</h3>
+                <form method="post" action="{{ step_action_base }}plan/" class="mt-4 flex flex-wrap items-end gap-4">
+                    {% csrf_token %}
+                    <label class="min-w-72 space-y-2">
+                        <span class="text-sm font-semibold text-[var(--color-text-primary)]">Plano ativo</span>
+                        <select class="ds-input" name="plan_code" required>
+                            <option value="">Selecione</option>
+                            {% for plan in plans %}
+                                <option value="{{ plan.code }}" {% if plan.code == onboarding.plan_code %}selected{% endif %}>{{ plan.name }} · {{ plan.monthly_price }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    {% include "shared/components/actions/button.html" with label="Salvar plano" variant="primary" type="submit" %}
+                </form>
+            </section>
+
+            <section class="admin-ops-panel ds-surface p-6">
+                <h3 class="text-base font-semibold text-[var(--color-text-primary)]">3. Owner inicial</h3>
+                <form method="post" action="{{ step_action_base }}owner/" class="mt-4 grid gap-4 md:grid-cols-3">
+                    {% csrf_token %}
+                    <input class="ds-input" name="owner_email" value="{{ onboarding.owner_email }}" placeholder="owner@exemplo.com" type="email" required>
+                    <input class="ds-input" name="owner_name" value="{{ onboarding.owner_name }}" placeholder="Nome do owner">
+                    <select class="ds-input" name="owner_role">
+                        <option value="owner" {% if onboarding.owner_role == "owner" %}selected{% endif %}>Owner</option>
+                        <option value="admin" {% if onboarding.owner_role == "admin" %}selected{% endif %}>Admin</option>
+                    </select>
+                    <div class="md:col-span-3">
+                        {% include "shared/components/actions/button.html" with label="Salvar owner" variant="primary" type="submit" %}
+                    </div>
+                </form>
+            </section>
+
+            <section class="admin-ops-panel ds-surface p-6">
+                <h3 class="text-base font-semibold text-[var(--color-text-primary)]">4. Branding mínimo</h3>
+                <form method="post" action="{{ step_action_base }}branding/" class="mt-4 grid gap-4 md:grid-cols-2">
+                    {% csrf_token %}
+                    <input class="ds-input" name="store_display_name" value="{{ onboarding.store_display_name }}" placeholder="Nome comercial" required>
+                    <input class="ds-input" name="primary_color" value="{{ onboarding.primary_color }}" placeholder="#4f46e5" required>
+                    <div class="md:col-span-2">
+                        {% include "shared/components/actions/button.html" with label="Salvar branding" variant="primary" type="submit" %}
+                    </div>
+                </form>
+            </section>
+
+            <section class="admin-ops-panel ds-surface p-6">
+                <h3 class="text-base font-semibold text-[var(--color-text-primary)]">5. Domínio</h3>
+                <form method="post" action="{{ step_action_base }}domain/" class="mt-4 flex flex-wrap items-end gap-4">
+                    {% csrf_token %}
+                    <label class="min-w-72 space-y-2">
+                        <span class="text-sm font-semibold text-[var(--color-text-primary)]">Domínio customizado opcional</span>
+                        <input class="ds-input" name="custom_domain" value="{{ onboarding.custom_domain }}" placeholder="loja.exemplo.com">
+                    </label>
+                    {% include "shared/components/actions/button.html" with label="Salvar domínio" variant="primary" type="submit" %}
+                </form>
+                <p class="mt-3 text-sm text-[var(--color-text-secondary)]">DNS/TLS seguem externos. Este campo é contract-only no MVP.</p>
+            </section>
+        </div>
+
+        <aside class="space-y-6">
+            <section class="admin-ops-panel ds-surface p-6">
+                <h3 class="text-base font-semibold text-[var(--color-text-primary)]">Checklist</h3>
+                <ul class="mt-4 space-y-3 text-sm">
+                    {% for step in onboarding.steps %}
+                        <li class="flex items-center justify-between gap-3">
+                            <span>{{ step.label }}</span>
+                            <span class="rounded-full px-2.5 py-1 text-xs {% if step.completed %}bg-emerald-100 text-emerald-800{% elif step.current %}bg-amber-100 text-amber-800{% else %}bg-slate-100 text-slate-600{% endif %}">
+                                {% if step.completed %}feito{% elif step.current %}atual{% else %}pendente{% endif %}
+                            </span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </section>
+
+            <section class="admin-ops-panel ds-surface p-6">
+                <h3 class="text-base font-semibold text-[var(--color-text-primary)]">Preview</h3>
+                <div class="mt-4 rounded-2xl border border-[var(--color-border-subtle)] p-5" style="border-color: {{ onboarding.primary_color }}">
+                    <p class="text-xs uppercase tracking-wide text-[var(--color-text-secondary)]">Storefront</p>
+                    <h4 class="mt-2 text-xl font-semibold" style="color: {{ onboarding.primary_color }}">{{ onboarding.store_display_name|default:onboarding.store_name|default:"Nova loja" }}</h4>
+                    <p class="mt-2 text-sm text-[var(--color-text-secondary)]">{{ onboarding.store_subdomain|default:"subdominio" }}.hubx.market</p>
+                </div>
+            </section>
+
+            <section class="admin-ops-panel ds-surface p-6">
+                <h3 class="text-base font-semibold text-[var(--color-text-primary)]">Revisão final</h3>
+                <dl class="mt-4 space-y-3 text-sm">
+                    <div><dt class="text-[var(--color-text-secondary)]">Plano</dt><dd class="font-medium">{{ onboarding.plan_code|default:"—" }}</dd></div>
+                    <div><dt class="text-[var(--color-text-secondary)]">Owner</dt><dd class="font-medium">{{ onboarding.owner_email|default:"—" }}</dd></div>
+                    <div><dt class="text-[var(--color-text-secondary)]">Domínio</dt><dd class="font-medium">{{ onboarding.custom_domain|default:"contract-only opcional" }}</dd></div>
+                </dl>
+                {% if can_manage_platform_tenants %}
+                    <form method="post" action="{{ complete_action }}" class="mt-5">
+                        {% csrf_token %}
+                        {% include "shared/components/actions/button.html" with label="Criar/ativar loja" variant="primary" type="submit" %}
+                    </form>
+                {% endif %}
+            </section>
+
+            <section class="admin-ops-panel ds-surface p-6">
+                <p class="text-sm font-medium text-[var(--color-text-primary)]">Guardrails</p>
+                <ul class="mt-3 space-y-2 text-sm text-[var(--color-text-secondary)]">
+                    {% for note in contract_notes %}
+                        <li>• {{ note }}</li>
+                    {% endfor %}
+                </ul>
+            </section>
+        </aside>
+    </section>
+</section>
+{% endblock %}

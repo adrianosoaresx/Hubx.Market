@@ -3,10 +3,21 @@
 {% block title %}{{ page_title|default:"Checkout" }}{% endblock %}
 
 {% block checkout_content %}
-<section class="space-y-8">
-    {% with eyebrow=page_eyebrow|default:"Checkout" title=page_title|default:"Finalizar compra" description=page_description|default:"Revise seus itens, informe entrega e pagamento antes de concluir o pedido." meta=page_meta %}
-        {% include "shared/components/layout/page_header.html" %}
-    {% endwith %}
+<section class="cart-checkout-page checkout-page space-y-8">
+    <header class="storefront-hero checkout-page-hero space-y-3">
+        <p class="text-xs font-medium uppercase tracking-wide text-[var(--color-text-secondary)]">{{ page_eyebrow|default:"Checkout" }}</p>
+        <div class="space-y-2">
+            <h1 class="storefront-hero-title text-3xl font-semibold tracking-tight text-[var(--color-text-primary)]">
+                {{ page_title|default:"Finalizar compra" }}
+            </h1>
+            <p class="storefront-hero-description max-w-3xl text-base text-[var(--color-text-secondary)]">
+                {{ page_description|default:"Revise seus itens, informe entrega e pagamento antes de concluir o pedido." }}
+            </p>
+        </div>
+        {% if page_meta %}
+            <p class="text-sm text-[var(--color-text-secondary)]">{{ page_meta }}</p>
+        {% endif %}
+    </header>
 
     {% if checkout_feedback %}
         {% include "shared/components/feedback/alert.html" with variant=checkout_feedback.variant icon=checkout_feedback.icon title=checkout_feedback.title description=checkout_feedback.description %}
@@ -25,7 +36,7 @@
     {% endif %}
 
     {% if review_readiness_items %}
-        <section class="ds-surface space-y-4 p-6">
+        <section class="cart-checkout-panel ds-surface space-y-4 p-6">
             <div class="space-y-1">
                 <h2 class="text-base font-semibold text-[var(--color-text-primary)]">{{ review_readiness_title }}</h2>
                 <p class="text-sm text-[var(--color-text-secondary)]">{{ review_readiness_description }}</p>
@@ -44,7 +55,7 @@
     {% endif %}
 
     {% if checkout_recovery %}
-        <section class="ds-surface space-y-4 p-6">
+        <section class="cart-checkout-panel ds-surface space-y-4 p-6">
             <div class="space-y-1">
                 <h2 class="text-base font-semibold text-[var(--color-text-primary)]">{{ checkout_recovery.title }}</h2>
                 <p class="text-sm text-[var(--color-text-secondary)]">{{ checkout_recovery.description }}</p>
@@ -64,7 +75,7 @@
     {% endif %}
 
     {% if inventory_conflicts %}
-        <section class="ds-surface space-y-4 p-6" aria-label="Itens com estoque alterado">
+        <section class="cart-checkout-panel ds-surface space-y-4 p-6" aria-label="Itens com estoque alterado">
             <div class="space-y-1">
                 <h2 class="text-base font-semibold text-[var(--color-text-primary)]">Itens que precisam de revisão</h2>
                 <p class="text-sm text-[var(--color-text-secondary)]">
@@ -132,7 +143,7 @@
         {% endwith %}
     {% endif %}
 
-    <div class="grid gap-8 lg:grid-cols-[minmax(0,1.5fr)_minmax(22rem,26rem)]">
+    <div class="cart-checkout-layout grid gap-8 lg:grid-cols-[minmax(0,1.5fr)_minmax(22rem,26rem)]">
         <div class="space-y-6">
             <form method="{{ form_method|default:'post' }}" action="{{ form_action|default:request.path }}" class="space-y-6">
                 {% csrf_token %}
@@ -141,7 +152,7 @@
                 <input type="hidden" name="current_stage" value="{{ current_stage|default:'delivery' }}">
 
                 {% if show_delivery_surface %}
-                <section class="ds-surface space-y-6 p-6">
+                <section class="cart-checkout-panel checkout-stage-panel ds-surface space-y-6 p-6">
                     <header class="space-y-1">
                         <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">Entrega</h2>
                         <p class="text-sm text-[var(--color-text-secondary)]">{{ shipping_section_description|default:"Preencha as informacoes de envio do pedido." }}</p>
@@ -181,7 +192,7 @@
                 {% endif %}
 
                 {% if show_payment_surface %}
-                <section class="ds-surface space-y-6 p-6">
+                <section class="cart-checkout-panel checkout-stage-panel ds-surface space-y-6 p-6">
                     <header class="space-y-1">
                         <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">Pagamento</h2>
                         <p class="text-sm text-[var(--color-text-secondary)]">{{ payment_section_description|default:"Selecione a forma de pagamento e confirme os dados finais." }}</p>
@@ -220,7 +231,7 @@
                 {% endif %}
 
                 {% if show_order_items_surface|default:True %}
-                <section class="ds-surface space-y-5 p-6">
+                <section class="cart-checkout-panel checkout-stage-panel ds-surface space-y-5 p-6">
                     <header class="space-y-1">
                         <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">Itens do pedido</h2>
                         <p class="text-sm text-[var(--color-text-secondary)]">{{ review_section_description|default:"Revise os itens antes de seguir para a confirmacao." }}</p>
@@ -282,13 +293,13 @@
             </form>
         </div>
 
-        <aside class="space-y-6">
+        <aside class="cart-checkout-sidebar space-y-6">
             {% with title=summary_title|default:"Resumo do pedido" description=summary_description|default:"Confira os totais antes de finalizar." note=summary_note items=order_items subtotal=subtotal shipping=shipping_total discount=discount_total total=grand_total installments=installments_summary actions=summary_actions showcase_mode=showcase_mode %}
                 {% include "shared/components/composite/order_summary.html" %}
             {% endwith %}
 
             {% if checkout_trust_items %}
-                <section class="ds-surface space-y-4 p-6" aria-label="Confiança no checkout">
+                <section class="cart-checkout-panel ds-surface space-y-4 p-6" aria-label="Confiança no checkout">
                     <h2 class="text-base font-semibold text-[var(--color-text-primary)]">{{ checkout_trust_title }}</h2>
                     <div class="space-y-3">
                         {% for item in checkout_trust_items %}

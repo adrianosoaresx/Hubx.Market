@@ -5,7 +5,14 @@ from dataclasses import dataclass
 from django.conf import settings
 from django.contrib.auth.models import User
 
-from app.modules.accounts.application.admin_permissions import ROLE_ADMIN, ROLE_OWNER, ROLE_PERMISSIONS, admin_permissions
+from app.modules.accounts.application.admin_permissions import (
+    PERMISSION_PLATFORM_TENANTS_MANAGE,
+    PERMISSION_PLATFORM_TENANTS_VIEW,
+    ROLE_ADMIN,
+    ROLE_OWNER,
+    ROLE_PERMISSIONS,
+    admin_permissions,
+)
 from app.modules.accounts.models import OwnerUser
 from app.modules.tenants.models import Tenant
 
@@ -21,6 +28,8 @@ REQUIRED_OPS_PERMISSIONS = {
     "owners.manage",
     "pages.manage",
     "payments.view",
+    PERMISSION_PLATFORM_TENANTS_MANAGE,
+    PERMISSION_PLATFORM_TENANTS_VIEW,
     "reviews.moderate",
     "shipping.view",
 }

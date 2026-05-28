@@ -46,6 +46,7 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "app.modules.accounts.interfaces.middleware.OwnerContextMiddleware",
+    "app.modules.accounts.interfaces.middleware.PlatformOwnerContextMiddleware",
     "app.modules.accounts.interfaces.middleware.OpsAuthenticationGateMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -106,6 +107,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "app.modules.accounts.interfaces.context_processors.admin_shell_context",
             ]
         },
     }
@@ -152,6 +154,8 @@ NOTIFICATIONS_EMAIL_DRY_RUN = os.getenv("NOTIFICATIONS_EMAIL_DRY_RUN", "1") == "
 NOTIFICATIONS_EMAIL_BATCH_SIZE = int(os.getenv("NOTIFICATIONS_EMAIL_BATCH_SIZE", "25"))
 
 HUBX_MARKET_ROOT_DOMAIN = os.getenv("HUBX_MARKET_ROOT_DOMAIN", "hubx.market")
+HUBX_MARKET_PUBLIC_PORT = os.getenv("HUBX_MARKET_PUBLIC_PORT", "")
+HUBX_PLATFORM_TENANT_SLUG = os.getenv("HUBX_PLATFORM_TENANT_SLUG", "platform-system")
 PAYMENTS_WEBHOOK_TOKEN = os.getenv("PAYMENTS_WEBHOOK_TOKEN", "")
 PAYMENTS_OBSERVABILITY_TOKEN = os.getenv("PAYMENTS_OBSERVABILITY_TOKEN", "")
 NOTIFICATIONS_OBSERVABILITY_TOKEN = os.getenv("NOTIFICATIONS_OBSERVABILITY_TOKEN", "")

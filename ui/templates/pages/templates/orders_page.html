@@ -3,10 +3,12 @@
 {% block title %}{{ page_title|default:"Meus pedidos" }}{% endblock %}
 
 {% block content %}
-<section class="space-y-6">
-    {% with eyebrow=eyebrow|default:"Customer Area" title=page_title|default:"Meus pedidos" description=page_description|default:"Acompanhe o histórico de compras, status e próximos passos dos seus pedidos." meta=page_meta %}
-        {% include "shared/components/layout/page_header.html" %}
-    {% endwith %}
+<section class="customer-area-page customer-orders-page space-y-6">
+    <div class="customer-area-hero">
+        {% with eyebrow=eyebrow|default:"Customer Area" title=page_title|default:"Meus pedidos" description=page_description|default:"Acompanhe o histórico de compras, status e próximos passos dos seus pedidos." meta=page_meta %}
+            {% include "shared/components/layout/page_header.html" %}
+        {% endwith %}
+    </div>
 
     {% if search_name or status_options or extra_filters or search_value %}
         {% with title=filter_title|default:"Filtrar pedidos" description=filter_description|default:"Use busca e filtros para localizar pedidos específicos." search_name=search_name|default:"q" search_value=search_value search_label=search_label|default:"Buscar pedidos" search_placeholder=search_placeholder|default:"Número do pedido, status ou item" status_name=status_name|default:"status" status_selected=status_selected status_label=status_label|default:"Status" status_options=status_options extra_filters=extra_filters reset_url=reset_url show_actions=show_filter_actions|default:True %}

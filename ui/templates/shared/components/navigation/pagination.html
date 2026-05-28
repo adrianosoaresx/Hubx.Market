@@ -1,10 +1,10 @@
 {% if total_pages and total_pages > 1 %}
-<nav class="flex items-center justify-between gap-4 rounded-xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] px-4 py-3" aria-label="Paginação">
-    <div class="text-sm text-[var(--color-text-secondary)]">
+<nav class="flex flex-col gap-3 rounded-xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] px-4 py-3 lg:flex-row lg:items-center lg:justify-between" aria-label="Paginação">
+    <div class="shrink-0 text-sm text-[var(--color-text-secondary)]">
         Página {{ page|default:1 }} de {{ total_pages }}
     </div>
 
-    <div class="flex items-center gap-2">
+    <div class="flex flex-wrap items-center gap-2">
         {% if prev_url %}
             <a href="{{ prev_url }}" class="rounded-lg border border-[var(--color-border-default)] px-3 py-2 text-sm text-[var(--color-text-primary)] hover:bg-slate-50">Anterior</a>
         {% else %}
