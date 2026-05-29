@@ -1,13 +1,13 @@
 {% extends "layouts/base.html" %}
 
-{% block title %}{% block page_title %}Hubx Market Account{% endblock %}{% endblock %}
+{% block title %}{% block page_title %}{% firstof store_display_name request.tenant.store_display_name request.tenant.name "Área do cliente" %}{% endblock %}{% endblock %}
 {% block ui_context %}account{% endblock %}
 
 {% block body %}
 <div class="min-h-screen bg-[var(--color-surface-page)]">
     <header class="border-b border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
         <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
-            <a href="/" class="text-lg font-semibold text-[var(--color-text-primary)]">Hubx Market</a>
+            {% include "shared/partials/brand_identity.html" with brand_scope="Área do cliente" brand_href="/" %}
             {% include "shared/partials/navbar.html" %}
         </div>
     </header>
@@ -17,10 +17,22 @@
             <aside class="customer-area-sidebar ds-surface h-fit p-4">
                 {% block account_sidebar %}
                     <nav class="customer-area-nav space-y-2 text-sm">
-                        <a href="/accounts/account/" class="block rounded-lg px-3 py-2 text-[var(--color-text-primary)] hover:bg-slate-50">Visão geral</a>
-                        <a href="/accounts/account/orders/" class="block rounded-lg px-3 py-2 text-[var(--color-text-secondary)] hover:bg-slate-50 hover:text-[var(--color-text-primary)]">Pedidos</a>
-                        <a href="/accounts/account/addresses/" class="block rounded-lg px-3 py-2 text-[var(--color-text-secondary)] hover:bg-slate-50 hover:text-[var(--color-text-primary)]">Endereços</a>
-                        <a href="/accounts/account/profile/" class="block rounded-lg px-3 py-2 text-[var(--color-text-secondary)] hover:bg-slate-50 hover:text-[var(--color-text-primary)]">Perfil</a>
+                        <a href="/accounts/account/" class="customer-area-nav-link {% if request.path == '/accounts/account/' %}is-active{% endif %}">
+                            {% include "shared/partials/icon.html" with name="layout-dashboard" size="sm" %}
+                            <span>Visão geral</span>
+                        </a>
+                        <a href="/accounts/account/orders/" class="customer-area-nav-link {% if request.path == '/accounts/account/orders/' %}is-active{% endif %}">
+                            {% include "shared/partials/icon.html" with name="receipt-text" size="sm" %}
+                            <span>Pedidos</span>
+                        </a>
+                        <a href="/accounts/account/addresses/" class="customer-area-nav-link {% if request.path == '/accounts/account/addresses/' %}is-active{% endif %}">
+                            {% include "shared/partials/icon.html" with name="map-pin" size="sm" %}
+                            <span>Endereços</span>
+                        </a>
+                        <a href="/accounts/account/profile/" class="customer-area-nav-link {% if request.path == '/accounts/account/profile/' %}is-active{% endif %}">
+                            {% include "shared/partials/icon.html" with name="user" size="sm" %}
+                            <span>Perfil</span>
+                        </a>
                     </nav>
                 {% endblock %}
             </aside>

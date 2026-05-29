@@ -13,7 +13,11 @@ from app.modules.tenants.application.tenant_onboarding_queries import tenant_onb
 from app.modules.tenants.models import Tenant, TenantOnboarding
 
 
-@override_settings(ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver"])
+@override_settings(
+    HUBX_PLATFORM_TENANT_SLUG="platform-host",
+    HUBX_OPS_AUTH_GATE_ENFORCED=False,
+    ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver"],
+)
 class TenantOnboardingSelfServiceTests(TestCase):
     def setUp(self):
         self.platform_tenant = Tenant.objects.create(

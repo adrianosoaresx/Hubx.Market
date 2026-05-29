@@ -1,6 +1,47 @@
+{% firstof footer_variant "standard" as resolved_footer_variant %}
 <footer class="global-footer border-t border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
-    <div class="mx-auto flex max-w-7xl flex-col gap-2 px-6 py-6 text-sm text-[var(--color-text-secondary)] md:flex-row md:items-center md:justify-between">
-        <p class="font-medium text-[var(--color-text-primary)]">Hubx Market</p>
-        <p>Infraestrutura para lojas online multi-tenant.</p>
-    </div>
+    {% if resolved_footer_variant == "compact" %}
+        <div class="mx-auto flex max-w-7xl flex-col gap-3 px-6 py-5 text-sm text-[var(--color-text-secondary)] md:flex-row md:items-center md:justify-between">
+            {% include "shared/partials/brand_identity.html" with size="sm" brand_scope="" brand_href="/" %}
+            <p class="inline-flex items-center gap-2">
+                {% include "shared/partials/icon.html" with name="shield" size="sm" %}
+                <span>Operado com Hubx Market</span>
+            </p>
+        </div>
+    {% else %}
+        <div class="mx-auto grid max-w-7xl gap-8 px-6 py-8 text-sm text-[var(--color-text-secondary)] md:grid-cols-[minmax(0,1.1fr)_minmax(0,1.4fr)_auto] md:items-start">
+            <div class="space-y-3">
+                {% include "shared/partials/brand_identity.html" with brand_scope="Loja online" brand_href="/" %}
+                <p class="max-w-sm">Compra segura, catálogo tenant-scoped e atendimento pela loja.</p>
+            </div>
+
+            <nav class="storefront-footer-links" aria-label="Links úteis da loja">
+                <a href="/catalog/">
+                    {% include "shared/partials/icon.html" with name="shopping-bag" size="sm" %}
+                    <span>Catálogo</span>
+                </a>
+                <a href="/accounts/account/">
+                    {% include "shared/partials/icon.html" with name="user" size="sm" %}
+                    <span>Minha conta</span>
+                </a>
+                <a href="/accounts/account/orders/">
+                    {% include "shared/partials/icon.html" with name="receipt-text" size="sm" %}
+                    <span>Meus pedidos</span>
+                </a>
+                {% for link in storefront_footer_links %}
+                    <a href="{{ link.href }}">
+                        {% include "shared/partials/icon.html" with name=link.icon|default:"file-text" size="sm" %}
+                        <span>{{ link.label }}</span>
+                    </a>
+                {% endfor %}
+            </nav>
+
+            <div class="storefront-footer-hubx">
+                <span class="inline-flex items-center gap-2">
+                    {% include "shared/partials/icon.html" with name="shield" size="sm" %}
+                    <span>Operado com Hubx Market</span>
+                </span>
+            </div>
+        </div>
+    {% endif %}
 </footer>

@@ -1,6 +1,6 @@
 {% extends "layouts/base.html" %}
 
-{% block title %}{% block page_title %}Hubx Market Admin{% endblock %}{% endblock %}
+{% block title %}{% block page_title %}{% if is_platform_admin_shell %}Hubx Market Admin{% else %}{% firstof store_display_name request.tenant.store_display_name request.tenant.name "Admin da loja" %}{% endif %}{% endblock %}{% endblock %}
 {% block ui_context %}admin{% endblock %}
 {% block body_class %}bg-slate-50{% endblock %}
 
@@ -9,11 +9,9 @@
     <aside class="admin-ops-sidebar border-r border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-6">
         <div class="mb-8">
             {% if is_platform_admin_shell %}
-                <a href="/" class="text-lg font-semibold text-[var(--color-text-primary)]">Hubx Market</a>
-                <p class="mt-1 text-xs text-[var(--color-text-secondary)]">Platform admin</p>
+                {% include "shared/partials/brand_identity.html" with brand_name="Hubx Market" brand_monogram="HX" brand_scope="Project owner" brand_href="/" %}
             {% else %}
-                <a href="/ops/" class="text-lg font-semibold text-[var(--color-text-primary)]">Hubx Market</a>
-                <p class="mt-1 text-xs text-[var(--color-text-secondary)]">Admin da loja</p>
+                {% include "shared/partials/brand_identity.html" with brand_scope="Admin da loja" brand_href="/ops/" %}
             {% endif %}
         </div>
         {% include "shared/partials/sidebar.html" %}
@@ -22,7 +20,9 @@
         <header class="admin-ops-topbar border-b border-[var(--color-border-default)] bg-[var(--color-surface-panel)] px-6 py-4">
             <div class="mx-auto flex max-w-7xl items-center justify-between gap-4">
                 <div>
-                    <p class="text-sm text-[var(--color-text-secondary)]">Admin SaaS</p>
+                    <p class="text-sm font-medium text-[var(--color-text-secondary)]">
+                        {% if is_platform_admin_shell %}Platform admin{% else %}Admin da loja{% endif %}
+                    </p>
                     <h1 class="text-xl font-semibold text-[var(--color-text-primary)]">{% block shell_title %}Painel{% endblock %}</h1>
                 </div>
                 {% include "shared/partials/navbar.html" %}
@@ -31,6 +31,11 @@
         <main class="admin-ops-content mx-auto max-w-7xl px-6 py-8">
             {% block content %}{% endblock %}
         </main>
+        <footer class="admin-ops-footer mx-auto max-w-7xl px-6 pb-8 text-xs text-[var(--color-text-secondary)]">
+            <span>Hubx Market</span>
+            <span aria-hidden="true"> · </span>
+            <span>{% if is_platform_admin_shell %}Escopo platform{% else %}Escopo tenant{% endif %}</span>
+        </footer>
     </div>
 </div>
 {% endblock %}

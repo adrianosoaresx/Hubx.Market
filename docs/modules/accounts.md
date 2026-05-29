@@ -4410,6 +4410,9 @@ Fora de escopo atual:
 - login comum de loja continua tenant-scoped por subdomínio;
 - login central pode direcionar `OwnerUser` com permissão platform para `/ops/platform/tenants/`;
 - login com `next=/ops/platform/...` preserva o destino platform quando a role permite;
+- permissões platform em runtime central só são resolvidas para `OwnerUser` ativo no tenant reservado `platform-system` (`HUBX_PLATFORM_TENANT_SLUG`);
+- owners de loja, mesmo com role `owner`, não viram platform owner apenas por estarem autenticados no portal central;
 - owners sem permissão platform vão para a loja única que administram ou para `/accounts/select-store/`;
 - após a sessão, `/ops/platform/...` resolve `request.owner_user` por e-mail ativo e permissão `platform.tenants.view`;
 - superfícies comerciais tenant-owned continuam dependentes de `request.tenant`.
+- superfícies `/ops/platform/...` não são servidas a partir de host tenant-owned.

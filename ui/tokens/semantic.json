@@ -26,5 +26,44 @@
   },
   "focus": {
     "ring": { "value": "rgba(79, 70, 229, 0.35)" }
+  },
+  "icon": {
+    "sm": { "value": "1rem" },
+    "md": { "value": "1.25rem" },
+    "lg": { "value": "1.5rem" },
+    "xl": { "value": "2rem" },
+    "stroke": { "value": "2" },
+    "default": { "value": "{text.primary.value}" },
+    "muted": { "value": "{text.secondary.value}" },
+    "brand": { "value": "{action.primary.value}" },
+    "success": { "value": "{feedback.success.value}" },
+    "warning": { "value": "{feedback.warning.value}" },
+    "danger": { "value": "{feedback.danger.value}" }
+  },
+  "brand": {
+    "logo_size": {
+      "header": { "value": "2.375rem" },
+      "banner": { "value": "3rem" }
+    },
+    "banner_bg": { "value": "rgba(79, 70, 229, 0.08)" },
+    "banner_text": { "value": "{text.primary.value}" },
+    "banner_accent": { "value": "{action.primary.value}" }
+  },
+  "admin": {
+    "sidebar_width": { "value": "16rem" },
+    "topbar_height": { "value": "4.5rem" },
+    "content_max": { "value": "80rem" },
+    "nav_active_bg": { "value": "rgba(34, 197, 94, 0.10)" },
+    "nav_active_text": { "value": "#0F766E" },
+    "nav_muted": { "value": "{text.secondary.value}" },
+    "surface_raised": { "value": "{surface.panel.value}" },
+    "risk_accent": { "value": "#B42318" },
+    "platform_accent": { "value": "#2563EB" }
+  },
+  "footer": {
+    "bg": { "value": "{surface.panel.value}" },
+    "text": { "value": "{text.secondary.value}" },
+    "link": { "value": "{text.primary.value}" },
+    "hubx_text": { "value": "{text.secondary.value}" }
   }
 }

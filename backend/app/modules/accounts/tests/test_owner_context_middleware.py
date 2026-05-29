@@ -24,6 +24,7 @@ urlpatterns = [
 @override_settings(
     HUBX_MARKET_ROOT_DOMAIN="hubx.market",
     ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver"],
+    HUBX_OPS_AUTH_GATE_ENFORCED=False,
     ROOT_URLCONF="app.modules.accounts.tests.test_owner_context_middleware",
 )
 class OwnerContextMiddlewareTests(TestCase):

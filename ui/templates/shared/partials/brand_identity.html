@@ -1,0 +1,21 @@
+{% firstof brand_name store_display_name request.tenant.store_display_name request.tenant.name "Hubx Market" as resolved_brand_name %}
+{% firstof brand_href "/" as resolved_brand_href %}
+{% firstof brand_scope "" as resolved_brand_scope %}
+{% firstof brand_monogram resolved_brand_name|slice:":2"|upper as resolved_brand_monogram %}
+{% firstof logo_url request.tenant.logo_url "" as resolved_logo_url %}
+
+<a href="{{ resolved_brand_href }}" class="brand-identity brand-identity-{{ size|default:'md' }} {{ extra_class|default:'' }}" aria-label="{{ resolved_brand_name }}">
+    <span class="brand-identity-mark" aria-hidden="true">
+        {% if resolved_logo_url %}
+            <img src="{{ resolved_logo_url }}" alt="" class="brand-identity-logo">
+        {% else %}
+            <span class="brand-identity-monogram">{{ resolved_brand_monogram }}</span>
+        {% endif %}
+    </span>
+    <span class="brand-identity-copy">
+        <span class="brand-identity-name">{{ resolved_brand_name }}</span>
+        {% if resolved_brand_scope %}
+            <span class="brand-identity-scope">{{ resolved_brand_scope }}</span>
+        {% endif %}
+    </span>
+</a>

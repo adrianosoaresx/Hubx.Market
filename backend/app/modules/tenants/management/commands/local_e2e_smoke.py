@@ -129,7 +129,14 @@ class Command(BaseCommand):
         client = Client(HTTP_HOST=host)
         results: list[E2EResult] = []
         response = client.post("/accounts/login/?next=/ops/", {"login": email, "password": password}, HTTP_HOST=host)
-        results.append(E2EResult("store-login-redirect", response.status_code == 302 and response["Location"] == "/ops/", f"status={response.status_code} location={response.get('Location', '')}"))
+        location = response.get("Location", "")
+        results.append(
+            E2EResult(
+                "store-login-redirect",
+                response.status_code == 302 and (location == "/ops/" or location == f"http://{host}/ops/"),
+                f"status={response.status_code} location={location}",
+            )
+        )
         dashboard = client.get("/ops/", HTTP_HOST=host)
         html = dashboard.content.decode("utf-8", errors="replace")
         results.append(
@@ -200,7 +207,8 @@ class Command(BaseCommand):
             if not target:
                 continue
             response = client.get(target, HTTP_HOST=host)
-            results.append(E2EResult(f"image:{path}:{target}", response.status_code == 200 and bool(response.content), f"status={response.status_code} bytes={len(response.content)}"))
+            size = self._response_size(response)
+            results.append(E2EResult(f"image:{path}:{target}", response.status_code == 200 and size > 0, f"status={response.status_code} bytes={size}"))
         return results
 
     def _local_path(self, *, href: str, host: str) -> str:
@@ -214,3 +222,8 @@ class Command(BaseCommand):
         if parsed.query:
             path = f"{path}?{parsed.query}"
         return path
+
+    def _response_size(self, response) -> int:
+        if getattr(response, "streaming", False):
+            return sum(len(chunk) for chunk in response.streaming_content)
+        return len(getattr(response, "content", b"") or b"")

@@ -9,11 +9,14 @@
     <header class="border-b border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
         <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
             <div class="space-y-1">
-                <a href="/" class="text-lg font-semibold text-[var(--color-text-primary)]">Hubx Market</a>
+                {% include "shared/partials/brand_identity.html" with brand_scope="Checkout seguro" brand_href="/" %}
                 <p class="text-sm text-[var(--color-text-secondary)]">Fluxo seguro de checkout</p>
             </div>
             {% block checkout_header_meta %}
-                <span class="text-sm text-[var(--color-text-secondary)]">Checkout</span>
+                <span class="inline-flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
+                    {% include "shared/partials/icon.html" with name="shield" size="sm" %}
+                    <span>Checkout</span>
+                </span>
             {% endblock %}
         </div>
     </header>
@@ -21,5 +24,6 @@
     <main class="mx-auto max-w-7xl px-6 py-8">
         {% block checkout_content %}{% endblock %}
     </main>
+    {% include "shared/partials/footer.html" with footer_variant="compact" %}
 </div>
 {% endblock %}

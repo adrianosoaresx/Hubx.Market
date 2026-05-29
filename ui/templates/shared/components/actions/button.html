@@ -4,9 +4,17 @@
     href="{{ href }}"
     class="ds-btn {% if variant == 'secondary' %}ds-btn-secondary{% else %}ds-btn-primary{% endif %} {% if size == 'sm' %}ds-btn-sm{% else %}ds-btn-md{% endif %} {% if full_width %}w-full{% endif %} {% if disabled %}pointer-events-none opacity-50{% endif %}"
 >
-    {% if icon_left %}<span aria-hidden="true">{{ icon_left }}</span>{% endif %}
+    {% if icon_name %}
+        {% include "shared/partials/icon.html" with name=icon_name size="sm" %}
+    {% elif icon_left %}
+        <span aria-hidden="true">{{ icon_left }}</span>
+    {% endif %}
     <span>{{ label }}</span>
-    {% if icon_right %}<span aria-hidden="true">{{ icon_right }}</span>{% endif %}
+    {% if icon_right_name %}
+        {% include "shared/partials/icon.html" with name=icon_right_name size="sm" %}
+    {% elif icon_right %}
+        <span aria-hidden="true">{{ icon_right }}</span>
+    {% endif %}
 </a>
 {% else %}
 <button
@@ -18,11 +26,17 @@
 >
     {% if loading %}
         <span class="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent" aria-hidden="true"></span>
+    {% elif icon_name %}
+        {% include "shared/partials/icon.html" with name=icon_name size="sm" %}
     {% elif icon_left %}
         <span aria-hidden="true">{{ icon_left }}</span>
     {% endif %}
     <span>{{ label }}</span>
-    {% if icon_right %}<span aria-hidden="true">{{ icon_right }}</span>{% endif %}
+    {% if icon_right_name %}
+        {% include "shared/partials/icon.html" with name=icon_right_name size="sm" %}
+    {% elif icon_right %}
+        <span aria-hidden="true">{{ icon_right }}</span>
+    {% endif %}
 </button>
 {% endif %}
 {% endwith %}

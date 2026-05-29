@@ -621,6 +621,10 @@ class LoginView(TemplateView):
         if not self._login_belongs_to_owner(tenant_id=tenant_id, login_value=login_value):
             customer_result = self._authenticate_customer(request=request, tenant_id=tenant_id, login_value=login_value, password=password)
             if customer_result == "customer-login-authenticated":
+                if tenant_id:
+                    if safe_next_url and not safe_next_url.startswith("/ops/"):
+                        return HttpResponseRedirect(safe_next_url)
+                    return HttpResponseRedirect(reverse("accounts:account-overview"))
                 decision = post_login_redirects.decide_customer_redirect(email=login_value, safe_next_url=safe_next_url)
                 return HttpResponseRedirect(decision.url)
 
@@ -632,6 +636,10 @@ class LoginView(TemplateView):
             remember_me=request.POST.get("remember_me") in {"1", "on", "true", "True"},
         )
         if result.get("result") == "owner-login-authenticated":
+            if tenant_id:
+                if safe_next_url.startswith("/ops/") and not safe_next_url.startswith("/ops/platform/"):
+                    return HttpResponseRedirect(safe_next_url)
+                return HttpResponseRedirect(reverse("merchant_ops:admin-dashboard"))
             decision = post_login_redirects.decide_owner_redirect(email=login_value, safe_next_url=safe_next_url)
             return HttpResponseRedirect(decision.url)
         if result.get("result") == "owner-login-mfa-challenge-required":

@@ -6,10 +6,16 @@
 <div class="min-h-screen bg-[var(--color-surface-page)]">
     <header class="border-b border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
         <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
-            <a href="/" class="text-lg font-semibold text-[var(--color-text-primary)]">Hubx Market</a>
+            {% include "shared/partials/brand_identity.html" with brand_name="Hubx Market" brand_monogram="HX" brand_scope="Portal central" brand_href="/" %}
             <nav class="flex items-center gap-3 text-sm text-[var(--color-text-secondary)]" aria-label="Portal central">
-                <a href="{{ login_href }}" class="rounded-lg px-3 py-2 hover:bg-slate-100 hover:text-[var(--color-text-primary)]">Entrar</a>
-                <a href="{{ platform_tenants_href }}" class="rounded-lg px-3 py-2 hover:bg-slate-100 hover:text-[var(--color-text-primary)]">Admin de lojas</a>
+                <a href="{{ login_href }}" class="global-nav-link rounded-lg px-3 py-2 hover:bg-slate-100 hover:text-[var(--color-text-primary)]">
+                    {% include "shared/partials/icon.html" with name="log-in" size="sm" %}
+                    <span>Entrar</span>
+                </a>
+                <a href="{{ platform_tenants_href }}" class="global-nav-link rounded-lg px-3 py-2 hover:bg-slate-100 hover:text-[var(--color-text-primary)]">
+                    {% include "shared/partials/icon.html" with name="store" size="sm" %}
+                    <span>Admin de lojas</span>
+                </a>
             </nav>
         </div>
     </header>
@@ -25,8 +31,14 @@
                     Entre com sua conta Hubx. A plataforma direciona você para o admin de lojas, para a loja que administra ou para seleção de loja quando houver múltiplos vínculos.
                 </p>
                 <div class="flex flex-wrap gap-3">
-                    <a class="ds-btn-primary" href="{{ login_href }}">Entrar no portal</a>
-                    <a class="ds-btn-secondary" href="{{ platform_onboarding_href }}">Onboarding de lojas</a>
+                    <a class="ds-btn ds-btn-primary ds-btn-md" href="{{ login_href }}">
+                        {% include "shared/partials/icon.html" with name="log-in" size="sm" %}
+                        <span>Entrar no portal</span>
+                    </a>
+                    <a class="ds-btn ds-btn-secondary ds-btn-md" href="{{ platform_onboarding_href }}">
+                        {% include "shared/partials/icon.html" with name="store" size="sm" %}
+                        <span>Onboarding de lojas</span>
+                    </a>
                 </div>
             </div>
 
@@ -52,5 +64,6 @@
             </aside>
         </section>
     </main>
+    {% include "shared/partials/footer.html" with footer_variant="compact" brand_name="Hubx Market" brand_monogram="HX" %}
 </div>
 {% endblock %}

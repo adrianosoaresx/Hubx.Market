@@ -8,7 +8,12 @@ from app.modules.tenants.application.platform_tenant_admin_queries import platfo
 from app.modules.tenants.models import Tenant
 
 
-@override_settings(HUBX_MARKET_ROOT_DOMAIN="hubx.market", ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver"])
+@override_settings(
+    HUBX_MARKET_ROOT_DOMAIN="hubx.market",
+    HUBX_PLATFORM_TENANT_SLUG="loja-platform",
+    HUBX_OPS_AUTH_GATE_ENFORCED=False,
+    ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver"],
+)
 class PlatformTenantAdminViewTests(TestCase):
     def setUp(self):
         self.tenant = Tenant.objects.create(

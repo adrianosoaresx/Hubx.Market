@@ -4,6 +4,99 @@ body {
   font-family: var(--font-family-base);
 }
 
+.ds-icon {
+  color: currentColor;
+  display: inline-block;
+  flex: 0 0 auto;
+  height: var(--icon-md, 1.25rem);
+  width: var(--icon-md, 1.25rem);
+}
+
+.ds-icon-sm {
+  height: var(--icon-sm, 1rem);
+  width: var(--icon-sm, 1rem);
+}
+
+.ds-icon-lg {
+  height: var(--icon-lg, 1.5rem);
+  width: var(--icon-lg, 1.5rem);
+}
+
+.ds-icon-xl {
+  height: var(--icon-xl, 2rem);
+  width: var(--icon-xl, 2rem);
+}
+
+.brand-identity {
+  align-items: center;
+  color: var(--color-text-primary);
+  display: inline-flex;
+  gap: 0.75rem;
+  min-width: 0;
+  text-decoration: none;
+}
+
+.brand-identity-mark {
+  align-items: center;
+  background: var(--brand-banner-accent, var(--color-action-primary-bg));
+  border-radius: var(--radius-md, 0.75rem);
+  color: var(--color-text-inverse, #ffffff);
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: var(--brand-logo-size-header, 2.375rem);
+  justify-content: center;
+  overflow: hidden;
+  width: var(--brand-logo-size-header, 2.375rem);
+}
+
+.brand-identity-sm .brand-identity-mark {
+  height: 2rem;
+  width: 2rem;
+}
+
+.brand-identity-lg .brand-identity-mark {
+  height: var(--brand-logo-size-banner, 3rem);
+  width: var(--brand-logo-size-banner, 3rem);
+}
+
+.brand-identity-logo {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.brand-identity-monogram {
+  font-size: 0.8125rem;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.brand-identity-lg .brand-identity-monogram {
+  font-size: 1rem;
+}
+
+.brand-identity-copy {
+  display: grid;
+  line-height: 1.15;
+  min-width: 0;
+}
+
+.brand-identity-name {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.brand-identity-scope {
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  margin-top: 0.2rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .ds-surface {
   background-color: var(--color-surface-panel, #ffffff);
   border: 1px solid var(--color-border-default, #e2e8f0);
@@ -258,6 +351,30 @@ body {
   transform: translateX(2px);
 }
 
+.customer-area-nav-link {
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md, 0.75rem);
+  color: var(--color-text-secondary);
+  display: flex;
+  gap: 0.625rem;
+  padding: 0.625rem 0.75rem;
+  text-decoration: none;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, transform 140ms ease;
+}
+
+.customer-area-nav-link:hover {
+  background: var(--color-surface-subtle, #f1f5f9);
+  color: var(--color-text-primary, #0f172a);
+}
+
+.customer-area-nav-link.is-active {
+  background: var(--admin-nav-active-bg, rgba(34, 197, 94, 0.10));
+  border-color: rgba(15, 118, 110, 0.18);
+  color: var(--admin-nav-active-text, #0f766e);
+  font-weight: 700;
+}
+
 .customer-area-hero {
   border: 1px solid var(--color-border-default, #e2e8f0);
   border-radius: 1.5rem;
@@ -284,9 +401,7 @@ body {
 }
 
 .admin-ops-shell {
-  background:
-    radial-gradient(circle at top right, rgba(79, 70, 229, 0.10), transparent 24rem),
-    var(--color-surface-page, #f8fafc);
+  background: var(--color-surface-page, #f8fafc);
 }
 
 .admin-ops-sidebar,
@@ -307,6 +422,30 @@ body {
 
 .admin-ops-nav a:hover {
   transform: translateX(2px);
+}
+
+.admin-ops-nav-link {
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md, 0.75rem);
+  color: var(--admin-nav-muted, var(--color-text-secondary));
+  display: flex;
+  gap: 0.625rem;
+  padding: 0.625rem 0.75rem;
+  text-decoration: none;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, transform 140ms ease;
+}
+
+.admin-ops-nav-link:hover {
+  background: var(--color-surface-subtle, #f1f5f9);
+  color: var(--color-text-primary, #0f172a);
+}
+
+.admin-ops-nav-link.is-active {
+  background: var(--admin-nav-active-bg, rgba(34, 197, 94, 0.10));
+  border-color: rgba(15, 118, 110, 0.18);
+  color: var(--admin-nav-active-text, #0f766e);
+  font-weight: 700;
 }
 
 .admin-ops-hero {
@@ -346,7 +485,16 @@ body {
 }
 
 .global-nav-link {
+  align-items: center;
+  background: transparent;
   border: 1px solid transparent;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  gap: 0.5rem;
+  line-height: 1;
+  min-height: 2.25rem;
+  text-decoration: none;
   transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, transform 140ms ease;
 }
 
@@ -357,6 +505,55 @@ body {
 
 .global-footer {
   box-shadow: 0 -1px 0 rgba(15, 23, 42, 0.02);
+}
+
+.storefront-footer-links {
+  display: grid;
+  gap: 0.625rem 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.storefront-footer-links a,
+.storefront-footer-hubx {
+  align-items: center;
+  color: var(--footer-link, var(--color-text-primary));
+  display: inline-flex;
+  gap: 0.5rem;
+  min-width: 0;
+  text-decoration: none;
+}
+
+.storefront-footer-links a {
+  border-radius: var(--radius-sm, 0.5rem);
+  padding: 0.25rem 0;
+  transition: color 140ms ease, transform 140ms ease;
+}
+
+.storefront-footer-links a:hover {
+  color: var(--color-action-primary-bg, #4f46e5);
+  transform: translateX(2px);
+}
+
+.storefront-footer-hubx {
+  color: var(--footer-hubx-text, var(--color-text-secondary));
+  justify-content: flex-start;
+}
+
+.storefront-identity-banner {
+  background:
+    linear-gradient(90deg, var(--brand-banner-bg, rgba(79, 70, 229, 0.08)), var(--color-surface-panel, #ffffff) 55%);
+  border-color: rgba(79, 70, 229, 0.18);
+}
+
+.storefront-identity-signal {
+  align-items: center;
+  background: var(--color-surface-panel, #ffffff);
+  border: 1px solid var(--color-border-default, #e2e8f0);
+  border-radius: var(--radius-md, 0.75rem);
+  display: inline-flex;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.625rem 0.75rem;
 }
 
 .home-hero {
@@ -462,6 +659,35 @@ body {
   .customer-area-nav {
     display: flex;
     min-width: max-content;
+  }
+}
+
+@media (max-width: 767px) {
+  .storefront-identity-banner .brand-identity-lg .brand-identity-mark {
+    height: 2.5rem;
+    width: 2.5rem;
+  }
+
+  .storefront-identity-banner .brand-identity-lg .brand-identity-monogram {
+    font-size: 0.875rem;
+  }
+
+  .storefront-identity-actions .ds-btn {
+    min-height: 2.5rem;
+    padding: 0.625rem 0.875rem;
+  }
+
+  .storefront-identity-signals {
+    font-size: 0.8125rem;
+  }
+
+  .storefront-identity-signal {
+    min-height: 2.25rem;
+    padding: 0.5rem 0.625rem;
+  }
+
+  .storefront-footer-links {
+    grid-template-columns: 1fr;
   }
 }
 

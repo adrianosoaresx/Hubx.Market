@@ -37,3 +37,20 @@ Hubx Market é a infraestrutura de e-commerce da Hubx voltada para empresas que 
 - `lojax.hubx.market`
 - `nike.hubx.market`
 - `demo.hubx.market`
+
+## Identidade em produto
+- Em storefront tenant-owned, a marca principal é a loja.
+- Hubx Market aparece como plataforma operadora, especialmente no footer.
+- Em admin da loja, a identidade do tenant aparece como contexto operacional.
+- Em project/platform owner, Hubx Market é a marca principal.
+
+## Fallback de logo
+- Quando não houver imagem de logo, usar monograma derivado do nome exibido.
+- O nome comercial preferencial é `store_display_name` quando existir.
+- Na ausência de nome comercial, usar `request.tenant.name`.
+- Upload/storage de logo permanece fora do primeiro corte de UI.
+
+## Footer
+- Texto padrão permitido: "Operado com Hubx Market".
+- Evitar transformar o footer em bloco promocional da Hubx.
+- Links úteis da loja devem ficar no footer para preservar header limpo.

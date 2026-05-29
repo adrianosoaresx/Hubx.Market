@@ -1,13 +1,56 @@
 <nav class="admin-ops-nav space-y-2 text-sm">
     {% if is_platform_admin_shell %}
-        <a href="/ops/platform/tenants/" class="block rounded-lg px-3 py-2 text-[var(--color-text-primary)] hover:bg-slate-100">Lojas</a>
-        <a href="/ops/platform/onboarding/" class="block rounded-lg px-3 py-2 text-[var(--color-text-primary)] hover:bg-slate-100">Onboarding</a>
-        <a href="/" class="block rounded-lg px-3 py-2 text-[var(--color-text-primary)] hover:bg-slate-100">Portal central</a>
+        <a href="/ops/platform/tenants/" class="admin-ops-nav-link {% if request.path == '/ops/platform/tenants/' %}is-active{% endif %}">
+            {% include "shared/partials/icon.html" with name="store" size="sm" %}
+            <span>Lojas</span>
+        </a>
+        <a href="/ops/platform/onboarding/" class="admin-ops-nav-link {% if request.path == '/ops/platform/onboarding/' %}is-active{% endif %}">
+            {% include "shared/partials/icon.html" with name="list" size="sm" %}
+            <span>Onboarding</span>
+        </a>
+        <a href="/" class="admin-ops-nav-link">
+            {% include "shared/partials/icon.html" with name="home" size="sm" %}
+            <span>Portal central</span>
+        </a>
     {% else %}
-        <a href="/ops/" class="block rounded-lg px-3 py-2 text-[var(--color-text-primary)] hover:bg-slate-100">Dashboard</a>
+        <a href="/ops/" class="admin-ops-nav-link {% if request.path == '/ops/' or request.path == '/ops' %}is-active{% endif %}">
+            {% include "shared/partials/icon.html" with name="layout-dashboard" size="sm" %}
+            <span>Dashboard</span>
+        </a>
         {% for item in admin_nav_items %}
             {% if "/ops/platform/" not in item.href %}
-                <a href="{{ item.href }}" class="block rounded-lg px-3 py-2 text-[var(--color-text-primary)] hover:bg-slate-100">{{ item.label }}</a>
+                <a href="{{ item.href }}" class="admin-ops-nav-link {% if request.path == item.href %}is-active{% endif %}">
+                    {% if item.label == "Pedidos" %}
+                        {% include "shared/partials/icon.html" with name="shopping-cart" size="sm" %}
+                    {% elif item.label == "Catálogo" %}
+                        {% include "shared/partials/icon.html" with name="package" size="sm" %}
+                    {% elif item.label == "Páginas" %}
+                        {% include "shared/partials/icon.html" with name="file-text" size="sm" %}
+                    {% elif item.label == "Newsletter" %}
+                        {% include "shared/partials/icon.html" with name="mail" size="sm" %}
+                    {% elif item.label == "Audit log" %}
+                        {% include "shared/partials/icon.html" with name="shield" size="sm" %}
+                    {% elif item.label == "API keys" %}
+                        {% include "shared/partials/icon.html" with name="key-round" size="sm" %}
+                    {% elif item.label == "Cupons" %}
+                        {% include "shared/partials/icon.html" with name="tag" size="sm" %}
+                    {% elif item.label == "Avaliações" %}
+                        {% include "shared/partials/icon.html" with name="check-circle" size="sm" %}
+                    {% elif item.label == "Clientes" %}
+                        {% include "shared/partials/icon.html" with name="users" size="sm" %}
+                    {% elif item.label == "Financeiro" %}
+                        {% include "shared/partials/icon.html" with name="credit-card" size="sm" %}
+                    {% elif item.label == "Refunds" %}
+                        {% include "shared/partials/icon.html" with name="rotate-ccw" size="sm" %}
+                    {% elif item.label == "Owners" or item.label == "MFA owners" %}
+                        {% include "shared/partials/icon.html" with name="user" size="sm" %}
+                    {% elif item.label == "Assinatura" %}
+                        {% include "shared/partials/icon.html" with name="receipt-text" size="sm" %}
+                    {% else %}
+                        {% include "shared/partials/icon.html" with name="list" size="sm" %}
+                    {% endif %}
+                    <span>{{ item.label }}</span>
+                </a>
             {% endif %}
         {% endfor %}
     {% endif %}

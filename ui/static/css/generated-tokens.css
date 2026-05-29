@@ -62,6 +62,35 @@
   --color-feedback-warning: #D97706;
   --color-feedback-danger: #DC2626;
   --focus-ring: rgba(79, 70, 229, 0.35);
+  --icon-sm: 1rem;
+  --icon-md: 1.25rem;
+  --icon-lg: 1.5rem;
+  --icon-xl: 2rem;
+  --icon-stroke: 2;
+  --icon-default: #0F172A;
+  --icon-muted: #475569;
+  --icon-brand: #4F46E5;
+  --icon-success: #22C55E;
+  --icon-warning: #D97706;
+  --icon-danger: #DC2626;
+  --brand-logo-size-header: 2.375rem;
+  --brand-logo-size-banner: 3rem;
+  --brand-banner-bg: rgba(79, 70, 229, 0.08);
+  --brand-banner-text: #0F172A;
+  --brand-banner-accent: #4F46E5;
+  --admin-sidebar-width: 16rem;
+  --admin-topbar-height: 4.5rem;
+  --admin-content-max: 80rem;
+  --admin-nav-active-bg: rgba(34, 197, 94, 0.10);
+  --admin-nav-active-text: #0F766E;
+  --admin-nav-muted: #475569;
+  --admin-surface-raised: #FFFFFF;
+  --admin-risk-accent: #B42318;
+  --admin-platform-accent: #2563EB;
+  --footer-bg: #FFFFFF;
+  --footer-text: #475569;
+  --footer-link: #0F172A;
+  --footer-hubx-text: #475569;
 
   /* Components tokens */
   --component-button-primary-bg: #4F46E5;

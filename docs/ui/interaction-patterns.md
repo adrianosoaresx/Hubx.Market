@@ -35,3 +35,18 @@ Padronizar fluxos de interação do usuário.
 ## Navegação
 - usar breadcrumbs quando necessário
 - manter retorno claro ao contexto anterior
+
+## Escopo tenant/platform
+- admin da loja deve indicar contexto tenant
+- platform owner deve indicar contexto platform
+- ações cross-tenant precisam de confirmação, estado de risco e trilha auditável visível quando aplicável
+
+## Identidade e marca
+- header deve reforçar a loja atual sem esconder navegação
+- Hubx Market deve aparecer como operador/plataforma, não como nome fixo da loja tenant-owned
+- footer pode concentrar links úteis para reduzir poluição no header
+
+## Iconografia
+- usar ícones em navegação, filtros, sort, cupom, entrega, pagamento, segurança, sucesso, erro e estados vazios
+- ícone não deve competir com preço, produto ou CTA principal
+- estados destrutivos devem usar iconografia e cor com parcimônia

@@ -1619,6 +1619,9 @@ Observações:
 - Platform Owner Context permite que `/ops/platform/...` use o portal central `hubx.market`, resolvendo `request.owner_user` por e-mail autenticado e permissão `platform.tenants.view`.
 - Login central em `hubx.market` direciona platform owner/admin para `/ops/platform/tenants/`, owner de loja única para `https?://{loja}.hubx.market/ops/` e owners multi-loja para `/accounts/select-store/`.
 - Login tenant-owned em `{loja}.hubx.market` continua respeitando `request.tenant` para storefront, customers e admin da loja.
+- Platform owner/admin em runtime central exige `OwnerUser` ativo no tenant reservado `platform-system` (`HUBX_PLATFORM_TENANT_SLUG`); role `owner` em uma loja comum não concede contexto platform no portal central.
+- Requests `/ops/platform/...` feitas em host tenant-owned são bloqueadas pelo gate; platform surfaces só rodam no host central.
+- O smoke local `local_e2e_smoke` valida login/redirect por perfil, menus contextuais, links GET locais, bloqueio de platform em host de loja e imagens do storefront.
 
 ---
 
