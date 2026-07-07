@@ -562,8 +562,9 @@ Branding institucional do storefront foi alterado por uma superfície administra
 
 Observações:
 - emitido como `AuditLog` por `tenants.application.storefront_branding_commands`;
-- payload registra tenant, flag de exibição e presença de logo, título, descrição, imagem e CTA;
+- payload registra tenant, flag de exibição e presença de logo, cor de conversão validada, título, descrição, imagem e CTA;
 - não deve carregar URL secreta, arquivo binário, dados de catálogo, pedidos, clientes ou pagamentos;
+- não deve carregar CSS arbitrário; a cor de conversão precisa chegar validada pelo command service;
 - exige tenant resolvido e permissão administrativa `storefront.branding.manage`.
 
 ---

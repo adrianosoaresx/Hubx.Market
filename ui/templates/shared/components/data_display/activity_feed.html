@@ -28,6 +28,9 @@
                                 {% if item.meta %}<span>{{ item.meta }}</span>{% endif %}
                                 {% if item.timestamp %}<span>{{ item.timestamp }}</span>{% endif %}
                             </div>
+                            {% if item.href %}
+                                <a class="ds-btn ds-btn-secondary ds-btn-sm mt-2" href="{{ item.href }}">Abrir</a>
+                            {% endif %}
                         </div>
                     </li>
                 {% endfor %}

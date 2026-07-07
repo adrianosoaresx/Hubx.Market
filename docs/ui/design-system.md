@@ -28,6 +28,9 @@ Garantir consistência visual, reutilização de componentes e previsibilidade d
 - Brand Gold: `#D6A937`
 - Primary: `#9A6410`
 - Primary Hover: `#794A0C`
+- Conversion Primary: `#9A6410`
+- Conversion Primary Hover: `#794A0C`
+- Conversion Primary Text: `#FFFFFF`
 - Accent: `#D6A937`
 - Surface: `#FFFFFF`
 - Background: `#F8FAFC`
@@ -39,6 +42,13 @@ Garantir consistência visual, reutilização de componentes e previsibilidade d
 - Success: `#16A34A`
 
 Observação: a paleta de marca segue o logo ouro do Hubx Market. Cores funcionais continuam separadas para preservar leitura de estados.
+
+### Cor primária de conversão
+- Botões `primary` usam os tokens `--color-conversion-primary-bg`, `--color-conversion-primary-bg-hover` e `--color-conversion-primary-text`.
+- O fallback oficial é a paleta Hubx (`#9A6410` / `#794A0C` / texto branco).
+- Tenants podem sobrescrever a cor por `Tenant.conversion_primary_color` em `/ops/branding/`.
+- A cor tenant-scoped precisa ser hexadecimal `#rrggbb` e passar contraste AA com texto branco; tons claros como highlight/amarelo não devem ser aceitos como CTA primário.
+- A customização altera hierarquia de CTA, não estados funcionais; `danger`, `success`, `warning` e `info` continuam semânticos.
 
 ### Modos claro e escuro
 - O tema claro é o padrão inicial e usa os tokens semânticos definidos em `:root`.
@@ -114,6 +124,9 @@ admin da loja, project/platform owner e portal central.
   - `brand/banner-bg`
   - `brand/banner-text`
   - `brand/banner-accent`
+  - `conversion/primary-bg`
+  - `conversion/primary-bg-hover`
+  - `conversion/primary-text`
 
 ### Banner compacto
 - home deve abrir com hero institucional curto, formal e orientado a conversão

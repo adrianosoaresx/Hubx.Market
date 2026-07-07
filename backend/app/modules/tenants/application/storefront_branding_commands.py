@@ -8,10 +8,12 @@ from django.db import connection
 
 from app.modules.accounts.application.admin_permissions import PERMISSION_STOREFRONT_BRANDING_MANAGE, admin_permissions
 from app.modules.audit.application.audit_log_commands import audit_log_commands
+from app.modules.tenants.domain.branding_colors import validate_conversion_primary_color
 
 
 BRANDING_FIELDS = (
     "logo_url",
+    "conversion_primary_color",
     "storefront_hero_enabled",
     "storefront_hero_title",
     "storefront_hero_description",
@@ -91,6 +93,7 @@ class DjangoOrmStorefrontBrandingCommandRepository:
             return {"result": "storefront-branding-invalid", "errors": errors}
 
         previous_enabled = bool(getattr(tenant, "storefront_hero_enabled", True))
+        previous_conversion_color = _string(getattr(tenant, "conversion_primary_color", ""))
         for field_name, value in values.items():
             setattr(tenant, field_name, value)
         tenant.save(update_fields=[*BRANDING_FIELDS, "updated_at"])
@@ -107,6 +110,8 @@ class DjangoOrmStorefrontBrandingCommandRepository:
                 "previous_enabled": previous_enabled,
                 "enabled": values["storefront_hero_enabled"],
                 "has_logo": bool(values["logo_url"]),
+                "previous_conversion_primary_color": bool(previous_conversion_color),
+                "has_conversion_primary_color": bool(values["conversion_primary_color"]),
                 "has_title": bool(values["storefront_hero_title"]),
                 "has_description": bool(values["storefront_hero_description"]),
                 "has_image": bool(values["storefront_hero_image_url"]),
@@ -118,6 +123,9 @@ class DjangoOrmStorefrontBrandingCommandRepository:
     def _validated_values(self, *, payload: dict[str, object]) -> tuple[dict[str, object], dict[str, str]]:
         errors: dict[str, str] = {}
         logo_url = _string(payload.get("logo_url"))
+        conversion_primary_color, conversion_color_error = validate_conversion_primary_color(
+            payload.get("conversion_primary_color")
+        )
         title = _string(payload.get("storefront_hero_title"))
         description = _string(payload.get("storefront_hero_description"))
         image_url = _string(payload.get("storefront_hero_image_url"))
@@ -126,6 +134,8 @@ class DjangoOrmStorefrontBrandingCommandRepository:
 
         if len(logo_url) > 500:
             errors["logo_url"] = "Use no máximo 500 caracteres."
+        if conversion_color_error:
+            errors["conversion_primary_color"] = conversion_color_error
         if len(title) > 160:
             errors["storefront_hero_title"] = "Use no máximo 160 caracteres."
         if len(description) > 600:
@@ -153,6 +163,7 @@ class DjangoOrmStorefrontBrandingCommandRepository:
         return (
             {
                 "logo_url": logo_url,
+                "conversion_primary_color": conversion_primary_color,
                 "storefront_hero_enabled": "storefront_hero_enabled" in payload
                 and _checkbox(payload.get("storefront_hero_enabled")),
                 "storefront_hero_title": title,

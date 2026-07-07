@@ -120,6 +120,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "app.modules.accounts.interfaces.context_processors.admin_shell_context",
                 "app.modules.pages.interfaces.context_processors.storefront_pages_context",
+                "app.modules.tenants.interfaces.context_processors.tenant_branding_context",
             ]
         },
     }

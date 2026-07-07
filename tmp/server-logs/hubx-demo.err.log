@@ -1376,3 +1376,646 @@ X:\Projeto\Hubx.market\backend\app\modules\subscriptions\admin.py changed, reloa
 Watching for file changes with StatReloader
 X:\Projeto\Hubx.market\backend\app\modules\subscriptions\application\subscription_coupon_commands.py changed, reloading.
 Watching for file changes with StatReloader
+[07/Jul/2026 14:38:26] "GET / HTTP/1.1" 200 14663
+[07/Jul/2026 14:38:26] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 95101
+[07/Jul/2026 14:38:26] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[07/Jul/2026 14:38:26] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[07/Jul/2026 14:38:26] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[07/Jul/2026 14:38:26] "GET /static/img/brand/hubx-public-hero.jpg HTTP/1.1" 200 215421
+[07/Jul/2026 14:38:26] "GET /static/js/app.js HTTP/1.1" 200 2101
+[07/Jul/2026 14:38:27] "GET /static/img/brand/favicon.ico HTTP/1.1" 200 8022
+[07/Jul/2026 14:38:49] "GET /demo/ HTTP/1.1" 200 18251
+[07/Jul/2026 14:38:52] "GET /accounts/demo-session/?profile=customer&return_url=http%3A%2F%2F127.0.0.1%3A8002%2Fdemo%2F HTTP/1.1" 302 0
+[07/Jul/2026 14:38:52] "GET / HTTP/1.1" 200 25054
+[07/Jul/2026 14:38:52] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 95101
+[07/Jul/2026 14:38:52] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[07/Jul/2026 14:38:52] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[07/Jul/2026 14:38:52] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[07/Jul/2026 14:38:52] "GET /static/js/app.js HTTP/1.1" 200 2101
+[07/Jul/2026 14:38:52] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 200 350859
+[07/Jul/2026 14:38:52] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 200 347555
+[07/Jul/2026 14:38:52] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 200 71272
+[07/Jul/2026 14:39:57] "GET /catalog/ HTTP/1.1" 200 48201
+[07/Jul/2026 14:39:57] "GET /media/demo-catalog/hubx-demo/demo-corda-speed-jump-1.jpg HTTP/1.1" 200 336956
+[07/Jul/2026 14:39:57] "GET /media/demo-catalog/hubx-demo/demo-bota-urban-trek-1.jpg HTTP/1.1" 200 320431
+[07/Jul/2026 14:39:57] "GET /media/demo-catalog/hubx-demo/demo-moletom-soft-zip-1.jpg HTTP/1.1" 200 411507
+[07/Jul/2026 14:39:57] "GET /media/demo-catalog/hubx-demo/demo-hidratante-body-fresh-1.jpg HTTP/1.1" 200 64124
+[07/Jul/2026 14:39:57] "GET /media/demo-catalog/hubx-demo/demo-camiseta-dry-fit-core-1.jpg HTTP/1.1" 200 430471
+[07/Jul/2026 14:39:57] "GET /media/demo-catalog/hubx-demo/demo-jaqueta-wind-shield-1.jpg HTTP/1.1" 200 318631
+X:\Projeto\Hubx.market\backend\app\modules\catalog\interfaces\views.py changed, reloading.
+Watching for file changes with StatReloader
+[07/Jul/2026 15:07:06] "GET /catalog/ HTTP/1.1" 200 48705
+[07/Jul/2026 15:07:06] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 95101
+[07/Jul/2026 15:07:06] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[07/Jul/2026 15:07:06] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[07/Jul/2026 15:07:06] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[07/Jul/2026 15:07:06] "GET /static/js/app.js HTTP/1.1" 200 2101
+[07/Jul/2026 15:07:06] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 200 350859
+[07/Jul/2026 15:07:06] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 200 347555
+[07/Jul/2026 15:07:06] "GET /media/demo-catalog/hubx-demo/demo-moletom-soft-zip-1.jpg HTTP/1.1" 200 411507
+[07/Jul/2026 15:07:06] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 200 71272
+[07/Jul/2026 15:07:06] "GET /media/demo-catalog/hubx-demo/demo-corda-speed-jump-1.jpg HTTP/1.1" 200 336956
+[07/Jul/2026 15:07:07] "GET /media/demo-catalog/hubx-demo/demo-bota-urban-trek-1.jpg HTTP/1.1" 200 320431
+[07/Jul/2026 15:07:07] "GET /media/demo-catalog/hubx-demo/demo-camiseta-dry-fit-core-1.jpg HTTP/1.1" 200 430471
+[07/Jul/2026 15:07:07] "GET /media/demo-catalog/hubx-demo/demo-jaqueta-wind-shield-1.jpg HTTP/1.1" 200 318631
+[07/Jul/2026 15:07:07] "GET /media/demo-catalog/hubx-demo/demo-hidratante-body-fresh-1.jpg HTTP/1.1" 200 64124
+[07/Jul/2026 15:07:07] "GET /static/img/brand/favicon.ico HTTP/1.1" 200 8022
+X:\Projeto\Hubx.market\backend\app\modules\tenants\models.py changed, reloading.
+Watching for file changes with StatReloader
+Internal Server Error: /accounts/logout/
+Traceback (most recent call last):
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\sqlite3\base.py", line 360, in execute
+    return super().execute(query, params)
+sqlite3.OperationalError: no such column: tenants_tenant.conversion_primary_color
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "X:\Projeto\Hubx.market\backend\app\modules\tenants\interfaces\middleware.py", line 70, in __call__
+    tenant = Tenant.objects.get(subdomain=subdomain, is_active=True)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 631, in get
+    num = len(clone)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 368, in __len__
+    self._fetch_all()
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\sql\compiler.py", line 1623, in execute_sql
+    cursor.execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 122, in execute
+    return super().execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\sqlite3\base.py", line 360, in execute
+    return super().execute(query, params)
+django.db.utils.OperationalError: no such column: tenants_tenant.conversion_primary_color
+[07/Jul/2026 15:07:35] "POST /accounts/logout/ HTTP/1.1" 500 161487
+Internal Server Error: /favicon.ico
+Traceback (most recent call last):
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\sqlite3\base.py", line 360, in execute
+    return super().execute(query, params)
+sqlite3.OperationalError: no such column: tenants_tenant.conversion_primary_color
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "X:\Projeto\Hubx.market\backend\app\modules\tenants\interfaces\middleware.py", line 70, in __call__
+    tenant = Tenant.objects.get(subdomain=subdomain, is_active=True)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 631, in get
+    num = len(clone)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 368, in __len__
+    self._fetch_all()
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\sql\compiler.py", line 1623, in execute_sql
+    cursor.execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 122, in execute
+    return super().execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\sqlite3\base.py", line 360, in execute
+    return super().execute(query, params)
+django.db.utils.OperationalError: no such column: tenants_tenant.conversion_primary_color
+[07/Jul/2026 15:07:35] "GET /favicon.ico HTTP/1.1" 500 160271
+X:\Projeto\Hubx.market\backend\app\modules\tenants\interfaces\storefront_branding_views.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\tenants\application\storefront_branding_commands.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\tenants\application\tenant_onboarding_commands.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\tenants\migrations\0006_tenant_conversion_primary_color.py changed, reloading.
+Watching for file changes with StatReloader
+Internal Server Error: /catalog/
+Traceback (most recent call last):
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\sqlite3\base.py", line 360, in execute
+    return super().execute(query, params)
+sqlite3.OperationalError: no such column: tenants_tenant.conversion_primary_color
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "X:\Projeto\Hubx.market\backend\app\modules\tenants\interfaces\middleware.py", line 70, in __call__
+    tenant = Tenant.objects.get(subdomain=subdomain, is_active=True)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 631, in get
+    num = len(clone)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 368, in __len__
+    self._fetch_all()
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\sql\compiler.py", line 1623, in execute_sql
+    cursor.execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 122, in execute
+    return super().execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\sqlite3\base.py", line 360, in execute
+    return super().execute(query, params)
+django.db.utils.OperationalError: no such column: tenants_tenant.conversion_primary_color
+[07/Jul/2026 15:27:20] "GET /catalog/ HTTP/1.1" 500 161094
+Internal Server Error: /favicon.ico
+Traceback (most recent call last):
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\sqlite3\base.py", line 360, in execute
+    return super().execute(query, params)
+sqlite3.OperationalError: no such column: tenants_tenant.conversion_primary_color
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "X:\Projeto\Hubx.market\backend\app\modules\tenants\interfaces\middleware.py", line 70, in __call__
+    tenant = Tenant.objects.get(subdomain=subdomain, is_active=True)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 631, in get
+    num = len(clone)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 368, in __len__
+    self._fetch_all()
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\sql\compiler.py", line 1623, in execute_sql
+    cursor.execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 122, in execute
+    return super().execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\sqlite3\base.py", line 360, in execute
+    return super().execute(query, params)
+django.db.utils.OperationalError: no such column: tenants_tenant.conversion_primary_color
+[07/Jul/2026 15:27:20] "GET /favicon.ico HTTP/1.1" 500 160652
+Internal Server Error: /catalog/
+Traceback (most recent call last):
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\sqlite3\base.py", line 360, in execute
+    return super().execute(query, params)
+sqlite3.OperationalError: no such column: tenants_tenant.conversion_primary_color
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "X:\Projeto\Hubx.market\backend\app\modules\tenants\interfaces\middleware.py", line 70, in __call__
+    tenant = Tenant.objects.get(subdomain=subdomain, is_active=True)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 631, in get
+    num = len(clone)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 368, in __len__
+    self._fetch_all()
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\sql\compiler.py", line 1623, in execute_sql
+    cursor.execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 122, in execute
+    return super().execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\sqlite3\base.py", line 360, in execute
+    return super().execute(query, params)
+django.db.utils.OperationalError: no such column: tenants_tenant.conversion_primary_color
+[07/Jul/2026 15:27:30] "GET /catalog/ HTTP/1.1" 500 161094
+Internal Server Error: /favicon.ico
+Traceback (most recent call last):
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\sqlite3\base.py", line 360, in execute
+    return super().execute(query, params)
+sqlite3.OperationalError: no such column: tenants_tenant.conversion_primary_color
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "X:\Projeto\Hubx.market\backend\app\modules\tenants\interfaces\middleware.py", line 70, in __call__
+    tenant = Tenant.objects.get(subdomain=subdomain, is_active=True)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 631, in get
+    num = len(clone)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 368, in __len__
+    self._fetch_all()
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\sql\compiler.py", line 1623, in execute_sql
+    cursor.execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 122, in execute
+    return super().execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\sqlite3\base.py", line 360, in execute
+    return super().execute(query, params)
+django.db.utils.OperationalError: no such column: tenants_tenant.conversion_primary_color
+[07/Jul/2026 15:27:30] "GET /favicon.ico HTTP/1.1" 500 160652
+Internal Server Error: /
+Traceback (most recent call last):
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\sqlite3\base.py", line 360, in execute
+    return super().execute(query, params)
+sqlite3.OperationalError: no such column: tenants_tenant.conversion_primary_color
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "X:\Projeto\Hubx.market\backend\app\modules\tenants\interfaces\middleware.py", line 70, in __call__
+    tenant = Tenant.objects.get(subdomain=subdomain, is_active=True)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 631, in get
+    num = len(clone)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 368, in __len__
+    self._fetch_all()
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\sql\compiler.py", line 1623, in execute_sql
+    cursor.execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 122, in execute
+    return super().execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\sqlite3\base.py", line 360, in execute
+    return super().execute(query, params)
+django.db.utils.OperationalError: no such column: tenants_tenant.conversion_primary_color
+[07/Jul/2026 15:27:32] "GET / HTTP/1.1" 500 160474
+Internal Server Error: /favicon.ico
+Traceback (most recent call last):
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\sqlite3\base.py", line 360, in execute
+    return super().execute(query, params)
+sqlite3.OperationalError: no such column: tenants_tenant.conversion_primary_color
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "X:\Projeto\Hubx.market\backend\app\modules\tenants\interfaces\middleware.py", line 70, in __call__
+    tenant = Tenant.objects.get(subdomain=subdomain, is_active=True)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 631, in get
+    num = len(clone)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 368, in __len__
+    self._fetch_all()
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\sql\compiler.py", line 1623, in execute_sql
+    cursor.execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 122, in execute
+    return super().execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\sqlite3\base.py", line 360, in execute
+    return super().execute(query, params)
+django.db.utils.OperationalError: no such column: tenants_tenant.conversion_primary_color
+[07/Jul/2026 15:27:32] "GET /favicon.ico HTTP/1.1" 500 160379
+Internal Server Error: /demo/
+Traceback (most recent call last):
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\sqlite3\base.py", line 360, in execute
+    return super().execute(query, params)
+sqlite3.OperationalError: no such column: tenants_tenant.conversion_primary_color
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\views\generic\base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\views\generic\base.py", line 144, in dispatch
+    return handler(request, *args, **kwargs)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\views\generic\base.py", line 228, in get
+    context = self.get_context_data(**kwargs)
+  File "X:\Projeto\Hubx.market\backend\app\modules\catalog\interfaces\views.py", line 1581, in get_context_data
+    demo_tenant = Tenant.objects.filter(subdomain=demo_subdomain, is_active=True).first()
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 1106, in first
+    for obj in queryset[:1]:
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 386, in __iter__
+    self._fetch_all()
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\sql\compiler.py", line 1623, in execute_sql
+    cursor.execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 122, in execute
+    return super().execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\sqlite3\base.py", line 360, in execute
+    return super().execute(query, params)
+django.db.utils.OperationalError: no such column: tenants_tenant.conversion_primary_color
+[07/Jul/2026 15:27:33] "GET /demo/ HTTP/1.1" 500 174943
+Not Found: /favicon.ico
+[07/Jul/2026 15:27:33] "GET /favicon.ico HTTP/1.1" 404 8747
+[07/Jul/2026 15:27:35] "GET / HTTP/1.1" 200 14668
+[07/Jul/2026 15:27:35] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 97479
+[07/Jul/2026 15:27:35] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[07/Jul/2026 15:27:35] "GET /static/js/app.js HTTP/1.1" 200 2101
+[07/Jul/2026 15:27:35] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[07/Jul/2026 15:27:35] "GET /static/img/brand/hubx-public-hero.jpg HTTP/1.1" 200 215421
+[07/Jul/2026 15:27:35] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[07/Jul/2026 15:27:37] "GET / HTTP/1.1" 200 14668
+[07/Jul/2026 15:27:37] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 97479
+[07/Jul/2026 15:27:37] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[07/Jul/2026 15:27:37] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[07/Jul/2026 15:27:37] "GET /static/img/brand/hubx-public-hero.jpg HTTP/1.1" 200 215421
+[07/Jul/2026 15:27:37] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[07/Jul/2026 15:27:37] "GET /static/js/app.js HTTP/1.1" 200 2101
+[07/Jul/2026 15:27:37] "GET /static/img/brand/favicon.ico HTTP/1.1" 200 8022
+Internal Server Error: /demo/
+Traceback (most recent call last):
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\sqlite3\base.py", line 360, in execute
+    return super().execute(query, params)
+sqlite3.OperationalError: no such column: tenants_tenant.conversion_primary_color
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\core\handlers\base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\views\generic\base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\views\generic\base.py", line 144, in dispatch
+    return handler(request, *args, **kwargs)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\views\generic\base.py", line 228, in get
+    context = self.get_context_data(**kwargs)
+  File "X:\Projeto\Hubx.market\backend\app\modules\catalog\interfaces\views.py", line 1581, in get_context_data
+    demo_tenant = Tenant.objects.filter(subdomain=demo_subdomain, is_active=True).first()
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 1106, in first
+    for obj in queryset[:1]:
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 386, in __iter__
+    self._fetch_all()
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\models\sql\compiler.py", line 1623, in execute_sql
+    cursor.execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 122, in execute
+    return super().execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\db\backends\sqlite3\base.py", line 360, in execute
+    return super().execute(query, params)
+django.db.utils.OperationalError: no such column: tenants_tenant.conversion_primary_color
+[07/Jul/2026 15:27:40] "GET /demo/ HTTP/1.1" 500 175074
+Not Found: /favicon.ico
+[07/Jul/2026 15:27:40] "GET /favicon.ico HTTP/1.1" 404 8747
+[07/Jul/2026 15:28:33] "GET /demo/ HTTP/1.1" 200 18256
+[07/Jul/2026 15:29:54] "GET /demo/ HTTP/1.1" 200 18256
+[07/Jul/2026 15:29:54] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 304 0
+[07/Jul/2026 15:29:59] "GET /accounts/demo-session/?profile=customer&return_url=http%3A%2F%2F127.0.0.1%3A8002%2Fdemo%2F HTTP/1.1" 302 0
+[07/Jul/2026 15:29:59] "GET / HTTP/1.1" 200 25059
+[07/Jul/2026 15:30:05] "GET / HTTP/1.1" 200 25059
+[07/Jul/2026 15:30:05] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 97479
+[07/Jul/2026 15:30:05] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[07/Jul/2026 15:30:05] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[07/Jul/2026 15:30:05] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 200 350859
+[07/Jul/2026 15:30:05] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[07/Jul/2026 15:30:05] "GET /static/js/app.js HTTP/1.1" 200 2101
+[07/Jul/2026 15:30:05] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 200 71272
+[07/Jul/2026 15:30:05] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 200 347555
+[07/Jul/2026 15:30:05] "GET /static/img/brand/favicon.ico HTTP/1.1" 200 8022
+[07/Jul/2026 15:30:08] "GET /catalog/demo-bolsa-tote-canvas/ HTTP/1.1" 200 24186
+[07/Jul/2026 15:30:08] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-4.jpg HTTP/1.1" 200 334489
+[07/Jul/2026 15:30:08] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-2.jpg HTTP/1.1" 200 335082
+[07/Jul/2026 15:30:08] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-3.jpg HTTP/1.1" 200 461428
+[07/Jul/2026 15:30:17] "GET /catalog/ HTTP/1.1" 200 48710
+[07/Jul/2026 15:31:08] "GET /catalog/?q=&category=calcados&offer=&price_min=&price_max= HTTP/1.1" 200 36638
+[07/Jul/2026 15:31:08] "GET /media/demo-catalog/hubx-demo/demo-tenis-trail-grip-1.jpg HTTP/1.1" 200 293138
+[07/Jul/2026 15:31:08] "GET /media/demo-catalog/hubx-demo/demo-sandalia-cloud-step-1.jpg HTTP/1.1" 200 255429
+[07/Jul/2026 15:31:08] "GET /media/demo-catalog/hubx-demo/demo-tenis-aero-run-1.jpg HTTP/1.1" 200 305493
+[07/Jul/2026 15:31:08] "GET /media/demo-catalog/hubx-demo/demo-tenis-street-flex-1.jpg HTTP/1.1" 200 345004
+[07/Jul/2026 15:31:27] "GET /catalog/ HTTP/1.1" 200 48710
+[07/Jul/2026 15:33:15] "GET /catalog/demo-almofada-lumbar-rest/ HTTP/1.1" 200 24041
+[07/Jul/2026 15:33:15] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 304 0
+[07/Jul/2026 15:33:16] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-3.jpg HTTP/1.1" 200 396194
+[07/Jul/2026 15:33:16] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-2.jpg HTTP/1.1" 200 347842
+[07/Jul/2026 15:33:16] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-4.jpg HTTP/1.1" 200 393699
+[07/Jul/2026 15:33:31] "GET /catalog/ HTTP/1.1" 200 48692
+[07/Jul/2026 15:33:36] "GET /catalog/ HTTP/1.1" 200 48692
+[07/Jul/2026 15:33:38] "GET /catalog/ HTTP/1.1" 200 48692
+[07/Jul/2026 15:34:56] "GET / HTTP/1.1" 200 25053
+[07/Jul/2026 15:35:00] "GET / HTTP/1.1" 200 25053
+[07/Jul/2026 15:35:01] "POST /accounts/logout/ HTTP/1.1" 302 0
+[07/Jul/2026 15:35:01] "GET /demo/ HTTP/1.1" 200 18256
+[07/Jul/2026 15:35:01] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 304 0
+[07/Jul/2026 15:35:03] "GET / HTTP/1.1" 200 14668
+[07/Jul/2026 15:35:17] "GET /demo/ HTTP/1.1" 200 18256
+[07/Jul/2026 15:35:21] "GET /accounts/demo-session/?profile=customer&return_url=http%3A%2F%2F127.0.0.1%3A8002%2Fdemo%2F HTTP/1.1" 302 0
+[07/Jul/2026 15:35:22] "GET / HTTP/1.1" 200 25053
+[07/Jul/2026 15:39:14] "GET / HTTP/1.1" 200 25030
+[07/Jul/2026 15:40:28] "GET /static/img/brand/hubx-public-hero.jpg HTTP/1.1" 200 215421
+[07/Jul/2026 15:41:50] "GET / HTTP/1.1" 200 25030
+[07/Jul/2026 15:41:50] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[07/Jul/2026 15:41:50] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 97479
+[07/Jul/2026 15:41:50] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[07/Jul/2026 15:41:50] "GET /static/img/brand/hubx-public-hero.jpg HTTP/1.1" 200 215421
+[07/Jul/2026 15:41:50] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[07/Jul/2026 15:41:50] "GET /static/js/app.js HTTP/1.1" 200 2101
+[07/Jul/2026 15:41:50] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 200 350859
+[07/Jul/2026 15:41:50] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 200 347555
+[07/Jul/2026 15:41:50] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 200 71272
+[07/Jul/2026 15:41:50] "GET /static/img/brand/favicon.ico HTTP/1.1" 200 8022
+[07/Jul/2026 15:42:21] "GET /catalog/demo-almofada-lumbar-rest/ HTTP/1.1" 200 24041
+[07/Jul/2026 15:43:10] "GET /cart/?demo_flow=cart HTTP/1.1" 200 29395
+[07/Jul/2026 15:43:28] "GET /checkout/?demo_flow=checkout&stage=review HTTP/1.1" 200 44881
+[07/Jul/2026 15:45:00] "GET /cart/?demo_flow=cart HTTP/1.1" 200 29395
+[07/Jul/2026 15:45:05] "GET /accounts/account/orders/ HTTP/1.1" 200 23280
+[07/Jul/2026 15:45:13] "GET /catalog/ HTTP/1.1" 200 48669
+[07/Jul/2026 15:45:13] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 304 0
+[07/Jul/2026 15:45:13] "GET /media/demo-catalog/hubx-demo/demo-bota-urban-trek-1.jpg HTTP/1.1" 304 0
+[07/Jul/2026 15:45:14] "GET /media/demo-catalog/hubx-demo/demo-moletom-soft-zip-1.jpg HTTP/1.1" 304 0
+[07/Jul/2026 15:45:14] "GET /media/demo-catalog/hubx-demo/demo-corda-speed-jump-1.jpg HTTP/1.1" 304 0
+[07/Jul/2026 15:45:14] "GET /media/demo-catalog/hubx-demo/demo-camiseta-dry-fit-core-1.jpg HTTP/1.1" 304 0
+[07/Jul/2026 15:45:14] "GET /media/demo-catalog/hubx-demo/demo-hidratante-body-fresh-1.jpg HTTP/1.1" 304 0
+[07/Jul/2026 15:45:14] "GET /media/demo-catalog/hubx-demo/demo-jaqueta-wind-shield-1.jpg HTTP/1.1" 304 0
+[07/Jul/2026 15:45:15] "POST /accounts/logout/ HTTP/1.1" 302 0
+[07/Jul/2026 15:45:15] "GET /demo/ HTTP/1.1" 200 18256
+[07/Jul/2026 15:45:15] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 304 0
+[07/Jul/2026 15:45:17] "GET /accounts/demo-session/?profile=admin&return_url=http%3A%2F%2F127.0.0.1%3A8002%2Fdemo%2F HTTP/1.1" 302 0
+[07/Jul/2026 15:45:18] "GET /ops/ HTTP/1.1" 200 42719
+[07/Jul/2026 15:47:26] "GET /ops/orders/ HTTP/1.1" 200 30076
+[07/Jul/2026 15:47:31] "GET /ops/catalog/products/ HTTP/1.1" 200 32917
+[07/Jul/2026 15:47:42] "GET /ops/catalog/products/demo-suporte-notebook-lift/ HTTP/1.1" 200 56353
+X:\Projeto\Hubx.market\backend\app\modules\accounts\application\admin_merchant_operations_queries.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\accounts\interfaces\merchant_ops_views.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\accounts\interfaces\merchant_ops_views.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\accounts\application\admin_merchant_operations_queries.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\accounts\application\admin_merchant_operations_queries.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\accounts\interfaces\merchant_ops_views.py changed, reloading.
+Watching for file changes with StatReloader
+[07/Jul/2026 15:54:12] "GET /ops/ HTTP/1.1" 302 0
+[07/Jul/2026 15:54:12] "GET /accounts/login/?next=%2Fops%2F HTTP/1.1" 200 16758
+[07/Jul/2026 15:54:23] "GET /ops/ HTTP/1.1" 302 0
+[07/Jul/2026 15:54:23] "GET /accounts/login/?next=%2Fops%2F HTTP/1.1" 200 16758
+[07/Jul/2026 15:54:34] "GET /accounts/demo-session/?profile=admin&return_url=http%3A%2F%2Fhubx-demo.localhost%3A8002%2Fops%2F HTTP/1.1" 302 0
+[07/Jul/2026 15:54:34] "GET /ops/ HTTP/1.1" 200 41710
+[07/Jul/2026 15:54:34,990] - Broken pipe from ('127.0.0.1', 61140)
+X:\Projeto\Hubx.market\backend\app\modules\accounts\application\admin_merchant_operations_queries.py changed, reloading.
+Watching for file changes with StatReloader
+[07/Jul/2026 15:59:19] "GET /ops/catalog/products/demo-suporte-notebook-lift/ HTTP/1.1" 200 56469
+[07/Jul/2026 15:59:19] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 97479
+[07/Jul/2026 15:59:19] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[07/Jul/2026 15:59:19] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[07/Jul/2026 15:59:19] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[07/Jul/2026 15:59:19] "GET /static/js/app.js HTTP/1.1" 200 2101
+[07/Jul/2026 15:59:19] "GET /static/img/brand/favicon.ico HTTP/1.1" 200 8022
+[07/Jul/2026 15:59:22] "GET /ops/ HTTP/1.1" 200 41710
+[07/Jul/2026 15:59:48] "GET /ops/orders/ HTTP/1.1" 200 30076
+[07/Jul/2026 15:59:54] "GET /ops/catalog/products/ HTTP/1.1" 200 32917
+[07/Jul/2026 15:59:58] "GET /ops/catalog/products/demo-suporte-notebook-lift/ HTTP/1.1" 200 56469
+[07/Jul/2026 16:01:51] "GET /ops/newsletter/ HTTP/1.1" 200 31039
+[07/Jul/2026 16:02:01] "GET /ops/coupons/ HTTP/1.1" 200 28460
+[07/Jul/2026 16:02:12] "GET /ops/api-keys/ HTTP/1.1" 200 25660
+[07/Jul/2026 16:03:43] "GET /accounts/demo-session/?profile=admin&return_url=http%3A%2F%2Fhubx-demo.localhost%3A8002%2Fops%2Fcatalog%2Fproducts%2Fdemo-suporte-notebook-lift%2F HTTP/1.1" 302 0
+[07/Jul/2026 16:03:45] "GET /ops/catalog/products/demo-suporte-notebook-lift/ HTTP/1.1" 200 56511
+[07/Jul/2026 16:03:45,676] - Broken pipe from ('127.0.0.1', 52218)
+[07/Jul/2026 16:04:16] "GET /accounts/demo-session/?profile=admin&return_url=http%3A%2F%2Fhubx-demo.localhost%3A8002%2Fops%2Fcatalog%2Fproducts%2Fdemo-suporte-notebook-lift%2F HTTP/1.1" 302 0
+[07/Jul/2026 16:04:16] "GET /ops/ HTTP/1.1" 200 41710
+[07/Jul/2026 16:04:16] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 97489
+[07/Jul/2026 16:04:16] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[07/Jul/2026 16:04:16] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[07/Jul/2026 16:04:16] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[07/Jul/2026 16:04:16] "GET /static/js/app.js HTTP/1.1" 200 2101
+[07/Jul/2026 16:04:17] "GET /ops/catalog/products/demo-suporte-notebook-lift/ HTTP/1.1" 200 56511
+[07/Jul/2026 16:05:13] "POST /accounts/logout/ HTTP/1.1" 302 0
+[07/Jul/2026 16:05:13] "GET /demo/ HTTP/1.1" 200 18256
+[07/Jul/2026 16:05:13] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 97489
+[07/Jul/2026 16:05:18] "GET / HTTP/1.1" 200 14668
+[07/Jul/2026 16:05:21] "GET /plans/ HTTP/1.1" 200 39717

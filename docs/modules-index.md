@@ -78,7 +78,7 @@ Readiness:
 - System Validation Pass 2 adiciona `system_template_regression_smoke` para validar Home, Loja, Login, Meus pedidos, `/ops/` e `/ops/platform/tenants/` contra 404/link legado/template quebrado.
 - Platform Self-Service Tenant Onboarding adiciona `/ops/platform/onboarding/` com wizard controlado para loja, plano interno, owner, branding mínimo, domínio e conclusão auditável.
 - Storefront Institutional Hero adiciona campos `storefront_hero_*` em `Tenant` e query service de branding para renderizar hero tenant-owned na home da loja, com fallback visual para imagem de produto do próprio tenant.
-- Storefront Branding Settings adiciona `/ops/branding/` para lojistas configurarem `Tenant.logo_url` e campos `Tenant.storefront_hero_*`, com permissão `storefront.branding.manage` e auditoria tenant-scoped.
+- Storefront Branding Settings adiciona `/ops/branding/` para lojistas configurarem `Tenant.logo_url`, `Tenant.conversion_primary_color` e campos `Tenant.storefront_hero_*`, com permissão `storefront.branding.manage` e auditoria tenant-scoped.
 
 ---
 

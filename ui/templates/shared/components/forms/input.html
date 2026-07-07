@@ -16,7 +16,7 @@
             type="{{ input_type }}"
             value="{{ value|default:'' }}"
             placeholder="{{ placeholder|default:'' }}"
-            class="ds-input {% if size == 'sm' %}ds-input-sm{% elif size == 'lg' %}ds-input-lg{% endif %} {% if prefix %}pl-10{% endif %} {% if suffix %}pr-10{% endif %}"
+            class="ds-input {% if size == 'sm' %}ds-input-sm{% elif size == 'lg' %}ds-input-lg{% endif %} {% if prefix %}ds-input-has-prefix{% endif %} {% if suffix %}ds-input-has-suffix{% endif %}"
             aria-invalid="{% if invalid %}true{% else %}false{% endif %}"
             {% if invalid and error_text %}aria-describedby="{{ input_id }}-error"{% elif help_text %}aria-describedby="{{ input_id }}-help"{% endif %}
             {% if required %}required{% endif %}

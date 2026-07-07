@@ -153,7 +153,7 @@ api-keys
 Responsabilidades:
 
 - gerenciamento de lojas
-- branding e configurações institucionais leves da storefront
+- branding, cor primária de conversão e configurações institucionais leves da storefront
 - autenticação de usuários administrativos
 - planos SaaS
 - aquisição pública de planos como lead seguro

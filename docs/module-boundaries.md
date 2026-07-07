@@ -337,8 +337,9 @@ Gerenciar lojas, subdomínios, branding, modo manutenção, configurações do t
 `tenants` é o núcleo do contexto SaaS.
 - identidade institucional da storefront pertence a `tenants`; páginas de commerce devem consumir contratos de application/query como `storefront_branding_queries`, sem reimplementar fallback de branding por conta própria.
 - campos `Tenant.storefront_hero_*` representam configuração leve da home tenant-owned; eles não devem carregar regra de catálogo, estoque, pedido, pagamento ou page builder.
+- `Tenant.conversion_primary_color` pertence a `tenants` e só pode influenciar CTAs primários por tokens/variáveis do design system; cores sem contraste AA ou CSS arbitrário não atravessam a fronteira.
 - quando uma storefront precisar de imagem fallback para o hero, ela pode passar uma URL já tenant-scoped do próprio catálogo para o query service; esse fallback não autoriza leitura cross-tenant nem transforma `catalog` em dono do branding.
-- a configuração administrativa desses campos e de `Tenant.logo_url` nasce em `/ops/branding/`, com view fina em `tenants.interfaces`, command service em `tenants.application`, permissão `storefront.branding.manage` definida em `accounts` e `AuditLog` tenant-scoped.
+- a configuração administrativa desses campos, de `Tenant.logo_url` e de `Tenant.conversion_primary_color` nasce em `/ops/branding/`, com view fina em `tenants.interfaces`, command service em `tenants.application`, permissão `storefront.branding.manage` definida em `accounts` e `AuditLog` tenant-scoped.
 
 ### Platform Store Management
 

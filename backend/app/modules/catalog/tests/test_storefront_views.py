@@ -228,6 +228,48 @@ class StorefrontViewTests(TestCase):
         self.assertContains(response, "Tênis Hubx Runner")
         self.assertContains(response, "curadoria leve")
 
+    def test_catalog_list_view_exposes_infinite_scroll_product_fragment(self):
+        for index in range(10):
+            product = Product.objects.create(
+                tenant=self.tenant,
+                name=f"Produto Scroll {index:02d}",
+                slug=f"produto-scroll-{index:02d}",
+                brand_name="Hubx",
+                category_label="Acessórios",
+                description="Produto criado para validar a paginação progressiva.",
+                status=Product.Status.ACTIVE,
+                is_active=True,
+            )
+            ProductVariant.objects.create(
+                product=product,
+                sku=f"SCROLL-{index:02d}-UN",
+                label="Único",
+                price="99.90",
+                stock=10,
+                is_default=True,
+                is_active=True,
+            )
+
+        response = self.client.get(reverse("storefront:catalog-list"), HTTP_HOST=self.storefront_host)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "pages/templates/catalog_page.html")
+        self.assertContains(response, "storefront-product-load-more")
+        self.assertContains(response, 'hx-trigger="revealed"')
+        self.assertContains(response, "fragment=products")
+
+        fragment_response = self.client.get(
+            reverse("storefront:catalog-list"),
+            {"page": 2, "fragment": "products"},
+            HTTP_HOST=self.storefront_host,
+            HTTP_HX_REQUEST="true",
+        )
+
+        self.assertEqual(fragment_response.status_code, 200)
+        self.assertTemplateUsed(fragment_response, "pages/partials/catalog_product_page.html")
+        self.assertContains(fragment_response, "Produto Scroll")
+        self.assertNotContains(fragment_response, "storefront-catalog-meta")
+
     def test_catalog_list_view_applies_search_filter(self):
         response = self.client.get(reverse("storefront:catalog-list"), {"q": "mochila"}, HTTP_HOST=self.storefront_host)
 

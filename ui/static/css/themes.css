@@ -10,6 +10,9 @@
   --tenant-brand-primary: var(--component-button-primary-bg, #9a6410);
   --tenant-brand-primary-hover: var(--component-button-primary-bg-hover, #794a0c);
   --tenant-brand-secondary: var(--color-action-secondary);
+  --tenant-conversion-primary: var(--tenant-brand-primary, var(--component-button-primary-bg, #9a6410));
+  --tenant-conversion-primary-hover: var(--tenant-brand-primary-hover, var(--component-button-primary-bg-hover, #794a0c));
+  --tenant-conversion-primary-text: var(--component-button-primary-text, #ffffff);
   --tenant-radius-base: var(--radius-md);
 }
 
@@ -92,21 +95,35 @@
   --tenant-brand-primary-hover: #794a0c;
   --tenant-brand-secondary: #d6a937;
   --tenant-brand-highlight: #ffe797;
+  --tenant-conversion-primary: #9a6410;
+  --tenant-conversion-primary-hover: #794a0c;
 }
 
 [data-tenant="storefront"] {
   --tenant-brand-primary: #0f766e;
   --tenant-brand-primary-hover: #115e59;
   --tenant-brand-secondary: #f59e0b;
+  --tenant-conversion-primary: #0f766e;
+  --tenant-conversion-primary-hover: #115e59;
 }
 
 [data-tenant="nike"] {
   --tenant-brand-primary: #111827;
   --tenant-brand-primary-hover: #1f2937;
   --tenant-brand-secondary: #ef4444;
+  --tenant-conversion-primary: #111827;
+  --tenant-conversion-primary-hover: #1f2937;
 }
 
 [data-tenant] {
-  --color-action-primary-bg: var(--tenant-brand-primary, var(--component-button-primary-bg, #9a6410));
-  --color-action-primary-bg-hover: var(--tenant-brand-primary-hover, var(--component-button-primary-bg-hover, #794a0c));
+  --color-conversion-primary-bg: var(--tenant-conversion-primary, var(--tenant-brand-primary, var(--component-button-primary-bg, #9a6410)));
+  --color-conversion-primary-bg-hover: var(--tenant-conversion-primary-hover, var(--tenant-brand-primary-hover, var(--component-button-primary-bg-hover, #794a0c)));
+  --color-conversion-primary-text: var(--tenant-conversion-primary-text, var(--component-button-primary-text, #ffffff));
+  --component-button-primary-bg: var(--color-conversion-primary-bg);
+  --component-button-primary-bg-hover: var(--color-conversion-primary-bg-hover);
+  --component-button-primary-text: var(--color-conversion-primary-text);
+  --color-action-primary-bg: var(--component-button-primary-bg);
+  --color-action-primary-bg-hover: var(--component-button-primary-bg-hover);
+  --color-action-primary-text: var(--component-button-primary-text);
+  --color-border-primary: var(--color-action-primary-bg);
 }

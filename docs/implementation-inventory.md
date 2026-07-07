@@ -59,7 +59,7 @@ O corte atual cobre storefront, catálogo, carrinho, checkout, pedidos, pagament
 
 | Módulo | Modelos principais | Superfícies implementadas | Estado atual |
 | --- | --- | --- | --- |
-| `tenants` | `Tenant`, `TenantOnboarding` | middleware de tenant, platform tenant admin, onboarding platform, custom domain atrás de flag, hero institucional da storefront, `/ops/branding/` | operacional para gestão interna e branding leve da home; DNS/TLS/billing real fora |
+| `tenants` | `Tenant`, `TenantOnboarding` | middleware de tenant, platform tenant admin, onboarding platform, custom domain atrás de flag, hero institucional da storefront, cor primária de conversão, `/ops/branding/` | operacional para gestão interna e branding leve da home; DNS/TLS/billing real fora |
 | `accounts` | `AccountProfile`, `OwnerUser`, `OwnerMfaFactor`, `OwnerMfaRecoveryCode` | login owner/admin, customer area, `/ops/owners/`, MFA, RBAC, métricas owner access/MFA | amplo e sensível; depende de env/gates para produção |
 | `subscriptions` | `SubscriptionPlan`, `TenantSubscription`, `SubscriptionAcquisitionLead` | `/plans/`, `/plans/signup/`, fila platform de aquisições, admin read-only e commands foundation | aquisição pública segura, trial de 30 dias/cartão obrigatório como contrato de plano; billing provider, captura de cartão e enforcement fora |
 | `audit` | `AuditLog` | writer, admin read-only, export, closures/evidências | implementado para ações explícitas; sem middleware global |
@@ -95,7 +95,7 @@ Principais grupos de rota registrados:
 - `/api-keys/metrics/public-endpoints/` métricas protegidas por token;
 - `/notifications/metrics/email-logs/` métricas protegidas por token;
 - `/ops/...` cockpit/admin por módulo;
-- `/ops/branding/` configuração tenant-scoped de logo e hero institucional da loja;
+- `/ops/branding/` configuração tenant-scoped de logo, cor primária de conversão e hero institucional da loja;
 - `/ops/catalog/products/`, `/ops/catalog/products/new/`, `/ops/catalog/products/<slug>/edit/` e `/ops/catalog/products/<slug>/actions/deactivate/` para CRUD administrativo básico de produtos;
 - `/ops/platform/tenants/` gestão platform de tenants;
 - `/ops/platform/onboarding/` onboarding platform self-service.

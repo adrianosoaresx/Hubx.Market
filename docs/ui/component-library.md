@@ -31,7 +31,7 @@ Definir os componentes reutilizáveis oficiais do Hubx Market.
 - não substituir label textual por ícone sem `aria-label`
 
 ### Regras de uso
-- `primary`: ação principal da tela ou fluxo
+- `primary`: ação principal da tela ou fluxo; usa a cor primária de conversão do design system e, em tenant-owned surfaces, pode vir de `Tenant.conversion_primary_color` apenas quando validada para contraste AA com texto branco
 - `secondary`: alternativa segura ou navegação de apoio
 - `ghost`: ação de baixa ênfase em barras, listas e menus
 - `danger`: ação destrutiva ou irreversível, sempre com contexto

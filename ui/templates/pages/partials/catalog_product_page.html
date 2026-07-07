@@ -1,0 +1,17 @@
+{% for product in products %}
+    {% with href=product.href image_url=product.image_url image_alt=product.image_alt eyebrow=product.eyebrow title=product.title subtitle=product.subtitle badge_label=product.badge_label badge_variant=product.badge_variant price=product.price compare_price=product.compare_price price_helper=product.price_helper meta=product.meta availability_note=product.availability_note review_summary=product.review_summary stock_state=product.stock_state stock_label=product.stock_label stock_helper=product.stock_helper action_label=product.action_label actions=product.actions clickable=product.clickable %}
+        {% include "shared/components/composite/product_card.html" %}
+    {% endwith %}
+{% endfor %}
+
+{% if infinite_scroll_enabled and load_more_url %}
+    <div class="storefront-product-load-more md:col-span-2 lg:col-span-3"
+         hx-get="{{ load_more_url }}"
+         hx-trigger="revealed"
+         hx-swap="outerHTML">
+        <a class="ds-btn ds-btn-secondary ds-btn-md w-full" href="{{ next_url }}">
+            {% include "shared/partials/icon.html" with name="loader-circle" size="sm" %}
+            <span>Carregar mais produtos</span>
+        </a>
+    </div>
+{% endif %}

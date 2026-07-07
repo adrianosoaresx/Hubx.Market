@@ -2,6 +2,7 @@
 
 ## Tenant
 Loja do SaaS. Identificada por slug/subdomínio.
+Guarda branding leve da loja, incluindo `logo_url`, `conversion_primary_color` e campos `storefront_hero_*`.
 
 ## OwnerUser
 Usuário administrativo da loja.

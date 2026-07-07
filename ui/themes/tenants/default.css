@@ -3,6 +3,8 @@
  * --tenant-brand-primary
  * --tenant-brand-primary-hover
  * --tenant-brand-secondary
+ * --tenant-conversion-primary
+ * --tenant-conversion-primary-hover
  * --tenant-radius-base
  */
 
@@ -11,5 +13,8 @@
   --tenant-brand-primary: var(--component-button-primary-bg, #9a6410);
   --tenant-brand-primary-hover: var(--component-button-primary-bg-hover, #794a0c);
   --tenant-brand-secondary: var(--color-action-secondary);
+  --tenant-conversion-primary: var(--tenant-brand-primary, var(--component-button-primary-bg, #9a6410));
+  --tenant-conversion-primary-hover: var(--tenant-brand-primary-hover, var(--component-button-primary-bg-hover, #794a0c));
+  --tenant-conversion-primary-text: var(--component-button-primary-text, #ffffff);
   --tenant-radius-base: var(--radius-md);
 }

@@ -71,7 +71,7 @@ Definir esqueletos padrão de página.
 - listas operacionais devem usar filtros compactos, toolbar tokenizada e tabelas DS sem cores arbitrárias por template
 - listas CRUD operacionais devem expor ações descobríveis por linha para detalhe/edição quando a permissão permitir
 - status renderizado por helpers de interface deve emitir `ds-badge`; progresso operacional deve usar `ds-progress`
-- `/ops/branding/` usa template de formulário admin com campo de URL pública do logo e preview do partial `storefront_institutional_hero.html`; a prévia deve consumir o mesmo contrato `storefront_hero` da storefront.
+- `/ops/branding/` usa template de formulário admin com campo de URL pública do logo, cor primária de conversão e preview do partial `storefront_institutional_hero.html`; a prévia deve consumir o mesmo contrato `storefront_hero` da storefront.
 
 ## Project/platform owner
 - sidebar com Hubx Market e escopo platform

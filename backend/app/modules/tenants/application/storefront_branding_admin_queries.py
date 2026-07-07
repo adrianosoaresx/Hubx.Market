@@ -15,6 +15,7 @@ class StorefrontBrandingAdminQueryService:
         if tenant is None:
             return {
                 "logo_url": "",
+                "conversion_primary_color": "",
                 "storefront_hero_enabled": False,
                 "storefront_hero_title": "",
                 "storefront_hero_description": "",
@@ -24,6 +25,7 @@ class StorefrontBrandingAdminQueryService:
             }
         return {
             "logo_url": _string(getattr(tenant, "logo_url", "")),
+            "conversion_primary_color": _string(getattr(tenant, "conversion_primary_color", "")),
             "storefront_hero_enabled": bool(getattr(tenant, "storefront_hero_enabled", True)),
             "storefront_hero_title": _string(getattr(tenant, "storefront_hero_title", "")),
             "storefront_hero_description": _string(getattr(tenant, "storefront_hero_description", "")),

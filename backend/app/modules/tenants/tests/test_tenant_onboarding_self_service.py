@@ -53,6 +53,7 @@ class TenantOnboardingSelfServiceTests(TestCase):
         tenant = Tenant.objects.get(slug="nova-loja")
         self.assertEqual(tenant.subdomain, "nova-loja")
         self.assertEqual(tenant.custom_domain, "nova.example.com")
+        self.assertEqual(tenant.conversion_primary_color, "#9a6410")
         self.assertTrue(TenantSubscription.objects.filter(tenant=tenant, plan__code="starter").exists())
         self.assertTrue(OwnerUser.objects.filter(tenant=tenant, email="new.owner@hubx.market", role="owner").exists())
         onboarding.refresh_from_db()

@@ -7,6 +7,7 @@ class Tenant(models.Model):
     subdomain = models.SlugField(max_length=63, unique=True)
     custom_domain = models.CharField(max_length=255, null=True, blank=True)
     logo_url = models.URLField(max_length=500, blank=True)
+    conversion_primary_color = models.CharField(max_length=7, blank=True)
     storefront_hero_enabled = models.BooleanField(default=True)
     storefront_hero_title = models.CharField(max_length=160, blank=True)
     storefront_hero_description = models.TextField(blank=True)

@@ -32,6 +32,7 @@ Hubx Market é a infraestrutura de e-commerce da Hubx voltada para empresas que 
 - Logo gold: `#D6A937`
 - Primary: `#9A6410`
 - Primary hover/shadow: `#794A0C`
+- Conversion Primary: `#9A6410` com texto branco; tenants podem sobrescrever apenas por cor hexadecimal validada com contraste AA.
 - Background/Text: `#0F172A`
 
 As cores funcionais de feedback continuam semânticas e não devem ser substituídas por ouro quando comunicarem sucesso, erro, alerta ou informação operacional.
@@ -50,6 +51,7 @@ As cores funcionais de feedback continuam semânticas e não devem ser substitu�
 
 ## Fallback de logo
 - Quando `Tenant.logo_url` estiver configurado, usar essa imagem como marca principal da loja em shells tenant-owned e blocos institucionais.
+- Quando `Tenant.conversion_primary_color` estiver configurado, usar essa cor apenas para CTAs primários de conversão e estados de foco correlatos, mantendo feedback funcional separado.
 - Quando não houver imagem de logo, usar monograma derivado do nome exibido.
 - O nome comercial preferencial é `store_display_name` quando existir.
 - Na ausência de nome comercial, usar `request.tenant.name`.

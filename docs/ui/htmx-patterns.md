@@ -24,6 +24,13 @@ Sugeridas:
 - `_form.html`
 - `_modal.html`
 
+## Rolagem infinita progressiva
+- usar apenas para listas públicas ou operacionais em que paginação sequencial seja suficiente
+- manter paginação HTML tradicional como fallback navegável
+- carregar apenas o próximo fragmento com `hx-get` e `hx-trigger="revealed"`
+- retornar partials sem shell/layout completo quando `fragment=` indicar uma resposta parcial
+- preservar filtros, busca, ordenação e tenant resolvido na URL do próximo fragmento
+
 ## Regras
 - definir `hx-target` explicitamente
 - usar `hx-swap` coerente

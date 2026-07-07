@@ -150,6 +150,7 @@ Boas práticas:
 - cachear listagens populares
 - cachear configurações do tenant
 - evitar cachear dados altamente mutáveis
+- tratar branding leve do tenant, como `conversion_primary_color`, como configuração pequena e cacheável junto do tenant resolvido; a renderização deve usar variáveis CSS request-scoped, sem estado global por loja.
 
 ---
 

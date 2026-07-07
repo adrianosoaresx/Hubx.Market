@@ -27,6 +27,7 @@ class SeedDemoCatalogCommandTests(TestCase):
         self.assertEqual(products.count(), 2)
         tenant.refresh_from_db()
         self.assertEqual(tenant.name, "Seed Demo Store")
+        self.assertEqual(tenant.storefront_hero_image_url, "")
         self.assertEqual(products.filter(status=Product.Status.ACTIVE, is_active=True).count(), 2)
         self.assertEqual(ProductVariant.objects.filter(product__in=products).count(), 6)
         self.assertEqual(ProductImage.objects.filter(product__in=products).count(), 4)
@@ -60,6 +61,10 @@ class SeedDemoCatalogCommandTests(TestCase):
 
         tenant.refresh_from_db()
         self.assertEqual(tenant.name, "Hubx Market Demo")
+        self.assertEqual(
+            tenant.storefront_hero_image_url,
+            "http://hubx-demo.localhost:8002/static/img/brand/hubx-public-hero.jpg",
+        )
         self.assertFalse(Product.objects.filter(tenant=tenant, slug="legacy-product").exists())
         self.assertEqual(Product.objects.filter(tenant=tenant, slug__startswith="demo-").count(), 1)
         self.assertFalse(ProductImage.objects.filter(product__tenant=tenant, image_url__endswith=".svg").exists())

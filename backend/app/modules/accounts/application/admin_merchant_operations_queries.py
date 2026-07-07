@@ -168,14 +168,7 @@ class AdminMerchantOperationsQueryService:
             ],
             "tasks": tasks,
             "activity_items": self._build_activity_items(tasks),
-            "audit_entries": self._build_audit_entries(
-                orders=len(orders),
-                products=len(products),
-                customers=len(customers),
-                shipments=len(shipments),
-                owners=len(owners),
-                tenant_id=tenant_id,
-            ),
+            "recent_activity_items": self._build_recent_activity_items(tasks),
             "summary": self._summary(tasks),
         }
 
@@ -186,17 +179,17 @@ class AdminMerchantOperationsQueryService:
             return [
                 {
                     "title": "Operação sem bloqueio crítico",
-                    "description": "Nenhum sinal prioritário apareceu no recorte atual.",
+                    "description": "Nenhuma pendência prioritária apareceu no recorte atual.",
                     "timestamp": "agora",
                     "badge_label": "OK",
                     "badge_variant": "success",
-                    "meta": "Leitura consolidada",
+                    "meta": "Atualizado agora",
                 }
             ]
         return [
             {
                 "title": task["action"],
-                "description": f"{task['count']} sinal(is): {task['signal']}.",
+                "description": f"{task['count']} pendência(s): {task['signal']}.",
                 "timestamp": "agora",
                 "badge_label": task["area"],
                 "badge_variant": "warning" if task["severity"] == "warning" else "info",
@@ -206,33 +199,30 @@ class AdminMerchantOperationsQueryService:
         ]
 
     @staticmethod
-    def _build_audit_entries(
-        *,
-        orders: int,
-        products: int,
-        customers: int,
-        shipments: int,
-        owners: int,
-        tenant_id: int | None,
-    ) -> list[dict[str, str]]:
-        tenant_label = f"tenant_id={tenant_id}" if tenant_id else "tenant não resolvido"
+    def _build_recent_activity_items(tasks: list[dict[str, Any]]) -> list[dict[str, str]]:
+        active_tasks = [task for task in tasks if int(task["count"]) > 0]
+        if not active_tasks:
+            return [
+                {
+                    "title": "Nenhuma ação crítica pendente",
+                    "description": "A operação não tem pendências prioritárias no recorte atual.",
+                    "timestamp": "agora",
+                    "badge_label": "OK",
+                    "badge_variant": "success",
+                    "meta": "Dashboard da loja",
+                }
+            ]
         return [
             {
+                "title": task["action"],
+                "description": f"{task['count']} pendência(s): {task['signal']}.",
                 "timestamp": "agora",
-                "actor": "merchant-ops",
-                "badge_label": "Leitura",
-                "badge_variant": "info",
-                "target": "Pedidos/Catálogo/Clientes",
-                "meta": f"{orders} pedido(s), {products} produto(s), {customers} cliente(s) · {tenant_label}",
-            },
-            {
-                "timestamp": "agora",
-                "actor": "merchant-ops",
-                "badge_label": "Leitura",
-                "badge_variant": "neutral",
-                "target": "Shipping/Owners",
-                "meta": f"{shipments} entrega(s), {owners} owner(s)",
-            },
+                "badge_label": task["area"],
+                "badge_variant": "warning" if task["severity"] == "warning" else "info",
+                "meta": str(task["href"]),
+                "href": str(task["href"]),
+            }
+            for task in active_tasks[:4]
         ]
 
     @staticmethod

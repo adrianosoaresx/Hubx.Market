@@ -22,6 +22,7 @@ def _request_owner_role(request) -> str:
 def _form_values_from_payload(payload: dict[str, object]) -> dict[str, object]:
     return {
         "logo_url": payload.get("logo_url", ""),
+        "conversion_primary_color": payload.get("conversion_primary_color", ""),
         "storefront_hero_enabled": "storefront_hero_enabled" in payload,
         "storefront_hero_title": payload.get("storefront_hero_title", ""),
         "storefront_hero_description": payload.get("storefront_hero_description", ""),
@@ -46,7 +47,7 @@ class StorefrontBrandingSettingsView(TemplateView):
         return {
             "page_title": "Branding da loja",
             "page_eyebrow": "Conteúdo",
-            "page_description": "Configure logo e hero institucional exibidos no storefront tenant-owned.",
+            "page_description": "Configure logo, cor de conversão e hero institucional exibidos no storefront tenant-owned.",
             "page_meta": f"Escopo tenant · role: {_request_owner_role(self.request) or 'compatibilidade legada'}",
             "form_action": reverse("tenant_branding:storefront-branding-settings"),
             "cancel_href": reverse("merchant_ops:admin-dashboard"),

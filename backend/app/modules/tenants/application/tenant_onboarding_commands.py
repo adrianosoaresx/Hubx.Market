@@ -23,6 +23,10 @@ from app.modules.tenants.application.platform_tenant_admin_commands import (
     _string,
     platform_tenant_admin_commands,
 )
+from app.modules.tenants.domain.branding_colors import (
+    DEFAULT_CONVERSION_PRIMARY,
+    validate_conversion_primary_color,
+)
 from app.modules.tenants.models import Tenant, TenantOnboarding
 
 
@@ -53,12 +57,13 @@ def _check_manage_permission(*, actor_role: object, denied_result: str) -> dict[
 
 
 def _primary_color(value: object) -> str:
-    color = _string(value, limit=7)
-    if not color:
-        return ""
-    if len(color) == 7 and color.startswith("#") and all(character in "0123456789abcdefABCDEF" for character in color[1:]):
-        return color.lower()
-    return ""
+    color, _error = validate_conversion_primary_color(value)
+    return color
+
+
+def _primary_color_error(value: object) -> str:
+    _color, error = validate_conversion_primary_color(value)
+    return error
 
 
 def _money(value: object) -> Decimal:
@@ -170,7 +175,7 @@ class TenantOnboardingCommandService:
             status=TenantOnboarding.Status.DRAFT,
             store_name=_string(payload.get("store_name") or payload.get("name"), limit=150),
             store_display_name=_string(payload.get("store_display_name") or payload.get("store_name") or payload.get("name"), limit=150),
-            primary_color=_primary_color(payload.get("primary_color")) or "#9a6410",
+            primary_color=_primary_color(payload.get("primary_color")) or DEFAULT_CONVERSION_PRIMARY,
             created_by_label=_string(actor_label, limit=180),
         )
         audit_result = self._record_platform_event(
@@ -284,6 +289,10 @@ class TenantOnboardingCommandService:
                         tenant_result.get("errors") or {"__all__": "Não foi possível criar a loja."},
                     )
                 tenant = tenant_result["tenant"]
+                Tenant.objects.filter(pk=tenant["id"]).update(
+                    conversion_primary_color=locked.primary_color,
+                    updated_at=timezone.now(),
+                )
 
                 subscription_result = subscription_commands.set_tenant_subscription(
                     tenant_id=tenant["id"],
@@ -428,7 +437,7 @@ class TenantOnboardingCommandService:
             if not display_name:
                 errors["store_display_name"] = "Nome comercial é obrigatório."
             if not primary_color:
-                errors["primary_color"] = "Cor primária deve usar formato hexadecimal, ex.: #9a6410."
+                errors["primary_color"] = _primary_color_error(payload.get("primary_color")) or "Cor primária deve usar formato hexadecimal, ex.: #9a6410."
             if not errors:
                 onboarding.store_display_name = display_name
                 onboarding.primary_color = primary_color
@@ -461,7 +470,7 @@ class TenantOnboardingCommandService:
         if not onboarding.store_display_name:
             errors["store_display_name"] = "Nome comercial é obrigatório."
         if not _primary_color(onboarding.primary_color):
-            errors["primary_color"] = "Cor primária deve usar formato hexadecimal."
+            errors["primary_color"] = _primary_color_error(onboarding.primary_color) or "Cor primária deve usar formato hexadecimal."
         if onboarding.custom_domain and Tenant.objects.filter(custom_domain__iexact=onboarding.custom_domain).exists():
             errors["custom_domain"] = "Já existe uma loja com este domínio customizado."
         return errors

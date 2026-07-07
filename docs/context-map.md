@@ -52,7 +52,7 @@ Responsável pela **infraestrutura do SaaS**.
 Inclui:
 
 - gerenciamento de tenants
-- branding institucional leve da storefront
+- branding institucional leve da storefront, incluindo cor primária de conversão
 - controle de usuários da plataforma
 - assinaturas do SaaS
 - billing da plataforma

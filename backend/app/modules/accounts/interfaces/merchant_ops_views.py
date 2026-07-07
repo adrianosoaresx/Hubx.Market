@@ -224,6 +224,7 @@ class MerchantOperationsDashboardView(TemplateView):
         tasks = _filter_tasks_for_request(self.request, dashboard["tasks"])
         nav_items = _allowed_nav_items(self.request)
         activity_items = admin_merchant_operations_queries._build_activity_items(tasks)
+        recent_activity_items = admin_merchant_operations_queries._build_recent_activity_items(tasks)
         summary = admin_merchant_operations_queries._summary(tasks)
 
         context.update(
@@ -264,17 +265,17 @@ class MerchantOperationsDashboardView(TemplateView):
                 "chart_value": summary,
                 "chart_delta": "tenant-scoped",
                 "chart_trend": "neutral",
-                "chart_meta": "Leitura em tempo real",
+                "chart_meta": "Atualizado agora",
                 "chart_footer": "Este cockpit não cria nova regra de negócio; ele aponta para superfícies operacionais existentes.",
                 "activity_title": "O que merece atenção",
-                "activity_description": "Top sinais derivados de pedidos, estoque, catálogo, clientes, entregas e owners.",
+                "activity_description": "Principais pendências de pedidos, estoque, catálogo, clientes, entregas e owners.",
                 "activity_items": activity_items,
                 "table_title": "Filas operacionais",
                 "table_description": "Primeiro mapa para o lojista decidir a próxima ação.",
                 "table_count": f"{len(tasks)} frente(s) visível(is)",
                 "table_columns": [
                     {"label": "Área"},
-                    {"label": "Sinal"},
+                    {"label": "Pendência"},
                     {"label": "Quantidade"},
                     {"label": "Ação"},
                 ],
@@ -290,10 +291,12 @@ class MerchantOperationsDashboardView(TemplateView):
                     for task in tasks
                 ],
                 "table_empty_title": "Nenhuma fila operacional",
-                "table_empty_description": "Não há sinais consolidados para este tenant no momento.",
-                "audit_title": "Sinais por módulo",
-                "audit_description": "Leitura consolidada dos módulos consumidos pelo cockpit.",
-                "audit_entries": dashboard["audit_entries"],
+                "table_empty_description": "Não há pendências consolidadas para este tenant no momento.",
+                "recent_activity_title": "Atividades recentes",
+                "recent_activity_description": "Próximas ações operacionais geradas pelas filas da loja.",
+                "recent_activity_items": recent_activity_items,
+                "recent_activity_empty_title": "Nenhuma atividade recente",
+                "recent_activity_empty_description": "Novas pendências e atualizações operacionais aparecerão aqui.",
             }
         )
         return context

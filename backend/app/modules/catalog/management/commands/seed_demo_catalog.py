@@ -81,6 +81,7 @@ VARIANT_OPTIONS = {
 
 
 DEMO_IMAGE_FIXTURE_DIR = Path(settings.BASE_DIR) / "app" / "modules" / "catalog" / "fixtures" / "demo_product_images"
+DEMO_STOREFRONT_HERO_IMAGE_PATH = "/static/img/brand/hubx-public-hero.jpg"
 RASTER_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp")
 
 
@@ -113,9 +114,20 @@ class Command(BaseCommand):
             image_host = f"http://{tenant.subdomain}.localhost:8002"
 
         with transaction.atomic():
+            tenant_update_fields: list[str] = []
             if store_name and tenant.name != store_name:
                 tenant.name = store_name
-                tenant.save(update_fields=["name", "updated_at"])
+                tenant_update_fields.append("name")
+            if tenant.subdomain == _official_demo_subdomain():
+                hero_image_url = f"{image_host}{DEMO_STOREFRONT_HERO_IMAGE_PATH}"
+                if tenant.storefront_hero_image_url != hero_image_url:
+                    tenant.storefront_hero_image_url = hero_image_url
+                    tenant_update_fields.append("storefront_hero_image_url")
+                if not tenant.storefront_hero_enabled:
+                    tenant.storefront_hero_enabled = True
+                    tenant_update_fields.append("storefront_hero_enabled")
+            if tenant_update_fields:
+                tenant.save(update_fields=[*tenant_update_fields, "updated_at"])
             if options["reset_seed"]:
                 if options["reset_tenant_catalog"]:
                     Product.objects.filter(tenant=tenant).delete()
@@ -239,10 +251,16 @@ class Command(BaseCommand):
 
 def _fixture_image_source(*, product_slug: str, category: str, index: int) -> Path | None:
     candidates: list[Path] = []
+    category_slug = slugify(category)
     for extension in RASTER_EXTENSIONS:
         candidates.append(DEMO_IMAGE_FIXTURE_DIR / "products" / f"{product_slug}-{index}{extension}")
         candidates.append(DEMO_IMAGE_FIXTURE_DIR / "products" / f"{product_slug}{extension}")
+        candidates.append(DEMO_IMAGE_FIXTURE_DIR / f"{category_slug}{extension}")
     return next((candidate for candidate in candidates if candidate.exists()), None)
+
+
+def _official_demo_subdomain() -> str:
+    return str(getattr(settings, "HUBX_MARKET_DEMO_TENANT_SUBDOMAIN", "hubx-demo") or "hubx-demo").strip().lower()
 
 
 def _write_raster_fallback(

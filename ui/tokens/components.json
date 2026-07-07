@@ -1,9 +1,9 @@
 {
   "button": {
     "primary": {
-      "bg": { "value": "{action.primary.value}" },
-      "bg_hover": { "value": "{action.primary_hover.value}" },
-      "text": { "value": "{text.inverse.value}" },
+      "bg": { "value": "{conversion.primary_bg.value}" },
+      "bg_hover": { "value": "{conversion.primary_bg_hover.value}" },
+      "text": { "value": "{conversion.primary_text.value}" },
       "radius": { "value": "{radius.md.value}" }
     },
     "secondary": {

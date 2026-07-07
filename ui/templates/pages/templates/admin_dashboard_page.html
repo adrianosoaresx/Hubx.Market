@@ -27,7 +27,7 @@
             {% include "shared/components/data_display/data_table.html" with title=table_title|default:"Operação" description=table_description|default:"Bloco reutilizável para listagens operacionais." count=table_count columns=table_columns rows=table_rows table_id=table_id|default:"admin-dashboard-table" actions=table_actions selection_count=selection_count bulk_actions=bulk_actions page=page total_pages=total_pages prev_url=prev_url next_url=next_url page_items=page_items empty_title=table_empty_title|default:"Nenhum registro operacional" empty_description=table_empty_description|default:"Use esta área para pedidos, clientes, tickets ou qualquer fila operacional." empty_primary_action=table_empty_primary_action empty_secondary_action=table_empty_secondary_action hx_target_id=hx_target_id showcase_mode=showcase_mode %}
         </div>
 
-        {% include "shared/components/data_display/audit_log.html" with title=audit_title|default:"Audit Log" description=audit_description|default:"Histórico estruturado de ações sensíveis e eventos do sistema." entries=audit_entries empty_title=audit_empty_title empty_description=audit_empty_description showcase_mode=True %}
+        {% include "shared/components/data_display/activity_feed.html" with title=recent_activity_title|default:"Atividades recentes" description=recent_activity_description|default:"Eventos e próximos passos operacionais." items=recent_activity_items empty_title=recent_activity_empty_title empty_description=recent_activity_empty_description showcase_mode=showcase_mode %}
     </section>
 </section>
 {% endblock %}

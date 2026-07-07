@@ -1335,3 +1335,172 @@ Quit the server with CTRL-BREAK.
 
 WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
 For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Performing system checks...
+
+System check identified no issues (0 silenced).
+
+You have 2 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): subscriptions, tenants.
+Run 'python manage.py migrate' to apply them.
+July 07, 2026 - 12:36:40
+Django version 5.2.13, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8002/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Performing system checks...
+
+System check identified no issues (0 silenced).
+
+You have 2 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): subscriptions, tenants.
+Run 'python manage.py migrate' to apply them.
+July 07, 2026 - 14:45:19
+Django version 5.2.13, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8002/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Performing system checks...
+
+System check identified no issues (0 silenced).
+
+You have 3 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): subscriptions, tenants.
+Run 'python manage.py migrate' to apply them.
+July 07, 2026 - 15:07:34
+Django version 5.2.13, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8002/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Performing system checks...
+
+System check identified no issues (0 silenced).
+
+You have 3 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): subscriptions, tenants.
+Run 'python manage.py migrate' to apply them.
+July 07, 2026 - 15:07:45
+Django version 5.2.13, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8002/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Performing system checks...
+
+System check identified no issues (0 silenced).
+
+You have 3 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): subscriptions, tenants.
+Run 'python manage.py migrate' to apply them.
+July 07, 2026 - 15:07:53
+Django version 5.2.13, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8002/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Performing system checks...
+
+System check identified no issues (0 silenced).
+
+You have 3 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): subscriptions, tenants.
+Run 'python manage.py migrate' to apply them.
+July 07, 2026 - 15:08:42
+Django version 5.2.13, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8002/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Performing system checks...
+
+System check identified no issues (0 silenced).
+
+You have 3 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): subscriptions, tenants.
+Run 'python manage.py migrate' to apply them.
+July 07, 2026 - 15:14:20
+Django version 5.2.13, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8002/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Performing system checks...
+
+System check identified no issues (0 silenced).
+
+You have 1 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): subscriptions.
+Run 'python manage.py migrate' to apply them.
+July 07, 2026 - 15:51:56
+Django version 5.2.13, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8002/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Performing system checks...
+
+System check identified no issues (0 silenced).
+
+You have 1 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): subscriptions.
+Run 'python manage.py migrate' to apply them.
+July 07, 2026 - 15:52:07
+Django version 5.2.13, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8002/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Performing system checks...
+
+System check identified no issues (0 silenced).
+
+You have 1 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): subscriptions.
+Run 'python manage.py migrate' to apply them.
+July 07, 2026 - 15:52:22
+Django version 5.2.13, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8002/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Performing system checks...
+
+System check identified no issues (0 silenced).
+
+You have 1 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): subscriptions.
+Run 'python manage.py migrate' to apply them.
+July 07, 2026 - 15:52:37
+Django version 5.2.13, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8002/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Performing system checks...
+
+System check identified no issues (0 silenced).
+
+You have 1 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): subscriptions.
+Run 'python manage.py migrate' to apply them.
+July 07, 2026 - 15:53:28
+Django version 5.2.13, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8002/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/
+Performing system checks...
+
+System check identified no issues (0 silenced).
+
+You have 1 unapplied migration(s). Your project may not work properly until you apply the migrations for app(s): subscriptions.
+Run 'python manage.py migrate' to apply them.
+July 07, 2026 - 15:53:41
+Django version 5.2.13, using settings 'config.settings'
+Starting development server at http://0.0.0.0:8002/
+Quit the server with CTRL-BREAK.
+
+WARNING: This is a development server. Do not use it in a production setting. Use a production WSGI or ASGI server instead.
+For more information on production servers see: https://docs.djangoproject.com/en/5.2/howto/deployment/

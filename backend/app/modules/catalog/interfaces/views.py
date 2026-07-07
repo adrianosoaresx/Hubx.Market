@@ -1296,6 +1296,12 @@ class AdminProductDeactivateView(View):
 
 class CatalogListView(TemplateView):
     template_name = "pages/templates/catalog_page.html"
+    product_page_template_name = "pages/partials/catalog_product_page.html"
+
+    def get_template_names(self):
+        if self.request.GET.get("fragment") == "products":
+            return [self.product_page_template_name]
+        return super().get_template_names()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -1376,6 +1382,10 @@ class CatalogListView(TemplateView):
         def page_url(number: int) -> str:
             suffix = "&".join(query_params)
             return f"{base_url}?{suffix + '&' if suffix else ''}page={number}"
+
+        def product_page_url(number: int) -> str:
+            suffix = "&".join([*query_params, f"page={number}", "fragment=products"])
+            return f"{base_url}?{suffix}"
 
         category_label = next(
             (option["label"] for option in _storefront_category_options() if option["value"] == category_selected),
@@ -1490,6 +1500,8 @@ class CatalogListView(TemplateView):
                 "total_pages": paginator.num_pages,
                 "prev_url": page_url(page_obj.previous_page_number()) if page_obj.has_previous() else None,
                 "next_url": page_url(page_obj.next_page_number()) if page_obj.has_next() else None,
+                "load_more_url": product_page_url(page_obj.next_page_number()) if page_obj.has_next() else "",
+                "infinite_scroll_enabled": True,
                 "page_items": _storefront_page_items(page_obj.number, paginator.num_pages, base_url, query_params),
             }
         )

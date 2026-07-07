@@ -40,13 +40,18 @@ Categorias, marcas e tags normalizadas continuam planejadas para evolução futu
 - as query layers de `Admin Products` e do storefront já consomem essa estrutura quando houver migração aplicada e registros persistidos
 - o seed mínimo `catalog_minimal_seed` permite validar a primeira leitura persistida sem alterar o contrato visual
 - o seed `seed_demo_catalog` gera catálogo lifestyle tenant-scoped com imagens raster locais; o caminho padrão usa fixtures JPG geradas por IA em vez de SVG placeholder
-- para a demo oficial, `seed_demo_catalog --reset-tenant-catalog --clear-discovery-events` pode resetar todo o catálogo do tenant `hubx-demo`, atualizar o nome comercial e remover eventos de descoberta anteriores
+- para a demo oficial, `seed_demo_catalog --reset-tenant-catalog --clear-discovery-events` pode resetar todo o catálogo do tenant `hubx-demo`, atualizar o nome comercial, aplicar no hero institucional a mesma imagem da home pública e remover eventos de descoberta anteriores
 - analytics de descoberta storefront descarta eventos do tenant demo oficial para preservar o contrato de demo somente leitura
 - enquanto não houver tenant resolvido, o fallback administrativo continua intencionalmente ativo como compatibilidade
 - quando houver tenant resolvido e nenhum produto persistido correspondente, `Admin Products` passa a expor ausência real em vez de reutilizar fixtures de demonstração
 - na listagem administrativa tenant-scoped, esse caso também aparece com empty state explícito de loja sem catálogo persistido, em vez de parecer apenas uma tabela vazia
 - quando houver fonte persistida, leituras do storefront devem sempre ser filtradas por `tenant_id`
 - ausência de tenant não deve cair em catálogo demo/fallback como se fosse uma loja válida
+- a listagem storefront pode usar rolagem infinita progressiva via HTMX, desde que:
+  - a origem continue sendo `catalog.application.storefront_catalog_queries` filtrada por tenant;
+  - a resposta parcial renderize somente cards de produto e o próximo gatilho;
+  - a paginação tradicional permaneça disponível como fallback;
+  - filtros, busca e ordenação sejam preservados na URL do próximo fragmento.
 
 ## Admin Product CRUD Execution
 - o admin de catálogo agora conecta as rotas:

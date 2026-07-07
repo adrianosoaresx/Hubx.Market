@@ -566,14 +566,14 @@ body {
 }
 
 .ds-btn-primary {
-  background-color: var(--color-action-primary-bg, #9a6410);
-  border-color: var(--color-action-primary-bg, #9a6410);
-  color: var(--color-action-primary-text, #ffffff);
+  background-color: var(--color-conversion-primary-bg, var(--color-action-primary-bg, #9a6410));
+  border-color: var(--color-conversion-primary-bg, var(--color-action-primary-bg, #9a6410));
+  color: var(--color-conversion-primary-text, var(--color-action-primary-text, #ffffff));
 }
 
 .ds-btn-primary:hover {
-  background-color: var(--color-action-primary-bg-hover, #794a0c);
-  border-color: var(--color-action-primary-bg-hover, #794a0c);
+  background-color: var(--color-conversion-primary-bg-hover, var(--color-action-primary-bg-hover, #794a0c));
+  border-color: var(--color-conversion-primary-bg-hover, var(--color-action-primary-bg-hover, #794a0c));
 }
 
 .ds-btn-secondary {
@@ -679,6 +679,14 @@ body {
   min-height: 3rem;
   padding: 0.875rem 1rem;
   font-size: 1rem;
+}
+
+.ds-input.ds-input-has-prefix {
+  padding-left: 2.75rem;
+}
+
+.ds-input.ds-input-has-suffix {
+  padding-right: 2.75rem;
 }
 
 .ds-input[aria-invalid="true"],

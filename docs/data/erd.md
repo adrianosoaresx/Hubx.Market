@@ -20,6 +20,7 @@
 - `subdomain`
 - `custom_domain`
 - `logo_url`
+- `conversion_primary_color`
 - `storefront_hero_enabled`
 - `storefront_hero_title`
 - `storefront_hero_description`

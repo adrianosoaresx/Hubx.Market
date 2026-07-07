@@ -53,6 +53,11 @@ Padronizar campos de formulário, labels, ajuda de campo e mensagens de erro.
 - ação secundária clara
 - loading visível quando houver submissão assíncrona
 
+## Branding da loja
+- o campo `conversion_primary_color` em `/ops/branding/` aceita somente hexadecimal `#rrggbb`
+- valores claros demais são recusados para preservar contraste AA do CTA primário com texto branco
+- valor vazio remove a customização e retorna ao fallback Hubx
+
 ## Contrato dos partials
 - `input.html`, `select.html` e `textarea.html` aceitam `id`, `name`, `label`, `help_text`, `error_text`, `invalid`, `required`, `disabled` e `size`.
 - `size` usa a escala `sm`, `md` padrão e `lg`.

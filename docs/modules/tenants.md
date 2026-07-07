@@ -17,8 +17,9 @@ Gerenciar tenant, branding, contato, manutenção e onboarding.
 - tenant resolvido por subdomínio
 - identidade institucional de storefront pertence ao tenant e pode usar campos `storefront_hero_*`
 - `logo_url` representa a imagem pública opcional da marca do tenant
+- `conversion_primary_color` representa a cor primária opcional de CTAs de conversão do tenant e deve manter contraste AA com texto branco
 - o hero institucional é configuração leve de home: título, descrição, imagem remota, CTA e flag de exibição
-- lojistas configuram logo e hero em `/ops/branding/`, que grava apenas `Tenant.logo_url` e campos `Tenant.storefront_hero_*`
+- lojistas configuram logo, cor de conversão e hero em `/ops/branding/`, que grava apenas `Tenant.logo_url`, `Tenant.conversion_primary_color` e campos `Tenant.storefront_hero_*`
 - fallback visual do hero deve usar somente dados já resolvidos do próprio tenant, nunca conteúdo global de outra loja
 - superfícies de commerce devem falhar fechado quando `request.tenant` não estiver resolvido
 - subdomínio inexistente sob `HUBX_MARKET_ROOT_DOMAIN` deve responder `404`
@@ -76,7 +77,7 @@ Guardrails preservados:
 
 Status: **implementado**.
 
-A configuração tenant-scoped de logo e hero institucional foi adicionada em:
+A configuração tenant-scoped de logo, cor primária de conversão e hero institucional foi adicionada em:
 
 ```text
 /ops/branding/
@@ -84,17 +85,18 @@ A configuração tenant-scoped de logo e hero institucional foi adicionada em:
 
 Escopo entregue:
 
-- formulário admin para `logo_url`, `storefront_hero_enabled`, título, descrição, URL de imagem, texto e destino do CTA;
+- formulário admin para `logo_url`, `conversion_primary_color`, `storefront_hero_enabled`, título, descrição, URL de imagem, texto e destino do CTA;
 - preview reaproveitando `shared/partials/storefront_institutional_hero.html`;
 - `POST` fino delegando para `tenants.application.storefront_branding_commands.update_storefront_hero(...)`;
 - permissão `storefront.branding.manage` no RBAC de `accounts`;
 - `AuditLog` tenant-scoped com `tenant.storefront_branding_updated`;
-- validação de logo/imagem como URL pública e CTA como caminho interno iniciado por `/`.
+- validação de logo/imagem como URL pública, CTA como caminho interno iniciado por `/` e cor de conversão como hexadecimal `#rrggbb` com contraste mínimo AA contra texto branco.
 
 Guardrails preservados:
 
 - grava somente o `Tenant` resolvido pelo host da loja;
 - não altera catálogo, produtos, páginas, pedidos, pagamentos, clientes ou dados platform-only;
+- a cor de conversão é exposta para a UI por variáveis CSS sanitizadas no layout base, sem permitir CSS arbitrário;
 - não faz upload/storage de imagem nesta fase; recebe apenas URL pública;
 - não cria page builder nem lógica visual fora do partial compartilhado.
 
@@ -956,7 +958,7 @@ Escopo entregue:
 - conclusão orquestrada por application service, reutilizando boundaries de tenants, subscriptions, accounts e audit;
 - `TenantSubscription` criada como contrato interno `trialing`, sem provider de cobrança;
 - owner inicial provisionado sem senha manual, login automático ou impersonação;
-- branding mínimo persistido como `store_display_name` e `primary_color`, sem upload/storage;
+- branding mínimo persistido como `store_display_name` e `primary_color`, com `primary_color` validado pela mesma regra de contraste e aplicado como `Tenant.conversion_primary_color` na conclusão, sem upload/storage;
 - smoke sistêmico inclui `/ops/platform/onboarding/`.
 
 Guardrails:

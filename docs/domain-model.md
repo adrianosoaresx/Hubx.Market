@@ -7,6 +7,7 @@ Este documento descreve o modelo conceitual do Hubx Market.
 Representa uma loja no SaaS.
 - guarda configurações institucionais leves da home tenant-owned via `storefront_hero_*`
 - guarda `logo_url` como imagem pública opcional da marca da loja, usada pelos componentes de identidade
+- guarda `conversion_primary_color` como cor opcional de CTA primário da loja, validada para contraste AA com texto branco antes de persistir
 - o hero institucional pode ter título, descrição, imagem remota, CTA e flag de exibição
 - quando a imagem do hero não estiver configurada, a storefront pode usar fallback visual derivado do catálogo da própria loja
 - esses campos não substituem catálogo, páginas institucionais nem page builder

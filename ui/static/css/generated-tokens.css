@@ -59,6 +59,9 @@
   --color-action-primary: #9A6410;
   --color-action-primary-hover: #794A0C;
   --color-action-secondary: #0F172A;
+  --color-conversion-primary-bg: #9A6410;
+  --color-conversion-primary-bg-hover: #794A0C;
+  --color-conversion-primary-text: #FFFFFF;
   --color-feedback-success: #16A34A;
   --color-feedback-info: #0EA5E9;
   --color-feedback-warning: #D97706;

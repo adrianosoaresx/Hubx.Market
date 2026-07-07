@@ -30,6 +30,10 @@
                 {% with name="logo_url" label="URL do logo" value=logo_url placeholder="https://cdn.exemplo.com/logo-loja.png" input_type="url" invalid=errors.logo_url error_text=errors.logo_url help_text="Use uma URL pública, preferencialmente PNG ou SVG em fundo transparente." disabled=can_save_storefront_branding|yesno:",1" %}
                     {% include "shared/components/forms/input.html" %}
                 {% endwith %}
+
+                {% with name="conversion_primary_color" label="Cor primária de conversão" value=conversion_primary_color placeholder="#9a6410" invalid=errors.conversion_primary_color error_text=errors.conversion_primary_color help_text="Use hexadecimal escuro/saturado. O botão principal exige contraste AA com texto branco; deixe vazio para usar o padrão Hubx." disabled=can_save_storefront_branding|yesno:",1" %}
+                    {% include "shared/components/forms/input.html" %}
+                {% endwith %}
             </section>
 
             <section class="ds-surface space-y-6 p-6">
