@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from django.contrib.auth.models import User
-from django.test import TestCase, override_settings
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from app.modules.accounts.models import OwnerUser
@@ -45,6 +45,48 @@ class SubscriptionCouponE2ETests(TestCase):
             trial_days=30,
             requires_payment_method=True,
         )
+
+    def test_public_plans_form_renders_active_plan_options_and_preserves_selection(self):
+        response = self.client.get(
+            f"{reverse('subscription_public:plans')}?plan=starter",
+            HTTP_HOST=self.central_host,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '<option value="starter" selected>Starter · R$ 100,00</option>')
+        self.assertContains(response, "30 dias grátis")
+
+    @override_settings(
+        CSRF_TRUSTED_ORIGINS=["https://hubx.market", "https://*.hubx.market"],
+        SECURE_PROXY_SSL_HEADER=("HTTP_X_FORWARDED_PROTO", "https"),
+    )
+    def test_public_plans_post_accepts_https_origin_behind_proxy_with_csrf(self):
+        csrf_client = Client(enforce_csrf_checks=True)
+        get_response = csrf_client.get(
+            reverse("subscription_public:plans"),
+            HTTP_HOST=self.central_host,
+            HTTP_X_FORWARDED_PROTO="https",
+        )
+        csrf_token = get_response.cookies["csrftoken"].value
+
+        response = csrf_client.post(
+            reverse("subscription_public:plans"),
+            {
+                "csrfmiddlewaretoken": csrf_token,
+                "plan_code": "starter",
+                "store_name": "Loja VPS",
+                "desired_subdomain": "loja-vps",
+                "contact_name": "Contato VPS",
+                "contact_email": "vps@example.com",
+            },
+            HTTP_HOST=self.central_host,
+            HTTP_ORIGIN="https://hubx.market",
+            HTTP_X_FORWARDED_PROTO="https",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Recebemos sua intenção")
+        self.assertTrue(SubscriptionAcquisitionLead.objects.filter(desired_subdomain="loja-vps").exists())
 
     def test_assisted_plan_coupon_e2e_creates_snapshot_until_subscription(self):
         platform_client = self._logged_platform_client()

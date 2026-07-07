@@ -1,0 +1,104 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-hubxmarket}
+      POSTGRES_USER: ${DB_USER:-hubxmarket}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - redis_data:/data
+
+  web:
+    build:
+      context: ../..
+      dockerfile: infra/deploy/Dockerfile
+    image: hubxmarket/web:${WEB_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    env_file:
+      - .env.vps
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      DJANGO_ENV: production
+      DEBUG: "0"
+      SESSION_COOKIE_SECURE: "1"
+      CSRF_COOKIE_SECURE: "1"
+      CSRF_TRUSTED_ORIGINS: "https://hubx.market,https://*.hubx.market"
+      SECURE_PROXY_SSL_HEADER: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    expose:
+      - "8000"
+    volumes:
+      - media_data:/app/backend/media
+    networks:
+      - default
+      - traefik
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "docker_traefik"
+      traefik.http.routers.hubxmarket-web.rule: "Host(`hubx.market`) || Host(`www.hubx.market`) || Host(`app.hubx.market`) || Host(`api.hubx.market`) || Host(`hubx-demo.hubx.market`)"
+      traefik.http.routers.hubxmarket-web.entrypoints: "web"
+      traefik.http.routers.hubxmarket-web.middlewares: "hubxmarket-https-redirect"
+      traefik.http.middlewares.hubxmarket-https-redirect.redirectscheme.scheme: "https"
+      traefik.http.middlewares.hubxmarket-https-redirect.redirectscheme.permanent: "true"
+      traefik.http.routers.hubxmarket.rule: "Host(`hubx.market`) || Host(`www.hubx.market`) || Host(`app.hubx.market`) || Host(`api.hubx.market`) || Host(`hubx-demo.hubx.market`)"
+      traefik.http.routers.hubxmarket.entrypoints: "websecure"
+      traefik.http.routers.hubxmarket.tls: "true"
+      traefik.http.routers.hubxmarket.tls.certresolver: "letsencrypt"
+      traefik.http.services.hubxmarket.loadbalancer.server.port: "8000"
+      traefik.http.services.hubxmarket.loadbalancer.passHostHeader: "true"
+
+  worker:
+    image: hubxmarket/web:${WEB_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    command: ["celery", "-A", "config", "worker", "-l", "INFO", "--concurrency=2"]
+    env_file:
+      - .env.vps
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      DJANGO_ENV: production
+      DEBUG: "0"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - media_data:/app/backend/media
+
+volumes:
+  db_data:
+  redis_data:
+  media_data:
+
+networks:
+  traefik:
+    external: true
+    name: docker_traefik

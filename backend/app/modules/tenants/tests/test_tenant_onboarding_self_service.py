@@ -169,6 +169,8 @@ class TenantOnboardingSelfServiceTests(TestCase):
         self.assertEqual(detail_response.status_code, 200)
         self.assertTemplateUsed(detail_response, "pages/templates/admin_tenant_onboarding_detail_page.html")
         self.assertContains(detail_response, "Criar/ativar loja")
+        self.assertContains(detail_response, '<option value="starter"')
+        self.assertContains(detail_response, "Starter · R$ 99,90")
         self.assertContains(detail_response, "Checklist")
 
     def _create_ready_onboarding(self, *, promotion_snapshot: dict[str, object] | None = None) -> TenantOnboarding:
