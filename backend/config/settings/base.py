@@ -155,6 +155,7 @@ STATICFILES_DIRS = [REPO_ROOT / "ui" / "static"]
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = str(BASE_DIR / "media")
+HUBX_SERVE_MEDIA_LOCALLY = os.environ.get("HUBX_SERVE_MEDIA_LOCALLY", "0") == "1"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
