@@ -1,0 +1,1378 @@
+Watching for file changes with StatReloader
+[03/Jul/2026 10:41:39] "GET / HTTP/1.1" 200 14649
+[03/Jul/2026 10:41:41] "GET /demo/ HTTP/1.1" 200 14603
+[03/Jul/2026 10:41:41] "GET / HTTP/1.1" 200 27685
+[03/Jul/2026 10:41:42] "GET /catalog/ HTTP/1.1" 200 46412
+[03/Jul/2026 10:51:19] "GET / HTTP/1.1" 200 14649
+[03/Jul/2026 10:51:19] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 83535
+[03/Jul/2026 10:51:19] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[03/Jul/2026 10:51:19] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[03/Jul/2026 10:51:19] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[03/Jul/2026 10:51:19] "GET /static/js/app.js HTTP/1.1" 200 2101
+[03/Jul/2026 10:51:19] "GET /static/img/brand/hubx-public-hero.jpg HTTP/1.1" 200 215421
+[03/Jul/2026 10:51:19] "GET /static/img/brand/favicon.ico HTTP/1.1" 200 8022
+[03/Jul/2026 10:51:22] "GET /demo/ HTTP/1.1" 200 14603
+[03/Jul/2026 10:51:25] "GET /accounts/demo-session/?profile=customer&return_url=http%3A%2F%2Flocalhost%3A8002%2Fdemo%2F HTTP/1.1" 302 0
+[03/Jul/2026 10:51:25] "GET / HTTP/1.1" 200 27685
+[03/Jul/2026 10:51:25] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 83535
+[03/Jul/2026 10:51:25] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[03/Jul/2026 10:51:25] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[03/Jul/2026 10:51:25] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 200 350859
+[03/Jul/2026 10:51:25] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[03/Jul/2026 10:51:25] "GET /static/js/app.js HTTP/1.1" 200 2101
+[03/Jul/2026 10:51:25] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 200 71272
+[03/Jul/2026 10:51:25] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 200 347555
+[03/Jul/2026 10:51:40] "GET /catalog/demo-almofada-lumbar-rest/ HTTP/1.1" 200 25206
+[03/Jul/2026 10:51:40] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-2.jpg HTTP/1.1" 200 347842
+[03/Jul/2026 10:51:40] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-3.jpg HTTP/1.1" 200 396194
+[03/Jul/2026 10:51:40] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-4.jpg HTTP/1.1" 200 393699
+[03/Jul/2026 10:51:47] "GET /catalog/ HTTP/1.1" 200 46412
+[03/Jul/2026 10:51:47] "GET /media/demo-catalog/hubx-demo/demo-hidratante-body-fresh-1.jpg HTTP/1.1" 200 64124
+[03/Jul/2026 10:51:47] "GET /media/demo-catalog/hubx-demo/demo-corda-speed-jump-1.jpg HTTP/1.1" 200 336956
+[03/Jul/2026 10:51:47] "GET /media/demo-catalog/hubx-demo/demo-bota-urban-trek-1.jpg HTTP/1.1" 200 320431
+[03/Jul/2026 10:51:47] "GET /media/demo-catalog/hubx-demo/demo-jaqueta-wind-shield-1.jpg HTTP/1.1" 200 318631
+[03/Jul/2026 10:51:47] "GET /media/demo-catalog/hubx-demo/demo-camiseta-dry-fit-core-1.jpg HTTP/1.1" 200 430471
+[03/Jul/2026 10:51:47] "GET /media/demo-catalog/hubx-demo/demo-moletom-soft-zip-1.jpg HTTP/1.1" 200 411507
+[03/Jul/2026 10:51:56] "GET /catalog/ HTTP/1.1" 200 46412
+[03/Jul/2026 10:51:59] "GET /catalog/ HTTP/1.1" 200 46412
+[03/Jul/2026 10:52:01] "GET /catalog/ HTTP/1.1" 200 46412
+[03/Jul/2026 10:52:01] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 83535
+[03/Jul/2026 10:52:01] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[03/Jul/2026 10:52:01] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[03/Jul/2026 10:52:01] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[03/Jul/2026 10:52:01] "GET /static/js/app.js HTTP/1.1" 200 2101
+[03/Jul/2026 10:52:01] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 200 71272
+[03/Jul/2026 10:52:01] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 200 350859
+[03/Jul/2026 10:52:01] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 200 347555
+[03/Jul/2026 10:52:01] "GET /media/demo-catalog/hubx-demo/demo-bota-urban-trek-1.jpg HTTP/1.1" 200 320431
+[03/Jul/2026 10:52:01] "GET /media/demo-catalog/hubx-demo/demo-hidratante-body-fresh-1.jpg HTTP/1.1" 200 64124
+[03/Jul/2026 10:52:01] "GET /media/demo-catalog/hubx-demo/demo-corda-speed-jump-1.jpg HTTP/1.1" 200 336956
+[03/Jul/2026 10:52:01] "GET /media/demo-catalog/hubx-demo/demo-moletom-soft-zip-1.jpg HTTP/1.1" 200 411507
+[03/Jul/2026 10:52:01] "GET /media/demo-catalog/hubx-demo/demo-camiseta-dry-fit-core-1.jpg HTTP/1.1" 200 430471
+[03/Jul/2026 10:52:01] "GET /media/demo-catalog/hubx-demo/demo-jaqueta-wind-shield-1.jpg HTTP/1.1" 200 318631
+[03/Jul/2026 10:52:01] "GET /static/img/brand/favicon.ico HTTP/1.1" 200 8022
+[03/Jul/2026 10:52:09] "GET /catalog/demo-camiseta-dry-fit-core/ HTTP/1.1" 200 25188
+[03/Jul/2026 10:52:09] "GET /media/demo-catalog/hubx-demo/demo-camiseta-dry-fit-core-2.jpg HTTP/1.1" 200 410004
+[03/Jul/2026 10:52:09] "GET /media/demo-catalog/hubx-demo/demo-camiseta-dry-fit-core-4.jpg HTTP/1.1" 200 353901
+[03/Jul/2026 10:52:09] "GET /media/demo-catalog/hubx-demo/demo-camiseta-dry-fit-core-3.jpg HTTP/1.1" 200 445963
+[03/Jul/2026 10:53:03] "GET / HTTP/1.1" 200 27685
+[03/Jul/2026 10:53:29] "POST /accounts/logout/ HTTP/1.1" 302 0
+[03/Jul/2026 10:53:30] "GET /demo/ HTTP/1.1" 200 14603
+[03/Jul/2026 10:53:32] "GET /accounts/demo-session/?profile=admin&return_url=http%3A%2F%2Flocalhost%3A8002%2Fdemo%2F HTTP/1.1" 302 0
+[03/Jul/2026 10:53:32] "GET /ops/ HTTP/1.1" 200 39085
+[03/Jul/2026 10:53:56] "GET /ops/catalog/products/ HTTP/1.1" 200 27531
+[03/Jul/2026 12:47:18] "GET / HTTP/1.1" 200 27685
+[03/Jul/2026 12:47:18] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 304 0
+[03/Jul/2026 12:47:18] "GET /static/js/app.js HTTP/1.1" 304 0
+[03/Jul/2026 12:47:18] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 304 0
+[03/Jul/2026 12:47:18] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 304 0
+[03/Jul/2026 12:47:18] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 304 0
+[03/Jul/2026 12:47:26] "POST /accounts/logout/ HTTP/1.1" 302 0
+[03/Jul/2026 12:47:26] "GET /demo/ HTTP/1.1" 200 14603
+[03/Jul/2026 12:47:26] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 304 0
+[03/Jul/2026 12:47:26] "GET /static/js/app.js HTTP/1.1" 304 0
+X:\Projeto\Hubx.market\backend\app\modules\accounts\application\admin_permissions.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\catalog\application\admin_product_queries.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\catalog\interfaces\urls.py changed, reloading.
+Watching for file changes with StatReloader
+Exception in thread django-main-thread:
+Traceback (most recent call last):
+  File "C:\Python310\lib\threading.py", line 1009, in _bootstrap_inner
+    self.run()
+  File "C:\Python310\lib\threading.py", line 946, in run
+    self._target(*self._args, **self._kwargs)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\utils\autoreload.py", line 64, in wrapper
+    fn(*args, **kwargs)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\core\management\commands\runserver.py", line 134, in inner_run
+    self.check(**check_kwargs)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\core\management\base.py", line 496, in check
+    all_issues = checks.run_checks(
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\core\checks\registry.py", line 89, in run_checks
+    new_errors = check(app_configs=app_configs, databases=databases)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\core\checks\urls.py", line 44, in check_url_namespaces_unique
+    all_namespaces = _load_all_namespaces(resolver)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\core\checks\urls.py", line 63, in _load_all_namespaces
+    url_patterns = getattr(resolver, "url_patterns", [])
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\utils\functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\urls\resolvers.py", line 718, in url_patterns
+    patterns = getattr(self.urlconf_module, "urlpatterns", self.urlconf_module)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\utils\functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\urls\resolvers.py", line 711, in urlconf_module
+    return import_module(self.urlconf_name)
+  File "C:\Python310\lib\importlib\__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1050, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1006, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 688, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 883, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "X:\Projeto\Hubx.market\backend\config\urls.py", line 26, in <module>
+    path("ops/catalog/", include(("app.modules.catalog.interfaces.urls", "catalog"), namespace="catalog")),
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\urls\conf.py", line 39, in include
+    urlconf_module = import_module(urlconf_module)
+  File "C:\Python310\lib\importlib\__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1050, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1006, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 688, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 883, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "X:\Projeto\Hubx.market\backend\app\modules\catalog\interfaces\urls.py", line 3, in <module>
+    from .views import (
+ImportError: cannot import name 'AdminProductDeactivateView' from 'app.modules.catalog.interfaces.views' (X:\Projeto\Hubx.market\backend\app\modules\catalog\interfaces\views.py)
+X:\Projeto\Hubx.market\backend\app\modules\catalog\interfaces\views.py changed, reloading.
+Watching for file changes with StatReloader
+Exception in thread django-main-thread:
+Traceback (most recent call last):
+  File "C:\Python310\lib\threading.py", line 1009, in _bootstrap_inner
+    self.run()
+  File "C:\Python310\lib\threading.py", line 946, in run
+    self._target(*self._args, **self._kwargs)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\utils\autoreload.py", line 64, in wrapper
+    fn(*args, **kwargs)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\core\management\commands\runserver.py", line 134, in inner_run
+    self.check(**check_kwargs)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\core\management\base.py", line 496, in check
+    all_issues = checks.run_checks(
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\core\checks\registry.py", line 89, in run_checks
+    new_errors = check(app_configs=app_configs, databases=databases)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\core\checks\urls.py", line 44, in check_url_namespaces_unique
+    all_namespaces = _load_all_namespaces(resolver)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\core\checks\urls.py", line 63, in _load_all_namespaces
+    url_patterns = getattr(resolver, "url_patterns", [])
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\utils\functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\urls\resolvers.py", line 718, in url_patterns
+    patterns = getattr(self.urlconf_module, "urlpatterns", self.urlconf_module)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\utils\functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\urls\resolvers.py", line 711, in urlconf_module
+    return import_module(self.urlconf_name)
+  File "C:\Python310\lib\importlib\__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1050, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1006, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 688, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 883, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "X:\Projeto\Hubx.market\backend\config\urls.py", line 26, in <module>
+    path("ops/catalog/", include(("app.modules.catalog.interfaces.urls", "catalog"), namespace="catalog")),
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\urls\conf.py", line 39, in include
+    urlconf_module = import_module(urlconf_module)
+  File "C:\Python310\lib\importlib\__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1050, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1006, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 688, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 883, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "X:\Projeto\Hubx.market\backend\app\modules\catalog\interfaces\urls.py", line 3, in <module>
+    from .views import (
+ImportError: cannot import name 'AdminProductDeactivateView' from 'app.modules.catalog.interfaces.views' (X:\Projeto\Hubx.market\backend\app\modules\catalog\interfaces\views.py)
+X:\Projeto\Hubx.market\backend\app\modules\catalog\interfaces\views.py changed, reloading.
+Watching for file changes with StatReloader
+Exception in thread django-main-thread:
+Traceback (most recent call last):
+  File "C:\Python310\lib\threading.py", line 1009, in _bootstrap_inner
+    self.run()
+  File "C:\Python310\lib\threading.py", line 946, in run
+    self._target(*self._args, **self._kwargs)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\utils\autoreload.py", line 64, in wrapper
+    fn(*args, **kwargs)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\core\management\commands\runserver.py", line 134, in inner_run
+    self.check(**check_kwargs)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\core\management\base.py", line 496, in check
+    all_issues = checks.run_checks(
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\core\checks\registry.py", line 89, in run_checks
+    new_errors = check(app_configs=app_configs, databases=databases)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\core\checks\urls.py", line 44, in check_url_namespaces_unique
+    all_namespaces = _load_all_namespaces(resolver)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\core\checks\urls.py", line 63, in _load_all_namespaces
+    url_patterns = getattr(resolver, "url_patterns", [])
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\utils\functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\urls\resolvers.py", line 718, in url_patterns
+    patterns = getattr(self.urlconf_module, "urlpatterns", self.urlconf_module)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\utils\functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\urls\resolvers.py", line 711, in urlconf_module
+    return import_module(self.urlconf_name)
+  File "C:\Python310\lib\importlib\__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1050, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1006, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 688, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 883, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "X:\Projeto\Hubx.market\backend\config\urls.py", line 26, in <module>
+    path("ops/catalog/", include(("app.modules.catalog.interfaces.urls", "catalog"), namespace="catalog")),
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\urls\conf.py", line 39, in include
+    urlconf_module = import_module(urlconf_module)
+  File "C:\Python310\lib\importlib\__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1050, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1006, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 688, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 883, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "X:\Projeto\Hubx.market\backend\app\modules\catalog\interfaces\urls.py", line 3, in <module>
+    from .views import (
+ImportError: cannot import name 'AdminProductDeactivateView' from 'app.modules.catalog.interfaces.views' (X:\Projeto\Hubx.market\backend\app\modules\catalog\interfaces\views.py)
+X:\Projeto\Hubx.market\backend\app\modules\catalog\interfaces\views.py changed, reloading.
+Watching for file changes with StatReloader
+Exception in thread django-main-thread:
+Traceback (most recent call last):
+  File "C:\Python310\lib\threading.py", line 1009, in _bootstrap_inner
+    self.run()
+  File "C:\Python310\lib\threading.py", line 946, in run
+    self._target(*self._args, **self._kwargs)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\utils\autoreload.py", line 64, in wrapper
+    fn(*args, **kwargs)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\core\management\commands\runserver.py", line 134, in inner_run
+    self.check(**check_kwargs)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\core\management\base.py", line 496, in check
+    all_issues = checks.run_checks(
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\core\checks\registry.py", line 89, in run_checks
+    new_errors = check(app_configs=app_configs, databases=databases)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\core\checks\urls.py", line 44, in check_url_namespaces_unique
+    all_namespaces = _load_all_namespaces(resolver)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\core\checks\urls.py", line 63, in _load_all_namespaces
+    url_patterns = getattr(resolver, "url_patterns", [])
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\utils\functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\urls\resolvers.py", line 718, in url_patterns
+    patterns = getattr(self.urlconf_module, "urlpatterns", self.urlconf_module)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\utils\functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\urls\resolvers.py", line 711, in urlconf_module
+    return import_module(self.urlconf_name)
+  File "C:\Python310\lib\importlib\__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1050, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1006, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 688, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 883, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "X:\Projeto\Hubx.market\backend\config\urls.py", line 26, in <module>
+    path("ops/catalog/", include(("app.modules.catalog.interfaces.urls", "catalog"), namespace="catalog")),
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\urls\conf.py", line 39, in include
+    urlconf_module = import_module(urlconf_module)
+  File "C:\Python310\lib\importlib\__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "<frozen importlib._bootstrap>", line 1050, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1027, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1006, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 688, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 883, in exec_module
+  File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+  File "X:\Projeto\Hubx.market\backend\app\modules\catalog\interfaces\urls.py", line 3, in <module>
+    from .views import (
+ImportError: cannot import name 'AdminProductDeactivateView' from 'app.modules.catalog.interfaces.views' (X:\Projeto\Hubx.market\backend\app\modules\catalog\interfaces\views.py)
+X:\Projeto\Hubx.market\backend\app\modules\catalog\interfaces\views.py changed, reloading.
+Watching for file changes with StatReloader
+[03/Jul/2026 12:53:28] "GET /demo/ HTTP/1.1" 200 14603
+[03/Jul/2026 12:53:29] "GET /accounts/demo-session/?profile=admin&return_url=http%3A%2F%2Flocalhost%3A8002%2Fdemo%2F HTTP/1.1" 302 0
+[03/Jul/2026 12:53:30] "GET /ops/ HTTP/1.1" 200 39085
+[03/Jul/2026 12:54:49] "GET /ops/payments/refunds/ HTTP/1.1" 200 23799
+[03/Jul/2026 12:54:59] "GET /ops/owners/ HTTP/1.1" 200 28321
+[03/Jul/2026 12:55:07] "GET /ops/owners/mfa/ HTTP/1.1" 200 22976
+[03/Jul/2026 12:55:16] "GET /ops/api-keys/quotas/ HTTP/1.1" 200 19631
+[03/Jul/2026 12:55:24] "GET /ops/audit/ HTTP/1.1" 200 60616
+[03/Jul/2026 12:55:35] "GET /ops/newsletter/ HTTP/1.1" 200 23697
+[03/Jul/2026 12:55:47] "GET /ops/pages/ HTTP/1.1" 200 28306
+[03/Jul/2026 12:55:55] "GET /ops/catalog/products/ HTTP/1.1" 200 28329
+[03/Jul/2026 12:56:11] "GET /ops/orders/ HTTP/1.1" 200 25484
+[03/Jul/2026 12:56:19] "GET /ops/ HTTP/1.1" 200 39085
+[03/Jul/2026 12:56:22] "GET /ops/coupons/ HTTP/1.1" 200 23868
+[03/Jul/2026 12:56:45] "GET /ops/pages/ HTTP/1.1" 200 28306
+[03/Jul/2026 12:56:53] "GET /ops/newsletter/ HTTP/1.1" 200 23697
+[03/Jul/2026 12:56:59] "GET /ops/catalog/products/ HTTP/1.1" 200 28329
+[03/Jul/2026 12:57:01] "GET /ops/orders/ HTTP/1.1" 200 25484
+[03/Jul/2026 12:57:06] "GET /ops/catalog/products/ HTTP/1.1" 200 28329
+[03/Jul/2026 12:57:08] "GET /ops/pages/ HTTP/1.1" 200 28306
+[03/Jul/2026 12:57:14] "GET /ops/newsletter/ HTTP/1.1" 200 23697
+[03/Jul/2026 12:57:15] "GET /ops/audit/ HTTP/1.1" 200 60616
+[03/Jul/2026 12:57:17] "GET /ops/api-keys/quotas/ HTTP/1.1" 200 19631
+[03/Jul/2026 12:57:21] "GET /ops/coupons/ HTTP/1.1" 200 23868
+[03/Jul/2026 12:57:25] "GET /ops/reviews/ HTTP/1.1" 200 24028
+[03/Jul/2026 12:57:28] "GET /ops/customers/ HTTP/1.1" 200 28411
+[03/Jul/2026 12:57:31] "GET /ops/payments/finance/ HTTP/1.1" 200 22751
+[03/Jul/2026 12:57:33] "GET /ops/payments/refunds/ HTTP/1.1" 200 23799
+[03/Jul/2026 12:57:35] "GET /ops/owners/ HTTP/1.1" 200 28321
+[03/Jul/2026 12:57:44] "GET /ops/ HTTP/1.1" 200 39085
+[03/Jul/2026 12:59:12] "GET /ops/orders/ HTTP/1.1" 200 25484
+[03/Jul/2026 12:59:14] "GET /ops/catalog/products/ HTTP/1.1" 200 28329
+[03/Jul/2026 12:59:15] "GET /ops/pages/ HTTP/1.1" 200 28306
+[03/Jul/2026 13:00:20] "GET /ops/newsletter/ HTTP/1.1" 200 23697
+[03/Jul/2026 13:00:30] "GET /ops/audit/ HTTP/1.1" 200 60616
+[03/Jul/2026 13:00:41] "GET /ops/api-keys/quotas/ HTTP/1.1" 200 19631
+[03/Jul/2026 13:00:51] "GET /ops/coupons/ HTTP/1.1" 200 23868
+[03/Jul/2026 13:00:53] "GET /ops/reviews/ HTTP/1.1" 200 24028
+[03/Jul/2026 13:01:00] "GET /ops/customers/ HTTP/1.1" 200 28411
+[03/Jul/2026 13:01:08] "GET /ops/payments/finance/ HTTP/1.1" 200 22751
+[03/Jul/2026 13:01:09] "GET /ops/payments/refunds/ HTTP/1.1" 200 23799
+[03/Jul/2026 13:01:11] "GET /ops/owners/ HTTP/1.1" 200 28321
+[03/Jul/2026 13:01:19] "GET /ops/owners/mfa/ HTTP/1.1" 200 22976
+[03/Jul/2026 13:01:26] "GET /ops/subscriptions/ HTTP/1.1" 200 19583
+[03/Jul/2026 13:07:20] "GET /ops/subscriptions/ HTTP/1.1" 200 19624
+[03/Jul/2026 13:07:24] "GET /ops/owners/mfa/ HTTP/1.1" 200 23017
+[03/Jul/2026 13:07:26] "GET /ops/owners/ HTTP/1.1" 200 28362
+[03/Jul/2026 13:07:29] "GET /ops/payments/refunds/ HTTP/1.1" 200 23799
+[03/Jul/2026 13:07:30] "GET /ops/payments/refunds/ HTTP/1.1" 200 23799
+[03/Jul/2026 13:07:31] "GET /ops/payments/finance/ HTTP/1.1" 200 22751
+[03/Jul/2026 13:07:32] "GET /ops/payments/finance/ HTTP/1.1" 200 22751
+[03/Jul/2026 13:07:34] "GET /ops/customers/ HTTP/1.1" 200 28452
+[03/Jul/2026 13:07:36] "GET /ops/reviews/ HTTP/1.1" 200 24069
+[03/Jul/2026 13:07:37] "GET /ops/coupons/ HTTP/1.1" 200 23868
+[03/Jul/2026 13:07:41] "GET /ops/api-keys/quotas/ HTTP/1.1" 200 19672
+[03/Jul/2026 13:07:42] "GET /ops/audit/ HTTP/1.1" 200 60657
+[03/Jul/2026 13:07:46] "GET /ops/newsletter/ HTTP/1.1" 200 23738
+[03/Jul/2026 13:07:49] "GET /ops/ HTTP/1.1" 200 39085
+[03/Jul/2026 13:07:59] "GET /ops/orders/ HTTP/1.1" 200 25484
+[03/Jul/2026 13:08:09] "GET /ops/catalog/products/ HTTP/1.1" 200 28329
+[03/Jul/2026 13:18:19] "GET /ops/catalog/products/ HTTP/1.1" 200 28329
+[03/Jul/2026 13:18:23] "GET /ops/catalog/products/ HTTP/1.1" 200 28329
+[03/Jul/2026 13:18:23] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[03/Jul/2026 13:18:23] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[03/Jul/2026 13:18:23] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 84319
+[03/Jul/2026 13:18:23] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[03/Jul/2026 13:18:23] "GET /static/js/app.js HTTP/1.1" 200 2101
+[03/Jul/2026 13:18:23] "GET /static/img/brand/favicon.ico HTTP/1.1" 200 8022
+[03/Jul/2026 13:18:31] "GET /ops/orders/ HTTP/1.1" 200 25484
+[03/Jul/2026 13:18:34] "GET /ops/ HTTP/1.1" 200 39085
+[03/Jul/2026 13:32:25] "GET /ops/orders/ HTTP/1.1" 200 25484
+[03/Jul/2026 13:32:25] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 304 0
+[03/Jul/2026 13:32:47] "GET /ops/catalog/products/ HTTP/1.1" 200 28329
+[03/Jul/2026 13:32:57] "GET /ops/catalog/products/ HTTP/1.1" 200 28329
+[03/Jul/2026 13:32:57] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[03/Jul/2026 13:32:57] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 84319
+[03/Jul/2026 13:32:57] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[03/Jul/2026 13:32:57] "GET /static/js/app.js HTTP/1.1" 200 2101
+[03/Jul/2026 13:32:57] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[03/Jul/2026 13:32:57] "GET /static/img/brand/favicon.ico HTTP/1.1" 200 8022
+[03/Jul/2026 13:34:18] "GET /ops/orders/ HTTP/1.1" 200 25484
+[03/Jul/2026 13:34:21] "GET /ops/ HTTP/1.1" 200 39085
+[03/Jul/2026 13:34:22] "GET /ops/orders/ HTTP/1.1" 200 25484
+[03/Jul/2026 13:34:25] "GET /ops/catalog/products/ HTTP/1.1" 200 28329
+[03/Jul/2026 13:34:27] "GET /ops/pages/ HTTP/1.1" 200 28365
+[03/Jul/2026 13:34:37] "GET /ops/catalog/products/ HTTP/1.1" 200 28329
+[03/Jul/2026 13:34:39] "GET /ops/pages/ HTTP/1.1" 200 28365
+[03/Jul/2026 13:35:09] "GET /ops/catalog/products/ HTTP/1.1" 200 28329
+[03/Jul/2026 13:35:10] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 304 0
+X:\Projeto\Hubx.market\backend\app\modules\pages\interfaces\views.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\customers\interfaces\views.py changed, reloading.
+Watching for file changes with StatReloader
+[03/Jul/2026 13:37:50] "GET /ops/catalog/products/ HTTP/1.1" 200 28325
+[03/Jul/2026 13:37:51] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[03/Jul/2026 13:37:51] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 84319
+[03/Jul/2026 13:37:51] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[03/Jul/2026 13:37:51] "GET /static/js/app.js HTTP/1.1" 200 2101
+[03/Jul/2026 13:37:51] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[03/Jul/2026 13:37:51] "GET /static/img/brand/favicon.ico HTTP/1.1" 200 8022
+[03/Jul/2026 13:38:15] "GET /ops/ HTTP/1.1" 200 39425
+[03/Jul/2026 13:39:38] "POST /accounts/logout/ HTTP/1.1" 302 0
+[03/Jul/2026 13:39:38] "GET /demo/ HTTP/1.1" 200 14603
+[03/Jul/2026 13:39:40] "GET /accounts/demo-session/?profile=customer&return_url=http%3A%2F%2Flocalhost%3A8002%2Fdemo%2F HTTP/1.1" 302 0
+[03/Jul/2026 13:39:41] "GET / HTTP/1.1" 200 27685
+[03/Jul/2026 13:39:41] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 304 0
+[03/Jul/2026 13:39:41] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 304 0
+[03/Jul/2026 13:39:41] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 304 0
+[03/Jul/2026 13:39:50] "GET /catalog/demo-almofada-lumbar-rest/ HTTP/1.1" 200 25206
+[03/Jul/2026 13:39:50] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-2.jpg HTTP/1.1" 304 0
+[03/Jul/2026 13:39:50] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-4.jpg HTTP/1.1" 304 0
+[03/Jul/2026 13:39:50] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-3.jpg HTTP/1.1" 304 0
+X:\Projeto\Hubx.market\backend\app\modules\catalog\interfaces\views.py changed, reloading.
+Watching for file changes with StatReloader
+[03/Jul/2026 13:41:31] "POST /accounts/logout/ HTTP/1.1" 302 0
+[03/Jul/2026 13:41:31] "GET /demo/ HTTP/1.1" 200 18251
+[03/Jul/2026 13:41:39] "GET /accounts/demo-session/?profile=admin&return_url=http%3A%2F%2Flocalhost%3A8002%2Fdemo%2F HTTP/1.1" 302 0
+[03/Jul/2026 13:41:40] "GET /ops/ HTTP/1.1" 200 39425
+[03/Jul/2026 13:41:40] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 304 0
+[03/Jul/2026 13:41:48] "GET /ops/orders/ HTTP/1.1" 200 25484
+[03/Jul/2026 13:41:52] "GET /ops/catalog/products/ HTTP/1.1" 200 28325
+[03/Jul/2026 13:41:54] "GET /ops/pages/ HTTP/1.1" 200 28570
+[03/Jul/2026 13:41:56] "GET /ops/newsletter/ HTTP/1.1" 200 23756
+[03/Jul/2026 13:41:58] "GET /ops/audit/ HTTP/1.1" 200 61475
+[03/Jul/2026 13:42:04] "GET /ops/api-keys/quotas/ HTTP/1.1" 200 19690
+[03/Jul/2026 13:42:05] "GET /ops/coupons/ HTTP/1.1" 200 23868
+[03/Jul/2026 13:42:09] "GET /ops/reviews/ HTTP/1.1" 200 24209
+[03/Jul/2026 13:42:12] "GET /ops/audit/ HTTP/1.1" 200 61475
+[03/Jul/2026 13:42:17] "GET /ops/api-keys/quotas/ HTTP/1.1" 200 19690
+[03/Jul/2026 13:42:20] "GET /ops/coupons/ HTTP/1.1" 200 23868
+[03/Jul/2026 13:42:40] "GET /ops/reviews/ HTTP/1.1" 200 24209
+[03/Jul/2026 13:42:44] "GET /ops/customers/ HTTP/1.1" 200 28578
+[03/Jul/2026 13:43:23] "GET /ops/payments/finance/ HTTP/1.1" 200 22751
+[03/Jul/2026 13:43:27] "GET /ops/payments/refunds/ HTTP/1.1" 200 23799
+[03/Jul/2026 13:43:30] "GET /ops/owners/ HTTP/1.1" 200 28655
+[03/Jul/2026 13:43:45] "POST /accounts/logout/ HTTP/1.1" 302 0
+[03/Jul/2026 13:43:45] "GET /demo/ HTTP/1.1" 200 18251
+[03/Jul/2026 13:43:47] "GET /accounts/demo-session/?profile=customer&return_url=http%3A%2F%2Flocalhost%3A8002%2Fdemo%2F HTTP/1.1" 302 0
+[03/Jul/2026 13:43:47] "GET / HTTP/1.1" 200 27769
+[03/Jul/2026 13:44:45] "POST /accounts/logout/ HTTP/1.1" 302 0
+[03/Jul/2026 13:44:45] "GET /demo/ HTTP/1.1" 200 18251
+[03/Jul/2026 13:44:49] "GET /accounts/demo-session/?profile=customer&return_url=http%3A%2F%2Flocalhost%3A8002%2Fdemo%2F HTTP/1.1" 302 0
+[03/Jul/2026 13:44:49] "GET / HTTP/1.1" 200 27769
+[03/Jul/2026 13:44:49] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 304 0
+[03/Jul/2026 13:44:54] "GET /accounts/account/orders/ HTTP/1.1" 200 23571
+[03/Jul/2026 13:45:06] "GET /accounts/account/addresses/ HTTP/1.1" 200 20129
+[03/Jul/2026 13:45:09] "GET /accounts/account/profile/ HTTP/1.1" 200 24683
+X:\Projeto\Hubx.market\backend\app\modules\accounts\interfaces\merchant_ops_views.py changed, reloading.
+Watching for file changes with StatReloader
+[03/Jul/2026 13:45:37] "GET /accounts/account/orders/ HTTP/1.1" 200 23571
+[03/Jul/2026 13:45:40] "GET /catalog/ HTTP/1.1" 200 46496
+[03/Jul/2026 13:45:40] "GET /media/demo-catalog/hubx-demo/demo-bota-urban-trek-1.jpg HTTP/1.1" 304 0
+[03/Jul/2026 13:45:40] "GET /media/demo-catalog/hubx-demo/demo-moletom-soft-zip-1.jpg HTTP/1.1" 304 0
+[03/Jul/2026 13:45:40] "GET /media/demo-catalog/hubx-demo/demo-camiseta-dry-fit-core-1.jpg HTTP/1.1" 304 0
+[03/Jul/2026 13:45:40] "GET /media/demo-catalog/hubx-demo/demo-corda-speed-jump-1.jpg HTTP/1.1" 304 0
+[03/Jul/2026 13:45:40] "GET /media/demo-catalog/hubx-demo/demo-hidratante-body-fresh-1.jpg HTTP/1.1" 304 0
+[03/Jul/2026 13:45:40] "GET /media/demo-catalog/hubx-demo/demo-jaqueta-wind-shield-1.jpg HTTP/1.1" 304 0
+[03/Jul/2026 13:48:06] "GET / HTTP/1.1" 200 27769
+[03/Jul/2026 13:48:06] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 85342
+[03/Jul/2026 13:48:09] "POST /accounts/logout/ HTTP/1.1" 302 0
+[03/Jul/2026 13:48:10] "GET /demo/ HTTP/1.1" 200 18251
+[03/Jul/2026 13:48:13] "GET /accounts/demo-session/?profile=admin&return_url=http%3A%2F%2Flocalhost%3A8002%2Fdemo%2F HTTP/1.1" 302 0
+[03/Jul/2026 13:48:13] "GET /ops/ HTTP/1.1" 200 41785
+[03/Jul/2026 13:49:59] "GET / HTTP/1.1" 200 27829
+[03/Jul/2026 13:49:59] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 304 0
+[03/Jul/2026 13:50:20] "GET /catalog/ HTTP/1.1" 200 46596
+[03/Jul/2026 13:50:20] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 304 0
+[03/Jul/2026 13:50:24] "GET / HTTP/1.1" 200 27829
+[03/Jul/2026 13:50:38] "GET /catalog/ HTTP/1.1" 200 46596
+[03/Jul/2026 13:50:43] "GET /catalog/ HTTP/1.1" 200 46596
+[03/Jul/2026 13:50:43] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[03/Jul/2026 13:50:43] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[03/Jul/2026 13:50:43] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 86648
+[03/Jul/2026 13:50:43] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 200 350859
+[03/Jul/2026 13:50:43] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 200 347555
+[03/Jul/2026 13:50:43] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 200 71272
+[03/Jul/2026 13:50:43] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[03/Jul/2026 13:50:43] "GET /static/js/app.js HTTP/1.1" 200 2101
+[03/Jul/2026 13:50:43] "GET /media/demo-catalog/hubx-demo/demo-bota-urban-trek-1.jpg HTTP/1.1" 200 320431
+[03/Jul/2026 13:50:43] "GET /media/demo-catalog/hubx-demo/demo-moletom-soft-zip-1.jpg HTTP/1.1" 200 411507
+[03/Jul/2026 13:50:43] "GET /media/demo-catalog/hubx-demo/demo-corda-speed-jump-1.jpg HTTP/1.1" 200 336956
+[03/Jul/2026 13:50:43] "GET /media/demo-catalog/hubx-demo/demo-hidratante-body-fresh-1.jpg HTTP/1.1" 200 64124
+[03/Jul/2026 13:50:44] "GET /media/demo-catalog/hubx-demo/demo-camiseta-dry-fit-core-1.jpg HTTP/1.1" 200 430471
+[03/Jul/2026 13:50:44] "GET /media/demo-catalog/hubx-demo/demo-jaqueta-wind-shield-1.jpg HTTP/1.1" 200 318631
+[03/Jul/2026 13:50:44] "GET /static/img/brand/favicon.ico HTTP/1.1" 200 8022
+[03/Jul/2026 13:51:14] "GET /catalog/demo-almofada-lumbar-rest/ HTTP/1.1" 200 25300
+[03/Jul/2026 13:51:14] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 304 0
+[03/Jul/2026 13:51:32] "POST /accounts/logout/ HTTP/1.1" 302 0
+[03/Jul/2026 13:51:32] "GET /demo/ HTTP/1.1" 200 18251
+[03/Jul/2026 13:51:34] "GET /accounts/demo-session/?profile=admin&return_url=http%3A%2F%2Flocalhost%3A8002%2Fdemo%2F HTTP/1.1" 302 0
+[03/Jul/2026 13:51:35] "GET /ops/ HTTP/1.1" 200 41785
+[03/Jul/2026 13:51:35] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 304 0
+[03/Jul/2026 13:53:02] "POST /accounts/logout/ HTTP/1.1" 302 0
+[03/Jul/2026 13:53:03] "GET /demo/ HTTP/1.1" 200 18251
+[03/Jul/2026 13:53:05] "GET /accounts/demo-session/?profile=customer&return_url=http%3A%2F%2Flocalhost%3A8002%2Fdemo%2F HTTP/1.1" 302 0
+[03/Jul/2026 13:53:05] "GET / HTTP/1.1" 200 27829
+[03/Jul/2026 13:53:06] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 304 0
+[03/Jul/2026 13:53:10] "GET / HTTP/1.1" 200 27829
+[03/Jul/2026 13:53:10] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[03/Jul/2026 13:53:10] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 86648
+[03/Jul/2026 13:53:10] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[03/Jul/2026 13:53:10] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 200 350859
+[03/Jul/2026 13:53:10] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[03/Jul/2026 13:53:10] "GET /static/js/app.js HTTP/1.1" 200 2101
+[03/Jul/2026 13:53:10] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 200 71272
+[03/Jul/2026 13:53:10] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 200 347555
+[03/Jul/2026 13:53:10] "GET /static/img/brand/favicon.ico HTTP/1.1" 200 8022
+[03/Jul/2026 13:53:12] "GET /catalog/ HTTP/1.1" 200 46596
+[03/Jul/2026 13:53:15] "GET /catalog/ HTTP/1.1" 200 46596
+[03/Jul/2026 13:53:15] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[03/Jul/2026 13:53:15] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 86648
+[03/Jul/2026 13:53:15] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[03/Jul/2026 13:53:15] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 200 350859
+[03/Jul/2026 13:53:15] "GET /static/js/app.js HTTP/1.1" 200 2101
+[03/Jul/2026 13:53:15] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[03/Jul/2026 13:53:15] "GET /media/demo-catalog/hubx-demo/demo-bota-urban-trek-1.jpg HTTP/1.1" 200 320431
+[03/Jul/2026 13:53:15] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 200 347555
+[03/Jul/2026 13:53:15] "GET /media/demo-catalog/hubx-demo/demo-corda-speed-jump-1.jpg HTTP/1.1" 200 336956
+[03/Jul/2026 13:53:15] "GET /media/demo-catalog/hubx-demo/demo-camiseta-dry-fit-core-1.jpg HTTP/1.1" 200 430471
+[03/Jul/2026 13:53:15] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 200 71272
+[03/Jul/2026 13:53:15] "GET /media/demo-catalog/hubx-demo/demo-hidratante-body-fresh-1.jpg HTTP/1.1" 200 64124
+[03/Jul/2026 13:53:15] "GET /media/demo-catalog/hubx-demo/demo-moletom-soft-zip-1.jpg HTTP/1.1" 200 411507
+[03/Jul/2026 13:53:15] "GET /media/demo-catalog/hubx-demo/demo-jaqueta-wind-shield-1.jpg HTTP/1.1" 200 318631
+[03/Jul/2026 13:53:15] "GET /static/img/brand/favicon.ico HTTP/1.1" 200 8022
+[03/Jul/2026 13:53:33] "GET / HTTP/1.1" 200 27829
+[03/Jul/2026 13:53:33] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 304 0
+[03/Jul/2026 13:54:03] "GET / HTTP/1.1" 200 27829
+[03/Jul/2026 13:54:03] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[03/Jul/2026 13:54:03] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 86648
+[03/Jul/2026 13:54:03] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[03/Jul/2026 13:54:03] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 200 350859
+[03/Jul/2026 13:54:03] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[03/Jul/2026 13:54:03] "GET /static/js/app.js HTTP/1.1" 200 2101
+[03/Jul/2026 13:54:03] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 200 71272
+[03/Jul/2026 13:54:03] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 200 347555
+[03/Jul/2026 13:54:03] "GET /static/img/brand/favicon.ico HTTP/1.1" 200 8022
+[03/Jul/2026 13:54:10] "GET /catalog/ HTTP/1.1" 200 46596
+[03/Jul/2026 13:54:14] "GET /catalog/ HTTP/1.1" 200 46596
+[03/Jul/2026 13:54:14] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 86648
+[03/Jul/2026 13:54:14] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[03/Jul/2026 13:54:14] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[03/Jul/2026 13:54:14] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[03/Jul/2026 13:54:14] "GET /static/js/app.js HTTP/1.1" 200 2101
+[03/Jul/2026 13:54:14] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 200 71272
+[03/Jul/2026 13:54:14] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 200 350859
+[03/Jul/2026 13:54:14] "GET /media/demo-catalog/hubx-demo/demo-bota-urban-trek-1.jpg HTTP/1.1" 200 320431
+[03/Jul/2026 13:54:14] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 200 347555
+[03/Jul/2026 13:54:14] "GET /media/demo-catalog/hubx-demo/demo-corda-speed-jump-1.jpg HTTP/1.1" 200 336956
+[03/Jul/2026 13:54:14] "GET /media/demo-catalog/hubx-demo/demo-hidratante-body-fresh-1.jpg HTTP/1.1" 200 64124
+[03/Jul/2026 13:54:14] "GET /media/demo-catalog/hubx-demo/demo-moletom-soft-zip-1.jpg HTTP/1.1" 200 411507
+[03/Jul/2026 13:54:14] "GET /media/demo-catalog/hubx-demo/demo-jaqueta-wind-shield-1.jpg HTTP/1.1" 200 318631
+[03/Jul/2026 13:54:14] "GET /media/demo-catalog/hubx-demo/demo-camiseta-dry-fit-core-1.jpg HTTP/1.1" 200 430471
+[03/Jul/2026 13:54:14] "GET /static/img/brand/favicon.ico HTTP/1.1" 200 8022
+[03/Jul/2026 13:55:21] "GET / HTTP/1.1" 200 27829
+[03/Jul/2026 13:55:21] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 304 0
+[03/Jul/2026 13:58:31] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 200 350859
+[03/Jul/2026 13:58:31] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 200 347555
+[03/Jul/2026 13:58:31] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 200 71272
+[03/Jul/2026 13:58:31] "GET /media/demo-catalog/hubx-demo/demo-bota-urban-trek-1.jpg HTTP/1.1" 200 320431
+[03/Jul/2026 13:58:31] "GET /media/demo-catalog/hubx-demo/demo-corda-speed-jump-1.jpg HTTP/1.1" 200 336956
+[03/Jul/2026 13:58:31] "GET /media/demo-catalog/hubx-demo/demo-moletom-soft-zip-1.jpg HTTP/1.1" 200 411507
+[03/Jul/2026 13:58:31] "GET /media/demo-catalog/hubx-demo/demo-camiseta-dry-fit-core-1.jpg HTTP/1.1" 200 430471
+[03/Jul/2026 13:58:31] "GET /media/demo-catalog/hubx-demo/demo-hidratante-body-fresh-1.jpg HTTP/1.1" 200 64124
+[03/Jul/2026 13:58:31] "GET /media/demo-catalog/hubx-demo/demo-jaqueta-wind-shield-1.jpg HTTP/1.1" 200 318631
+[03/Jul/2026 13:59:18] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 200 350859
+[03/Jul/2026 13:59:18] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 200 347555
+[03/Jul/2026 13:59:19] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 200 71272
+[03/Jul/2026 13:59:19] "GET /media/demo-catalog/hubx-demo/demo-hidratante-body-fresh-1.jpg HTTP/1.1" 200 64124
+[03/Jul/2026 13:59:19] "GET /media/demo-catalog/hubx-demo/demo-moletom-soft-zip-1.jpg HTTP/1.1" 200 411507
+[03/Jul/2026 13:59:19] "GET /media/demo-catalog/hubx-demo/demo-camiseta-dry-fit-core-1.jpg HTTP/1.1" 200 430471
+[03/Jul/2026 13:59:19] "GET /media/demo-catalog/hubx-demo/demo-jaqueta-wind-shield-1.jpg HTTP/1.1" 200 318631
+[03/Jul/2026 13:59:19] "GET /media/demo-catalog/hubx-demo/demo-corda-speed-jump-1.jpg HTTP/1.1" 200 336956
+[03/Jul/2026 13:59:19] "GET /media/demo-catalog/hubx-demo/demo-bota-urban-trek-1.jpg HTTP/1.1" 200 320431
+[03/Jul/2026 13:59:38] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 200 350859
+[03/Jul/2026 13:59:38] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 200 347555
+[03/Jul/2026 13:59:38] "GET /media/demo-catalog/hubx-demo/demo-corda-speed-jump-1.jpg HTTP/1.1" 200 336956
+[03/Jul/2026 13:59:38] "GET /media/demo-catalog/hubx-demo/demo-jaqueta-wind-shield-1.jpg HTTP/1.1" 200 318631
+[03/Jul/2026 13:59:38] "GET /media/demo-catalog/hubx-demo/demo-camiseta-dry-fit-core-1.jpg HTTP/1.1" 200 430471
+[03/Jul/2026 13:59:38] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 200 71272
+[03/Jul/2026 13:59:38] "GET /media/demo-catalog/hubx-demo/demo-hidratante-body-fresh-1.jpg HTTP/1.1" 200 64124
+[03/Jul/2026 13:59:38] "GET /media/demo-catalog/hubx-demo/demo-moletom-soft-zip-1.jpg HTTP/1.1" 200 411507
+[03/Jul/2026 13:59:39] "GET /media/demo-catalog/hubx-demo/demo-bota-urban-trek-1.jpg HTTP/1.1" 200 320431
+[03/Jul/2026 14:03:35] "GET / HTTP/1.1" 200 31911
+[03/Jul/2026 14:03:35] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 89154
+[03/Jul/2026 14:03:35] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[03/Jul/2026 14:03:35] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[03/Jul/2026 14:03:35] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 200 71272
+[03/Jul/2026 14:03:35] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[03/Jul/2026 14:03:35] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 200 350859
+[03/Jul/2026 14:03:35] "GET /static/js/app.js HTTP/1.1" 200 2101
+[03/Jul/2026 14:03:35] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 200 347555
+[03/Jul/2026 14:03:35] "GET /static/img/brand/favicon.ico HTTP/1.1" 200 8022
+[03/Jul/2026 14:03:49] "GET /catalog/ HTTP/1.1" 200 50675
+[03/Jul/2026 14:03:55] "GET /accounts/account/orders/ HTTP/1.1" 200 25796
+[03/Jul/2026 14:04:02] "GET /accounts/account/addresses/ HTTP/1.1" 200 22347
+[03/Jul/2026 14:04:02] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 304 0
+[03/Jul/2026 14:04:04] "GET /accounts/account/profile/ HTTP/1.1" 200 26906
+[03/Jul/2026 14:04:09] "GET /accounts/account/ HTTP/1.1" 200 26761
+[03/Jul/2026 14:04:22] "GET /accounts/account/orders/ HTTP/1.1" 200 25796
+[03/Jul/2026 14:04:33] "GET /accounts/account/addresses/ HTTP/1.1" 200 22347
+[03/Jul/2026 14:04:33] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 304 0
+[03/Jul/2026 14:04:36] "GET /accounts/account/orders/ HTTP/1.1" 200 25796
+[03/Jul/2026 14:04:37] "GET /accounts/account/addresses/ HTTP/1.1" 200 22347
+[03/Jul/2026 14:04:44] "GET /accounts/account/profile/ HTTP/1.1" 200 26906
+[03/Jul/2026 14:04:52] "GET / HTTP/1.1" 200 31911
+[03/Jul/2026 14:05:53] "POST /accounts/logout/ HTTP/1.1" 302 0
+[03/Jul/2026 14:05:53] "GET /demo/ HTTP/1.1" 200 18251
+[03/Jul/2026 14:05:55] "GET / HTTP/1.1" 200 14681
+[03/Jul/2026 14:06:02] "GET /plans/ HTTP/1.1" 200 31568
+[03/Jul/2026 14:06:04] "GET /demo/ HTTP/1.1" 200 18251
+[03/Jul/2026 14:06:09] "GET /accounts/demo-session/?profile=admin&return_url=http%3A%2F%2Flocalhost%3A8002%2Fdemo%2F HTTP/1.1" 302 0
+[03/Jul/2026 14:06:10] "GET /ops/ HTTP/1.1" 200 41785
+[03/Jul/2026 14:06:10] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 89966
+[03/Jul/2026 14:06:24] "GET /ops/pages/ HTTP/1.1" 200 30950
+[03/Jul/2026 14:06:24] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 304 0
+[03/Jul/2026 14:31:10] "POST /accounts/logout/ HTTP/1.1" 302 0
+[03/Jul/2026 14:31:11] "GET /demo/ HTTP/1.1" 200 18251
+[03/Jul/2026 14:31:12] "GET /accounts/demo-session/?profile=customer&return_url=http%3A%2F%2Flocalhost%3A8002%2Fdemo%2F HTTP/1.1" 302 0
+[03/Jul/2026 14:31:13] "GET / HTTP/1.1" 200 31911
+[03/Jul/2026 14:31:13] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 304 0
+[03/Jul/2026 14:31:13] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 304 0
+[03/Jul/2026 14:31:13] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 304 0
+[03/Jul/2026 14:31:13] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 304 0
+[03/Jul/2026 14:31:17] "GET /catalog/ HTTP/1.1" 200 50675
+[03/Jul/2026 14:31:17] "GET /media/demo-catalog/hubx-demo/demo-bota-urban-trek-1.jpg HTTP/1.1" 304 0
+[03/Jul/2026 14:31:17] "GET /media/demo-catalog/hubx-demo/demo-corda-speed-jump-1.jpg HTTP/1.1" 304 0
+[03/Jul/2026 14:31:17] "GET /media/demo-catalog/hubx-demo/demo-moletom-soft-zip-1.jpg HTTP/1.1" 304 0
+[03/Jul/2026 14:31:17] "GET /media/demo-catalog/hubx-demo/demo-camiseta-dry-fit-core-1.jpg HTTP/1.1" 304 0
+[03/Jul/2026 14:31:17] "GET /media/demo-catalog/hubx-demo/demo-hidratante-body-fresh-1.jpg HTTP/1.1" 304 0
+[03/Jul/2026 14:31:17] "GET /media/demo-catalog/hubx-demo/demo-jaqueta-wind-shield-1.jpg HTTP/1.1" 304 0
+[03/Jul/2026 14:31:19] "GET /catalog/ HTTP/1.1" 200 50675
+[03/Jul/2026 14:31:19] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 89966
+[03/Jul/2026 14:31:19] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[03/Jul/2026 14:31:19] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[03/Jul/2026 14:31:19] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[03/Jul/2026 14:31:19] "GET /static/js/app.js HTTP/1.1" 200 2101
+[03/Jul/2026 14:31:19] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 200 71272
+[03/Jul/2026 14:31:19] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 200 350859
+[03/Jul/2026 14:31:19] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 200 347555
+[03/Jul/2026 14:31:19] "GET /media/demo-catalog/hubx-demo/demo-bota-urban-trek-1.jpg HTTP/1.1" 200 320431
+[03/Jul/2026 14:31:19] "GET /media/demo-catalog/hubx-demo/demo-corda-speed-jump-1.jpg HTTP/1.1" 200 336956
+[03/Jul/2026 14:31:19] "GET /media/demo-catalog/hubx-demo/demo-moletom-soft-zip-1.jpg HTTP/1.1" 200 411507
+[03/Jul/2026 14:31:19] "GET /media/demo-catalog/hubx-demo/demo-hidratante-body-fresh-1.jpg HTTP/1.1" 200 64124
+[03/Jul/2026 14:31:19] "GET /media/demo-catalog/hubx-demo/demo-camiseta-dry-fit-core-1.jpg HTTP/1.1" 200 430471
+[03/Jul/2026 14:31:19] "GET /media/demo-catalog/hubx-demo/demo-jaqueta-wind-shield-1.jpg HTTP/1.1" 200 318631
+[03/Jul/2026 14:31:19] "GET /static/img/brand/favicon.ico HTTP/1.1" 200 8022
+[03/Jul/2026 14:31:38] "GET /catalog/ HTTP/1.1" 200 50675
+[03/Jul/2026 14:31:38] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[03/Jul/2026 14:31:38] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 89966
+[03/Jul/2026 14:31:38] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[03/Jul/2026 14:31:38] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 200 350859
+[03/Jul/2026 14:31:38] "GET /static/js/app.js HTTP/1.1" 200 2101
+[03/Jul/2026 14:31:38] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[03/Jul/2026 14:31:38] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 200 71272
+[03/Jul/2026 14:31:38] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 200 347555
+[03/Jul/2026 14:31:38] "GET /media/demo-catalog/hubx-demo/demo-corda-speed-jump-1.jpg HTTP/1.1" 200 336956
+[03/Jul/2026 14:31:38] "GET /media/demo-catalog/hubx-demo/demo-bota-urban-trek-1.jpg HTTP/1.1" 200 320431
+[03/Jul/2026 14:31:38] "GET /media/demo-catalog/hubx-demo/demo-moletom-soft-zip-1.jpg HTTP/1.1" 200 411507
+[03/Jul/2026 14:31:38] "GET /media/demo-catalog/hubx-demo/demo-hidratante-body-fresh-1.jpg HTTP/1.1" 200 64124
+[03/Jul/2026 14:31:38] "GET /media/demo-catalog/hubx-demo/demo-camiseta-dry-fit-core-1.jpg HTTP/1.1" 200 430471
+[03/Jul/2026 14:31:38] "GET /media/demo-catalog/hubx-demo/demo-jaqueta-wind-shield-1.jpg HTTP/1.1" 200 318631
+[03/Jul/2026 14:31:38] "GET /static/img/brand/favicon.ico HTTP/1.1" 200 8022
+[03/Jul/2026 14:31:39] "GET /catalog/ HTTP/1.1" 200 50675
+[03/Jul/2026 14:31:39] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 89966
+[03/Jul/2026 14:31:39] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[03/Jul/2026 14:31:39] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[03/Jul/2026 14:31:39] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[03/Jul/2026 14:31:39] "GET /static/js/app.js HTTP/1.1" 200 2101
+[03/Jul/2026 14:31:39] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 200 71272
+[03/Jul/2026 14:31:39] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 200 350859
+[03/Jul/2026 14:31:39] "GET /media/demo-catalog/hubx-demo/demo-bota-urban-trek-1.jpg HTTP/1.1" 200 320431
+[03/Jul/2026 14:31:39] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 200 347555
+[03/Jul/2026 14:31:39] "GET /media/demo-catalog/hubx-demo/demo-corda-speed-jump-1.jpg HTTP/1.1" 200 336956
+[03/Jul/2026 14:31:39] "GET /media/demo-catalog/hubx-demo/demo-moletom-soft-zip-1.jpg HTTP/1.1" 200 411507
+[03/Jul/2026 14:31:39] "GET /media/demo-catalog/hubx-demo/demo-hidratante-body-fresh-1.jpg HTTP/1.1" 200 64124
+[03/Jul/2026 14:31:39] "GET /media/demo-catalog/hubx-demo/demo-camiseta-dry-fit-core-1.jpg HTTP/1.1" 200 430471
+[03/Jul/2026 14:31:39] "GET /media/demo-catalog/hubx-demo/demo-jaqueta-wind-shield-1.jpg HTTP/1.1" 200 318631
+[03/Jul/2026 14:31:39] "GET /catalog/ HTTP/1.1" 200 50675
+[03/Jul/2026 14:31:39] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[03/Jul/2026 14:31:39] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 89966
+[03/Jul/2026 14:31:39] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[03/Jul/2026 14:31:39] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 200 350859
+[03/Jul/2026 14:31:39] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[03/Jul/2026 14:31:39] "GET /static/js/app.js HTTP/1.1" 200 2101
+[03/Jul/2026 14:31:39] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 200 71272
+[03/Jul/2026 14:31:39] "GET /media/demo-catalog/hubx-demo/demo-bota-urban-trek-1.jpg HTTP/1.1" 200 320431
+[03/Jul/2026 14:31:39] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 200 347555
+[03/Jul/2026 14:31:39] "GET /media/demo-catalog/hubx-demo/demo-corda-speed-jump-1.jpg HTTP/1.1" 200 336956
+[03/Jul/2026 14:31:39] "GET /media/demo-catalog/hubx-demo/demo-moletom-soft-zip-1.jpg HTTP/1.1" 200 411507
+[03/Jul/2026 14:31:39] "GET /media/demo-catalog/hubx-demo/demo-hidratante-body-fresh-1.jpg HTTP/1.1" 200 64124
+[03/Jul/2026 14:31:39] "GET /media/demo-catalog/hubx-demo/demo-camiseta-dry-fit-core-1.jpg HTTP/1.1" 200 430471
+[03/Jul/2026 14:31:39] "GET /media/demo-catalog/hubx-demo/demo-jaqueta-wind-shield-1.jpg HTTP/1.1" 200 318631
+[03/Jul/2026 14:31:39] "GET /static/img/brand/favicon.ico HTTP/1.1" 200 8022
+[03/Jul/2026 14:31:40] "GET /catalog/ HTTP/1.1" 200 50675
+[03/Jul/2026 14:31:40] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 89966
+[03/Jul/2026 14:31:40] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[03/Jul/2026 14:31:40] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[03/Jul/2026 14:31:40] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[03/Jul/2026 14:31:40] "GET /static/js/app.js HTTP/1.1" 200 2101
+[03/Jul/2026 14:31:40] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 200 71272
+[03/Jul/2026 14:31:40] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 200 350859
+[03/Jul/2026 14:31:40] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 200 347555
+[03/Jul/2026 14:31:40] "GET /media/demo-catalog/hubx-demo/demo-hidratante-body-fresh-1.jpg HTTP/1.1" 200 64124
+[03/Jul/2026 14:31:40] "GET /media/demo-catalog/hubx-demo/demo-corda-speed-jump-1.jpg HTTP/1.1" 200 336956
+[03/Jul/2026 14:31:40] "GET /media/demo-catalog/hubx-demo/demo-bota-urban-trek-1.jpg HTTP/1.1" 200 320431
+[03/Jul/2026 14:31:40] "GET /media/demo-catalog/hubx-demo/demo-moletom-soft-zip-1.jpg HTTP/1.1" 200 411507
+[03/Jul/2026 14:31:40] "GET /media/demo-catalog/hubx-demo/demo-camiseta-dry-fit-core-1.jpg HTTP/1.1" 200 430471
+[03/Jul/2026 14:31:40] "GET /media/demo-catalog/hubx-demo/demo-jaqueta-wind-shield-1.jpg HTTP/1.1" 200 318631
+[03/Jul/2026 14:31:41] "GET /catalog/ HTTP/1.1" 200 50675
+[03/Jul/2026 14:31:41] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[03/Jul/2026 14:31:41] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 89966
+[03/Jul/2026 14:31:41] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[03/Jul/2026 14:31:41] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 200 350859
+[03/Jul/2026 14:31:41] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[03/Jul/2026 14:31:41] "GET /static/js/app.js HTTP/1.1" 200 2101
+[03/Jul/2026 14:31:41] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 200 71272
+[03/Jul/2026 14:31:41] "GET /media/demo-catalog/hubx-demo/demo-corda-speed-jump-1.jpg HTTP/1.1" 200 336956
+[03/Jul/2026 14:31:41] "GET /media/demo-catalog/hubx-demo/demo-bota-urban-trek-1.jpg HTTP/1.1" 200 320431
+[03/Jul/2026 14:31:41] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 200 347555
+[03/Jul/2026 14:31:41] "GET /media/demo-catalog/hubx-demo/demo-moletom-soft-zip-1.jpg HTTP/1.1" 200 411507
+[03/Jul/2026 14:31:41] "GET /media/demo-catalog/hubx-demo/demo-hidratante-body-fresh-1.jpg HTTP/1.1" 200 64124
+[03/Jul/2026 14:31:41] "GET /media/demo-catalog/hubx-demo/demo-camiseta-dry-fit-core-1.jpg HTTP/1.1" 200 430471
+[03/Jul/2026 14:31:41] "GET /media/demo-catalog/hubx-demo/demo-jaqueta-wind-shield-1.jpg HTTP/1.1" 200 318631
+[03/Jul/2026 14:31:41] "GET /static/img/brand/favicon.ico HTTP/1.1" 200 8022
+[03/Jul/2026 14:31:41] "GET /catalog/ HTTP/1.1" 200 50675
+[03/Jul/2026 14:31:41] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 89966
+[03/Jul/2026 14:31:41] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[03/Jul/2026 14:31:41] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[03/Jul/2026 14:31:41] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[03/Jul/2026 14:31:41] "GET /static/js/app.js HTTP/1.1" 200 2101
+[03/Jul/2026 14:31:41] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 200 71272
+[03/Jul/2026 14:31:41] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 200 347555
+[03/Jul/2026 14:31:41] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 200 350859
+[03/Jul/2026 14:31:41] "GET /media/demo-catalog/hubx-demo/demo-bota-urban-trek-1.jpg HTTP/1.1" 200 320431
+[03/Jul/2026 14:31:41] "GET /media/demo-catalog/hubx-demo/demo-corda-speed-jump-1.jpg HTTP/1.1" 200 336956
+[03/Jul/2026 14:31:41] "GET /media/demo-catalog/hubx-demo/demo-moletom-soft-zip-1.jpg HTTP/1.1" 200 411507
+[03/Jul/2026 14:31:41] "GET /media/demo-catalog/hubx-demo/demo-hidratante-body-fresh-1.jpg HTTP/1.1" 200 64124
+[03/Jul/2026 14:31:41] "GET /media/demo-catalog/hubx-demo/demo-camiseta-dry-fit-core-1.jpg HTTP/1.1" 200 430471
+[03/Jul/2026 14:31:41] "GET /media/demo-catalog/hubx-demo/demo-jaqueta-wind-shield-1.jpg HTTP/1.1" 200 318631
+[03/Jul/2026 14:31:44] "GET /accounts/account/orders/ HTTP/1.1" 200 25796
+[03/Jul/2026 14:31:47] "GET /accounts/account/addresses/ HTTP/1.1" 200 22347
+[03/Jul/2026 14:31:48] "GET /accounts/account/profile/ HTTP/1.1" 200 26906
+[03/Jul/2026 14:31:50] "GET /accounts/account/ HTTP/1.1" 200 26761
+[03/Jul/2026 14:31:52] "GET /accounts/account/orders/ HTTP/1.1" 200 25796
+[03/Jul/2026 14:32:03] "GET /accounts/account/ HTTP/1.1" 200 26761
+[03/Jul/2026 14:32:06] "GET / HTTP/1.1" 200 31911
+[03/Jul/2026 14:33:41] "GET /catalog/ HTTP/1.1" 200 50675
+X:\Projeto\Hubx.market\backend\app\modules\tenants\models.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\catalog\interfaces\views.py changed, reloading.
+Watching for file changes with StatReloader
+[03/Jul/2026 14:55:42] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 200 350859
+[03/Jul/2026 14:55:42] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 200 347555
+[03/Jul/2026 14:55:42] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 200 71272
+X:\Projeto\Hubx.market\backend\app\modules\catalog\interfaces\views.py changed, reloading.
+Watching for file changes with StatReloader
+[03/Jul/2026 14:57:07] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 200 350859
+[03/Jul/2026 14:57:07] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 200 347555
+[03/Jul/2026 14:57:07] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 200 71272
+[03/Jul/2026 14:57:07] "GET /media/demo-catalog/hubx-demo/demo-hidratante-body-fresh-1.jpg HTTP/1.1" 200 64124
+[03/Jul/2026 14:57:07] "GET /media/demo-catalog/hubx-demo/demo-bota-urban-trek-1.jpg HTTP/1.1" 200 320431
+[03/Jul/2026 14:57:07] "GET /media/demo-catalog/hubx-demo/demo-corda-speed-jump-1.jpg HTTP/1.1" 200 336956
+[03/Jul/2026 14:57:07] "GET /media/demo-catalog/hubx-demo/demo-jaqueta-wind-shield-1.jpg HTTP/1.1" 200 318631
+[03/Jul/2026 14:57:07] "GET /media/demo-catalog/hubx-demo/demo-camiseta-dry-fit-core-1.jpg HTTP/1.1" 200 430471
+[03/Jul/2026 14:57:07] "GET /media/demo-catalog/hubx-demo/demo-moletom-soft-zip-1.jpg HTTP/1.1" 200 411507
+[03/Jul/2026 14:58:13] "GET /media/demo-catalog/hubx-demo/demo-bota-urban-trek-1.jpg HTTP/1.1" 200 320431
+[03/Jul/2026 14:58:13] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 200 71272
+[03/Jul/2026 14:58:13] "GET /media/demo-catalog/hubx-demo/demo-corda-speed-jump-1.jpg HTTP/1.1" 200 336956
+[03/Jul/2026 14:58:13] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 200 350859
+[03/Jul/2026 14:58:13] "GET /media/demo-catalog/hubx-demo/demo-moletom-soft-zip-1.jpg HTTP/1.1" 200 411507
+[03/Jul/2026 14:58:13] "GET /media/demo-catalog/hubx-demo/demo-camiseta-dry-fit-core-1.jpg HTTP/1.1" 200 430471
+[03/Jul/2026 14:58:13] "GET /media/demo-catalog/hubx-demo/demo-hidratante-body-fresh-1.jpg HTTP/1.1" 200 64124
+[03/Jul/2026 14:58:13] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 200 347555
+[03/Jul/2026 14:58:13] "GET /media/demo-catalog/hubx-demo/demo-jaqueta-wind-shield-1.jpg HTTP/1.1" 200 318631
+[03/Jul/2026 15:03:56] "GET /catalog/ HTTP/1.1" 200 53600
+[03/Jul/2026 15:03:56] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 95268
+[03/Jul/2026 15:03:56] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[03/Jul/2026 15:03:56] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[03/Jul/2026 15:03:56] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[03/Jul/2026 15:03:56] "GET /static/js/app.js HTTP/1.1" 200 2101
+[03/Jul/2026 15:03:56] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 200 350859
+[03/Jul/2026 15:03:56] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 200 347555
+[03/Jul/2026 15:03:56] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 200 71272
+[03/Jul/2026 15:03:56] "GET /media/demo-catalog/hubx-demo/demo-bota-urban-trek-1.jpg HTTP/1.1" 200 320431
+[03/Jul/2026 15:03:56] "GET /media/demo-catalog/hubx-demo/demo-corda-speed-jump-1.jpg HTTP/1.1" 200 336956
+[03/Jul/2026 15:03:56] "GET /media/demo-catalog/hubx-demo/demo-hidratante-body-fresh-1.jpg HTTP/1.1" 200 64124
+[03/Jul/2026 15:03:56] "GET /media/demo-catalog/hubx-demo/demo-moletom-soft-zip-1.jpg HTTP/1.1" 200 411507
+[03/Jul/2026 15:03:56] "GET /media/demo-catalog/hubx-demo/demo-jaqueta-wind-shield-1.jpg HTTP/1.1" 200 318631
+[03/Jul/2026 15:03:56] "GET /media/demo-catalog/hubx-demo/demo-camiseta-dry-fit-core-1.jpg HTTP/1.1" 200 430471
+[03/Jul/2026 15:03:56] "GET /static/img/brand/favicon.ico HTTP/1.1" 200 8022
+[03/Jul/2026 15:04:01] "GET / HTTP/1.1" 200 30429
+[03/Jul/2026 15:04:18] "POST /accounts/logout/ HTTP/1.1" 302 0
+[03/Jul/2026 15:04:19] "GET /demo/ HTTP/1.1" 200 18251
+[03/Jul/2026 15:04:19] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 95268
+[03/Jul/2026 15:04:19] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 304 0
+[03/Jul/2026 15:04:19] "GET /static/img/brand/hubx-public-hero.jpg HTTP/1.1" 304 0
+[03/Jul/2026 15:04:19] "GET /static/js/app.js HTTP/1.1" 304 0
+[03/Jul/2026 15:04:21] "GET /accounts/demo-session/?profile=admin&return_url=http%3A%2F%2Flocalhost%3A8002%2Fdemo%2F HTTP/1.1" 302 0
+[03/Jul/2026 15:04:21] "GET /ops/ HTTP/1.1" 200 41785
+X:\Projeto\Hubx.market\backend\app\modules\accounts\application\admin_permissions.py changed, reloading.
+Watching for file changes with StatReloader
+[03/Jul/2026 15:08:26] "GET /ops/catalog/products/ HTTP/1.1" 200 31395
+[03/Jul/2026 15:08:26] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 304 0
+[03/Jul/2026 15:08:38] "GET /ops/orders/ HTTP/1.1" 200 28554
+[03/Jul/2026 15:09:01] "POST /accounts/logout/ HTTP/1.1" 302 0
+[03/Jul/2026 15:09:01] "GET /demo/ HTTP/1.1" 200 18251
+[03/Jul/2026 15:09:01] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 304 0
+[03/Jul/2026 15:09:03] "GET /accounts/demo-session/?profile=customer&return_url=http%3A%2F%2Flocalhost%3A8002%2Fdemo%2F HTTP/1.1" 302 0
+[03/Jul/2026 15:09:03] "GET / HTTP/1.1" 200 30429
+[03/Jul/2026 15:09:14] "GET /catalog/demo-almofada-lumbar-rest/ HTTP/1.1" 200 29382
+[03/Jul/2026 15:09:14] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-2.jpg HTTP/1.1" 304 0
+[03/Jul/2026 15:09:14] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-3.jpg HTTP/1.1" 304 0
+[03/Jul/2026 15:09:14] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-4.jpg HTTP/1.1" 304 0
+X:\Projeto\Hubx.market\backend\config\urls.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\tenants\interfaces\storefront_branding_views.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\checkout\interfaces\views.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\checkout\application\checkout_result_taxonomy.py changed, reloading.
+Watching for file changes with StatReloader
+[03/Jul/2026 15:13:53] "GET / HTTP/1.1" 200 30429
+[03/Jul/2026 15:13:53] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 304 0
+[03/Jul/2026 15:13:58] "POST /accounts/logout/ HTTP/1.1" 302 0
+[03/Jul/2026 15:13:59] "GET /demo/ HTTP/1.1" 200 18251
+[03/Jul/2026 15:13:59] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 304 0
+[03/Jul/2026 15:14:01] "GET /accounts/demo-session/?profile=admin&return_url=http%3A%2F%2Flocalhost%3A8002%2Fdemo%2F HTTP/1.1" 302 0
+[03/Jul/2026 15:14:02] "GET /ops/ HTTP/1.1" 200 42554
+[03/Jul/2026 15:14:16] "GET /ops/branding/ HTTP/1.1" 200 31496
+X:\Projeto\Hubx.market\backend\app\modules\tenants\models.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\tenants\application\storefront_branding_commands.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\tenants\interfaces\storefront_branding_views.py changed, reloading.
+Watching for file changes with StatReloader
+[03/Jul/2026 15:23:11] "GET /ops/branding/ HTTP/1.1" 200 32753
+[03/Jul/2026 15:23:11] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[03/Jul/2026 15:23:11] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 95268
+[03/Jul/2026 15:23:11] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[03/Jul/2026 15:23:11] "GET /static/js/app.js HTTP/1.1" 200 2101
+[03/Jul/2026 15:23:11] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[03/Jul/2026 15:23:11] "GET /static/img/brand/favicon.ico HTTP/1.1" 200 8022
+[03/Jul/2026 15:23:13] "POST /accounts/logout/ HTTP/1.1" 302 0
+[03/Jul/2026 15:23:13] "GET /demo/ HTTP/1.1" 200 18251
+[03/Jul/2026 15:23:13] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 304 0
+[03/Jul/2026 15:23:15] "GET /accounts/demo-session/?profile=customer&return_url=http%3A%2F%2Flocalhost%3A8002%2Fdemo%2F HTTP/1.1" 302 0
+[03/Jul/2026 15:23:15] "GET / HTTP/1.1" 200 30429
+[03/Jul/2026 15:25:07] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 200 350859
+[03/Jul/2026 15:25:07] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 200 71272
+[03/Jul/2026 15:25:07] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 200 347555
+[03/Jul/2026 15:26:03] "GET /catalog/demo-almofada-lumbar-rest/ HTTP/1.1" 200 27333
+[03/Jul/2026 15:26:03] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 304 0
+[03/Jul/2026 15:29:31] "GET / HTTP/1.1" 200 28380
+[03/Jul/2026 15:29:31] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 304 0
+X:\Projeto\Hubx.market\backend\app\modules\catalog\interfaces\views.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\cart\interfaces\views.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\checkout\interfaces\views.py changed, reloading.
+Watching for file changes with StatReloader
+[03/Jul/2026 16:54:15] "GET / HTTP/1.1" 200 28380
+[03/Jul/2026 16:54:15] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 304 0
+[03/Jul/2026 16:54:15] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 304 0
+[03/Jul/2026 16:54:15] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 304 0
+[03/Jul/2026 16:54:15] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 304 0
+[03/Jul/2026 16:54:17] "GET /catalog/ HTTP/1.1" 200 51551
+[03/Jul/2026 16:54:17] "GET /media/demo-catalog/hubx-demo/demo-bota-urban-trek-1.jpg HTTP/1.1" 304 0
+[03/Jul/2026 16:54:17] "GET /media/demo-catalog/hubx-demo/demo-moletom-soft-zip-1.jpg HTTP/1.1" 304 0
+[03/Jul/2026 16:54:17] "GET /media/demo-catalog/hubx-demo/demo-camiseta-dry-fit-core-1.jpg HTTP/1.1" 304 0
+[03/Jul/2026 16:54:17] "GET /media/demo-catalog/hubx-demo/demo-corda-speed-jump-1.jpg HTTP/1.1" 304 0
+[03/Jul/2026 16:54:17] "GET /media/demo-catalog/hubx-demo/demo-hidratante-body-fresh-1.jpg HTTP/1.1" 304 0
+[03/Jul/2026 16:54:17] "GET /media/demo-catalog/hubx-demo/demo-jaqueta-wind-shield-1.jpg HTTP/1.1" 304 0
+[03/Jul/2026 16:54:20] "GET /catalog/demo-almofada-lumbar-rest/ HTTP/1.1" 200 27350
+[03/Jul/2026 16:54:20] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-4.jpg HTTP/1.1" 304 0
+[03/Jul/2026 16:54:20] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-2.jpg HTTP/1.1" 304 0
+[03/Jul/2026 16:54:20] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-3.jpg HTTP/1.1" 304 0
+[03/Jul/2026 16:54:25] "GET /cart/?demo_flow=cart HTTP/1.1" 200 32695
+[03/Jul/2026 16:54:46] "GET /checkout/?demo_flow=checkout&stage=review HTTP/1.1" 200 49748
+[03/Jul/2026 16:54:46] "GET /media/demo-catalog/hubx-demo/tenis-hubx-runner-persistido-1.svg HTTP/1.1" 200 1441
+[03/Jul/2026 16:54:46] "GET /media/demo-catalog/hubx-demo/demo-jaqueta-wind-shield-1.svg HTTP/1.1" 200 1407
+[03/Jul/2026 16:54:46] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.svg HTTP/1.1" 200 1399
+[03/Jul/2026 16:54:59] "GET /checkout/?demo_flow=checkout&stage=review HTTP/1.1" 200 49748
+[03/Jul/2026 16:54:59] "GET /media/demo-catalog/hubx-demo/tenis-hubx-runner-persistido-1.svg HTTP/1.1" 200 1441
+[03/Jul/2026 16:54:59] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 95268
+[03/Jul/2026 16:54:59] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.svg HTTP/1.1" 200 1399
+[03/Jul/2026 16:54:59] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[03/Jul/2026 16:54:59] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[03/Jul/2026 16:54:59] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[03/Jul/2026 16:54:59] "GET /media/demo-catalog/hubx-demo/demo-jaqueta-wind-shield-1.svg HTTP/1.1" 200 1407
+[03/Jul/2026 16:54:59] "GET /static/js/app.js HTTP/1.1" 200 2101
+[03/Jul/2026 16:54:59] "GET /static/img/brand/favicon.ico HTTP/1.1" 200 8022
+[03/Jul/2026 16:55:04] "GET /checkout/?demo_flow=checkout&stage=review HTTP/1.1" 200 49748
+[03/Jul/2026 16:55:04] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 95268
+[03/Jul/2026 16:55:04] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[03/Jul/2026 16:55:04] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[03/Jul/2026 16:55:04] "GET /static/js/app.js HTTP/1.1" 200 2101
+[03/Jul/2026 16:55:04] "GET /media/demo-catalog/hubx-demo/tenis-hubx-runner-persistido-1.svg HTTP/1.1" 200 1441
+[03/Jul/2026 16:55:04] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.svg HTTP/1.1" 200 1399
+[03/Jul/2026 16:55:04] "GET /media/demo-catalog/hubx-demo/demo-jaqueta-wind-shield-1.svg HTTP/1.1" 200 1407
+[03/Jul/2026 16:55:04] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[03/Jul/2026 16:55:04] "GET /static/img/brand/favicon.ico HTTP/1.1" 200 8022
+[03/Jul/2026 16:55:06] "GET /checkout/?demo_flow=checkout&stage=review HTTP/1.1" 200 49748
+[03/Jul/2026 16:55:06] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 95268
+[03/Jul/2026 16:55:06] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[03/Jul/2026 16:55:06] "GET /static/js/app.js HTTP/1.1" 200 2101
+[03/Jul/2026 16:55:06] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[03/Jul/2026 16:55:06] "GET /media/demo-catalog/hubx-demo/tenis-hubx-runner-persistido-1.svg HTTP/1.1" 200 1441
+[03/Jul/2026 16:55:06] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[03/Jul/2026 16:55:06] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.svg HTTP/1.1" 200 1399
+[03/Jul/2026 16:55:06] "GET /media/demo-catalog/hubx-demo/demo-jaqueta-wind-shield-1.svg HTTP/1.1" 200 1407
+[03/Jul/2026 16:55:06] "GET /static/img/brand/favicon.ico HTTP/1.1" 200 8022
+[03/Jul/2026 16:58:25] "GET /media/demo-catalog/hubx-demo/tenis-hubx-runner-persistido-1.svg HTTP/1.1" 200 1441
+[03/Jul/2026 16:58:25] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.svg HTTP/1.1" 200 1399
+[03/Jul/2026 16:58:25] "GET /media/demo-catalog/hubx-demo/demo-jaqueta-wind-shield-1.svg HTTP/1.1" 200 1407
+[03/Jul/2026 16:58:35] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.svg HTTP/1.1" 200 1399
+[03/Jul/2026 16:58:35] "GET /media/demo-catalog/hubx-demo/tenis-hubx-runner-persistido-1.svg HTTP/1.1" 200 1441
+[03/Jul/2026 16:58:35] "GET /media/demo-catalog/hubx-demo/demo-jaqueta-wind-shield-1.svg HTTP/1.1" 200 1407
+[03/Jul/2026 17:00:49] "GET /checkout/?demo_flow=checkout&stage=review HTTP/1.1" 200 49765
+[03/Jul/2026 17:00:49] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[03/Jul/2026 17:00:49] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 94979
+[03/Jul/2026 17:00:49] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[03/Jul/2026 17:00:49] "GET /media/demo-catalog/hubx-demo/tenis-hubx-runner-persistido-1.svg HTTP/1.1" 200 1441
+[03/Jul/2026 17:00:49] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.svg HTTP/1.1" 200 1399
+[03/Jul/2026 17:00:49] "GET /media/demo-catalog/hubx-demo/demo-jaqueta-wind-shield-1.svg HTTP/1.1" 200 1407
+[03/Jul/2026 17:00:49] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[03/Jul/2026 17:00:49] "GET /static/js/app.js HTTP/1.1" 200 2101
+[03/Jul/2026 17:00:49] "GET /static/img/brand/favicon.ico HTTP/1.1" 200 8022
+[04/Jul/2026 12:02:43] "GET /cart/?demo_flow=cart HTTP/1.1" 200 32695
+[04/Jul/2026 12:02:43] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 304 0
+[04/Jul/2026 12:02:43] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 304 0
+[04/Jul/2026 12:02:43] "GET /static/js/app.js HTTP/1.1" 304 0
+[04/Jul/2026 12:02:43] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 304 0
+[04/Jul/2026 12:02:43] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 304 0
+[04/Jul/2026 16:44:13] "GET /cart/?demo_flow=cart HTTP/1.1" 200 33387
+[04/Jul/2026 16:44:13] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 94979
+[04/Jul/2026 16:44:13] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[04/Jul/2026 16:44:13] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[04/Jul/2026 16:44:13] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[04/Jul/2026 16:44:13] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 200 350859
+[04/Jul/2026 16:44:13] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 200 347555
+[04/Jul/2026 16:44:13] "GET /static/js/app.js HTTP/1.1" 200 2101
+[04/Jul/2026 16:44:13] "GET /static/img/brand/favicon.ico HTTP/1.1" 200 8022
+[04/Jul/2026 16:44:16] "GET /cart/?demo_flow=cart HTTP/1.1" 200 33387
+[04/Jul/2026 16:44:18] "GET / HTTP/1.1" 200 29063
+[04/Jul/2026 16:44:18] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 304 0
+[05/Jul/2026 16:24:27] "GET /catalog/ HTTP/1.1" 200 52234
+[05/Jul/2026 16:24:27] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 304 0
+[05/Jul/2026 16:24:27] "GET /static/js/app.js HTTP/1.1" 304 0
+[05/Jul/2026 16:24:27] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 304 0
+[05/Jul/2026 16:24:27] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 304 0
+[05/Jul/2026 16:24:27] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 304 0
+[05/Jul/2026 16:24:27] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 304 0
+[05/Jul/2026 16:24:27] "GET /media/demo-catalog/hubx-demo/demo-bota-urban-trek-1.jpg HTTP/1.1" 304 0
+[05/Jul/2026 16:24:27] "GET /media/demo-catalog/hubx-demo/demo-corda-speed-jump-1.jpg HTTP/1.1" 304 0
+[05/Jul/2026 16:24:27] "GET /media/demo-catalog/hubx-demo/demo-moletom-soft-zip-1.jpg HTTP/1.1" 304 0
+[05/Jul/2026 16:24:27] "GET /media/demo-catalog/hubx-demo/demo-camiseta-dry-fit-core-1.jpg HTTP/1.1" 304 0
+[05/Jul/2026 16:24:27] "GET /media/demo-catalog/hubx-demo/demo-jaqueta-wind-shield-1.jpg HTTP/1.1" 304 0
+[05/Jul/2026 16:24:27] "GET /media/demo-catalog/hubx-demo/demo-hidratante-body-fresh-1.jpg HTTP/1.1" 304 0
+[05/Jul/2026 16:28:26] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 200 350859
+[05/Jul/2026 16:28:26] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 200 347555
+[05/Jul/2026 16:28:26] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 200 71272
+[05/Jul/2026 16:28:28] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 200 350859
+[05/Jul/2026 16:28:28] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 200 71272
+[05/Jul/2026 16:28:28] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 200 347555
+[06/Jul/2026 10:03:40] "GET /catalog/ HTTP/1.1" 200 51383
+[06/Jul/2026 10:03:40] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[06/Jul/2026 10:03:40] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 95101
+[06/Jul/2026 10:03:40] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[06/Jul/2026 10:03:40] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[06/Jul/2026 10:03:40] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 200 350859
+[06/Jul/2026 10:03:40] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 200 347555
+[06/Jul/2026 10:03:40] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 200 71272
+[06/Jul/2026 10:03:40] "GET /static/js/app.js HTTP/1.1" 200 2101
+[06/Jul/2026 10:03:40] "GET /media/demo-catalog/hubx-demo/demo-bota-urban-trek-1.jpg HTTP/1.1" 200 320431
+[06/Jul/2026 10:03:40] "GET /media/demo-catalog/hubx-demo/demo-corda-speed-jump-1.jpg HTTP/1.1" 200 336956
+[06/Jul/2026 10:03:40] "GET /media/demo-catalog/hubx-demo/demo-moletom-soft-zip-1.jpg HTTP/1.1" 200 411507
+[06/Jul/2026 10:03:40] "GET /media/demo-catalog/hubx-demo/demo-camiseta-dry-fit-core-1.jpg HTTP/1.1" 200 430471
+[06/Jul/2026 10:03:40] "GET /media/demo-catalog/hubx-demo/demo-hidratante-body-fresh-1.jpg HTTP/1.1" 200 64124
+[06/Jul/2026 10:03:40] "GET /media/demo-catalog/hubx-demo/demo-jaqueta-wind-shield-1.jpg HTTP/1.1" 200 318631
+[06/Jul/2026 10:03:40] "GET /static/img/brand/favicon.ico HTTP/1.1" 200 8022
+[06/Jul/2026 10:07:57] "GET /catalog/demo-camiseta-dry-fit-core/ HTTP/1.1" 200 27164
+[06/Jul/2026 10:07:57] "GET /media/demo-catalog/hubx-demo/demo-camiseta-dry-fit-core-2.jpg HTTP/1.1" 304 0
+[06/Jul/2026 10:07:57] "GET /media/demo-catalog/hubx-demo/demo-camiseta-dry-fit-core-4.jpg HTTP/1.1" 304 0
+[06/Jul/2026 10:07:57] "GET /media/demo-catalog/hubx-demo/demo-camiseta-dry-fit-core-3.jpg HTTP/1.1" 304 0
+[06/Jul/2026 10:08:56] "GET /cart/?demo_flow=cart HTTP/1.1" 200 32536
+[06/Jul/2026 10:09:25] "GET /checkout/?demo_flow=checkout&stage=review HTTP/1.1" 200 49765
+[06/Jul/2026 10:10:02] "GET /checkout/?demo_flow=complete&stage=review HTTP/1.1" 200 49625
+[06/Jul/2026 10:10:16] "GET /catalog/ HTTP/1.1" 200 51383
+[06/Jul/2026 10:11:27] "POST /accounts/logout/ HTTP/1.1" 302 0
+[06/Jul/2026 10:11:27] "GET /demo/ HTTP/1.1" 200 18251
+[06/Jul/2026 10:11:28] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 95101
+[06/Jul/2026 10:11:28] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 304 0
+[06/Jul/2026 10:11:28] "GET /static/img/brand/hubx-public-hero.jpg HTTP/1.1" 304 0
+[06/Jul/2026 10:11:28] "GET /static/js/app.js HTTP/1.1" 304 0
+[06/Jul/2026 10:11:30] "GET /accounts/demo-session/?profile=admin&return_url=http%3A%2F%2Flocalhost%3A8002%2Fdemo%2F HTTP/1.1" 302 0
+[06/Jul/2026 10:11:30] "GET /ops/ HTTP/1.1" 200 43179
+[06/Jul/2026 10:22:11] "GET /ops/ HTTP/1.1" 200 40772
+[06/Jul/2026 10:22:12] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 95101
+[06/Jul/2026 10:22:12] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[06/Jul/2026 10:22:12] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[06/Jul/2026 10:22:12] "GET /static/js/app.js HTTP/1.1" 200 2101
+[06/Jul/2026 10:22:12] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[06/Jul/2026 10:22:12] "GET /static/img/brand/favicon.ico HTTP/1.1" 200 8022
+[06/Jul/2026 10:27:30] "GET /ops/ HTTP/1.1" 200 44078
+[06/Jul/2026 10:27:31] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 95101
+[06/Jul/2026 10:27:31] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[06/Jul/2026 10:27:31] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[06/Jul/2026 10:27:31] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[06/Jul/2026 10:27:31] "GET /static/js/app.js HTTP/1.1" 200 2101
+[06/Jul/2026 10:27:31] "GET /static/img/brand/favicon.ico HTTP/1.1" 200 8022
+[06/Jul/2026 10:33:36] "GET /ops/ HTTP/1.1" 200 44078
+X:\Projeto\Hubx.market\backend\app\modules\pages\interfaces\views.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\accounts\application\initial_owner_provisioning_commands.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\config\settings\base.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\subscriptions\interfaces\views.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\pages\interfaces\views.py changed, reloading.
+Watching for file changes with StatReloader
+[06/Jul/2026 11:33:56] "GET /ops/ HTTP/1.1" 200 44078
+[06/Jul/2026 11:34:00] "GET /ops/orders/ HTTP/1.1" 200 30078
+[06/Jul/2026 11:34:02] "GET /ops/ HTTP/1.1" 200 44078
+[06/Jul/2026 11:34:04] "POST /accounts/logout/ HTTP/1.1" 302 0
+[06/Jul/2026 11:34:04] "GET /demo/ HTTP/1.1" 200 18251
+[06/Jul/2026 11:34:09] "GET / HTTP/1.1" 200 14681
+[06/Jul/2026 11:34:11] "GET /plans/ HTTP/1.1" 200 31668
+X:\Projeto\Hubx.market\backend\config\settings\base.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\tenants\application\public_tenant_signup_commands.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\tenants\interfaces\middleware.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\subscriptions\models.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\subscriptions\application\subscription_commands.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\subscriptions\application\subscription_queries.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\subscriptions\admin.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\subscriptions\application\subscription_queries.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\subscriptions\application\subscription_commands.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\subscriptions\application\subscription_commands.py changed, reloading.
+Watching for file changes with StatReloader
+[06/Jul/2026 14:59:06] "GET /plans/ HTTP/1.1" 200 39425
+[06/Jul/2026 14:59:06] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 304 0
+[06/Jul/2026 14:59:14] "GET /plans/ HTTP/1.1" 200 39425
+[06/Jul/2026 14:59:14] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 95101
+[06/Jul/2026 14:59:14] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[06/Jul/2026 14:59:14] "GET /static/img/brand/hubx-public-hero.jpg HTTP/1.1" 200 215421
+[06/Jul/2026 14:59:14] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[06/Jul/2026 14:59:14] "GET /static/js/app.js HTTP/1.1" 200 2101
+[06/Jul/2026 14:59:14] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[06/Jul/2026 14:59:14] "GET /static/img/brand/favicon.ico HTTP/1.1" 200 8022
+[06/Jul/2026 15:00:29] "GET / HTTP/1.1" 200 14681
+[06/Jul/2026 15:00:35] "GET /demo/ HTTP/1.1" 200 18251
+[06/Jul/2026 15:00:37] "GET /accounts/demo-session/?profile=customer&return_url=http%3A%2F%2Flocalhost%3A8002%2Fdemo%2F HTTP/1.1" 302 0
+[06/Jul/2026 15:00:37] "GET / HTTP/1.1" 200 28212
+[06/Jul/2026 15:00:37] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 304 0
+[06/Jul/2026 15:00:37] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[06/Jul/2026 15:00:37] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[06/Jul/2026 15:00:37] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 200 350859
+[06/Jul/2026 15:00:37] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[06/Jul/2026 15:00:37] "GET /static/js/app.js HTTP/1.1" 200 2101
+[06/Jul/2026 15:00:37] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 200 71272
+[06/Jul/2026 15:00:37] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 200 347555
+X:\Projeto\Hubx.market\backend\app\modules\catalog\interfaces\views.py changed, reloading.
+Watching for file changes with StatReloader
+[06/Jul/2026 15:09:55] "GET / HTTP/1.1" 200 28200
+[06/Jul/2026 15:10:15] "GET /catalog/demo-almofada-lumbar-rest/ HTTP/1.1" 200 27182
+[06/Jul/2026 15:10:15] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-2.jpg HTTP/1.1" 200 347842
+[06/Jul/2026 15:10:15] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-3.jpg HTTP/1.1" 200 396194
+[06/Jul/2026 15:10:15] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-4.jpg HTTP/1.1" 200 393699
+[06/Jul/2026 15:10:30] "POST /accounts/logout/ HTTP/1.1" 302 0
+[06/Jul/2026 15:10:30] "GET /demo/ HTTP/1.1" 200 18251
+[06/Jul/2026 15:10:33] "GET / HTTP/1.1" 200 14681
+[06/Jul/2026 15:10:48] "GET /plans/ HTTP/1.1" 200 39425
+X:\Projeto\Hubx.market\backend\config\settings\base.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\payments\infrastructure\provider_adapters.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\payments\infrastructure\provider_adapters.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\payments\domain\provider_rollout.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\payments\application\payment_attempt_commands.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\payments\domain\webhook_normalization.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\payments\application\webhook_commands.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\payments\interfaces\views.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\subscriptions\models.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\subscriptions\application\subscription_commands.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\subscriptions\application\subscription_queries.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\subscriptions\admin.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\subscriptions\interfaces\views.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\payments\application\webhook_commands.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\payments\infrastructure\provider_adapters.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\config\settings\base.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\accounts\interfaces\owner_views.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\customers\interfaces\views.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\customers\interfaces\views.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\orders\interfaces\views.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\shipping\interfaces\views.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\accounts\application\admin_permissions.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\accounts\interfaces\middleware.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\customers\application\admin_customer_commands.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\customers\interfaces\views.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\orders\application\admin_order_commands.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\orders\interfaces\views.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\shipping\application\shipment_commands.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\shipping\application\admin_provider_settings.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\shipping\interfaces\views.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\customers\interfaces\views.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\orders\interfaces\views.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\shipping\interfaces\views.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\accounts\application\admin_permissions.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\api_keys\interfaces\ops_views.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\api_keys\interfaces\ops_views.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\api_keys\application\admin_api_key_queries.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\api_keys\interfaces\ops_views.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\accounts\application\admin_permissions.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\newsletter\models.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\newsletter\application\admin_newsletter_queries.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\newsletter\application\admin_newsletter_queries.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\newsletter\interfaces\views.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\newsletter\interfaces\urls.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\api_keys\interfaces\ops_views.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\newsletter\interfaces\views.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\shipping\models.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\shipping\application\shipment_commands.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\shipping\application\admin_shipment_queries.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\shipping\interfaces\views.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\shipping\interfaces\views.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\accounts\application\admin_permissions.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\payments\infrastructure\provider_adapters.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\payments\application\refund_ledger_queries.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\payments\interfaces\ops_views.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\payments\interfaces\ops_views.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\catalog\models.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\catalog\application\admin_product_commands.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\catalog\application\admin_product_commands.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\catalog\application\admin_product_queries.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\catalog\interfaces\views.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\catalog\interfaces\urls.py changed, reloading.
+Watching for file changes with StatReloader
+[07/Jul/2026 09:56:06] "GET / HTTP/1.1" 200 14663
+[07/Jul/2026 09:56:06] "GET /static/js/app.js HTTP/1.1" 304 0
+[07/Jul/2026 09:56:06] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 304 0
+[07/Jul/2026 09:56:06] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 304 0
+[07/Jul/2026 09:56:06] "GET /static/img/brand/hubx-public-hero.jpg HTTP/1.1" 304 0
+Not Found: /demo/
+[07/Jul/2026 09:56:32] "GET /demo/ HTTP/1.1" 404 2570
+Not Found: /favicon.ico
+[07/Jul/2026 09:56:32] "GET /favicon.ico HTTP/1.1" 404 8570
+Not Found: /demo/
+[07/Jul/2026 09:56:37] "GET /demo/ HTTP/1.1" 404 2570
+Not Found: /favicon.ico
+[07/Jul/2026 09:56:37] "GET /favicon.ico HTTP/1.1" 404 8570
+Not Found: /demo/
+[07/Jul/2026 09:56:46] "GET /demo/ HTTP/1.1" 404 2570
+[07/Jul/2026 10:01:12] "GET / HTTP/1.1" 200 25054
+[07/Jul/2026 10:01:14] "GET /demo/ HTTP/1.1" 200 18251
+[07/Jul/2026 10:01:22] "GET / HTTP/1.1" 200 25054
+[07/Jul/2026 10:01:30] "GET / HTTP/1.1" 200 25054
+[07/Jul/2026 10:01:54] "GET /demo/ HTTP/1.1" 200 18251
+[07/Jul/2026 10:05:43] "GET /demo/ HTTP/1.1" 200 18251
+[07/Jul/2026 10:05:43] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 95101
+[07/Jul/2026 10:05:43] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[07/Jul/2026 10:05:43] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[07/Jul/2026 10:05:43] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[07/Jul/2026 10:05:43] "GET /static/img/brand/hubx-public-hero.jpg HTTP/1.1" 200 215421
+[07/Jul/2026 10:05:43] "GET /static/js/app.js HTTP/1.1" 200 2101
+[07/Jul/2026 10:05:47] "GET /accounts/demo-session/?profile=customer&return_url=http%3A%2F%2Flocalhost%3A8002%2Fdemo%2F HTTP/1.1" 302 0
+[07/Jul/2026 10:05:47] "GET / HTTP/1.1" 200 25054
+[07/Jul/2026 10:05:47] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 95101
+[07/Jul/2026 10:05:47] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[07/Jul/2026 10:05:47] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[07/Jul/2026 10:05:47] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[07/Jul/2026 10:05:47] "GET /static/js/app.js HTTP/1.1" 200 2101
+[07/Jul/2026 10:05:47] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 200 350859
+[07/Jul/2026 10:05:47] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 200 347555
+[07/Jul/2026 10:05:47] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 200 71272
+[07/Jul/2026 11:02:45] "GET /demo/ HTTP/1.1" 200 18251
+[07/Jul/2026 11:03:32] "GET /demo/ HTTP/1.1" 200 18251
+[07/Jul/2026 11:03:32] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 95101
+[07/Jul/2026 11:03:32] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 304 0
+[07/Jul/2026 11:03:32] "GET /static/img/brand/hubx-public-hero.jpg HTTP/1.1" 200 215421
+[07/Jul/2026 11:03:58] "GET /demo/ HTTP/1.1" 200 18251
+[07/Jul/2026 11:03:59] "GET /accounts/demo-session/?profile=admin&return_url=http%3A%2F%2Flocalhost%3A8002%2Fdemo%2F HTTP/1.1" 302 0
+[07/Jul/2026 11:04:00] "GET /ops/ HTTP/1.1" 200 42714
+[07/Jul/2026 11:04:00] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 304 0
+[07/Jul/2026 11:04:00] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 95101
+[07/Jul/2026 11:04:01] "GET /ops/ HTTP/1.1" 200 42714
+[07/Jul/2026 11:04:03] "GET /ops/catalog/products/ HTTP/1.1" 200 32912
+[07/Jul/2026 11:04:04] "GET /ops/orders/ HTTP/1.1" 200 30071
+[07/Jul/2026 11:04:04] "GET /ops/customers/ HTTP/1.1" 200 31720
+[07/Jul/2026 11:04:05] "GET /ops/coupons/ HTTP/1.1" 200 28455
+[07/Jul/2026 11:04:06] "GET /ops/pages/ HTTP/1.1" 200 28593
+[07/Jul/2026 11:04:06] "GET /ops/reviews/ HTTP/1.1" 200 28796
+[07/Jul/2026 11:04:07] "GET /ops/shipping/ HTTP/1.1" 200 27674
+[07/Jul/2026 11:04:08] "GET /ops/payments/finance/ HTTP/1.1" 200 27328
+[07/Jul/2026 11:04:09] "GET /ops/payments/refunds/ HTTP/1.1" 200 28431
+[07/Jul/2026 11:04:09] "GET /ops/newsletter/ HTTP/1.1" 200 31034
+[07/Jul/2026 11:04:10] "GET /ops/api-keys/ HTTP/1.1" 200 25655
+[07/Jul/2026 11:04:11] "GET /ops/audit/ HTTP/1.1" 200 30239
+[07/Jul/2026 11:04:12] "GET /ops/owners/ HTTP/1.1" 200 29731
+[07/Jul/2026 11:04:12] "GET /ops/subscriptions/ HTTP/1.1" 200 24227
+[07/Jul/2026 11:04:13] "GET /ops/branding/ HTTP/1.1" 200 34270
+[07/Jul/2026 11:04:15] "GET /ops/catalog/products/ HTTP/1.1" 200 32912
+[07/Jul/2026 11:04:16] "GET /ops/catalog/products/new/ HTTP/1.1" 200 37256
+[07/Jul/2026 11:04:17] "GET / HTTP/1.1" 200 25054
+[07/Jul/2026 11:04:17] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-1.jpg HTTP/1.1" 200 350859
+[07/Jul/2026 11:04:17] "GET /media/demo-catalog/hubx-demo/demo-bolsa-tote-canvas-1.jpg HTTP/1.1" 200 347555
+[07/Jul/2026 11:04:17] "GET /media/demo-catalog/hubx-demo/demo-condicionador-repair-soft-1.jpg HTTP/1.1" 200 71272
+[07/Jul/2026 11:04:19] "GET /catalog/ HTTP/1.1" 200 48201
+[07/Jul/2026 11:04:19] "GET /media/demo-catalog/hubx-demo/demo-bota-urban-trek-1.jpg HTTP/1.1" 200 320431
+[07/Jul/2026 11:04:19] "GET /media/demo-catalog/hubx-demo/demo-corda-speed-jump-1.jpg HTTP/1.1" 200 336956
+[07/Jul/2026 11:04:19] "GET /media/demo-catalog/hubx-demo/demo-hidratante-body-fresh-1.jpg HTTP/1.1" 200 64124
+[07/Jul/2026 11:04:19] "GET /media/demo-catalog/hubx-demo/demo-moletom-soft-zip-1.jpg HTTP/1.1" 200 411507
+[07/Jul/2026 11:04:19] "GET /media/demo-catalog/hubx-demo/demo-camiseta-dry-fit-core-1.jpg HTTP/1.1" 200 430471
+[07/Jul/2026 11:04:19] "GET /media/demo-catalog/hubx-demo/demo-jaqueta-wind-shield-1.jpg HTTP/1.1" 200 318631
+[07/Jul/2026 11:04:20] "GET /catalog/demo-almofada-lumbar-rest/ HTTP/1.1" 200 24036
+[07/Jul/2026 11:04:20] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-2.jpg HTTP/1.1" 200 347842
+[07/Jul/2026 11:04:20] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-3.jpg HTTP/1.1" 200 396194
+[07/Jul/2026 11:04:20] "GET /media/demo-catalog/hubx-demo/demo-almofada-lumbar-rest-4.jpg HTTP/1.1" 200 393699
+[07/Jul/2026 11:04:22] "GET /cart/?demo_flow=cart HTTP/1.1" 200 29390
+[07/Jul/2026 11:04:23] "GET /accounts/demo-session/?profile=customer HTTP/1.1" 302 0
+[07/Jul/2026 11:04:24] "GET / HTTP/1.1" 200 25054
+[07/Jul/2026 11:04:25] "GET /accounts/account/ HTTP/1.1" 200 24240
+[07/Jul/2026 11:04:26] "GET /accounts/account/orders/ HTTP/1.1" 200 23275
+[07/Jul/2026 11:04:27] "GET /accounts/login/ HTTP/1.1" 200 12822
+[07/Jul/2026 11:04:31] "POST /accounts/login/ HTTP/1.1" 302 0
+[07/Jul/2026 11:04:31] "GET /ops/platform/tenants/ HTTP/1.1" 200 24688
+[07/Jul/2026 11:04:31] "GET /ops/platform/tenants/ HTTP/1.1" 200 24688
+[07/Jul/2026 11:04:32] "GET /ops/platform/onboarding/ HTTP/1.1" 200 16217
+[07/Jul/2026 11:04:33] "GET /ops/platform/acquisitions/ HTTP/1.1" 200 17765
+Forbidden (Permission denied): /ops/shipping/
+Traceback (most recent call last):
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "X:\Projeto\Hubx.market\backend\app\modules\accounts\interfaces\middleware.py", line 161, in __call__
+    raise PermissionDenied("Owner access required")
+django.core.exceptions.PermissionDenied: Owner access required
+[07/Jul/2026 11:04:45] "GET /ops/shipping/ HTTP/1.1" 403 135
+Not Found: /favicon.ico
+[07/Jul/2026 11:04:47] "GET /favicon.ico HTTP/1.1" 404 8580
+Forbidden (Permission denied): /ops/payments/refunds/
+Traceback (most recent call last):
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "X:\Projeto\Hubx.market\backend\app\modules\accounts\interfaces\middleware.py", line 161, in __call__
+    raise PermissionDenied("Owner access required")
+django.core.exceptions.PermissionDenied: Owner access required
+[07/Jul/2026 11:04:47] "GET /ops/payments/refunds/ HTTP/1.1" 403 135
+Forbidden (Permission denied): /ops/audit/
+Traceback (most recent call last):
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "X:\Projeto\Hubx.market\backend\app\modules\accounts\interfaces\middleware.py", line 161, in __call__
+    raise PermissionDenied("Owner access required")
+django.core.exceptions.PermissionDenied: Owner access required
+[07/Jul/2026 11:04:48] "GET /ops/audit/ HTTP/1.1" 403 135
+Forbidden (Permission denied): /ops/owners/
+Traceback (most recent call last):
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "X:\Projeto\Hubx.market\backend\app\modules\accounts\interfaces\middleware.py", line 161, in __call__
+    raise PermissionDenied("Owner access required")
+django.core.exceptions.PermissionDenied: Owner access required
+[07/Jul/2026 11:04:49] "GET /ops/owners/ HTTP/1.1" 403 135
+Forbidden (Permission denied): /ops/catalog/products/
+Traceback (most recent call last):
+  File "X:\Projeto\Hubx.market\.venv\lib\site-packages\django\core\handlers\exception.py", line 55, in inner
+    response = get_response(request)
+  File "X:\Projeto\Hubx.market\backend\app\modules\accounts\interfaces\middleware.py", line 161, in __call__
+    raise PermissionDenied("Owner access required")
+django.core.exceptions.PermissionDenied: Owner access required
+[07/Jul/2026 11:04:49] "GET /ops/catalog/products/ HTTP/1.1" 403 135
+[07/Jul/2026 11:05:02] "GET /accounts/demo-session/?profile=admin HTTP/1.1" 302 0
+[07/Jul/2026 11:05:03] "GET /ops/ HTTP/1.1" 200 42714
+[07/Jul/2026 11:05:05] "GET /ops/catalog/products/ HTTP/1.1" 200 32912
+[07/Jul/2026 11:05:05] "GET /ops/shipping/ HTTP/1.1" 200 27674
+[07/Jul/2026 11:05:06] "GET /ops/payments/refunds/ HTTP/1.1" 200 28431
+[07/Jul/2026 11:05:07] "GET /ops/audit/ HTTP/1.1" 200 34039
+[07/Jul/2026 11:05:08] "GET /ops/owners/ HTTP/1.1" 200 29731
+[07/Jul/2026 11:05:08] "GET /ops/catalog/products/demo-suporte-notebook-lift/ HTTP/1.1" 200 56348
+[07/Jul/2026 11:06:08] "GET /accounts/demo-session/?profile=admin HTTP/1.1" 302 0
+[07/Jul/2026 11:06:09] "GET /ops/ HTTP/1.1" 200 42714
+[07/Jul/2026 11:06:22] "GET /ops/catalog/products/new/ HTTP/1.1" 200 37256
+[07/Jul/2026 11:06:22] "GET /ops/coupons/new/ HTTP/1.1" 200 29023
+[07/Jul/2026 11:06:23] "GET /ops/pages/new/ HTTP/1.1" 200 28023
+[07/Jul/2026 11:06:24] "GET /ops/reviews/new/ HTTP/1.1" 200 29410
+[07/Jul/2026 11:06:25] "GET /ops/owners/new/ HTTP/1.1" 200 25069
+[07/Jul/2026 11:06:26] "GET /ops/branding/ HTTP/1.1" 200 34270
+[07/Jul/2026 11:06:27] "GET /ops/api-keys/ HTTP/1.1" 200 25655
+[07/Jul/2026 11:06:28] "GET /ops/api-keys/quotas/ HTTP/1.1" 200 24248
+[07/Jul/2026 11:06:29] "GET /ops/newsletter/ HTTP/1.1" 200 31034
+[07/Jul/2026 11:06:29] "GET /ops/shipping/ HTTP/1.1" 200 27674
+[07/Jul/2026 11:06:30] "GET /ops/payments/refunds/ HTTP/1.1" 200 28431
+[07/Jul/2026 11:06:32] "GET /accounts/login/ HTTP/1.1" 200 13063
+[07/Jul/2026 11:06:33] "GET /ops/platform/tenants/new/ HTTP/1.1" 200 20534
+[07/Jul/2026 11:06:34] "GET /ops/platform/onboarding/new/ HTTP/1.1" 200 15232
+[07/Jul/2026 11:06:35] "GET /ops/platform/acquisitions/ HTTP/1.1" 200 17765
+X:\Projeto\Hubx.market\backend\app\modules\subscriptions\models.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\accounts\application\admin_permissions.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\subscriptions\application\subscription_commands.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\tenants\application\public_tenant_signup_commands.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\tenants\application\public_tenant_signup_commands.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\tenants\application\tenant_onboarding_commands.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\tenants\application\tenant_onboarding_queries.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\subscriptions\application\subscription_queries.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\subscriptions\interfaces\views.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\config\urls.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\accounts\interfaces\middleware.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\accounts\interfaces\merchant_ops_views.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\subscriptions\interfaces\views.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\subscriptions\application\subscription_commands.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\subscriptions\admin.py changed, reloading.
+Watching for file changes with StatReloader
+X:\Projeto\Hubx.market\backend\app\modules\subscriptions\application\subscription_coupon_commands.py changed, reloading.
+Watching for file changes with StatReloader

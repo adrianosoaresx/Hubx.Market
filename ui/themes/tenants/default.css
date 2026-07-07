@@ -8,8 +8,8 @@
 
 :root,
 [data-tenant="default"] {
-  --tenant-brand-primary: var(--component-button-primary-bg, #4f46e5);
-  --tenant-brand-primary-hover: var(--component-button-primary-bg-hover, #4338ca);
+  --tenant-brand-primary: var(--component-button-primary-bg, #9a6410);
+  --tenant-brand-primary-hover: var(--component-button-primary-bg-hover, #794a0c);
   --tenant-brand-secondary: var(--color-action-secondary);
   --tenant-radius-base: var(--radius-md);
 }

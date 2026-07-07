@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model, login as django_login
 from django.core.paginator import Paginator
-from django.http import HttpResponse, HttpResponseNotFound, HttpResponseRedirect
+from django.http import Http404, HttpResponse, HttpResponseNotFound, HttpResponseRedirect
 from django.middleware.csrf import get_token
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -19,6 +19,11 @@ from app.modules.accounts.application.account_customer_area_queries import (
     account_customer_area_queries,
 )
 from app.modules.accounts.application.owner_login_commands import owner_login_commands
+from app.modules.accounts.application.demo_session_login_commands import (
+    DEMO_SESSION_RETURN_URL_KEY,
+    DEMO_SESSION_SOURCE_KEY,
+    demo_session_login_commands,
+)
 from app.modules.accounts.application.post_login_redirects import post_login_redirects
 from app.modules.accounts.application.owner_access_recovery_commands import owner_access_recovery_commands
 from app.modules.accounts.application.owner_access_metrics_queries import owner_access_metrics_queries
@@ -609,6 +614,11 @@ class LoginView(TemplateView):
         context["register_href"] = reverse("accounts:register")
         context["forgot_password_href"] = reverse("accounts:forgot-password")
         context["next_url"] = self._safe_next_url()
+        if tenant_id is None:
+            context["portal_href"] = "/"
+            context["plans_href"] = "/plans/"
+            context["demo_href"] = "/demo/"
+            context["login_href"] = reverse("accounts:login")
         context.update(kwargs)
         return context
 
@@ -699,6 +709,19 @@ class LoginView(TemplateView):
         return ""
 
 
+class DemoSessionLoginView(View):
+    def get(self, request, *args, **kwargs):
+        result = demo_session_login_commands.authenticate_demo_profile(
+            request=request,
+            tenant=getattr(request, "tenant", None),
+            profile=request.GET.get("profile"),
+            return_url=_safe_demo_return_url(request),
+        )
+        if result.get("result") != "demo-session-authenticated":
+            raise Http404("Demo profile not found")
+        return HttpResponseRedirect(str(result.get("redirect_url") or "/"))
+
+
 class OwnerMfaChallengeView(TemplateView):
     template_name = "pages/templates/owner_mfa_challenge_page.html"
 
@@ -760,11 +783,82 @@ class OwnerMfaChallengeView(TemplateView):
 class LogoutView(View):
     def post(self, request, *args, **kwargs):
         tenant_id = getattr(getattr(request, "tenant", None), "id", None)
+        redirect_url = self._redirect_url(request)
         owner_login_commands.logout_owner(request=request, tenant_id=tenant_id)
-        return HttpResponseRedirect(reverse("accounts:login"))
+        return HttpResponseRedirect(redirect_url)
 
     def get(self, request, *args, **kwargs):
         return HttpResponseRedirect(reverse("accounts:login"))
+
+    def _redirect_url(self, request) -> str:
+        if request.session.get(DEMO_SESSION_SOURCE_KEY) == "public-demo":
+            return_url = str(request.session.get(DEMO_SESSION_RETURN_URL_KEY) or "").strip()
+            if return_url:
+                return return_url
+            return _central_public_url(request=request, path="/demo/")
+        if bool(getattr(request, "is_demo_read_only", False)):
+            return_url = _safe_demo_return_url(request)
+            if return_url:
+                return return_url
+            return _central_public_url(request=request, path="/demo/")
+        return reverse("accounts:login")
+
+
+def _safe_demo_return_url(request) -> str:
+    candidate = str(request.GET.get("return_url") or request.POST.get("return_url") or "").strip()
+    if not candidate:
+        return ""
+
+    parsed = urlparse(candidate)
+    if parsed.scheme not in {"http", "https"} or parsed.path != "/demo/":
+        return ""
+    if parsed.params or parsed.query or parsed.fragment:
+        return ""
+    if not _is_allowed_demo_return_host(request=request, hostname=str(parsed.hostname or "").lower()):
+        return ""
+    return candidate
+
+
+def _is_allowed_demo_return_host(*, request, hostname: str) -> bool:
+    root_domain = _configured_root_domain()
+    if hostname == root_domain:
+        return True
+
+    request_hostname, _port = _request_hostname_and_port(request)
+    is_local_demo_request = request_hostname in {"localhost", "127.0.0.1"} or request_hostname.endswith(".localhost")
+    return is_local_demo_request and hostname in {"localhost", "127.0.0.1"}
+
+
+def _central_public_url(*, request, path: str) -> str:
+    normalized_path = path if str(path or "").startswith("/") else f"/{path}"
+    hostname, port = _request_hostname_and_port(request)
+    root_domain = _central_root_domain(hostname=hostname)
+    public_port = _central_public_port(hostname=hostname, port=port)
+    return f"http://{root_domain}{public_port}{normalized_path}"
+
+
+def _request_hostname_and_port(request) -> tuple[str, str]:
+    host = str(request.get_host() if request is not None else "").strip().lower()
+    if host.count(":") == 1:
+        return host.rsplit(":", 1)
+    return host, ""
+
+
+def _central_root_domain(*, hostname: str) -> str:
+    if hostname in {"localhost", "127.0.0.1"} or hostname.endswith(".localhost"):
+        return "localhost"
+    return _configured_root_domain()
+
+
+def _central_public_port(*, hostname: str, port: str) -> str:
+    if (hostname in {"localhost", "127.0.0.1"} or hostname.endswith(".localhost")) and port:
+        return f":{port}"
+    configured_port = str(getattr(settings, "HUBX_MARKET_PUBLIC_PORT", "") or "").strip()
+    return f":{configured_port}" if configured_port else ""
+
+
+def _configured_root_domain() -> str:
+    return str(getattr(settings, "HUBX_MARKET_ROOT_DOMAIN", "hubx.market") or "hubx.market").strip().lower()
 
 
 class StoreSelectionView(TemplateView):
@@ -1148,11 +1242,11 @@ class AccountAddressesView(TemplateView):
                 "page_title": base_payload["page_title"],
                 "page_description": base_payload["page_description"],
                 "page_actions": mark_safe(
-                    f'<a href="{_build_account_address_management_url("create")}" class="ds-btn-primary">Adicionar endereço</a>'
+                    f'<a href="{_build_account_address_management_url("create")}" class="ds-btn ds-btn-primary ds-btn-md">Adicionar endereço</a>'
                 ),
                 "addresses": addresses,
                 "primary_action": mark_safe(
-                    f'<a href="{_build_account_address_management_url("create")}" class="ds-btn-primary">Adicionar endereço</a>'
+                    f'<a href="{_build_account_address_management_url("create")}" class="ds-btn ds-btn-primary ds-btn-md">Adicionar endereço</a>'
                 ),
             }
         )

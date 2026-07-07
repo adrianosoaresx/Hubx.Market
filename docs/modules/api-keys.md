@@ -1246,6 +1246,41 @@ Objetivo:
 - criação de endpoint público novo;
 - armazenamento de API key, header, hash, token ou segredo.
 
+## API Key Admin Management Execution
+
+- o módulo `api_keys` agora possui surface operacional para gestão completa inicial de chaves.
+- query service:
+  - `api_keys.application.admin_api_key_queries`.
+- command service reutilizado:
+  - `api_keys.application.api_key_commands`.
+- views:
+  - `api_keys.interfaces.ops_views.AdminApiKeyListView`;
+  - `api_keys.interfaces.ops_views.AdminApiKeyCreateView`;
+  - `api_keys.interfaces.ops_views.AdminApiKeyRevokeView`.
+- URLs:
+  - `/ops/api-keys/`;
+  - `/ops/api-keys/new/`;
+  - `/ops/api-keys/<key_id>/revoke/`;
+  - `/ops/api-keys/quotas/`.
+
+### Regras
+
+- listagem usa apenas `tenant_id` resolvido por subdomínio.
+- criação exige permissão `api_keys.manage`.
+- revogação exige permissão `api_keys.manage`.
+- perfis com apenas `api_keys.view` conseguem auditar prefixo, escopos, status, owner, last-used e quotas, mas não criam nem revogam.
+- valor claro do segredo aparece somente na resposta de criação.
+- listagem, quota, audit log e métricas não expõem segredo, `key_hash`, header ou bearer token.
+- revogação usa `tenant_id + key_id`, preserva histórico e registra `api_key.revoked`.
+
+### Escopo deliberado
+
+- sem editar escopos de uma chave existente.
+- sem regenerar segredo.
+- sem UI de quota mutável; quotas continuam por command service.
+- sem permission matrix persistida em banco.
+- sem cobrança/billing por API key.
+
 ### Próxima trilha recomendada
 
 **System ROI Re-Selection Review**

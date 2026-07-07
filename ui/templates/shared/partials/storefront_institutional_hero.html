@@ -1,0 +1,32 @@
+{% if storefront_hero.enabled %}
+<section class="storefront-institutional-hero {% if storefront_hero.image_url %}has-media{% else %}has-no-media{% endif %}" aria-label="Destaque institucional da loja">
+    <div class="storefront-institutional-hero-copy">
+        {% include "shared/partials/brand_identity.html" with brand_name=storefront_hero.title brand_scope="Loja online" brand_href="/" size="lg" %}
+        <div class="storefront-institutional-hero-main">
+            <h1 class="storefront-institutional-hero-title">{{ storefront_hero.title }}</h1>
+            <p class="storefront-institutional-hero-description">{{ storefront_hero.description }}</p>
+        </div>
+        <div class="storefront-institutional-hero-actions">
+            {% include "shared/components/actions/button.html" with label=storefront_hero.primary_label href=storefront_hero.primary_href variant="primary" icon_name="shopping-bag" %}
+            {% if storefront_hero.secondary_href %}
+                {% include "shared/components/actions/button.html" with label=storefront_hero.secondary_label href=storefront_hero.secondary_href variant="secondary" icon_name="mail" %}
+            {% endif %}
+            {% if not request.is_demo_read_only %}
+                {% include "shared/components/actions/button.html" with label="Entrar" href="/accounts/login/" variant="secondary" icon_name="log-in" %}
+            {% endif %}
+        </div>
+    </div>
+    {% if storefront_hero.image_url %}
+        <div class="storefront-institutional-hero-media" aria-hidden="true">
+            <img src="{{ storefront_hero.image_url }}" alt="" class="storefront-institutional-hero-image">
+            {% if storefront_hero.badges %}
+                <div class="storefront-institutional-hero-badges">
+                    {% for badge in storefront_hero.badges %}
+                        <span class="storefront-institutional-hero-badge">{{ badge }}</span>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+</section>
+{% endif %}

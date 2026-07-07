@@ -14,7 +14,7 @@
 
     {% if can_manage_platform_tenants %}
         {% if form_error %}
-            <div class="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{{ form_error }}</div>
+            {% include "shared/components/feedback/alert.html" with variant="danger" title="Corrija o formulário" description=form_error %}
         {% endif %}
 
         <form method="post" action="{{ form_action }}" class="space-y-6">
@@ -52,17 +52,17 @@
                 </div>
 
                 <div class="grid gap-4 md:grid-cols-2">
-                    <label class="flex items-start gap-3 rounded-2xl border border-[var(--color-border-default)] p-4">
+                    <label class="ds-subpanel flex items-start gap-3">
                         <input type="hidden" name="is_active" value="0">
-                        <input type="checkbox" name="is_active" value="1" class="mt-1" {% if values.is_active %}checked{% endif %}>
+                        <input type="checkbox" name="is_active" value="1" class="ds-checkbox-input" {% if values.is_active %}checked{% endif %}>
                         <span>
                             <span class="block text-sm font-medium text-[var(--color-text-primary)]">Criar ativa</span>
                             <span class="block text-sm text-[var(--color-text-secondary)]">Quando desligado, o tenant não resolve como loja ativa.</span>
                         </span>
                     </label>
 
-                    <label class="flex items-start gap-3 rounded-2xl border border-[var(--color-border-default)] p-4">
-                        <input type="checkbox" name="maintenance_mode" class="mt-1" {% if values.maintenance_mode %}checked{% endif %}>
+                    <label class="ds-subpanel flex items-start gap-3">
+                        <input type="checkbox" name="maintenance_mode" class="ds-checkbox-input" {% if values.maintenance_mode %}checked{% endif %}>
                         <span>
                             <span class="block text-sm font-medium text-[var(--color-text-primary)]">Modo manutenção</span>
                             <span class="block text-sm text-[var(--color-text-secondary)]">Marca a loja como em preparação operacional.</span>
@@ -74,9 +74,9 @@
             <section class="admin-ops-panel ds-surface p-6">
                 <div class="space-y-3">
                     <p class="text-sm font-medium text-[var(--color-text-primary)]">Guardrails desta criação</p>
-                    <ul class="space-y-2 text-sm text-[var(--color-text-secondary)]">
+                    <ul class="ds-callout-list text-sm text-[var(--color-text-secondary)]">
                         {% for note in contract_notes %}
-                            <li>• {{ note }}</li>
+                            <li>{{ note }}</li>
                         {% endfor %}
                     </ul>
                 </div>

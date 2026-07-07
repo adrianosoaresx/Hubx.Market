@@ -1,6 +1,6 @@
 {% if state %}
     {% with stock_state=state %}
-<div class="inline-flex items-center gap-2">
+<div class="ds-stock-indicator">
     {% if stock_state == 'low_stock' %}
         {% include "shared/components/data_display/badge.html" with label=label|default:"Estoque baixo" variant="warning" size=size|default:"sm" %}
     {% elif stock_state == 'out_of_stock' %}
@@ -12,13 +12,13 @@
     {% endif %}
 
     {% if helper %}
-        <span class="text-sm text-[var(--color-text-secondary)]">{{ helper }}</span>
+        <span class="ds-stock-helper">{{ helper }}</span>
     {% endif %}
 </div>
     {% endwith %}
 {% elif variant %}
     {% with stock_state=variant %}
-<div class="inline-flex items-center gap-2">
+<div class="ds-stock-indicator">
     {% if stock_state == 'low_stock' %}
         {% include "shared/components/data_display/badge.html" with label=label|default:"Estoque baixo" variant="warning" size=size|default:"sm" %}
     {% elif stock_state == 'out_of_stock' %}
@@ -30,13 +30,13 @@
     {% endif %}
 
     {% if helper %}
-        <span class="text-sm text-[var(--color-text-secondary)]">{{ helper }}</span>
+        <span class="ds-stock-helper">{{ helper }}</span>
     {% endif %}
 </div>
     {% endwith %}
 {% else %}
     {% with stock_state="in_stock" %}
-<div class="inline-flex items-center gap-2">
+<div class="ds-stock-indicator">
     {% if stock_state == 'low_stock' %}
         {% include "shared/components/data_display/badge.html" with label=label|default:"Estoque baixo" variant="warning" size=size|default:"sm" %}
     {% elif stock_state == 'out_of_stock' %}
@@ -48,7 +48,7 @@
     {% endif %}
 
     {% if helper %}
-        <span class="text-sm text-[var(--color-text-secondary)]">{{ helper }}</span>
+        <span class="ds-stock-helper">{{ helper }}</span>
     {% endif %}
 </div>
     {% endwith %}

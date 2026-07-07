@@ -16,12 +16,12 @@
                 {% include "shared/components/data_display/card.html" %}
             {% endwith %}
 
-            <section class="customer-area-panel space-y-4">
+            <section class="customer-area-panel ds-surface space-y-4 p-6">
                 <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">{{ recent_orders_title|default:"Pedidos recentes" }}</h2>
                 {% if recent_orders %}
                     {% include "shared/components/data_display/table.html" with columns=recent_order_columns rows=recent_orders empty_message="Nenhum pedido recente." %}
                 {% else %}
-                    {% with icon="📦" title="Nenhum pedido recente" description="Assim que houver pedidos, eles aparecerão aqui para acompanhamento rápido." centered=False %}
+                    {% with icon_name="package" title="Nenhum pedido recente" description="Assim que houver pedidos, eles aparecerão aqui para acompanhamento rápido." centered=False %}
                         {% include "shared/components/feedback/empty_state.html" %}
                     {% endwith %}
                 {% endif %}
@@ -34,18 +34,18 @@
             {% endwith %}
 
             {% if quick_links %}
-                <div class="customer-area-panel ds-surface p-6">
+                <section class="customer-area-panel ds-surface p-6">
                     <div class="space-y-3">
                         {% for link in quick_links %}
-                            <a href="{{ link.href|default:'#' }}" class="block rounded-lg border border-[var(--color-border-default)] px-4 py-3 text-sm text-[var(--color-text-primary)] hover:bg-slate-50">
-                                <div class="font-medium">{{ link.label }}</div>
-                                {% if link.description %}<div class="mt-1 text-[var(--color-text-secondary)]">{{ link.description }}</div>{% endif %}
+                            <a href="{{ link.href|default:'#' }}" class="ds-link-card">
+                                <span class="ds-link-card-title">{{ link.label }}</span>
+                                {% if link.description %}<span class="ds-link-card-description">{{ link.description }}</span>{% endif %}
                             </a>
                         {% endfor %}
                     </div>
-                </div>
+                </section>
             {% else %}
-                {% with icon="↗" title="Sem atalhos configurados" description="Use este bloco para expor links rápidos como pedidos, endereços e perfil." centered=False %}
+                {% with icon_name="send" title="Sem atalhos configurados" description="Use este bloco para expor links rápidos como pedidos, endereços e perfil." centered=False %}
                     {% include "shared/components/feedback/empty_state.html" %}
                 {% endwith %}
             {% endif %}

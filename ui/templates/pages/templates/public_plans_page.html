@@ -1,0 +1,211 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}{{ page_title|default:"Planos Hubx Market" }}{% endblock %}
+
+{% block body %}
+<div class="min-h-screen bg-[var(--color-surface-page)]">
+    <header class="border-b border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
+        <div class="site-header-inner mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
+            {% include "shared/partials/brand_identity.html" with brand_name="Hubx Market" brand_monogram="HX" brand_scope="Planos SaaS" brand_href="/" %}
+            {% include "shared/partials/public_nav.html" with portal_href=portal_href plans_href="/plans/" demo_href=demo_href login_href=login_href %}
+        </div>
+    </header>
+
+    <main>
+        {% include "shared/partials/public_hero.html" with hero_eyebrow="Planos Hubx Market" hero_title="Teste grátis por 30 dias." hero_description="Escolha um plano, avance pelo onboarding e valide a loja em trial. Asaas será o primeiro provider para recebimentos e billing SaaS, com interface preparada para outros meios no futuro." primary_label="Iniciar onboarding" primary_href="#aquisicao" primary_icon="send" secondary_label="Ver planos" secondary_href="#planos" secondary_icon="receipt-text" tertiary_label="Acessar demo" tertiary_href=demo_href tertiary_icon="store" %}
+
+        <section id="planos" class="mx-auto max-w-7xl px-6 py-12">
+            <div class="flex flex-wrap items-end justify-between gap-4">
+                <div>
+                    <p class="text-sm font-semibold text-[var(--color-action-primary-bg)]">Planos ativos</p>
+                    <h2 class="mt-2 text-2xl font-semibold text-[var(--color-text-primary)]">Escolha o contrato inicial</h2>
+                </div>
+                <p class="max-w-xl text-sm text-[var(--color-text-secondary)]">
+                    Todos os planos comerciais podem iniciar com 30 dias grátis. O onboarding prepara Asaas como provider inicial para pagamentos da loja e billing SaaS, sem capturar cartão em campos livres.
+                </p>
+            </div>
+
+            <div class="mt-6 grid gap-5 lg:grid-cols-3">
+                {% for plan in plans %}
+                    <article class="ds-plan-card ds-surface {% if plan.is_recommended %}is-recommended{% endif %}">
+                        <div class="flex min-h-8 items-start justify-between gap-3">
+                            <h3 class="text-xl font-semibold text-[var(--color-text-primary)]">{{ plan.name }}</h3>
+                            {% if plan.is_recommended %}
+                                {% include "shared/components/data_display/badge.html" with label="Recomendado" variant="warning" size="xs" %}
+                            {% endif %}
+                        </div>
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            {% if plan.trial_badge %}
+                                {% include "shared/components/data_display/badge.html" with label=plan.trial_badge variant="success" size="xs" %}
+                            {% endif %}
+                            {% if plan.payment_badge %}
+                                {% include "shared/components/data_display/badge.html" with label=plan.payment_badge variant="neutral" size="xs" %}
+                            {% endif %}
+                        </div>
+                        <p class="mt-2 min-h-12 text-sm text-[var(--color-text-secondary)]">{{ plan.description }}</p>
+                        <p class="mt-5 text-3xl font-semibold text-[var(--color-text-primary)]">{{ plan.price_label }}{% if plan.price_caption %}<span class="text-sm font-normal text-[var(--color-text-secondary)]">{{ plan.price_caption }}</span>{% endif %}</p>
+                        <p class="mt-2 min-h-10 text-xs leading-5 text-[var(--color-text-muted)]">{{ plan.billing_note }}</p>
+                        <ul class="mt-5 space-y-3 text-sm text-[var(--color-text-secondary)]">
+                            {% for feature in plan.features %}
+                                <li class="flex gap-2">
+                                    {% include "shared/partials/icon.html" with name="check" size="sm" %}
+                                    <span>{{ feature }}</span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                        <a class="ds-btn ds-btn-secondary ds-btn-md mt-6 w-full" href="/plans/?plan={{ plan.code }}#aquisicao">
+                            {% include "shared/partials/icon.html" with name="arrow-down" size="sm" %}
+                            <span>Iniciar {{ plan.name }}</span>
+                        </a>
+                        {% if public_signup_enabled %}
+                            <a class="ds-btn ds-btn-primary ds-btn-md mt-3 w-full" href="{{ signup_href }}?plan={{ plan.code }}">
+                                {% include "shared/partials/icon.html" with name="store" size="sm" %}
+                                <span>Criar loja self-service</span>
+                            </a>
+                        {% endif %}
+                    </article>
+                {% empty %}
+                    <div class="ds-card ds-surface">
+                        <p class="text-sm font-semibold text-[var(--color-text-primary)]">Nenhum plano ativo</p>
+                        <p class="mt-2 text-sm text-[var(--color-text-secondary)]">Ative planos SaaS para liberar a aquisição pública.</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="border-y border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
+            <div class="mx-auto grid max-w-7xl gap-6 px-6 py-10 lg:grid-cols-3">
+                <div>
+                    <p class="text-sm font-semibold text-[var(--color-action-primary-bg)]">Onboarding e recebimentos</p>
+                    <h2 class="mt-2 text-2xl font-semibold text-[var(--color-text-primary)]">30 dias para validar antes da cobrança.</h2>
+                </div>
+                <div class="grid gap-3 text-sm text-[var(--color-text-secondary)] lg:col-span-2">
+                    <div class="flex gap-2">
+                        {% include "shared/partials/icon.html" with name="check" size="sm" %}
+                        <span>O trial é registrado como assinatura interna em estado <strong>trial</strong>.</span>
+                    </div>
+                    <div class="flex gap-2">
+                        {% include "shared/partials/icon.html" with name="credit-card" size="sm" %}
+                        <span>Asaas será usado para checkout hospedado e billing SaaS; dados de cartão ficam no provider seguro.</span>
+                    </div>
+                    <div class="flex gap-2">
+                        {% include "shared/partials/icon.html" with name="shield" size="sm" %}
+                        <span>Novas lojas começam em modo manutenção até configuração, validação de owner e checklist inicial.</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="bg-[var(--color-surface-panel)]">
+            <div class="mx-auto grid max-w-7xl gap-8 px-6 py-12 lg:grid-cols-[minmax(0,0.9fr)_minmax(360px,0.8fr)]">
+                <div class="flex flex-col justify-center">
+                    <p class="text-sm font-semibold text-[var(--color-action-primary-bg)]">Onboarding assistido</p>
+                    <h2 class="mt-2 text-2xl font-semibold text-[var(--color-text-primary)]">Comece a criação da sua loja com contexto comercial.</h2>
+                    <p class="mt-3 max-w-2xl text-sm leading-6 text-[var(--color-text-secondary)]">
+                        O envio registra o início do onboarding para revisão platform. A equipe valida plano, subdomínio, Asaas sandbox e próximos passos antes de qualquer cobrança SaaS.
+                    </p>
+                    <ul class="mt-6 grid gap-3 text-sm text-[var(--color-text-secondary)]">
+                        {% if public_signup_enabled %}
+                            <li class="flex gap-2">
+                                {% include "shared/partials/icon.html" with name="check" size="sm" %}
+                                <span>Self-service controlado disponível em <a class="font-medium text-[var(--color-action-primary-bg)] hover:underline" href="{{ signup_href }}">/plans/signup/</a>.</span>
+                            </li>
+                        {% endif %}
+                        <li class="flex gap-2">
+                            {% include "shared/partials/icon.html" with name="check" size="sm" %}
+                            <span>Onboarding comercial seguro, sem checkout público dentro do Hubx Market.</span>
+                        </li>
+                        <li class="flex gap-2">
+                            {% include "shared/partials/icon.html" with name="credit-card" size="sm" %}
+                            <span>Não insira dados de cartão neste formulário; a coleta real deve ocorrer em fluxo seguro de billing.</span>
+                        </li>
+                        <li class="flex gap-2">
+                            {% include "shared/partials/icon.html" with name="check" size="sm" %}
+                            <span>Onboarding platform separado da vitrine demo.</span>
+                        </li>
+                        <li class="flex gap-2">
+                            {% include "shared/partials/icon.html" with name="check" size="sm" %}
+                            <span>Demo disponível somente pelo CTA dedicado.</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div id="aquisicao" class="ds-card ds-surface">
+                    <h2 class="text-xl font-semibold text-[var(--color-text-primary)]">Iniciar onboarding</h2>
+                    {% if success %}
+                        <div class="ds-alert ds-alert-success mt-5" role="status">
+                            <div class="ds-alert-layout">
+                                <span class="ds-alert-icon" aria-hidden="true">
+                                    {% include "shared/partials/icon.html" with name="check-circle" size="md" %}
+                                </span>
+                                <div class="ds-alert-copy">
+                                    <p class="ds-alert-title">Intenção recebida</p>
+                                    <p class="ds-alert-description">Recebemos sua intenção para {{ lead.store_name }}. A fila platform revisará o plano {{ lead.plan_code }} antes de qualquer provisionamento.</p>
+                                    {% if lead.coupon_code_snapshot %}
+                                        <p class="ds-alert-description">Cupom {{ lead.coupon_code_snapshot }} aplicado: mensalidade efetiva {{ lead.effective_monthly_price_label }}.</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                    {% if form_error %}
+                        <div class="mt-5">
+                            {% include "shared/components/feedback/alert.html" with variant="danger" title="Não foi possível enviar" description=form_error %}
+                        </div>
+                    {% endif %}
+                    <form method="post" action="/plans/" class="mt-5 grid gap-4">
+                        {% csrf_token %}
+                        <label class="space-y-2">
+                            <span class="text-sm font-semibold text-[var(--color-text-primary)]">Plano</span>
+                            <select class="ds-input" name="plan_code" required>
+                                <option value="">Selecione</option>
+                                {% for plan in plans %}
+                                    <option value="{{ plan.code }}" {% if values.plan_code == plan.code or selected_plan == plan.code %}selected{% endif %}>{{ plan.name }} · {{ plan.monthly_price }}</option>
+                                {% endfor %}
+                            </select>
+                            {% if errors.plan_code %}{% include "shared/components/forms/field_error.html" with text=errors.plan_code %}{% endif %}
+                        </label>
+                        <label class="space-y-2">
+                            <span class="text-sm font-semibold text-[var(--color-text-primary)]">Cupom SaaS</span>
+                            <input class="ds-input" name="coupon_code" value="{{ values.coupon_code }}" placeholder="SAAS10">
+                            {% if errors.coupon_code %}{% include "shared/components/forms/field_error.html" with text=errors.coupon_code %}{% endif %}
+                        </label>
+                        <label class="space-y-2">
+                            <span class="text-sm font-semibold text-[var(--color-text-primary)]">Nome da loja</span>
+                            <input class="ds-input" name="store_name" value="{{ values.store_name }}" placeholder="Minha loja" required>
+                            {% if errors.store_name %}{% include "shared/components/forms/field_error.html" with text=errors.store_name %}{% endif %}
+                        </label>
+                        <label class="space-y-2">
+                            <span class="text-sm font-semibold text-[var(--color-text-primary)]">Subdomínio desejado</span>
+                            <input class="ds-input" name="desired_subdomain" value="{{ values.desired_subdomain }}" placeholder="minha-loja" required>
+                            {% if errors.desired_subdomain %}{% include "shared/components/forms/field_error.html" with text=errors.desired_subdomain %}{% endif %}
+                        </label>
+                        <div class="grid gap-4 md:grid-cols-2">
+                            <label class="space-y-2">
+                                <span class="text-sm font-semibold text-[var(--color-text-primary)]">Nome do contato</span>
+                                <input class="ds-input" name="contact_name" value="{{ values.contact_name }}" placeholder="Nome completo">
+                            </label>
+                            <label class="space-y-2">
+                                <span class="text-sm font-semibold text-[var(--color-text-primary)]">E-mail</span>
+                                <input class="ds-input" name="contact_email" value="{{ values.contact_email }}" placeholder="voce@empresa.com" type="email" required>
+                                {% if errors.contact_email %}{% include "shared/components/forms/field_error.html" with text=errors.contact_email %}{% endif %}
+                            </label>
+                        </div>
+                        <label class="space-y-2">
+                            <span class="text-sm font-semibold text-[var(--color-text-primary)]">Telefone</span>
+                            <input class="ds-input" name="contact_phone" value="{{ values.contact_phone }}" placeholder="(11) 99999-0000">
+                        </label>
+                        <label class="space-y-2">
+                            <span class="text-sm font-semibold text-[var(--color-text-primary)]">Mensagem</span>
+                            <textarea class="ds-input min-h-24" name="message" placeholder="Contexto comercial, prazo ou operação atual">{{ values.message }}</textarea>
+                        </label>
+                        {% include "shared/components/actions/button.html" with label="Enviar intenção" variant="primary" type="submit" icon_name="send" %}
+                    </form>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    {% include "shared/partials/footer.html" with footer_variant="compact" brand_name="Hubx Market" brand_monogram="HX" %}
+</div>
+{% endblock %}

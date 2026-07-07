@@ -11,7 +11,7 @@ if (-not (Test-Path $EnsureScript)) {
     throw "Script auxiliar não encontrado em $EnsureScript"
 }
 
-& $EnsureScript
+& $EnsureScript -PublicPort "$Port"
 
 $StoreBaseUrl = "http://hubx-demo.localhost:$Port"
 $AccessUrl = "$StoreBaseUrl/accounts/login/?next=/ops/"
@@ -19,7 +19,7 @@ $AccessUrl = "$StoreBaseUrl/accounts/login/?next=/ops/"
 Write-Host ""
 Write-Host "Acesso store owner" -ForegroundColor Cyan
 Write-Host "URL:     $AccessUrl" -ForegroundColor Yellow
-Write-Host "Usuário: store.owner@hubx.market"
+Write-Host "Usuário: admin@hubx-demo.market"
 Write-Host "Senha:   secret"
 Write-Host ""
 Write-Host "Se o servidor não estiver rodando, abra outro PowerShell e execute:" -ForegroundColor DarkYellow

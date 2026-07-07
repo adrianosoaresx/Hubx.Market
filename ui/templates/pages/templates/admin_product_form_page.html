@@ -6,7 +6,7 @@
 {% block content %}
 <section class="space-y-6">
     {% with eyebrow=page_eyebrow|default:"Catálogo" title=page_title|default:"Produto" description=page_description|default:"Atualize informações principais, preço, estoque e visibilidade." meta=page_meta %}
-        {% include "shared/components/layout/page_header.html" %}
+        {% include "shared/components/layout/admin_page_header.html" %}
     {% endwith %}
 
     {% if page_actions or cancel_href or showcase_mode %}
@@ -23,6 +23,10 @@
         </div>
     {% endif %}
 
+    {% if form_error %}
+        {% include "shared/components/feedback/alert.html" with variant="danger" title="Corrija o formulário" description=form_error %}
+    {% endif %}
+
     <form method="{{ form_method|default:'post' }}" {% if form_action %}action="{{ form_action }}"{% elif request.path %}action="{{ request.path }}"{% endif %} class="space-y-6">
         {% csrf_token %}
 
@@ -33,26 +37,30 @@
             </div>
 
             <div class="grid gap-6 md:grid-cols-2">
-                {% with name="name" label="Nome do produto" value=name placeholder="Ex.: Tênis Hubx Runner" required=True %}
+                {% with name="name" label="Nome do produto" value=name placeholder="Ex.: Tênis Hubx Runner" required=True invalid=errors.name error_text=errors.name %}
                     {% include "shared/components/forms/input.html" %}
                 {% endwith %}
 
-                {% with name="slug" label="Slug" value=slug placeholder="tenis-hubx-runner" help_text="Usado em URLs amigáveis e integrações." %}
+                {% with name="slug" label="Slug" value=slug placeholder="tenis-hubx-runner" help_text="Usado em URLs amigáveis e integrações." invalid=errors.slug error_text=errors.slug %}
                     {% include "shared/components/forms/input.html" %}
                 {% endwith %}
             </div>
 
             <div class="grid gap-6 md:grid-cols-2">
-                {% with name="sku" label="SKU principal" value=sku placeholder="RUNNER-001-BLK-42" %}
+                {% with name="sku" label="SKU principal" value=sku placeholder="RUNNER-001-BLK-42" required=True invalid=errors.sku error_text=errors.sku %}
                     {% include "shared/components/forms/input.html" %}
                 {% endwith %}
 
-                {% with name="brand" label="Marca" value=brand placeholder="Hubx" %}
+                {% with name="brand" label="Marca" value=brand placeholder="Hubx" invalid=errors.brand error_text=errors.brand %}
                     {% include "shared/components/forms/input.html" %}
                 {% endwith %}
             </div>
 
-            {% with name="description" label="Descrição operacional" value=description rows="5" help_text="Use um texto curto e objetivo para catálogo, atendimento e canais." %}
+            {% with name="category_label" label="Categoria" value=category_label placeholder="Calçados esportivos" invalid=errors.category_label error_text=errors.category_label %}
+                {% include "shared/components/forms/input.html" %}
+            {% endwith %}
+
+            {% with name="description" label="Descrição operacional" value=description rows="5" help_text="Use um texto curto e objetivo para catálogo, atendimento e canais." invalid=errors.description error_text=errors.description %}
                 {% include "shared/components/forms/textarea.html" %}
             {% endwith %}
         </section>
@@ -65,21 +73,21 @@
                 </div>
 
                 <div class="grid gap-6 md:grid-cols-2">
-                    {% with name="price" label="Preço" value=price input_type="number" prefix="R$" placeholder="0,00" required=True %}
+                    {% with name="price" label="Preço" value=price input_type="number" prefix="R$" placeholder="0,00" required=True invalid=errors.price error_text=errors.price %}
                         {% include "shared/components/forms/input.html" %}
                     {% endwith %}
 
-                    {% with name="compare_price" label="Preço comparativo" value=compare_price input_type="number" prefix="R$" placeholder="0,00" help_text="Opcional para promoções e âncora de preço." %}
+                    {% with name="compare_price" label="Preço comparativo" value=compare_price input_type="number" prefix="R$" placeholder="0,00" help_text="Opcional para promoções e âncora de preço." invalid=errors.compare_price error_text=errors.compare_price %}
                         {% include "shared/components/forms/input.html" %}
                     {% endwith %}
                 </div>
 
                 <div class="grid gap-6 md:grid-cols-2">
-                    {% with name="stock" label="Estoque disponível" value=stock input_type="number" placeholder="0" %}
+                    {% with name="stock" label="Estoque disponível" value=stock input_type="number" placeholder="0" required=True invalid=errors.stock error_text=errors.stock %}
                         {% include "shared/components/forms/input.html" %}
                     {% endwith %}
 
-                    {% with name="reserved_stock" label="Reserva operacional" value=reserved_stock input_type="number" placeholder="0" %}
+                    {% with name="reserved_stock" label="Reserva operacional" value=reserved_stock input_type="number" placeholder="0" invalid=errors.reserved_stock error_text=errors.reserved_stock %}
                         {% include "shared/components/forms/input.html" %}
                     {% endwith %}
                 </div>
@@ -92,7 +100,7 @@
                 </div>
 
                 {% if status_options %}
-                    {% with name="status" label="Status" options=status_options selected=status_selected placeholder="Selecione um status" %}
+                    {% with name="status" label="Status" options=status_options selected=status_selected placeholder="Selecione um status" invalid=errors.status error_text=errors.status %}
                         {% include "shared/components/forms/select.html" %}
                     {% endwith %}
                 {% else %}
@@ -102,7 +110,7 @@
                 {% endif %}
 
                 {% if is_active %}
-                    {% with name="is_active" label="Produto ativo" description="Permite venda e exibição nos canais habilitados." checked=is_active %}
+                    {% with name="is_active" label="Produto ativo" description="Permite venda e exibição nos canais habilitados." checked=is_active invalid=errors.is_active error_text=errors.is_active %}
                         {% include "shared/components/forms/switch.html" %}
                     {% endwith %}
                 {% elif showcase_mode %}
@@ -110,17 +118,17 @@
                         {% include "shared/components/forms/switch.html" %}
                     {% endwith %}
                 {% else %}
-                    {% with name="is_active" label="Produto ativo" description="Permite venda e exibição nos canais habilitados." %}
+                    {% with name="is_active" label="Produto ativo" description="Permite venda e exibição nos canais habilitados." invalid=errors.is_active error_text=errors.is_active %}
                         {% include "shared/components/forms/switch.html" %}
                     {% endwith %}
                 {% endif %}
 
-                {% with name="is_featured" label="Produto em destaque" description="Permite uso em vitrines e listas promocionais." checked=is_featured %}
+                {% with name="is_featured" label="Produto em destaque" description="Permite uso em vitrines e listas promocionais." checked=is_featured invalid=errors.is_featured error_text=errors.is_featured %}
                     {% include "shared/components/forms/switch.html" %}
                 {% endwith %}
 
                 {% if track_inventory %}
-                    {% with name="track_inventory" label="Controlar estoque" description="Mantenha o saldo sincronizado para operação e checkout." checked=track_inventory %}
+                    {% with name="track_inventory" label="Controlar estoque" description="Mantenha o saldo sincronizado para operação e checkout." checked=track_inventory invalid=errors.track_inventory error_text=errors.track_inventory %}
                         {% include "shared/components/forms/checkbox.html" %}
                     {% endwith %}
                 {% elif showcase_mode %}
@@ -128,18 +136,18 @@
                         {% include "shared/components/forms/checkbox.html" %}
                     {% endwith %}
                 {% else %}
-                    {% with name="track_inventory" label="Controlar estoque" description="Mantenha o saldo sincronizado para operação e checkout." %}
+                    {% with name="track_inventory" label="Controlar estoque" description="Mantenha o saldo sincronizado para operação e checkout." invalid=errors.track_inventory error_text=errors.track_inventory %}
                         {% include "shared/components/forms/checkbox.html" %}
                     {% endwith %}
                 {% endif %}
 
-                {% with name="allow_backorder" label="Permitir venda sob encomenda" description="Habilite apenas quando a operação suportar backorder." checked=allow_backorder %}
+                {% with name="allow_backorder" label="Permitir venda sob encomenda" description="Habilite apenas quando a operação suportar backorder." checked=allow_backorder invalid=errors.allow_backorder error_text=errors.allow_backorder %}
                     {% include "shared/components/forms/checkbox.html" %}
                 {% endwith %}
             </div>
         </section>
 
-        {% with primary_label=primary_label|default:"Salvar produto" secondary_label=secondary_label|default:"Cancelar" secondary_href=cancel_href|default:"#" loading=loading disabled=disabled %}
+        {% with primary_label=primary_label|default:submit_label|default:"Salvar produto" secondary_label=secondary_label|default:"Cancelar" secondary_href=cancel_href|default:"#" loading=loading disabled=disabled %}
             {% include "shared/components/forms/form_actions.html" %}
         {% endwith %}
     </form>

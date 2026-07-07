@@ -29,7 +29,11 @@ class PaymentWebhookView(View):
         if not isinstance(payload, dict):
             return JsonResponse({"result": "payment-webhook-invalid-json"}, status=400)
 
-        provided_token = str(request.headers.get("X-Hubx-Webhook-Token", "") or "").strip()
+        provided_token = str(
+            request.headers.get("X-Hubx-Webhook-Token", "")
+            or request.headers.get("asaas-access-token", "")
+            or request.headers.get("x-asaas-token", "")
+        ).strip()
         signature_header = str(getattr(settings, "PAGARME_WEBHOOK_SIGNATURE_HEADER", "X-Hub-Signature") or "").strip()
         provided_signature = str(request.headers.get(signature_header, "") or "").strip()
         result, status_code = payment_webhook_commands.process_webhook(

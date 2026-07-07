@@ -122,6 +122,35 @@ class CheckoutViewTests(TestCase):
 
         self.assertEqual(response.status_code, 404)
 
+    @override_settings(HUBX_MARKET_DEMO_TENANT_SUBDOMAIN="hubx-demo")
+    def test_demo_checkout_flow_renders_simulated_review_and_completion_without_orders(self):
+        demo_tenant = Tenant.objects.create(name="Hubx Demo", slug="hubx-demo", subdomain="hubx-demo")
+
+        review_response = self.client.get(
+            reverse("checkout:checkout-page"),
+            {"demo_flow": "checkout", "stage": "review"},
+            HTTP_HOST="hubx-demo.hubx.market",
+        )
+
+        self.assertEqual(review_response.status_code, 200)
+        self.assertContains(review_response, "Checkout demonstrativo")
+        self.assertContains(review_response, "Simular conclusão")
+        self.assertContains(review_response, 'href="/checkout/?demo_flow=complete&amp;stage=review"')
+        self.assertContains(review_response, "nenhum pedido, pagamento ou estoque será alterado")
+
+        completion_response = self.client.get(
+            reverse("checkout:checkout-page"),
+            {"demo_flow": "complete", "stage": "review"},
+            HTTP_HOST="hubx-demo.hubx.market",
+        )
+
+        self.assertEqual(completion_response.status_code, 200)
+        self.assertContains(completion_response, "Pedido simulado recebido")
+        self.assertContains(completion_response, "Operação simulada até o fim")
+        self.assertContains(completion_response, "sem criar pedido, pagamento, carrinho ou baixa de estoque")
+        self.assertEqual(CheckoutSession.objects.filter(tenant=demo_tenant).count(), 0)
+        self.assertEqual(Order.objects.filter(tenant=demo_tenant).count(), 0)
+
 
 @override_settings(ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver"])
 class CheckoutPersistedReadTests(TestCase):
@@ -453,7 +482,7 @@ class CheckoutPersistedReadTests(TestCase):
         self.assertEqual(payload["payment_completion_hint"]["title"], "Pagamento em andamento")
         self.assertEqual(payload["current_stage_completion_hint"]["title"], "Pagamento em andamento")
 
-    def test_checkout_post_updates_requested_session_and_recalculates_totals(self):
+    def test_checkout_post_updates_requested_session_and_recalculates_shipping_quote_totals(self):
         session = CheckoutSession.objects.get(pk=1)
         response = self.client.post(
             reverse("checkout:checkout-page"),
@@ -494,8 +523,9 @@ class CheckoutPersistedReadTests(TestCase):
         self.assertEqual(session.zip_code, "13010-000")
         self.assertEqual(session.shipping_method_selected, "standard")
         self.assertEqual(session.payment_method_selected, "credit_card")
-        self.assertEqual(str(session.shipping_total), "24.90")
-        self.assertEqual(str(session.grand_total), "469.70")
+        self.assertEqual(str(session.shipping_total), "0.00")
+        self.assertEqual(str(session.grand_total), "444.80")
+        self.assertEqual(session.shipping_methods[0]["provider_reference"], "manual-standard")
         self.assertEqual(session.installments_selected, "2x")
         self.assertTrue(session.accept_terms)
 
@@ -546,7 +576,69 @@ class CheckoutPersistedReadTests(TestCase):
 
         session.refresh_from_db()
         self.assertEqual(session.shipping_method_selected, "express")
+        self.assertEqual(str(session.shipping_total), "39.90")
+        self.assertEqual(str(session.grand_total), "239.80")
+        self.assertEqual(session.shipping_methods[1]["provider_reference"], "manual-express")
         self.assertFalse(session.accept_terms)
+
+    def test_checkout_post_keeps_delivery_stage_when_shipping_quote_fails(self):
+        session = CheckoutSession.objects.create(
+            tenant=self.tenant,
+            status=CheckoutSession.Status.OPEN,
+            shipping_methods=[
+                {"value": "standard", "label": "Entrega padrão", "price": "R$ 24,90"},
+                {"value": "express", "label": "Entrega expressa", "price": "R$ 39,90"},
+            ],
+            shipping_method_selected="standard",
+            payment_methods=[{"value": "credit_card", "label": "Cartão de crédito"}],
+            subtotal="199.90",
+            shipping_total="24.90",
+            discount_total="0.00",
+            grand_total="224.80",
+        )
+        CheckoutSessionItem.objects.create(
+            checkout_session=session,
+            title="Produto em progresso",
+            subtitle="Preto · 42",
+            meta="SKU PROG-QUOTE",
+            price="199.90",
+            quantity=1,
+            sort_order=1,
+        )
+
+        response = self.client.post(
+            reverse("checkout:checkout-page"),
+            data={
+                "session_key": str(session.session_key),
+                "current_stage": "delivery",
+                "first_name": "João",
+                "last_name": "Progressivo",
+                "email": "joao@hubx.market",
+                "phone": "(11) 95555-0000",
+                "address_line_1": "Rua Entrega, 10",
+                "city": "São Paulo",
+                "state": "SP",
+                "zip_code": "123",
+                "shipping_method": "standard",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("result=checkout-shipping-quote-failed", response["Location"])
+        self.assertIn("stage=delivery", response["Location"])
+
+        session.refresh_from_db()
+        self.assertEqual(session.first_name, "João")
+        self.assertEqual(session.zip_code, "123")
+        self.assertEqual(session.shipping_method_selected, "")
+        self.assertEqual(session.shipping_methods, [])
+        self.assertEqual(str(session.shipping_total), "0.00")
+        self.assertEqual(str(session.grand_total), "199.90")
+
+        follow_response = self.client.get(response["Location"])
+        self.assertContains(follow_response, "Não foi possível calcular o frete")
+        self.assertContains(follow_response, "Revise o CEP informado")
+        self.assertEqual(follow_response.context["checkout_result_taxonomy"]["family"], "shipping")
 
     def test_checkout_post_rejects_invalid_shipping_method_without_mutating_session(self):
         session = CheckoutSession.objects.create(
@@ -976,6 +1068,48 @@ class CheckoutPersistedReadTests(TestCase):
         follow_response = self.client.get(response["Location"])
         self.assertContains(follow_response, "itens, entrega e pagamento já registrados")
         self.assertContains(follow_response, "pagamento ainda pendente")
+
+    def test_checkout_review_post_saves_posted_checkout_fields_before_creating_order(self):
+        self._create_checkout_variants()
+        session = CheckoutSession.objects.get(pk=1)
+
+        response = self.client.post(
+            reverse("checkout:checkout-page"),
+            data={
+                "session_key": str(session.session_key),
+                "current_stage": "review",
+                "first_name": "Marina",
+                "last_name": "Final",
+                "email": "marina.final@hubx.market",
+                "phone": "(11) 96666-1111",
+                "address_line_1": "Rua Final, 55",
+                "address_line_2": "Apto 9",
+                "city": "Campinas",
+                "state": "SP",
+                "zip_code": "13010-000",
+                "shipping_method": "standard",
+                "payment_method": "credit_card",
+                "installments": "2x",
+                "accept_terms": "on",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        order = Order.objects.order_by("-id").first()
+        self.assertIsNotNone(order)
+        self.assertEqual(order.customer_name, "Marina Final")
+        self.assertEqual(order.customer_email, "marina.final@hubx.market")
+        self.assertIn("Rua Final, 55", order.shipping_address_summary)
+        self.assertIn("Apto 9", order.shipping_address_summary)
+        self.assertEqual(str(order.shipping_total), "0.00")
+        self.assertEqual(str(order.total), "444.80")
+        self.assertEqual(order.payment_attempts.first().payment_method_code, "credit_card")
+
+        session.refresh_from_db()
+        self.assertEqual(session.status, CheckoutSession.Status.COMPLETED)
+        self.assertEqual(session.shipping_method_selected, "standard")
+        self.assertEqual(session.payment_method_selected, "credit_card")
+        self.assertEqual(str(session.shipping_total), "0.00")
 
     def test_checkout_review_post_copies_coupon_snapshot_to_order(self):
         self._create_checkout_variants()

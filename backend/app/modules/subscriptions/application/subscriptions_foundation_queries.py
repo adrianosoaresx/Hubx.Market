@@ -51,7 +51,7 @@ class SubscriptionsFoundationQueryService:
             "decisions": (
                 SubscriptionsFoundationDecision("models", "ready" if signals["plan_model_ready"] and signals["tenant_subscription_state_ready"] else "blocked", "plano e assinatura tenant-scoped precisam existir"),
                 SubscriptionsFoundationDecision("admin", "ready" if signals["admin_read_surface_review_ready"] and signals["admin_read_surface_ready"] else "blocked", "admin read-only precisa expor estado sem mutação perigosa"),
-                SubscriptionsFoundationDecision("boundaries", "guarded" if signals["no_billing_provider_created"] and signals["no_store_payment_coupling"] else "blocked", "foundation não cria billing provider nem acopla pagamentos da loja"),
+                SubscriptionsFoundationDecision("boundaries", "guarded" if signals["no_billing_provider_created"] and signals["no_store_payment_coupling"] else "blocked", "foundation não cria recurso/cobrança externa no billing provider nem acopla pagamentos da loja"),
                 SubscriptionsFoundationDecision("classification", status, "classificação encerra ou bloqueia Battery E"),
             ),
             "closure_scope": (

@@ -32,18 +32,27 @@ class Product(models.Model):
 class ProductVariant(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="variants")
     sku = models.CharField(max_length=120, unique=True)
+    label = models.CharField(max_length=160, blank=True)
+    option_values = models.JSONField(default=dict, blank=True)
+    barcode = models.CharField(max_length=120, blank=True)
     price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     compare_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     stock = models.PositiveIntegerField(default=0)
     reserved_stock = models.PositiveIntegerField(default=0)
+    weight_grams = models.PositiveIntegerField(default=0)
     track_inventory = models.BooleanField(default=True)
     allow_backorder = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
     is_default = models.BooleanField(default=True)
+    position = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ("product_id", "-is_default", "sku")
+        ordering = ("product_id", "position", "-is_default", "sku")
+        indexes = [
+            models.Index(fields=("product", "is_active", "is_default", "position"), name="cat_var_prod_active_idx"),
+        ]
 
     def __str__(self) -> str:  # pragma: no cover
         return f"{self.product_id}:{self.sku}"

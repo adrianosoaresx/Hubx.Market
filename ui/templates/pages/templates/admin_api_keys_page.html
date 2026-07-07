@@ -1,0 +1,133 @@
+{% extends layout_template|default:"layouts/admin_shell.html" %}
+
+{% block page_title %}{{ page_title|default:"API keys" }}{% endblock %}
+{% block shell_title %}{% if shell_title %}{{ shell_title }}{% elif page_title %}{{ page_title }}{% else %}API keys{% endif %}{% endblock %}
+
+{% block content %}
+<section class="space-y-6">
+    {% with eyebrow=page_eyebrow|default:"Governança" title=page_title|default:"API keys" description=page_description|default:"Gerencie chaves tenant-scoped da API pública." %}
+        {% include "shared/components/layout/admin_page_header.html" %}
+    {% endwith %}
+
+    <div class="admin-ops-toolbar flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-wrap gap-3">
+            {% for action in page_actions %}
+                <a class="ds-btn ds-btn-secondary ds-btn-sm" href="{{ action.href }}">{{ action.label }}</a>
+            {% endfor %}
+        </div>
+        <p class="text-sm text-[var(--color-text-secondary)]">{{ table_count }}</p>
+    </div>
+
+    {% if feedback.title %}
+        {% include "shared/components/feedback/alert.html" with variant=feedback.variant title=feedback.title description=feedback.description %}
+    {% endif %}
+
+    {% if created_secret %}
+        <div class="ds-alert ds-alert-warning" role="status">
+            <div class="ds-alert-layout">
+                <span class="ds-alert-icon" aria-hidden="true">
+                    {% include "shared/partials/icon.html" with name="key-round" size="sm" %}
+                </span>
+                <div class="ds-alert-copy">
+                    <p class="ds-alert-title">Segredo da nova API key</p>
+                    <p class="ds-alert-description break-all font-mono">{{ created_secret }}</p>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    {% if can_manage_api_keys %}
+        <form method="post" action="{% url 'api_keys_ops:admin-api-key-create' %}" class="admin-ops-panel ds-surface grid gap-5 p-6">
+            {% csrf_token %}
+            <div class="grid gap-1">
+                <h2 class="text-base font-semibold text-[var(--color-text-primary)]">Nova API key</h2>
+                <p class="text-sm text-[var(--color-text-secondary)]">Crie uma chave para integrações aprovadas deste tenant.</p>
+            </div>
+
+            <div class="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end">
+                <div class="grid gap-2">
+                    <label class="text-sm font-semibold text-[var(--color-text-primary)]" for="api-key-name">Nome</label>
+                    <input id="api-key-name" name="name" type="text" value="{{ form.name }}" class="ds-input" maxlength="120" required>
+                    {% if errors.name %}{% include "shared/components/forms/field_error.html" with text=errors.name %}{% endif %}
+                </div>
+                <div class="grid gap-2">
+                    <label class="text-sm font-semibold text-[var(--color-text-primary)]" for="api-key-scopes">Escopos</label>
+                    <input id="api-key-scopes" name="scopes" type="text" value="{{ form.scopes|default:'read:catalog' }}" class="ds-input" maxlength="240">
+                    {% if errors.scopes %}{% include "shared/components/forms/field_error.html" with text=errors.scopes %}{% endif %}
+                </div>
+                <button type="submit" class="ds-btn ds-btn-primary ds-btn-md">Criar chave</button>
+            </div>
+            {% if form_error %}{% include "shared/components/forms/field_error.html" with text=form_error %}{% endif %}
+        </form>
+    {% endif %}
+
+    <section class="space-y-4">
+        <div class="flex flex-wrap items-end justify-between gap-3">
+            <div class="grid gap-1">
+                <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">Chaves criadas</h2>
+                <p class="text-sm text-[var(--color-text-secondary)]">Prefixo público, escopos, status e última utilização.</p>
+            </div>
+            <span class="text-sm text-[var(--color-text-secondary)]">{{ table_count }}</span>
+        </div>
+
+        {% if api_keys %}
+            <div class="ds-table-shell">
+                <div class="ds-table-scroll">
+                    <table class="ds-table" aria-label="API keys">
+                        <caption class="sr-only">API keys tenant-scoped</caption>
+                        <thead class="ds-table-head">
+                            <tr>
+                                <th scope="col" class="ds-table-th">Nome</th>
+                                <th scope="col" class="ds-table-th">Prefixo</th>
+                                <th scope="col" class="ds-table-th">Escopos</th>
+                                <th scope="col" class="ds-table-th">Status</th>
+                                <th scope="col" class="ds-table-th">Owner</th>
+                                <th scope="col" class="ds-table-th">Uso</th>
+                                <th scope="col" class="ds-table-th">Quotas</th>
+                                <th scope="col" class="ds-table-th">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody class="ds-table-body">
+                            {% for api_key in api_keys %}
+                                <tr class="ds-table-row">
+                                    <td class="ds-table-cell">
+                                        <span class="font-semibold text-[var(--color-text-primary)]">{{ api_key.name }}</span>
+                                        <span class="block text-xs text-[var(--color-text-muted)]">Criada em {{ api_key.created_at }}</span>
+                                    </td>
+                                    <td class="ds-table-cell font-mono">{{ api_key.prefix }}</td>
+                                    <td class="ds-table-cell">{{ api_key.scopes_label }}</td>
+                                    <td class="ds-table-cell">
+                                        {% if api_key.status == "active" %}
+                                            {% include "shared/components/data_display/badge.html" with label=api_key.status_label variant="active" size="xs" %}
+                                        {% else %}
+                                            {% include "shared/components/data_display/badge.html" with label=api_key.status_label variant="neutral" size="xs" %}
+                                        {% endif %}
+                                        {% if api_key.revoked_at %}
+                                            <span class="block text-xs text-[var(--color-text-muted)]">{{ api_key.revoked_at }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="ds-table-cell">{{ api_key.owner_label }}</td>
+                                    <td class="ds-table-cell">{{ api_key.last_used_at }}</td>
+                                    <td class="ds-table-cell">{{ api_key.quota_label }}</td>
+                                    <td class="ds-table-cell">
+                                        {% if can_manage_api_keys and api_key.can_revoke %}
+                                            <form method="post" action="{% url 'api_keys_ops:admin-api-key-revoke' api_key.id %}" class="inline-flex">
+                                                {% csrf_token %}
+                                                <button type="submit" class="ds-btn ds-btn-secondary ds-btn-sm">Revogar</button>
+                                            </form>
+                                        {% else %}
+                                            <span class="text-sm text-[var(--color-text-muted)]">Sem ação</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        {% else %}
+            {% include "shared/components/feedback/empty_state.html" with icon="key-round" title=empty_title description=empty_description %}
+        {% endif %}
+    </section>
+</section>
+{% endblock %}

@@ -17,6 +17,9 @@ from django.utils.html import format_html, format_html_join
 from django.utils.text import slugify
 from django.views.generic import TemplateView, View
 
+from app.modules.accounts.application.admin_permissions import PERMISSION_CATALOG_MANAGE
+from app.modules.accounts.interfaces.admin_rbac import request_admin_can, request_owner_role, request_tenant_id
+from app.modules.catalog.application.admin_product_commands import admin_product_commands
 from app.modules.catalog.application.admin_product_queries import (
     STATUS_OPTIONS,
     admin_product_queries,
@@ -33,6 +36,65 @@ from app.modules.checkout.application.checkout_activation_commands import (
     checkout_activation_commands,
 )
 from app.modules.reviews.application.review_summary_queries import product_review_summary_queries
+from app.modules.tenants.application.storefront_branding_queries import (
+    StorefrontHeroDefaults,
+    storefront_branding_queries,
+)
+from app.modules.tenants.models import Tenant
+
+
+def _request_tenant_id(request) -> int | None:
+    return request_tenant_id(request)
+
+
+def _request_owner_role(request) -> str:
+    return request_owner_role(request)
+
+
+def _request_hostname_and_port(request) -> tuple[str, str]:
+    host = str(request.get_host() if request is not None else "").strip().lower()
+    if host.count(":") == 1:
+        hostname, port = host.rsplit(":", 1)
+        return hostname, port
+    return host, ""
+
+
+def _root_domain(request=None) -> str:
+    hostname, _port = _request_hostname_and_port(request)
+    if hostname in {"localhost", "127.0.0.1"}:
+        return "localhost"
+    return str(getattr(settings, "HUBX_MARKET_ROOT_DOMAIN", "hubx.market") or "hubx.market").strip().lower()
+
+
+def _public_port(request=None) -> str:
+    hostname, request_port = _request_hostname_and_port(request)
+    if hostname in {"localhost", "127.0.0.1"} and request_port:
+        return f":{request_port}"
+    port = str(getattr(settings, "HUBX_MARKET_PUBLIC_PORT", "") or "").strip()
+    return f":{port}" if port else ""
+
+
+def _demo_tenant_subdomain() -> str:
+    return str(getattr(settings, "HUBX_MARKET_DEMO_TENANT_SUBDOMAIN", "hubx-demo") or "hubx-demo").strip().lower()
+
+
+def _public_store_url(subdomain: str, path: str = "/", request=None) -> str:
+    normalized_subdomain = str(subdomain or "").strip().lower()
+    normalized_path = path if str(path or "").startswith("/") else f"/{path}"
+    return f"http://{normalized_subdomain}.{_root_domain(request)}{_public_port(request)}{normalized_path}"
+
+
+def _demo_tenant_exists() -> bool:
+    return Tenant.objects.filter(subdomain=_demo_tenant_subdomain(), is_active=True).exists()
+
+
+def _storefront_hero_fallback_image(products: list[dict[str, object]]) -> str:
+    for product in products:
+        for key in ("main_image_url", "image_url"):
+            image_url = str(product.get(key) or "").strip()
+            if image_url:
+                return image_url
+    return ""
 
 
 def _require_storefront_tenant(request):
@@ -97,6 +159,59 @@ def _tenant_missing_empty_state(*, tenant_id: int | None, search_value: str, sta
         "Nenhum produto persistido nesta loja",
         "A loja atual ainda não possui produtos persistidos disponíveis para esta visão administrativa.",
     )
+
+
+def _admin_product_actions_cell(product: dict[str, object], *, can_manage: bool) -> str:
+    detail_href = reverse("catalog:admin-products-detail", kwargs={"product_slug": product["slug"]})
+    actions = [("secondary", detail_href, "Detalhar")]
+    if can_manage:
+        actions.append(("primary", reverse("catalog:admin-products-edit", kwargs={"product_slug": product["slug"]}), "Editar"))
+    return format_html(
+        '<div class="flex flex-wrap gap-2">{}</div>',
+        format_html_join(
+            "",
+            '<a class="ds-btn ds-btn-{} ds-btn-sm" href="{}">{}</a>',
+            actions,
+        ),
+    )
+
+
+def _variant_feedback(value: object) -> dict[str, str]:
+    status = str(value or "").strip()
+    mapping = {
+        "created": ("success", "Variante criada", "A variante foi adicionada ao produto."),
+        "default-set": ("success", "Variante padrão atualizada", "Preço e estoque principais agora vêm desta variante."),
+        "deactivated": ("success", "Variante desativada", "A variante saiu da venda sem exclusão física."),
+        "invalid": ("danger", "Variante não salva", "Revise SKU, preço, estoque e atributos informados."),
+        "blocked": ("warning", "Ação bloqueada", "O produto precisa manter ao menos uma variante ativa e uma variante padrão válida."),
+        "permission-denied": ("danger", "Permissão necessária", "Seu perfil não pode gerenciar variantes de catálogo."),
+        "not-found": ("warning", "Variante indisponível", "Produto ou variante não encontrados neste tenant."),
+    }
+    variant, title, description = mapping.get(status, ("info", "", ""))
+    return {"variant": variant, "title": title, "description": description} if title else {}
+
+
+def _variant_rows(product: dict[str, object], *, can_manage: bool) -> list[dict[str, object]]:
+    product_slug = str(product.get("slug") or "")
+    rows = []
+    for variant in list(product.get("variants") or []):
+        variant_id = variant.get("id")
+        row = dict(variant)
+        row["status_label"] = "Ativa" if variant.get("is_active", True) else "Inativa"
+        row["status_variant"] = "success" if variant.get("is_active", True) else "neutral"
+        row["default_label"] = "Padrão" if variant.get("is_default") else ""
+        row["set_default_url"] = (
+            reverse("catalog:admin-product-variant-default", kwargs={"product_slug": product_slug, "variant_id": variant_id})
+            if can_manage and variant_id and variant.get("is_active", True) and not variant.get("is_default")
+            else ""
+        )
+        row["deactivate_url"] = (
+            reverse("catalog:admin-product-variant-deactivate", kwargs={"product_slug": product_slug, "variant_id": variant_id})
+            if can_manage and variant_id and variant.get("is_active", True)
+            else ""
+        )
+        rows.append(row)
+    return rows
 
 
 def _page_items(page_number: int, total_pages: int, base_url: str) -> list[dict[str, object]]:
@@ -691,17 +806,6 @@ def _build_storefront_product_card(
     active_quick_filter: str = "",
     review_summary: dict[str, object] | None = None,
 ) -> dict[str, object]:
-    curation_note = product.get("catalog_card_curation_note", "")
-    click_helper = product.get("catalog_card_click_helper", "")
-    if active_quick_filter == "offer":
-        curation_note = _offer_card_curation_note(product)
-        click_helper = _offer_card_click_helper(product)
-    if active_quick_filter == "featured":
-        curation_note = _featured_card_curation_note(product)
-        click_helper = _featured_card_click_helper(product)
-    if active_quick_filter == "quick_buy":
-        curation_note = _quick_buy_card_curation_note(product)
-        click_helper = _quick_buy_card_click_helper(product)
     return {
         "href": reverse("storefront:product-detail", kwargs={"product_slug": product["slug"]}),
         "image_url": product.get("main_image_url") or f'https://placehold.co/640x640?text={slugify(str(product["name"]))}',
@@ -714,14 +818,12 @@ def _build_storefront_product_card(
         "price": f'R$ {str(product["price"]).replace(".", ",")}',
         "compare_price": f'R$ {str(product["compare_price"]).replace(".", ",")}' if product.get("compare_price") else "",
         "price_helper": product.get("catalog_card_price_helper") or product.get("price_helper", "ou 3x sem juros"),
-        "meta": product.get("catalog_card_meta") or product["sku"],
+        "meta": product.get("catalog_card_meta", ""),
         "stock_state": product.get("stock_state", _storefront_stock_state(product)),
-        "variant_summary": product.get("catalog_card_variant_summary", ""),
-        "curation_note": curation_note,
         "availability_note": product.get("catalog_card_availability_note", ""),
         "review_summary": _review_summary_label(review_summary),
-        "click_helper": click_helper,
         "stock_helper": product.get("stock_helper", _storefront_stock_helper(product)),
+        "action_label": "Comprar",
         "clickable": True,
     }
 
@@ -771,6 +873,7 @@ class AdminProductsListView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         tenant_id = getattr(getattr(self.request, "tenant", None), "id", None)
+        can_manage_products = request_admin_can(self.request, PERMISSION_CATALOG_MANAGE)
         search_value = self.request.GET.get("q", "").strip()
         status_selected = self.request.GET.get("status", "").strip()
         page_number = int(self.request.GET.get("page", "1") or "1")
@@ -813,7 +916,7 @@ class AdminProductsListView(TemplateView):
             {
                 "page_title": "Produtos",
                 "page_description": "Gerencie catálogo, disponibilidade e status dos produtos.",
-                "create_href": reverse("catalog:admin-products-create"),
+                "create_href": reverse("catalog:admin-products-create") if can_manage_products else "",
                 "filter_action": base_url,
                 "search_name": "q",
                 "search_value": search_value,
@@ -827,6 +930,7 @@ class AdminProductsListView(TemplateView):
                     {"label": "Estoque"},
                     *([{"label": "Descoberta"}] if discovery_by_slug else []),
                     {"label": "Atualização"},
+                    {"label": "Ações"},
                 ],
                 "rows": [
                     {
@@ -850,6 +954,7 @@ class AdminProductsListView(TemplateView):
                                 else []
                             ),
                             product["updated_at"],
+                            _admin_product_actions_cell(product, can_manage=can_manage_products),
                         ]
                     }
                     for product in page_obj.object_list
@@ -958,7 +1063,9 @@ class AdminProductDetailView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         tenant_id = getattr(getattr(self.request, "tenant", None), "id", None)
+        can_manage_products = request_admin_can(self.request, PERMISSION_CATALOG_MANAGE)
         product = _get_product(kwargs["product_slug"], tenant_id=tenant_id)
+        variant_rows = _variant_rows(product, can_manage=can_manage_products)
         context.update(
             {
                 "page_title": product["name"],
@@ -967,7 +1074,12 @@ class AdminProductDetailView(TemplateView):
                 "status_variant": product["status"],
                 "channel_label": product["channel_label"],
                 "back_href": reverse("catalog:admin-products-list"),
-                "edit_href": reverse("catalog:admin-products-edit", kwargs={"product_slug": product["slug"]}),
+                "edit_href": reverse("catalog:admin-products-edit", kwargs={"product_slug": product["slug"]})
+                if can_manage_products
+                else "",
+                "deactivate_href": reverse("catalog:admin-products-deactivate", kwargs={"product_slug": product["slug"]})
+                if can_manage_products and product["status"] != "inactive"
+                else "",
                 "summary_content": product["summary_content"],
                 "pricing_content": product["pricing_content"],
                 "inventory_content": " ".join(
@@ -988,46 +1100,198 @@ class AdminProductDetailView(TemplateView):
                 "sales_channel": product["sales_channel"],
                 "updated_at": product["updated_at"],
                 "activity_items": product["activity_items"],
+                "variant_rows": variant_rows,
+                "variant_count": f"{len(variant_rows)} variante(s)",
+                "variant_create_action": reverse("catalog:admin-product-variant-create", kwargs={"product_slug": product["slug"]})
+                if can_manage_products
+                else "",
+                "can_manage_variants": can_manage_products,
+                "variant_feedback": _variant_feedback(self.request.GET.get("variant_result")),
             }
         )
         return context
+
+
+class AdminProductVariantCreateView(View):
+    def post(self, request, *args, **kwargs):
+        product_slug = kwargs.get("product_slug")
+        result = admin_product_commands.create_product_variant(
+            tenant_id=_request_tenant_id(request),
+            product_slug=product_slug,
+            payload=request.POST,
+            actor_label=AdminProductFormView._actor_label(request),
+            actor_role=_request_owner_role(request),
+        )
+        result_status = {
+            "product-variant-created": "created",
+            "product-variant-invalid": "invalid",
+            "product-permission-denied": "permission-denied",
+            "product-not-found": "not-found",
+        }.get(str(result.get("result") or ""), "invalid")
+        product = result.get("product") or {"slug": product_slug}
+        return HttpResponseRedirect(
+            f'{reverse("catalog:admin-products-detail", kwargs={"product_slug": product.get("slug")})}?variant_result={result_status}'
+        )
+
+
+class AdminProductVariantDefaultView(View):
+    def post(self, request, *args, **kwargs):
+        product_slug = kwargs.get("product_slug")
+        result = admin_product_commands.set_default_variant(
+            tenant_id=_request_tenant_id(request),
+            product_slug=product_slug,
+            variant_id=kwargs.get("variant_id"),
+            actor_label=AdminProductFormView._actor_label(request),
+            actor_role=_request_owner_role(request),
+        )
+        result_status = {
+            "product-variant-default-set": "default-set",
+            "product-variant-default-blocked": "blocked",
+            "product-permission-denied": "permission-denied",
+            "product-not-found": "not-found",
+            "product-variant-not-found": "not-found",
+        }.get(str(result.get("result") or ""), "blocked")
+        product = result.get("product") or {"slug": product_slug}
+        return HttpResponseRedirect(
+            f'{reverse("catalog:admin-products-detail", kwargs={"product_slug": product.get("slug")})}?variant_result={result_status}'
+        )
+
+
+class AdminProductVariantDeactivateView(View):
+    def post(self, request, *args, **kwargs):
+        product_slug = kwargs.get("product_slug")
+        result = admin_product_commands.deactivate_product_variant(
+            tenant_id=_request_tenant_id(request),
+            product_slug=product_slug,
+            variant_id=kwargs.get("variant_id"),
+            actor_label=AdminProductFormView._actor_label(request),
+            actor_role=_request_owner_role(request),
+        )
+        result_status = {
+            "product-variant-deactivated": "deactivated",
+            "product-variant-already-inactive": "deactivated",
+            "product-variant-last-active": "blocked",
+            "product-permission-denied": "permission-denied",
+            "product-not-found": "not-found",
+            "product-variant-not-found": "not-found",
+        }.get(str(result.get("result") or ""), "blocked")
+        product = result.get("product") or {"slug": product_slug}
+        return HttpResponseRedirect(
+            f'{reverse("catalog:admin-products-detail", kwargs={"product_slug": product.get("slug")})}?variant_result={result_status}'
+        )
 
 
 class AdminProductFormView(TemplateView):
     template_name = "pages/templates/admin_product_form_page.html"
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
+    def _product_slug(self) -> str | None:
+        return self.kwargs.get("product_slug")
+
+    @staticmethod
+    def _actor_label(request) -> str:
+        user = getattr(request, "user", None)
+        if user is None:
+            return "Operação interna"
+        for attr in ("get_full_name", "username", "email"):
+            value = getattr(user, attr, "")
+            if callable(value):
+                value = value()
+            value = str(value or "").strip()
+            if value:
+                return value
+        return "Operação interna"
+
+    def _context(self, *, values: dict[str, object] | None = None, errors: dict[str, str] | None = None) -> dict[str, object]:
         tenant_id = getattr(getattr(self.request, "tenant", None), "id", None)
-        product_slug = kwargs.get("product_slug")
+        product_slug = self._product_slug()
         is_create = not product_slug
         form_initial = admin_product_queries.get_form_initial(product_slug, tenant_id=tenant_id)
         product = _get_product(product_slug, tenant_id=tenant_id) if product_slug else None
+        if values:
+            form_initial.update(
+                {
+                    "name": values.get("name", form_initial["name"]),
+                    "slug": values.get("slug", form_initial["slug"]),
+                    "sku": values.get("sku", form_initial["sku"]),
+                    "brand": values.get("brand", form_initial["brand"]),
+                    "category_label": values.get("category_label", form_initial["category_label"]),
+                    "description": values.get("description", form_initial["description"]),
+                    "price": values.get("price", form_initial["price"]),
+                    "compare_price": values.get("compare_price", form_initial["compare_price"]),
+                    "stock": values.get("stock", form_initial["stock"]),
+                    "reserved_stock": values.get("reserved_stock", form_initial["reserved_stock"]),
+                    "status_selected": values.get("status", form_initial["status_selected"]),
+                    "is_active": "is_active" in values,
+                    "is_featured": "is_featured" in values,
+                    "track_inventory": "track_inventory" in values,
+                    "allow_backorder": "allow_backorder" in values,
+                }
+            )
+        return {
+            "page_title": "Novo produto" if is_create else f'Editar {product["name"]}',
+            "page_description": "Atualize informações principais, preço, estoque e visibilidade.",
+            "form_action": self.request.path,
+            "cancel_href": reverse("catalog:admin-products-list"),
+            "submit_label": "Criar produto" if is_create else "Salvar produto",
+            "errors": errors or {},
+            "form_error": (errors or {}).get("__all__", ""),
+            **form_initial,
+        }
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update({"status_options": STATUS_OPTIONS, **self._context()})
+        return context
+
+    def post(self, request, *args, **kwargs):
+        product_slug = self._product_slug()
+        if product_slug:
+            result = admin_product_commands.update_product(
+                tenant_id=_request_tenant_id(request),
+                product_slug=product_slug,
+                payload=request.POST,
+                actor_label=self._actor_label(request),
+                actor_role=_request_owner_role(request),
+            )
+            success_result = "product-updated"
+        else:
+            result = admin_product_commands.create_product(
+                tenant_id=_request_tenant_id(request),
+                payload=request.POST,
+                actor_label=self._actor_label(request),
+                actor_role=_request_owner_role(request),
+            )
+            success_result = "product-created"
+        if result.get("result") == success_result:
+            product = result.get("product") or {}
+            return HttpResponseRedirect(
+                reverse("catalog:admin-products-detail", kwargs={"product_slug": product.get("slug")})
+            )
+        context = self.get_context_data(**kwargs)
         context.update(
             {
-                "page_title": "Novo produto" if is_create else f'Editar {product["name"]}',
-                "page_description": "Atualize informações principais, preço, estoque e visibilidade.",
-                "form_action": self.request.path,
-                "cancel_href": reverse("catalog:admin-products-list"),
-                "name": form_initial["name"],
-                "slug": form_initial["slug"],
-                "sku": form_initial["sku"],
-                "brand": form_initial["brand"],
-                "description": form_initial["description"],
-                "price": form_initial["price"],
-                "compare_price": form_initial["compare_price"],
-                "stock": form_initial["stock"],
-                "reserved_stock": form_initial["reserved_stock"],
                 "status_options": STATUS_OPTIONS,
-                "status_selected": form_initial["status_selected"],
-                "is_active": form_initial["is_active"],
-                "is_featured": form_initial["is_featured"],
-                "track_inventory": form_initial["track_inventory"],
-                "allow_backorder": form_initial["allow_backorder"],
+                **self._context(values=request.POST, errors=result.get("errors") or {}),
             }
         )
-        return context
+        return self.render_to_response(context, status=400)
+
+
+class AdminProductDeactivateView(View):
+    def post(self, request, *args, **kwargs):
+        product_slug = kwargs.get("product_slug")
+        result = admin_product_commands.deactivate_product(
+            tenant_id=_request_tenant_id(request),
+            product_slug=product_slug,
+            actor_label=AdminProductFormView._actor_label(request),
+            actor_role=_request_owner_role(request),
+        )
+        if result.get("result") == "product-deactivated":
+            product = result.get("product") or {}
+            return HttpResponseRedirect(
+                reverse("catalog:admin-products-detail", kwargs={"product_slug": product.get("slug")})
+            )
+        return HttpResponseRedirect(reverse("catalog:admin-products-list"))
 
 
 class CatalogListView(TemplateView):
@@ -1184,6 +1448,14 @@ class CatalogListView(TemplateView):
                     quick_filter=quick_filter,
                 ),
                 "results_meta": results_meta,
+                "storefront_hero": storefront_branding_queries.get_home_hero(
+                    tenant=tenant,
+                    defaults=StorefrontHeroDefaults(
+                        catalog_href=base_url,
+                        newsletter_href=reverse("storefront_newsletter:newsletter-subscribe"),
+                        fallback_image_url=_storefront_hero_fallback_image(products),
+                    ),
+                ),
                 "filter_action": base_url,
                 "filter_description": filter_description,
                 "filters_open": filters_open,
@@ -1238,10 +1510,11 @@ class StorefrontHomeView(TemplateView):
             context.update(
                 {
                     "page_title": "Hubx Market",
-                    "page_description": "Portal central para entrar, administrar lojas e acessar o onboarding SaaS.",
+                    "page_description": "Portal comercial para lojistas criarem lojas virtuais no Hubx Market.",
                     "login_href": "/accounts/login/",
-                    "platform_tenants_href": "/ops/platform/tenants/",
-                    "platform_onboarding_href": "/ops/platform/onboarding/",
+                    "plans_href": "/plans/",
+                    "demo_href": "/demo/",
+                    "demo_available": _demo_tenant_exists(),
                 }
             )
             return context
@@ -1264,6 +1537,14 @@ class StorefrontHomeView(TemplateView):
                 "page_title": "Início",
                 "hero_title": f"{getattr(tenant, 'name', '') or 'Hubx Market'}",
                 "hero_description": "Descubra produtos em destaque, acompanhe novidades e siga para uma compra segura.",
+                "storefront_hero": storefront_branding_queries.get_home_hero(
+                    tenant=tenant,
+                    defaults=StorefrontHeroDefaults(
+                        catalog_href=reverse("storefront:catalog-list"),
+                        newsletter_href=reverse("storefront_newsletter:newsletter-subscribe"),
+                        fallback_image_url=_storefront_hero_fallback_image(featured_products),
+                    ),
+                ),
                 "featured_products": [
                     _build_storefront_product_card(
                         product,
@@ -1277,6 +1558,46 @@ class StorefrontHomeView(TemplateView):
             }
         )
         return context
+
+
+class PublicDemoAccessView(TemplateView):
+    template_name = "pages/templates/public_demo_access_page.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        demo_subdomain = _demo_tenant_subdomain()
+        demo_tenant = Tenant.objects.filter(subdomain=demo_subdomain, is_active=True).first()
+        if demo_tenant is None:
+            raise Http404("Demo tenant not found")
+        context.update(
+            {
+                "page_title": "Acessar demo Hubx Market",
+                "page_description": "Escolha como deseja entrar na loja demo oficial.",
+                "demo_store_name": getattr(demo_tenant, "name", "") or "Hubx Demo",
+                "demo_storefront_href": self._demo_storefront_url(),
+                "demo_admin_login_href": self._demo_session_url(profile="admin"),
+                "demo_customer_login_href": self._demo_session_url(profile="customer"),
+                "footer_brand_scope": "Demo oficial",
+                "footer_description": "Acesse a loja demo, compare planos e conheça o portal comercial do Hubx Market.",
+                "footer_links": [
+                    {"href": "/", "label": "Portal", "icon": "home"},
+                    {"href": "/plans/", "label": "Planos", "icon": "receipt-text"},
+                    {"href": "/demo/", "label": "Demo", "icon": "store"},
+                    {"href": self._demo_storefront_url(), "label": "Vitrine demo", "icon": "shopping-bag"},
+                    {"href": "/accounts/login/", "label": "Entrar", "icon": "log-in"},
+                ],
+            }
+        )
+        return context
+
+    def _demo_storefront_url(self) -> str:
+        storefront_url = _public_store_url(_demo_tenant_subdomain(), "/", request=self.request)
+        return f"{storefront_url}?{urlencode({'return_url': self.request.build_absolute_uri('/demo/')})}"
+
+    def _demo_session_url(self, *, profile: str) -> str:
+        session_url = _public_store_url(_demo_tenant_subdomain(), "/accounts/demo-session/", request=self.request)
+        return_url = self.request.build_absolute_uri("/demo/")
+        return f"{session_url}?{urlencode({'profile': profile, 'return_url': return_url})}"
 
 
 class ProductDetailView(TemplateView):
@@ -1448,6 +1769,7 @@ class ProductDetailView(TemplateView):
             product_slug=str(product.get("slug") or kwargs["product_slug"]),
         )
 
+        is_demo_read_only = bool(getattr(self.request, "is_demo_read_only", False))
         context.update(
             {
                 "pdp_feedback": _pdp_cart_feedback(self.request.GET.get("cart_feedback")),
@@ -1493,4 +1815,19 @@ class ProductDetailView(TemplateView):
                 "approved_reviews": approved_reviews,
             }
         )
+        if is_demo_read_only:
+            context.update(
+                {
+                    "primary_action_label": "Simular carrinho",
+                    "primary_action_href": f'{reverse("cart:cart-page")}?{urlencode({"demo_flow": "cart"})}',
+                    "primary_action_type": "button",
+                    "primary_action_disabled": False,
+                    "secondary_action_label": "Simular checkout",
+                    "secondary_action_href": f'{reverse("checkout:checkout-page")}?{urlencode({"demo_flow": "checkout", "stage": "review"})}',
+                    "secondary_action_type": "button",
+                    "quantity_disabled": True,
+                    "purchase_note": "Esta loja demo simula a jornada de compra com dados de leitura; nenhuma alteração é gravada.",
+                    "cta_helper": "Siga para carrinho ou checkout demonstrativo sem criar carrinho, pedido ou pagamento real.",
+                }
+            )
         return context

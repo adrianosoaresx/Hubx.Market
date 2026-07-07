@@ -8,18 +8,12 @@
         {% include "shared/components/navigation/breadcrumb.html" with items=breadcrumbs %}
     {% endif %}
 
-    <header class="storefront-hero space-y-3">
-        {% if eyebrow %}
-            <p class="text-xs font-medium uppercase tracking-wide text-[var(--color-text-secondary)]">{{ eyebrow }}</p>
+    {% include "shared/partials/storefront_institutional_hero.html" %}
+
+    <header class="storefront-catalog-meta space-y-2">
+        {% if page_description %}
+            <p class="text-sm text-[var(--color-text-secondary)]">{{ page_description }}</p>
         {% endif %}
-        <div class="space-y-2">
-            <h1 class="storefront-hero-title text-3xl font-semibold tracking-tight text-[var(--color-text-primary)]">
-                {{ page_title|default:"Loja" }}
-            </h1>
-            {% if page_description %}
-                <p class="storefront-hero-description max-w-3xl text-base text-[var(--color-text-secondary)]">{{ page_description }}</p>
-            {% endif %}
-        </div>
         {% if page_meta %}
             <p class="text-sm text-[var(--color-text-secondary)]">{{ page_meta }}</p>
         {% endif %}
@@ -36,7 +30,7 @@
         <div {% if hx_target_id %}id="{{ hx_target_id }}"{% endif %} class="space-y-6">
             <div class="storefront-product-grid">
                 {% for product in products %}
-{% with href=product.href image_url=product.image_url image_alt=product.image_alt eyebrow=product.eyebrow title=product.title subtitle=product.subtitle badge_label=product.badge_label badge_variant=product.badge_variant price=product.price compare_price=product.compare_price price_helper=product.price_helper meta=product.meta variant_summary=product.variant_summary curation_note=product.curation_note availability_note=product.availability_note review_summary=product.review_summary click_helper=product.click_helper stock_state=product.stock_state stock_label=product.stock_label stock_helper=product.stock_helper actions=product.actions clickable=product.clickable %}
+{% with href=product.href image_url=product.image_url image_alt=product.image_alt eyebrow=product.eyebrow title=product.title subtitle=product.subtitle badge_label=product.badge_label badge_variant=product.badge_variant price=product.price compare_price=product.compare_price price_helper=product.price_helper meta=product.meta availability_note=product.availability_note review_summary=product.review_summary stock_state=product.stock_state stock_label=product.stock_label stock_helper=product.stock_helper action_label=product.action_label actions=product.actions clickable=product.clickable %}
                         {% include "shared/components/composite/product_card.html" %}
                     {% endwith %}
                 {% endfor %}
@@ -59,7 +53,7 @@
             {% endwith %}
         </div>
     {% else %}
-        {% with icon=empty_icon|default:"📦" title=empty_title|default:"Nenhum produto encontrado" description=empty_description|default:"Tente ajustar os filtros ou explorar outra categoria." primary_action=empty_primary_action secondary_action=empty_secondary_action %}
+        {% with icon_name=empty_icon_name|default:"package" title=empty_title|default:"Nenhum produto encontrado" description=empty_description|default:"Tente ajustar os filtros ou explorar outra categoria." primary_action=empty_primary_action secondary_action=empty_secondary_action %}
             {% include "shared/components/feedback/empty_state.html" %}
         {% endwith %}
     {% endif %}

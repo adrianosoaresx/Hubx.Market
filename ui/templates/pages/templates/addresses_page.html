@@ -21,11 +21,9 @@
                 <p class="text-sm text-[var(--color-text-secondary)]">{{ address_form_description|default:"Atualize os dados do endereço." }}</p>
             </div>
             {% if address_form.non_field_errors %}
-                <div class="rounded-2xl border border-[var(--color-feedback-danger)]/20 bg-rose-50 p-4 text-sm text-[var(--color-feedback-danger)]">
-                    {% for error in address_form.non_field_errors %}
-                        <p>{{ error }}</p>
-                    {% endfor %}
-                </div>
+                {% for error in address_form.non_field_errors %}
+                    {% include "shared/components/feedback/alert.html" with variant="danger" title="Corrija o endereço" description=error %}
+                {% endfor %}
             {% endif %}
             <form method="post" action="{{ address_form_action }}" class="space-y-6">
                 {% csrf_token %}
@@ -76,37 +74,11 @@
         </div>
     {% elif showcase_mode %}
         <div class="customer-address-grid grid gap-6 xl:grid-cols-2">
-            <section class="ds-surface p-6">
-                <div class="space-y-4">
-                    {% include "shared/components/data_display/card.html" with
-                        title="Casa"
-                        subtitle="Entrega principal"
-                        content="Rua das Laranjeiras, 100 · Apto 42 · Bela Vista · São Paulo/SP"
-                        footer="CEP 01310-100"
-                    %}
-                    <div class="flex gap-3">
-                        <a href="/accounts/account/addresses/new/" class="text-sm font-medium text-[var(--color-action-primary-bg)] hover:underline">Editar</a>
-                        <a href="/accounts/account/addresses/" class="text-sm font-medium text-rose-600 hover:underline">Remover</a>
-                    </div>
-                </div>
-            </section>
-            <section class="ds-surface p-6">
-                <div class="space-y-4">
-                    {% include "shared/components/data_display/card.html" with
-                        title="Escritório"
-                        subtitle="Entrega alternativa"
-                        content="Av. Paulista, 900 · 12º andar · São Paulo/SP"
-                        footer="CEP 01310-200"
-                    %}
-                    <div class="flex gap-3">
-                        <a href="/accounts/account/addresses/new/" class="text-sm font-medium text-[var(--color-action-primary-bg)] hover:underline">Editar</a>
-                        <a href="/accounts/account/addresses/" class="text-sm font-medium text-rose-600 hover:underline">Remover</a>
-                    </div>
-                </div>
-            </section>
+            {% include "shared/components/data_display/card.html" with title="Casa" subtitle="Entrega principal" content="Rua das Laranjeiras, 100 · Apto 42 · Bela Vista · São Paulo/SP" footer="CEP 01310-100" %}
+            {% include "shared/components/data_display/card.html" with title="Escritório" subtitle="Entrega alternativa" content="Av. Paulista, 900 · 12º andar · São Paulo/SP" footer="CEP 01310-200" %}
         </div>
     {% else %}
-        {% with icon="📍" title=empty_title|default:"Nenhum endereço salvo" description=empty_description|default:"Adicione um endereço para agilizar futuras compras." primary_action=primary_action secondary_action=secondary_action %}
+        {% with icon_name="map-pin" title=empty_title|default:"Nenhum endereço salvo" description=empty_description|default:"Adicione um endereço para agilizar futuras compras." primary_action=primary_action secondary_action=secondary_action %}
             {% include "shared/components/feedback/empty_state.html" %}
         {% endwith %}
     {% endif %}

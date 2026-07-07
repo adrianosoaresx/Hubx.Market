@@ -704,7 +704,10 @@ class DjangoOrmProductRepository:
         if not variant_list:
             return None
         for variant in variant_list:
-            if getattr(variant, "is_default", False):
+            if getattr(variant, "is_default", False) and bool(getattr(variant, "is_active", True)):
+                return variant
+        for variant in variant_list:
+            if bool(getattr(variant, "is_active", True)):
                 return variant
         return variant_list[0]
 
@@ -724,19 +727,33 @@ class DjangoOrmProductRepository:
             variant_list = list(variants.all())
         except Exception:
             return []
-        return [
-            {
-                "sku": DjangoOrmProductRepository._string_value(getattr(variant, "sku", None), default=""),
-                "price": DjangoOrmProductRepository._string_value(getattr(variant, "price", None), default="0.00"),
-                "compare_price": DjangoOrmProductRepository._string_value(getattr(variant, "compare_price", None), default=""),
-                "stock": DjangoOrmProductRepository._string_value(getattr(variant, "stock", None), default="0"),
-                "reserved_stock": DjangoOrmProductRepository._string_value(getattr(variant, "reserved_stock", None), default="0"),
-                "track_inventory": bool(getattr(variant, "track_inventory", True)),
-                "allow_backorder": bool(getattr(variant, "allow_backorder", False)),
-                "is_default": bool(getattr(variant, "is_default", False)),
-            }
-            for variant in variant_list
-        ]
+        serialized = []
+        for variant in variant_list:
+            option_values = getattr(variant, "option_values", {}) or {}
+            if not isinstance(option_values, dict):
+                option_values = {}
+            option_summary = " · ".join(f"{key}: {value}" for key, value in option_values.items())
+            serialized.append(
+                {
+                    "id": getattr(variant, "id", None),
+                    "sku": DjangoOrmProductRepository._string_value(getattr(variant, "sku", None), default=""),
+                    "label": DjangoOrmProductRepository._string_value(getattr(variant, "label", None), default=""),
+                    "option_values": dict(option_values),
+                    "option_summary": option_summary or "Sem atributos",
+                    "barcode": DjangoOrmProductRepository._string_value(getattr(variant, "barcode", None), default=""),
+                    "price": DjangoOrmProductRepository._string_value(getattr(variant, "price", None), default="0.00"),
+                    "compare_price": DjangoOrmProductRepository._string_value(getattr(variant, "compare_price", None), default=""),
+                    "stock": DjangoOrmProductRepository._string_value(getattr(variant, "stock", None), default="0"),
+                    "reserved_stock": DjangoOrmProductRepository._string_value(getattr(variant, "reserved_stock", None), default="0"),
+                    "weight_grams": int(getattr(variant, "weight_grams", 0) or 0),
+                    "track_inventory": bool(getattr(variant, "track_inventory", True)),
+                    "allow_backorder": bool(getattr(variant, "allow_backorder", False)),
+                    "is_active": bool(getattr(variant, "is_active", True)),
+                    "is_default": bool(getattr(variant, "is_default", False)),
+                    "position": int(getattr(variant, "position", 0) or 0),
+                }
+            )
+        return serialized
 
     @staticmethod
     def _serialize_images(product: object) -> list[dict[str, object]]:
@@ -836,6 +853,7 @@ class AdminProductQueryService:
                 "slug": "",
                 "sku": "",
                 "brand": "",
+                "category_label": "",
                 "description": "",
                 "price": "",
                 "compare_price": "",
@@ -854,6 +872,7 @@ class AdminProductQueryService:
             "slug": product["slug"],
             "sku": product["sku"],
             "brand": product["brand"],
+            "category_label": product["category_label"],
             "description": product["description"],
             "price": product["price"],
             "compare_price": product["compare_price"],

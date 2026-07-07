@@ -40,6 +40,8 @@ class InitialOwnerProvisioningCommandService:
         email: object,
         full_name: object = "",
         role: object = "owner",
+        password: object = None,
+        require_new_user: bool = False,
         dry_run: bool = False,
         actor_label: object = "system",
     ) -> dict[str, object]:
@@ -60,6 +62,8 @@ class InitialOwnerProvisioningCommandService:
         user_matches = list(User.objects.filter(email__iexact=normalized_email).order_by("id")[:2])
         if len(user_matches) > 1:
             return {"result": "initial-owner-ambiguous-user", "errors": {"__all__": "Há mais de um User Django com este e-mail."}}
+        if require_new_user and user_matches:
+            return {"result": "initial-owner-user-exists", "errors": {"email": "Este e-mail já possui um usuário de acesso."}}
 
         if dry_run:
             return {
@@ -102,14 +106,16 @@ class InitialOwnerProvisioningCommandService:
                 if not user.is_active:
                     return {"result": "initial-owner-inactive-user", "errors": {"__all__": "User Django existente está inativo."}}
             else:
+                normalized_password = str(password or "")
                 user = User.objects.create_user(
                     username=_username_from_email(normalized_email),
                     email=normalized_email,
-                    password=None,
+                    password=normalized_password or None,
                     first_name=_string(full_name, limit=150),
                 )
-                user.set_unusable_password()
-                user.save(update_fields=("password",))
+                if not normalized_password:
+                    user.set_unusable_password()
+                    user.save(update_fields=("password",))
                 user_created = True
 
             audit_log_commands.record_event(

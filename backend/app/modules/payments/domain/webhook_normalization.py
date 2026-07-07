@@ -90,6 +90,39 @@ def _normalize_pagarme(payload: dict[str, object]) -> NormalizedPaymentWebhook |
     )
 
 
+def _parse_hubx_external_reference(value: object) -> tuple[str, str]:
+    normalized = _string(value)
+    if not normalized.startswith("hubx-market:"):
+        return "", ""
+    parts = normalized.split(":", 3)
+    if len(parts) < 3:
+        return "", ""
+    tenant_subdomain = _string(parts[1])
+    order_number = _string(parts[2])
+    return tenant_subdomain, order_number
+
+
+def _normalize_asaas(payload: dict[str, object]) -> NormalizedPaymentWebhook | None:
+    provider = _string(payload.get("provider")).lower()
+    event_type = _string(payload.get("event") or payload.get("type")).upper()
+    if provider != "asaas" and not event_type.startswith("PAYMENT_"):
+        return None
+    paid_events = {"PAYMENT_RECEIVED", "PAYMENT_CONFIRMED"}
+    failed_events = {"PAYMENT_OVERDUE", "PAYMENT_DELETED", "PAYMENT_REFUNDED", "PAYMENT_CHARGEBACK_REQUESTED"}
+    if event_type not in paid_events | failed_events:
+        return None
+    payment = _dict(payload.get("payment"))
+    tenant_subdomain, order_number = _parse_hubx_external_reference(payment.get("externalReference"))
+    return NormalizedPaymentWebhook(
+        event_type="payment.paid" if event_type in paid_events else "payment.failed",
+        tenant_slug="",
+        tenant_subdomain=tenant_subdomain,
+        order_number=order_number,
+        payment_reference=_string(payment.get("id")),
+        payment_source_label=_string(payload.get("payment_source_label") or "Asaas"),
+    )
+
+
 def _normalize_stripe(payload: dict[str, object]) -> NormalizedPaymentWebhook | None:
     provider = _string(payload.get("provider")).lower()
     event_type = _string(payload.get("type") or payload.get("event")).lower()
@@ -111,11 +144,17 @@ def _normalize_stripe(payload: dict[str, object]) -> NormalizedPaymentWebhook | 
 
 
 def normalize_payment_webhook(payload: dict[str, object]) -> NormalizedPaymentWebhook | None:
-    for normalizer in (_normalize_generic, _normalize_pagarme, _normalize_stripe):
+    for normalizer in (_normalize_asaas, _normalize_generic, _normalize_pagarme, _normalize_stripe):
         normalized = normalizer(payload)
         if normalized is not None:
             return normalized
     return None
+
+
+def looks_like_asaas_webhook(payload: dict[str, object]) -> bool:
+    provider = _string(payload.get("provider")).lower()
+    event_type = _string(payload.get("event") or payload.get("type")).upper()
+    return provider == "asaas" or event_type.startswith("PAYMENT_")
 
 
 def looks_like_pagarme_webhook(payload: dict[str, object]) -> bool:

@@ -3,15 +3,17 @@
 {% block title %}{{ page_title|default:"Avaliar produto" }}{% endblock %}
 
 {% block content %}
-<section class="space-y-6">
+<section class="customer-area-page customer-review-form-page space-y-6">
+    <div class="customer-area-hero">
     {% with eyebrow=page_eyebrow|default:"Minha compra" title=page_title|default:"Avaliar produto" description=page_description|default:"Compartilhe sua experiência com este produto." %}
         {% include "shared/components/layout/page_header.html" %}
     {% endwith %}
+    </div>
 
     <form method="post" action="{{ form_action }}" class="space-y-6">
         {% csrf_token %}
 
-        <section class="ds-surface space-y-6 p-6">
+        <section class="customer-area-panel ds-surface space-y-6 p-6">
             <div class="space-y-1">
                 <h2 class="text-base font-semibold text-[var(--color-text-primary)]">Sua experiência</h2>
                 <p class="text-sm text-[var(--color-text-secondary)]">Sua avaliação será analisada antes de aparecer no produto.</p>
@@ -32,7 +34,7 @@
             {% endwith %}
         </section>
 
-        <section class="ds-surface space-y-6 p-6">
+        <section class="customer-area-panel ds-surface space-y-6 p-6">
             <div class="space-y-1">
                 <h2 class="text-base font-semibold text-[var(--color-text-primary)]">Nome público</h2>
                 <p class="text-sm text-[var(--color-text-secondary)]">Você pode enviar sem exibir seu nome publicamente.</p>

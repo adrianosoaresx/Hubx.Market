@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from django.db import transaction
 from django.utils import timezone
 
+from app.modules.accounts.application.admin_permissions import PERMISSION_ORDERS_MANAGE, admin_permissions
 from app.modules.coupons.application.coupon_redemption_commands import coupon_redemption_commands
 
 
@@ -52,9 +53,10 @@ class DjangoOrmAdminOrderCommandRepository:
         if self.order_model is None:
             return None
         try:
+            if not tenant_id:
+                return None
             queryset = self.order_model._default_manager.filter(number=order_number.lstrip("#"))
-            if tenant_id:
-                queryset = queryset.filter(tenant_id=tenant_id)
+            queryset = queryset.filter(tenant_id=tenant_id)
             return queryset.first()
         except Exception:
             return None
@@ -113,6 +115,32 @@ class AdminOrderCommandService:
     def _normalized_actor_label(actor_label: str = "") -> str:
         normalized = str(actor_label or "").strip()
         return normalized or "Operação interna"
+
+    @staticmethod
+    def _write_guard(*, tenant_id: int | None, actor_role: str) -> str:
+        if not tenant_id:
+            return "order-tenant-missing"
+        normalized_role = str(actor_role or "").strip()
+        if not normalized_role:
+            return "order-permission-denied"
+        if not admin_permissions.check(role=normalized_role, permission=PERMISSION_ORDERS_MANAGE).allowed:
+            return "order-permission-denied"
+        return ""
+
+    def _get_authorized_order(
+        self,
+        *,
+        order_number: str,
+        tenant_id: int | None,
+        actor_role: str,
+    ) -> tuple[object | None, str]:
+        guard_result = self._write_guard(tenant_id=tenant_id, actor_role=actor_role)
+        if guard_result:
+            return None, guard_result
+        order = self.repository.get_order(order_number, tenant_id=tenant_id)
+        if order is None:
+            return None, "order-not-found"
+        return order, ""
 
     def _active_inventory_exception_code(self, *, order) -> str:
         if (
@@ -205,7 +233,7 @@ class AdminOrderCommandService:
             order.inventory_recovered_at = timezone.now()
         return recovered_items
 
-    def _mark_shipment_sent(self, *, order) -> str:
+    def _mark_shipment_sent(self, *, order, actor_role: str = "") -> str:
         try:
             from app.modules.shipping.application.shipment_commands import shipment_commands
         except Exception:
@@ -213,9 +241,10 @@ class AdminOrderCommandService:
         return shipment_commands.mark_shipment_sent(
             tenant_id=getattr(order, "tenant_id", None),
             order_number=str(getattr(order, "number", "") or ""),
+            actor_role=actor_role,
         )
 
-    def _mark_shipment_delivered(self, *, order) -> str:
+    def _mark_shipment_delivered(self, *, order, actor_role: str = "") -> str:
         try:
             from app.modules.shipping.application.shipment_commands import shipment_commands
         except Exception:
@@ -223,20 +252,32 @@ class AdminOrderCommandService:
         delivery_result = shipment_commands.mark_shipment_delivered(
             tenant_id=getattr(order, "tenant_id", None),
             order_number=str(getattr(order, "number", "") or ""),
+            actor_role=actor_role,
         )
         if delivery_result in {"shipment-not-found", "shipment-delivery-blocked"}:
-            sent_result = self._mark_shipment_sent(order=order)
+            sent_result = self._mark_shipment_sent(order=order, actor_role=actor_role)
             if sent_result in {"shipment-sent", "shipment-sent-already-recorded"}:
                 delivery_result = shipment_commands.mark_shipment_delivered(
                     tenant_id=getattr(order, "tenant_id", None),
                     order_number=str(getattr(order, "number", "") or ""),
+                    actor_role=actor_role,
                 )
         return delivery_result
 
-    def complete_delivery(self, *, order_number: str, tenant_id: int | None = None) -> tuple[bool, str]:
-        order = self.repository.get_order(order_number, tenant_id=tenant_id)
-        if order is None:
-            return False, "order-not-found"
+    def complete_delivery(
+        self,
+        *,
+        order_number: str,
+        tenant_id: int | None = None,
+        actor_role: str = "",
+    ) -> tuple[bool, str]:
+        order, guard_result = self._get_authorized_order(
+            order_number=order_number,
+            tenant_id=tenant_id,
+            actor_role=actor_role,
+        )
+        if guard_result:
+            return False, guard_result
         current_status = str(getattr(order, "status", "") or "")
         current_fulfillment_label = str(getattr(order, "fulfillment_status_label", "") or "")
         current_shipping_status = str(getattr(order, "shipping_status", "") or "")
@@ -280,13 +321,23 @@ class AdminOrderCommandService:
                 badge_label="Entrega",
                 badge_variant="success",
             )
-            self._mark_shipment_delivered(order=order)
+            self._mark_shipment_delivered(order=order, actor_role=actor_role)
         return True, "delivery-completed"
 
-    def start_shipping(self, *, order_number: str, tenant_id: int | None = None) -> tuple[bool, str]:
-        order = self.repository.get_order(order_number, tenant_id=tenant_id)
-        if order is None:
-            return False, "order-not-found"
+    def start_shipping(
+        self,
+        *,
+        order_number: str,
+        tenant_id: int | None = None,
+        actor_role: str = "",
+    ) -> tuple[bool, str]:
+        order, guard_result = self._get_authorized_order(
+            order_number=order_number,
+            tenant_id=tenant_id,
+            actor_role=actor_role,
+        )
+        if guard_result:
+            return False, guard_result
         current_status = str(getattr(order, "status", "") or "")
         current_payment_status = str(getattr(order, "payment_status", "") or "")
         current_fulfillment_label = str(getattr(order, "fulfillment_status_label", "") or "")
@@ -317,13 +368,23 @@ class AdminOrderCommandService:
             badge_label="Transporte",
             badge_variant="shipped",
         )
-        self._mark_shipment_sent(order=order)
+        self._mark_shipment_sent(order=order, actor_role=actor_role)
         return True, "shipping-started"
 
-    def start_fulfillment(self, *, order_number: str, tenant_id: int | None = None) -> tuple[bool, str]:
-        order = self.repository.get_order(order_number, tenant_id=tenant_id)
-        if order is None:
-            return False, "order-not-found"
+    def start_fulfillment(
+        self,
+        *,
+        order_number: str,
+        tenant_id: int | None = None,
+        actor_role: str = "",
+    ) -> tuple[bool, str]:
+        order, guard_result = self._get_authorized_order(
+            order_number=order_number,
+            tenant_id=tenant_id,
+            actor_role=actor_role,
+        )
+        if guard_result:
+            return False, guard_result
         current_status = str(getattr(order, "status", "") or "")
         current_payment_status = str(getattr(order, "payment_status", "") or "")
         current_fulfillment_label = str(getattr(order, "fulfillment_status_label", "") or "")
@@ -353,10 +414,20 @@ class AdminOrderCommandService:
         )
         return True, "fulfillment-started"
 
-    def cancel_order(self, *, order_number: str, tenant_id: int | None = None) -> tuple[bool, str]:
-        order = self.repository.get_order(order_number, tenant_id=tenant_id)
-        if order is None:
-            return False, "order-not-found"
+    def cancel_order(
+        self,
+        *,
+        order_number: str,
+        tenant_id: int | None = None,
+        actor_role: str = "",
+    ) -> tuple[bool, str]:
+        order, guard_result = self._get_authorized_order(
+            order_number=order_number,
+            tenant_id=tenant_id,
+            actor_role=actor_role,
+        )
+        if guard_result:
+            return False, guard_result
         current_status = str(getattr(order, "status", "") or "")
         if current_status == "canceled":
             return False, "order-already-canceled"
@@ -405,10 +476,15 @@ class AdminOrderCommandService:
         order_number: str,
         actor_label: str = "",
         tenant_id: int | None = None,
+        actor_role: str = "",
     ) -> tuple[bool, str]:
-        order = self.repository.get_order(order_number, tenant_id=tenant_id)
-        if order is None:
-            return False, "order-not-found"
+        order, guard_result = self._get_authorized_order(
+            order_number=order_number,
+            tenant_id=tenant_id,
+            actor_role=actor_role,
+        )
+        if guard_result:
+            return False, guard_result
         normalized_actor = self._normalized_actor_label(actor_label)
         with transaction.atomic():
             exception_code = self._active_inventory_exception_code(order=order)
@@ -439,10 +515,15 @@ class AdminOrderCommandService:
         order_number: str,
         actor_label: str = "",
         tenant_id: int | None = None,
+        actor_role: str = "",
     ) -> tuple[bool, str]:
-        order = self.repository.get_order(order_number, tenant_id=tenant_id)
-        if order is None:
-            return False, "order-not-found"
+        order, guard_result = self._get_authorized_order(
+            order_number=order_number,
+            tenant_id=tenant_id,
+            actor_role=actor_role,
+        )
+        if guard_result:
+            return False, guard_result
         normalized_actor = self._normalized_actor_label(actor_label)
         with transaction.atomic():
             exception_code = self._active_inventory_exception_code(order=order)
@@ -478,10 +559,15 @@ class AdminOrderCommandService:
         order_number: str,
         actor_label: str = "",
         tenant_id: int | None = None,
+        actor_role: str = "",
     ) -> tuple[bool, str]:
-        order = self.repository.get_order(order_number, tenant_id=tenant_id)
-        if order is None:
-            return False, "order-not-found"
+        order, guard_result = self._get_authorized_order(
+            order_number=order_number,
+            tenant_id=tenant_id,
+            actor_role=actor_role,
+        )
+        if guard_result:
+            return False, guard_result
         normalized_actor = self._normalized_actor_label(actor_label)
         with transaction.atomic():
             exception_code = self._active_inventory_exception_code(order=order)
@@ -518,13 +604,18 @@ class AdminOrderCommandService:
         order_numbers: list[str],
         actor_label: str = "",
         tenant_id: int | None = None,
+        actor_role: str = "",
     ) -> tuple[bool, str]:
+        guard_result = self._write_guard(tenant_id=tenant_id, actor_role=actor_role)
+        if guard_result:
+            return False, guard_result
         changed = 0
         for order_number in order_numbers:
             success, result = self.mark_inventory_exception_under_review(
                 order_number=order_number,
                 actor_label=actor_label,
                 tenant_id=tenant_id,
+                actor_role=actor_role,
             )
             if success and result == "inventory-exception-under-review":
                 changed += 1
@@ -538,13 +629,18 @@ class AdminOrderCommandService:
         order_numbers: list[str],
         actor_label: str = "",
         tenant_id: int | None = None,
+        actor_role: str = "",
     ) -> tuple[bool, str]:
+        guard_result = self._write_guard(tenant_id=tenant_id, actor_role=actor_role)
+        if guard_result:
+            return False, guard_result
         changed = 0
         for order_number in order_numbers:
             success, result = self.mark_inventory_exception_resolved(
                 order_number=order_number,
                 actor_label=actor_label,
                 tenant_id=tenant_id,
+                actor_role=actor_role,
             )
             if success and result == "inventory-exception-resolved":
                 changed += 1
@@ -552,12 +648,23 @@ class AdminOrderCommandService:
             return False, "bulk-inventory-exception-resolved-no-change"
         return True, "bulk-inventory-exception-resolved"
 
-    def update_order_status(self, *, order_number: str, status: str, tenant_id: int | None = None) -> tuple[bool, str]:
+    def update_order_status(
+        self,
+        *,
+        order_number: str,
+        status: str,
+        tenant_id: int | None = None,
+        actor_role: str = "",
+    ) -> tuple[bool, str]:
         if status not in {option["value"] for option in ORDER_STATUS_OPTIONS}:
             return False, "order-status-invalid"
-        order = self.repository.get_order(order_number, tenant_id=tenant_id)
-        if order is None:
-            return False, "order-not-found"
+        order, guard_result = self._get_authorized_order(
+            order_number=order_number,
+            tenant_id=tenant_id,
+            actor_role=actor_role,
+        )
+        if guard_result:
+            return False, guard_result
         previous_status = str(getattr(order, "status", "") or "")
         if previous_status == status:
             return False, "order-status-unchanged"
@@ -590,13 +697,18 @@ class AdminOrderCommandService:
         order_number: str,
         fulfillment_status: str,
         tenant_id: int | None = None,
+        actor_role: str = "",
     ) -> tuple[bool, str]:
         option = next((item for item in FULFILLMENT_STATUS_OPTIONS if item["value"] == fulfillment_status), None)
         if option is None:
             return False, "fulfillment-status-invalid"
-        order = self.repository.get_order(order_number, tenant_id=tenant_id)
-        if order is None:
-            return False, "order-not-found"
+        order, guard_result = self._get_authorized_order(
+            order_number=order_number,
+            tenant_id=tenant_id,
+            actor_role=actor_role,
+        )
+        if guard_result:
+            return False, guard_result
         previous_label = str(getattr(order, "fulfillment_status_label", "") or "Indefinido")
         if previous_label == str(option["label"]):
             return False, "fulfillment-status-unchanged"

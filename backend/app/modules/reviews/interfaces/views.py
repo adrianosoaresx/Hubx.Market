@@ -44,7 +44,7 @@ def _action_cell(review: dict[str, object], *, csrf_token: str, can_moderate: bo
             '<form method="post" action="{}" class="inline">'
             '<input type="hidden" name="csrfmiddlewaretoken" value="{}">'
             '<input type="hidden" name="action" value="approve">'
-            '<button class="ds-btn-secondary" type="submit">Aprovar</button>'
+            '<button class="ds-btn ds-btn-secondary ds-btn-sm" type="submit">Aprovar</button>'
             "</form>",
             action_url,
             csrf_token,
@@ -54,7 +54,7 @@ def _action_cell(review: dict[str, object], *, csrf_token: str, can_moderate: bo
             '<form method="post" action="{}" class="inline">'
             '<input type="hidden" name="csrfmiddlewaretoken" value="{}">'
             '<input type="hidden" name="action" value="reject">'
-            '<button class="ds-btn-secondary" type="submit">Rejeitar</button>'
+            '<button class="ds-btn ds-btn-secondary ds-btn-sm" type="submit">Rejeitar</button>'
             "</form>",
             action_url,
             csrf_token,

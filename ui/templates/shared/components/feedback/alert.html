@@ -1,13 +1,27 @@
 {% with variant=variant|default:"info" %}
-<div class="ds-alert ds-alert-{{ variant }}">
-    <div class="flex items-start gap-3">
-        {% if icon %}<span class="mt-0.5" aria-hidden="true">{{ icon }}</span>{% endif %}
-        <div class="min-w-0 flex-1">
-            {% if title %}<p class="font-semibold text-[var(--color-text-primary)]">{{ title }}</p>{% endif %}
-            {% if description %}<p class="mt-1 text-sm text-[var(--color-text-secondary)]">{{ description }}</p>{% endif %}
+<div class="ds-alert ds-alert-{{ variant }}" role="{% if variant == 'danger' or variant == 'error' %}alert{% else %}status{% endif %}">
+    <div class="ds-alert-layout">
+        <span class="ds-alert-icon" aria-hidden="true">
+            {% if icon_name %}
+                {% include "shared/partials/icon.html" with name=icon_name size="sm" %}
+            {% elif icon %}
+                {{ icon }}
+            {% elif variant == "success" %}
+                {% include "shared/partials/icon.html" with name="check-circle" size="sm" %}
+            {% elif variant == "warning" %}
+                {% include "shared/partials/icon.html" with name="alert-triangle" size="sm" %}
+            {% elif variant == "danger" or variant == "error" %}
+                {% include "shared/partials/icon.html" with name="x-circle" size="sm" %}
+            {% else %}
+                {% include "shared/partials/icon.html" with name="help-circle" size="sm" %}
+            {% endif %}
+        </span>
+        <div class="ds-alert-copy">
+            {% if title %}<p class="ds-alert-title">{{ title }}</p>{% endif %}
+            {% if description %}<p class="ds-alert-description">{{ description }}</p>{% endif %}
         </div>
         {% if dismissible %}
-            <button type="button" class="text-sm text-[var(--color-text-secondary)]">Fechar</button>
+            <button type="button" class="ds-alert-dismiss" aria-label="Fechar aviso">Fechar</button>
         {% endif %}
     </div>
 </div>

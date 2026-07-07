@@ -3,9 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
+from django.conf import settings
 from django.utils.crypto import salted_hmac
 
 from app.modules.catalog.models import StorefrontDiscoveryEventLog
+from app.modules.tenants.models import Tenant
 
 
 DISCOVERY_EVENT_NAMES = {
@@ -129,6 +131,8 @@ class StorefrontDiscoveryAnalyticsService:
     def _publish(self, name: str, payload: dict[str, object]) -> None:
         if not payload.get("tenant_id"):
             return
+        if _is_demo_tenant_id(payload.get("tenant_id")):
+            return
         try:
             self.publisher.publish(StorefrontDiscoveryEvent(name=name, payload=payload))
         except Exception:
@@ -222,3 +226,12 @@ class StorefrontDiscoveryAnalyticsService:
 storefront_discovery_analytics = StorefrontDiscoveryAnalyticsService(
     publisher=DjangoStorefrontDiscoveryEventLogPublisher()
 )
+
+
+def _is_demo_tenant_id(tenant_id: object) -> bool:
+    try:
+        normalized_tenant_id = int(tenant_id)
+    except (TypeError, ValueError):
+        return False
+    demo_subdomain = str(getattr(settings, "HUBX_MARKET_DEMO_TENANT_SUBDOMAIN", "hubx-demo") or "hubx-demo").strip().lower()
+    return Tenant.objects.filter(id=normalized_tenant_id, subdomain=demo_subdomain, is_active=True).exists()

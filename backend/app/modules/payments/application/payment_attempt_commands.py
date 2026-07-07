@@ -39,6 +39,8 @@ def _default_provider_code(payment_method_code: str) -> str:
 
 def _default_provider_label(*, provider_code: str, payment_method_code: str) -> str:
     normalized_provider = str(provider_code or "").strip().lower()
+    if normalized_provider == "asaas":
+        return "Asaas"
     if normalized_provider == "pagarme":
         return "Pagar.me"
     return _normalize_payment_method_label(payment_method_code)

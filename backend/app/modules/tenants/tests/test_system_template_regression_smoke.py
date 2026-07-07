@@ -13,7 +13,10 @@ from app.modules.tenants.application.system_template_regression_smoke import (
 from app.modules.tenants.models import Tenant
 
 
-@override_settings(ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver"])
+@override_settings(
+    ALLOWED_HOSTS=[".hubx.market", "hubx.market", "localhost", "testserver"],
+    HUBX_MARKET_DEMO_TENANT_SUBDOMAIN="hubx-smoke-demo",
+)
 class SystemTemplateRegressionSmokeTests(TestCase):
     def setUp(self):
         self.tenant = Tenant.objects.create(
@@ -33,8 +36,13 @@ class SystemTemplateRegressionSmokeTests(TestCase):
             "storefront-home-nav",
             "storefront-catalog-list",
             "customer-login-form",
+            "central-home-public-entrypoints",
+            "central-login-public-nav",
             "customer-orders-nav-target",
             "ops-dashboard",
+            "public-demo-access",
+            "public-plans",
+            "platform-acquisitions-list",
             "platform-onboarding-list",
             "platform-tenants-list",
         ])
@@ -68,6 +76,34 @@ class SystemTemplateRegressionSmokeTests(TestCase):
         self.assertFalse(payload["ready"])
         self.assertIn("system-template-regression:missing-marker:missing:Marcador que não existe", payload["blockers"])
 
+    def test_smoke_blocks_when_marker_group_is_missing(self):
+        target = SystemTemplateSmokeTarget(
+            key="missing-marker-group",
+            path="/",
+            expected_status=200,
+            markers=("Hubx Smoke Demo",),
+            marker_groups=(("Marcador A", "Marcador B"),),
+        )
+
+        payload = system_template_regression_smoke.run(client=self.client, host=self.host, targets=(target,))
+
+        self.assertFalse(payload["ready"])
+        self.assertIn("system-template-regression:missing-marker-group:missing:Marcador A or Marcador B", payload["blockers"])
+
+    def test_anonymous_non_demo_storefront_home_keeps_login_entry(self):
+        tenant = Tenant.objects.create(
+            name="Regular Store",
+            slug="regular-store",
+            subdomain="regular-store",
+            is_active=True,
+        )
+
+        response = self.client.get("/", HTTP_HOST=f"{tenant.subdomain}.hubx.market")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Entrar")
+        self.assertNotContains(response, "Sair")
+
     def test_management_command_outputs_smoke_targets(self):
         output = StringIO()
 
@@ -75,9 +111,16 @@ class SystemTemplateRegressionSmokeTests(TestCase):
 
         value = output.getvalue()
         self.assertIn("[READY]", value)
-        self.assertIn("target key=storefront-home-nav path=/ status=200 ready=True", value)
-        self.assertIn("target key=platform-onboarding-list path=/ops/platform/onboarding/ status=200 ready=True", value)
-        self.assertIn("target key=platform-tenants-list path=/ops/platform/tenants/ status=200 ready=True", value)
+        self.assertIn("target key=storefront-home-nav host=hubx-smoke-demo.hubx.market path=/ status=200 ready=True", value)
+        self.assertIn("target key=central-home-public-entrypoints host=hubx.market path=/ status=200 ready=True", value)
+        self.assertIn("target key=public-demo-access host=hubx.market path=/demo/ status=200 ready=True", value)
+        self.assertIn("target key=public-plans host=hubx.market path=/plans/ status=200 ready=True", value)
+        self.assertIn(
+            "target key=platform-acquisitions-list host=hubx.market path=/ops/platform/acquisitions/ status=200 ready=True",
+            value,
+        )
+        self.assertIn("target key=platform-onboarding-list host=hubx.market path=/ops/platform/onboarding/ status=200 ready=True", value)
+        self.assertIn("target key=platform-tenants-list host=hubx.market path=/ops/platform/tenants/ status=200 ready=True", value)
         self.assertIn("next_track=System Validation Pass 2 — Browser Smoke Evidence", value)
 
     def test_management_command_blocks_unknown_owner_authentication(self):

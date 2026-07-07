@@ -19,6 +19,7 @@ from app.modules.tenants.models import Tenant
 
 REQUIRED_OPS_PERMISSIONS = {
     "audit.view",
+    "catalog.manage",
     "catalog.view",
     "checkout.view",
     "coupons.manage",
@@ -32,6 +33,7 @@ REQUIRED_OPS_PERMISSIONS = {
     PERMISSION_PLATFORM_TENANTS_VIEW,
     "reviews.moderate",
     "shipping.view",
+    "subscriptions.manage",
 }
 
 

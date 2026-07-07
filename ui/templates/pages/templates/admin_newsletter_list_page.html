@@ -6,12 +6,111 @@
 {% block content %}
 <section class="space-y-6">
     {% with eyebrow=page_eyebrow|default:"Retenção" title=page_title|default:"Newsletter" description=page_description|default:"Leia opt-ins tenant-scoped." %}
-        {% include "shared/components/layout/page_header.html" %}
+        {% include "shared/components/layout/admin_page_header.html" %}
     {% endwith %}
 
-    <div class="rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-4 text-sm text-[var(--color-text-secondary)]">
-        Primeira fundação: captura e leitura de consentimento. Campanhas, segmentação e envio ficam fora deste corte.
-    </div>
+    {% if feedback.title %}
+        {% include "shared/components/feedback/alert.html" with variant=feedback.variant title=feedback.title description=feedback.description %}
+    {% endif %}
+
+    {% if can_manage_newsletter %}
+        <form method="post" action="{% url 'newsletter:admin-newsletter-campaign-create' %}" class="admin-ops-panel ds-surface grid gap-5 p-6">
+            {% csrf_token %}
+            <div class="grid gap-1">
+                <h2 class="text-base font-semibold text-[var(--color-text-primary)]">Nova campanha</h2>
+                <p class="text-sm text-[var(--color-text-secondary)]">Envio para inscritos ativos com fila auditável.</p>
+            </div>
+
+            <div class="grid gap-4 md:grid-cols-2">
+                <div class="grid gap-2">
+                    <label class="text-sm font-semibold text-[var(--color-text-primary)]" for="campaign-title">Nome interno</label>
+                    <input id="campaign-title" name="title" type="text" value="{{ form.title }}" class="ds-input" maxlength="150" required>
+                    {% if errors.title %}{% include "shared/components/forms/field_error.html" with text=errors.title %}{% endif %}
+                </div>
+                <div class="grid gap-2">
+                    <label class="text-sm font-semibold text-[var(--color-text-primary)]" for="campaign-subject">Assunto</label>
+                    <input id="campaign-subject" name="subject" type="text" value="{{ form.subject }}" class="ds-input" maxlength="180" required>
+                    {% if errors.subject %}{% include "shared/components/forms/field_error.html" with text=errors.subject %}{% endif %}
+                </div>
+            </div>
+
+            <div class="grid gap-2">
+                <label class="text-sm font-semibold text-[var(--color-text-primary)]" for="campaign-body">Conteúdo</label>
+                <textarea id="campaign-body" name="body_text" class="ds-input min-h-32" required>{{ form.body_text }}</textarea>
+                {% if errors.body_text %}{% include "shared/components/forms/field_error.html" with text=errors.body_text %}{% endif %}
+            </div>
+
+            {% if form_error %}{% include "shared/components/forms/field_error.html" with text=form_error %}{% endif %}
+
+            <div class="flex flex-wrap gap-3">
+                <button type="submit" class="ds-btn ds-btn-primary ds-btn-md">Criar campanha</button>
+            </div>
+        </form>
+    {% endif %}
+
+    <section class="space-y-4">
+        <div class="flex flex-wrap items-end justify-between gap-3">
+            <div class="grid gap-1">
+                <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">Campanhas</h2>
+                <p class="text-sm text-[var(--color-text-secondary)]">Rascunhos e envios planejados para a base ativa.</p>
+            </div>
+            <span class="text-sm text-[var(--color-text-secondary)]">{{ campaign_count }}</span>
+        </div>
+
+        {% if campaigns %}
+            <div class="ds-table-shell">
+                <div class="ds-table-scroll">
+                    <table class="ds-table" aria-label="Campanhas de newsletter">
+                        <caption class="sr-only">Campanhas de newsletter tenant-scoped</caption>
+                        <thead class="ds-table-head">
+                            <tr>
+                                <th scope="col" class="ds-table-th">Campanha</th>
+                                <th scope="col" class="ds-table-th">Assunto</th>
+                                <th scope="col" class="ds-table-th">Status</th>
+                                <th scope="col" class="ds-table-th">Destinatários</th>
+                                <th scope="col" class="ds-table-th">Envio</th>
+                                <th scope="col" class="ds-table-th">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody class="ds-table-body">
+                            {% for campaign in campaigns %}
+                                <tr class="ds-table-row">
+                                    <td class="ds-table-cell">
+                                        <span class="font-semibold text-[var(--color-text-primary)]">{{ campaign.title }}</span>
+                                        <span class="block text-xs text-[var(--color-text-muted)]">Criada em {{ campaign.created_at }}</span>
+                                    </td>
+                                    <td class="ds-table-cell">{{ campaign.subject }}</td>
+                                    <td class="ds-table-cell">
+                                        {% if campaign.status == "sent" %}
+                                            {% include "shared/components/data_display/badge.html" with label=campaign.status_label variant="success" size="xs" %}
+                                        {% elif campaign.status == "failed" %}
+                                            {% include "shared/components/data_display/badge.html" with label=campaign.status_label variant="danger" size="xs" %}
+                                        {% else %}
+                                            {% include "shared/components/data_display/badge.html" with label=campaign.status_label variant="neutral" size="xs" %}
+                                        {% endif %}
+                                    </td>
+                                    <td class="ds-table-cell">{{ campaign.recipient_label }}</td>
+                                    <td class="ds-table-cell">{{ campaign.sent_at }}</td>
+                                    <td class="ds-table-cell">
+                                        {% if can_manage_newsletter and campaign.can_send %}
+                                            <form method="post" action="{% url 'newsletter:admin-newsletter-campaign-send' campaign.id %}" class="inline-flex">
+                                                {% csrf_token %}
+                                                <button type="submit" class="ds-btn ds-btn-secondary ds-btn-sm">Enviar</button>
+                                            </form>
+                                        {% else %}
+                                            <span class="text-sm text-[var(--color-text-muted)]">Sem ação</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        {% else %}
+            {% include "shared/components/feedback/empty_state.html" with icon="mail" title="Nenhuma campanha criada" description="Crie campanhas para planejar envios aos inscritos ativos." %}
+        {% endif %}
+    </section>
 
     {% with method="get" action=filter_action title="Filtros" description="Busque por e-mail, nome ou origem e refine por status." search_name=search_name search_value=search_value search_label=search_label search_placeholder=search_placeholder status_name="status" status_options=status_options status_selected=status_selected status_label="Status" reset_url=reset_url submit_label="Aplicar filtros" reset_label="Limpar" %}
         {% include "shared/components/composite/filter_bar.html" %}

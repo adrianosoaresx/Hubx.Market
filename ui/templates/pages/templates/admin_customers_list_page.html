@@ -4,12 +4,12 @@
 {% block shell_title %}{% if shell_title %}{{ shell_title }}{% elif page_title %}{{ page_title }}{% else %}Clientes{% endif %}{% endblock %}
 
 {% block content %}
-<section class="space-y-6">
+<section class="admin-ops-page admin-customers-page space-y-6">
     {% with eyebrow=page_eyebrow|default:"Clientes" title=page_title|default:"Clientes" description=page_description|default:"Acompanhe clientes, status da conta e atividade recente." meta=page_meta %}
-        {% include "shared/components/layout/page_header.html" %}
+        {% include "shared/components/layout/admin_page_header.html" %}
     {% endwith %}
 
-    <div class="flex flex-wrap items-center justify-between gap-3">
+    <div class="admin-ops-toolbar flex flex-wrap items-center justify-between gap-3">
         {% if page_actions %}
             <div class="flex flex-wrap gap-3">
                 {{ page_actions }}

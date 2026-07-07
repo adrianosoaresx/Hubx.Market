@@ -2,24 +2,44 @@
 
 {% block title %}{% block page_title %}{% firstof store_display_name request.tenant.store_display_name request.tenant.name "Acesso" %}{% endblock %}{% endblock %}
 {% block ui_context %}account{% endblock %}
+{% block tenant_theme %}{{ request.tenant.slug|default:"default" }}{% endblock %}
 
 {% block body %}
 <div class="min-h-screen bg-[var(--color-surface-page)]">
     <header class="border-b border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
-        <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
-            {% include "shared/partials/brand_identity.html" with brand_scope="Acesso" brand_href="/" %}
-            <div class="hidden md:block">
-                {% include "shared/partials/navbar.html" %}
-            </div>
+        <div class="site-header-inner mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
+            {% if request.tenant %}
+                {% include "shared/partials/brand_identity.html" with brand_scope="Acesso" brand_href="/" %}
+                <div class="hidden md:block">
+                    {% include "shared/partials/navbar.html" %}
+                </div>
+            {% else %}
+                {% include "shared/partials/brand_identity.html" with brand_name="Hubx Market" brand_monogram="HX" brand_scope="Acesso ao portal" brand_href="/" %}
+                {% include "shared/partials/public_nav.html" with portal_href="/" plans_href="/plans/" demo_href="/demo/" login_href="/accounts/login/" %}
+            {% endif %}
         </div>
     </header>
+    {% include "shared/partials/demo_read_only_banner.html" %}
 
-    <main class="mx-auto flex min-h-[calc(100vh-9rem)] max-w-7xl items-center justify-center px-6 py-10">
-        <div class="w-full max-w-lg">
+    <main class="mx-auto grid min-h-[calc(100vh-9rem)] max-w-7xl items-center gap-8 px-6 py-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(360px,0.75fr)]">
+        <aside class="auth-visual relative hidden overflow-hidden lg:block" aria-hidden="true">
+            <img class="auth-visual-image" src="/static/img/brand/hubx-public-hero.jpg" alt="">
+            <div class="auth-visual-shade"></div>
+            <div class="auth-visual-copy">
+                <p class="auth-visual-eyebrow">Hubx Market</p>
+                <p class="auth-visual-title">Acesse sua operação com contexto, segurança e continuidade.</p>
+                <p class="auth-visual-description">Conta, pedidos e administração vivem no mesmo ecossistema tenant-owned, preservando a identidade da loja.</p>
+            </div>
+        </aside>
+        <div class="w-full max-w-lg justify-self-center lg:justify-self-end">
             {% block content %}{% endblock %}
         </div>
     </main>
 
-    {% include "shared/partials/footer.html" %}
+    {% if request.tenant %}
+        {% include "shared/partials/footer.html" %}
+    {% else %}
+        {% include "shared/partials/footer.html" with footer_variant="compact" %}
+    {% endif %}
 </div>
 {% endblock %}

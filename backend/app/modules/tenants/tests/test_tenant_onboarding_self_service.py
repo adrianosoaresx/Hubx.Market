@@ -60,6 +60,35 @@ class TenantOnboardingSelfServiceTests(TestCase):
         self.assertEqual(onboarding.tenant, tenant)
         self.assertTrue(AuditLog.objects.filter(action="platform.tenant_onboarding.completed").exists())
 
+    def test_completion_copies_coupon_snapshot_to_subscription(self):
+        onboarding = self._create_ready_onboarding(
+            promotion_snapshot={
+                "coupon_code": "ASSIST20",
+                "plan_code": "starter",
+                "monthly_price": "99.90",
+                "discount_type": "percent",
+                "discount_value": "20.00",
+                "discount_total": "19.98",
+                "effective_monthly_price": "79.92",
+                "source": "public-plans",
+            }
+        )
+
+        result = tenant_onboarding_commands.complete_onboarding(
+            onboarding_id=onboarding.id,
+            actor_label="platform.owner@hubx.market",
+            actor_role="owner",
+        )
+
+        tenant = Tenant.objects.get(slug="nova-loja")
+        subscription = TenantSubscription.objects.get(tenant=tenant)
+        self.assertEqual(result["result"], "tenant-onboarding-completed")
+        self.assertEqual(subscription.coupon_code_snapshot, "ASSIST20")
+        self.assertEqual(str(subscription.coupon_discount_total_snapshot), "19.98")
+        self.assertEqual(str(subscription.effective_monthly_price_snapshot), "79.92")
+        self.assertEqual(subscription.promotion_snapshot["source"], "public-plans")
+        self.assertTrue(AuditLog.objects.filter(action="subscription.coupon_applied", entity_type="TenantSubscription").exists())
+
     def test_step_validation_blocks_duplicate_slug_without_creating_tenant(self):
         Tenant.objects.create(name="Existente", slug="existente", subdomain="existente")
         result = tenant_onboarding_commands.create_onboarding(
@@ -141,18 +170,21 @@ class TenantOnboardingSelfServiceTests(TestCase):
         self.assertContains(detail_response, "Criar/ativar loja")
         self.assertContains(detail_response, "Checklist")
 
-    def _create_ready_onboarding(self) -> TenantOnboarding:
+    def _create_ready_onboarding(self, *, promotion_snapshot: dict[str, object] | None = None) -> TenantOnboarding:
         result = tenant_onboarding_commands.create_onboarding(
-            payload={"store_name": "Nova Loja", "store_display_name": "Nova Loja", "primary_color": "#4f46e5"},
+            payload={"store_name": "Nova Loja", "store_display_name": "Nova Loja", "primary_color": "#9a6410"},
             actor_label="platform.owner@hubx.market",
             actor_role="owner",
         )
         onboarding_id = result["onboarding"]["id"]
+        plan_payload = {"plan_code": "starter"}
+        if promotion_snapshot is not None:
+            plan_payload["promotion_snapshot"] = promotion_snapshot
         for step_key, payload in (
             ("store", {"store_name": "Nova Loja", "store_slug": "nova-loja", "store_subdomain": "nova-loja"}),
-            ("plan", {"plan_code": "starter"}),
+            ("plan", plan_payload),
             ("owner", {"owner_email": "new.owner@hubx.market", "owner_name": "New Owner", "owner_role": "owner"}),
-            ("branding", {"store_display_name": "Nova Loja", "primary_color": "#4f46e5"}),
+            ("branding", {"store_display_name": "Nova Loja", "primary_color": "#9a6410"}),
             ("domain", {"custom_domain": "nova.example.com"}),
         ):
             step = tenant_onboarding_commands.update_step(

@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 
+from app.modules.accounts.application.admin_permissions import PERMISSION_SHIPPING_MANAGE, admin_permissions
+
 
 @dataclass(frozen=True)
 class AdminProviderSettingsItem:
@@ -64,6 +66,17 @@ class DjangoOrmAdminProviderSettingsRepository:
 class AdminProviderSettingsService:
     repository: DjangoOrmAdminProviderSettingsRepository
 
+    @staticmethod
+    def _write_guard(*, tenant_id: int | str, actor_role: str) -> str:
+        if not str(tenant_id or "").strip():
+            return "provider-settings-tenant-missing"
+        normalized_role = str(actor_role or "").strip()
+        if not normalized_role:
+            return "provider-settings-permission-denied"
+        if not admin_permissions.check(role=normalized_role, permission=PERMISSION_SHIPPING_MANAGE).allowed:
+            return "provider-settings-permission-denied"
+        return ""
+
     def get_settings_item(self, *, tenant_id: int | str) -> AdminProviderSettingsItem:
         settings = self.repository.get_settings(tenant_id=tenant_id)
         if settings is None:
@@ -96,7 +109,11 @@ class AdminProviderSettingsService:
         api_token: str,
         timeout_seconds: str,
         is_active: bool,
+        actor_role: str = "",
     ) -> str:
+        guard_result = self._write_guard(tenant_id=tenant_id, actor_role=actor_role)
+        if guard_result:
+            return guard_result
         normalized_tenant_id = str(tenant_id or "").strip()
         if not normalized_tenant_id:
             return "provider-settings-tenant-missing"

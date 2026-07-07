@@ -6,6 +6,7 @@ from django.test import SimpleTestCase
 from django.test import override_settings
 
 from app.modules.payments.infrastructure.provider_adapters import (
+    AsaasProviderAdapter,
     PagarmeProviderAdapter,
     ProviderAdapterError,
     ProviderAdapterLite,
@@ -91,3 +92,59 @@ class ProviderRefundAdapterTests(SimpleTestCase):
             PagarmeProviderAdapter().create_refund(contract=self._contract())
 
         self.assertEqual(str(context.exception), "pagarme-network-unavailable")
+
+    @override_settings(ASAAS_API_KEY="asaas_test_refund", ASAAS_BASE_URL="https://api-sandbox.asaas.com/v3")
+    @patch("app.modules.payments.infrastructure.provider_adapters.urlopen")
+    def test_asaas_refund_adapter_calls_payment_refund_endpoint(self, mocked_urlopen):
+        mocked_response = mocked_urlopen.return_value.__enter__.return_value
+        mocked_response.read.return_value = json.dumps({"id": "rf_asaas_123", "status": "REFUNDED"}).encode("utf-8")
+
+        response = AsaasProviderAdapter().create_refund(contract=self._contract())
+
+        request = mocked_urlopen.call_args.args[0]
+        request_payload = json.loads(request.data.decode("utf-8"))
+        self.assertEqual(request.full_url, "https://api-sandbox.asaas.com/v3/payments/ch_123/refund")
+        self.assertEqual(request.get_method(), "POST")
+        self.assertEqual(request_payload["value"], 120.0)
+        self.assertEqual(request_payload["description"], "customer-request")
+        self.assertEqual(response.provider_code, "asaas")
+        self.assertEqual(response.provider_refund_reference, "rf_asaas_123")
+        self.assertEqual(response.status, "succeeded")
+        self.assertEqual(response.payload_snapshot["response"]["status"], "REFUNDED")
+
+    @override_settings(ASAAS_API_KEY="asaas_test_refund", ASAAS_BASE_URL="https://api-sandbox.asaas.com/v3")
+    @patch("app.modules.payments.infrastructure.provider_adapters.urlopen")
+    def test_asaas_refund_adapter_keeps_unknown_status_as_accepted(self, mocked_urlopen):
+        mocked_response = mocked_urlopen.return_value.__enter__.return_value
+        mocked_response.read.return_value = json.dumps({"paymentId": "pay_123", "status": "PENDING"}).encode("utf-8")
+
+        response = AsaasProviderAdapter().create_refund(contract=self._contract())
+
+        self.assertEqual(response.provider_refund_reference, "pay_123")
+        self.assertEqual(response.status, "accepted")
+
+    @override_settings(ASAAS_API_KEY="", ASAAS_BASE_URL="https://api-sandbox.asaas.com/v3")
+    def test_asaas_refund_adapter_requires_api_key(self):
+        with self.assertRaises(ProviderAdapterError) as context:
+            AsaasProviderAdapter().create_refund(contract=self._contract())
+
+        self.assertEqual(str(context.exception), "asaas-api-key-missing")
+
+    @override_settings(ASAAS_API_KEY="asaas_test_refund", ASAAS_BASE_URL="https://api-sandbox.asaas.com/v3")
+    def test_asaas_refund_adapter_requires_payment_id(self):
+        contract = RefundProviderContract(
+            tenant_id=1,
+            refund_key="refund-key-1",
+            idempotency_key="refund-idem-1",
+            provider_code="asaas",
+            external_reference="",
+            amount="120.00",
+            currency_code="BRL",
+            reason_code="customer-request",
+            metadata={},
+        )
+
+        with self.assertRaises(ProviderAdapterError) as context:
+            AsaasProviderAdapter().create_refund(contract=contract)
+
+        self.assertEqual(str(context.exception), "asaas-refund-payment-id-missing")

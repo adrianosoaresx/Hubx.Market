@@ -2,7 +2,10 @@
 {% if href %}
 <a
     href="{{ href }}"
-    class="ds-btn {% if variant == 'secondary' %}ds-btn-secondary{% else %}ds-btn-primary{% endif %} {% if size == 'sm' %}ds-btn-sm{% else %}ds-btn-md{% endif %} {% if full_width %}w-full{% endif %} {% if disabled %}pointer-events-none opacity-50{% endif %}"
+    class="ds-btn {% if variant == 'secondary' %}ds-btn-secondary{% elif variant == 'ghost' %}ds-btn-ghost{% elif variant == 'danger' %}ds-btn-danger{% elif variant == 'success' %}ds-btn-success{% elif variant == 'link' %}ds-btn-link{% else %}ds-btn-primary{% endif %} {% if size == 'sm' %}ds-btn-sm{% elif size == 'lg' %}ds-btn-lg{% else %}ds-btn-md{% endif %} {% if full_width %}w-full{% endif %} {% if disabled %}pointer-events-none opacity-50{% endif %}"
+    {% if disabled %}aria-disabled="true" tabindex="-1"{% endif %}
+    {% if target %}target="{{ target }}"{% endif %}
+    {% if rel %}rel="{{ rel }}"{% endif %}
 >
     {% if icon_name %}
         {% include "shared/partials/icon.html" with name=icon_name size="sm" %}
@@ -21,8 +24,9 @@
     type="{{ type|default:'button' }}"
     {% if name %}name="{{ name }}"{% endif %}
     {% if value %}value="{{ value }}"{% endif %}
-    class="ds-btn {% if variant == 'secondary' %}ds-btn-secondary{% else %}ds-btn-primary{% endif %} {% if size == 'sm' %}ds-btn-sm{% else %}ds-btn-md{% endif %} {% if full_width %}w-full{% endif %} {% if disabled %}pointer-events-none opacity-50{% endif %}"
+    class="ds-btn {% if variant == 'secondary' %}ds-btn-secondary{% elif variant == 'ghost' %}ds-btn-ghost{% elif variant == 'danger' %}ds-btn-danger{% elif variant == 'success' %}ds-btn-success{% elif variant == 'link' %}ds-btn-link{% else %}ds-btn-primary{% endif %} {% if size == 'sm' %}ds-btn-sm{% elif size == 'lg' %}ds-btn-lg{% else %}ds-btn-md{% endif %} {% if full_width %}w-full{% endif %} {% if disabled %}pointer-events-none opacity-50{% endif %}"
     {% if disabled or loading %}disabled{% endif %}
+    {% if loading %}aria-busy="true"{% endif %}
 >
     {% if loading %}
         <span class="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent" aria-hidden="true"></span>

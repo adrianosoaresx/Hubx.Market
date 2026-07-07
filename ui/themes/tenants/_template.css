@@ -10,8 +10,8 @@
  */
 
 [data-tenant="<tenant-slug>"] {
-  --tenant-brand-primary: #4f46e5;
-  --tenant-brand-primary-hover: #4338ca;
-  --tenant-brand-secondary: #06b6d4;
+  --tenant-brand-primary: #9a6410;
+  --tenant-brand-primary-hover: #794a0c;
+  --tenant-brand-secondary: #d6a937;
   --tenant-radius-base: var(--radius-md);
 }

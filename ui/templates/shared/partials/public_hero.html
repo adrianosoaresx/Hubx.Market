@@ -1,0 +1,19 @@
+{% firstof hero_image_url "/static/img/brand/hubx-public-hero.jpg" as resolved_hero_image_url %}
+<section class="public-hero relative overflow-hidden">
+    <img class="public-hero-image" src="{{ resolved_hero_image_url }}" alt="" aria-hidden="true">
+    <div class="public-hero-shade" aria-hidden="true"></div>
+    <div class="public-hero-inner relative z-10 mx-auto flex max-w-7xl items-center px-6 py-16">
+        <div class="public-hero-copy max-w-2xl">
+            <p class="public-hero-eyebrow text-xs font-semibold uppercase tracking-normal">{{ hero_eyebrow }}</p>
+            <h1 class="public-hero-title mt-4 text-4xl font-semibold">{{ hero_title }}</h1>
+            <p class="public-hero-description mt-5 max-w-xl text-base">{{ hero_description }}</p>
+            <div class="mt-8 flex flex-wrap gap-3">
+                {% include "shared/components/actions/button.html" with label=primary_label href=primary_href variant="primary" icon_name=primary_icon %}
+                {% include "shared/components/actions/button.html" with label=secondary_label href=secondary_href variant="secondary" icon_name=secondary_icon %}
+                {% if tertiary_label and tertiary_href %}
+                    {% include "shared/components/actions/button.html" with label=tertiary_label href=tertiary_href variant="secondary" icon_name=tertiary_icon %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>

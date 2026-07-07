@@ -52,6 +52,7 @@ Responsável pela **infraestrutura do SaaS**.
 Inclui:
 
 - gerenciamento de tenants
+- branding institucional leve da storefront
 - controle de usuários da plataforma
 - assinaturas do SaaS
 - billing da plataforma
@@ -72,8 +73,13 @@ api-keys
 ## Responsabilidades
 
 - criar novas lojas
+- configurar identidade institucional básica da loja
 - gerenciar owners
 - controlar planos SaaS
+- expor contrato público de planos com trial, requisito de payment method e features
+- gerenciar cupons comerciais platform-scope para planos SaaS
+- capturar intenções públicas de aquisição SaaS
+- provisionar signup self-service controlado em `/plans/signup/` quando a feature flag e o controle de acesso estiverem ativos, criando trial interno com provider-alvo Asaas sem capturar cartão
 - auditoria do sistema
 - integração administrativa
 
@@ -244,6 +250,7 @@ Catálogo:
 
 - preço pertence a `ProductVariant`
 - estoque pertence a `ProductVariant`
+- CRUD administrativo de produto pertence a `catalog`; criação/edição gravam `Product` e variante padrão, e remoção operacional é desativação sem delete físico.
 
 Pedidos:
 

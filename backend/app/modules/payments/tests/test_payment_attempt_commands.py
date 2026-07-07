@@ -1,6 +1,6 @@
 import json
 from urllib.error import URLError
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from django.db import IntegrityError
 from django.test import TestCase
@@ -14,6 +14,7 @@ from app.modules.payments.infrastructure.alert_signal_metrics import (
     get_payment_alert_signal_snapshot,
     reset_payment_alert_signal,
 )
+from app.modules.payments.domain.webhook_normalization import normalize_payment_webhook
 from app.modules.payments.models import PaymentAttempt
 from app.modules.tenants.models import Tenant
 
@@ -302,6 +303,74 @@ class PaymentAttemptCommandTests(TestCase):
         self.assertEqual(request_payload["cart_settings"]["items"][0]["amount"], 21990)
         self.assertEqual(request_payload["cart_settings"]["items"][0]["default_quantity"], 1)
         self.assertEqual(request.get_header("Authorization"), "Basic c2tfdGVzdF9odWJ4Og==")
+
+    @override_settings(
+        PAYMENTS_PROVIDER_DEFAULT="asaas",
+        ASAAS_API_KEY="asaas_test_key",
+        ASAAS_BASE_URL="https://api-sandbox.asaas.com/v3",
+    )
+    @patch("app.modules.payments.infrastructure.provider_adapters.urlopen")
+    def test_provider_adapter_creates_real_asaas_hosted_payment(self, mocked_urlopen):
+        _result, attempt = payment_attempt_commands.bootstrap_pending_attempt(
+            tenant_id=self.tenant.id,
+            order_number=self.order.number,
+            payment_method_code="pix",
+        )
+        customer_context = MagicMock()
+        customer_context.__enter__.return_value.read.return_value = json.dumps({"id": "cus_123"}).encode("utf-8")
+        payment_context = MagicMock()
+        payment_context.__enter__.return_value.read.return_value = json.dumps(
+            {
+                "id": "pay_123",
+                "invoiceUrl": "https://sandbox.asaas.com/i/pay_123",
+            }
+        ).encode("utf-8")
+        mocked_urlopen.side_effect = [customer_context, payment_context]
+
+        result, response = provider_adapter_commands.create_external_intent(
+            tenant_id=self.tenant.id,
+            attempt_key=str(attempt.attempt_key),
+        )
+
+        attempt.refresh_from_db()
+        self.assertEqual(result, "provider-intent-ready")
+        self.assertEqual(attempt.provider_code, "asaas")
+        self.assertEqual(attempt.provider_label, "Asaas")
+        self.assertEqual(response.provider_code, "asaas")
+        self.assertEqual(response.action_url, "https://sandbox.asaas.com/i/pay_123")
+        self.assertEqual(attempt.external_reference, "pay_123")
+        self.assertEqual(mocked_urlopen.call_count, 2)
+
+        customer_request = mocked_urlopen.call_args_list[0].args[0]
+        payment_request = mocked_urlopen.call_args_list[1].args[0]
+        customer_payload = json.loads(customer_request.data.decode("utf-8"))
+        payment_payload = json.loads(payment_request.data.decode("utf-8"))
+        self.assertEqual(customer_request.full_url, "https://api-sandbox.asaas.com/v3/customers")
+        self.assertEqual(payment_request.full_url, "https://api-sandbox.asaas.com/v3/payments")
+        self.assertEqual(customer_request.get_header("Access_token"), "asaas_test_key")
+        self.assertEqual(customer_payload["externalReference"], "hubx-market:hubx-payment-attempt-tenant:8101")
+        self.assertEqual(payment_payload["customer"], "cus_123")
+        self.assertEqual(payment_payload["billingType"], "PIX")
+        self.assertEqual(payment_payload["value"], 219.9)
+        self.assertEqual(payment_payload["externalReference"], "hubx-market:hubx-payment-attempt-tenant:8101")
+
+    def test_asaas_webhook_normalizes_payment_received(self):
+        normalized = normalize_payment_webhook(
+            {
+                "event": "PAYMENT_RECEIVED",
+                "payment": {
+                    "id": "pay_123",
+                    "externalReference": "hubx-market:hubx-payment-attempt-tenant:8101",
+                },
+            }
+        )
+
+        self.assertIsNotNone(normalized)
+        self.assertEqual(normalized.event_type, "payment.paid")
+        self.assertEqual(normalized.tenant_subdomain, "hubx-payment-attempt-tenant")
+        self.assertEqual(normalized.order_number, "8101")
+        self.assertEqual(normalized.payment_reference, "pay_123")
+        self.assertEqual(normalized.payment_source_label, "Asaas")
 
     def test_bootstrap_pending_attempt_defaults_provider_to_configured_gateway(self):
         result, attempt = payment_attempt_commands.bootstrap_pending_attempt(

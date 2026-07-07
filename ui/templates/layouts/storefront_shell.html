@@ -2,18 +2,64 @@
 
 {% block title %}{% block page_title %}{% firstof store_display_name request.tenant.store_display_name request.tenant.name "Loja online" %}{% endblock %}{% endblock %}
 {% block ui_context %}storefront{% endblock %}
+{% block tenant_theme %}{{ request.tenant.slug|default:"default" }}{% endblock %}
+{% block body_class %}storefront-customer-shell{% endblock %}
 
 {% block body %}
-<div class="min-h-screen bg-[var(--color-surface-page)]">
-    <header class="storefront-header border-b border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
-        <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
-            {% include "shared/partials/brand_identity.html" with brand_scope="Loja online" brand_href="/" %}
-            {% include "shared/partials/navbar.html" %}
-        </div>
-    </header>
-    <main class="mx-auto max-w-7xl px-6 py-8">
-        {% block content %}{% endblock %}
-    </main>
-    {% include "shared/partials/footer.html" %}
+<div class="storefront-shell min-h-screen">
+    <div class="storefront-main min-w-0">
+        <header class="storefront-topbar border-b border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
+            <div class="storefront-header-inner mx-auto max-w-7xl px-6 py-4">
+                <div class="storefront-header-brand">
+                    {% include "shared/partials/brand_identity.html" with brand_scope="Loja online" brand_href="/" %}
+                    <p class="storefront-header-title">{% block shell_title %}{% firstof page_title store_display_name request.tenant.store_display_name request.tenant.name "Loja" %}{% endblock %}</p>
+                </div>
+                <nav class="storefront-side-nav storefront-header-nav text-sm" aria-label="Navegação da loja">
+                    <a href="/" class="storefront-side-nav-link {% if request.path == '/' %}is-active{% endif %}">
+                        {% include "shared/partials/icon.html" with name="home" size="sm" %}
+                        <span>Início</span>
+                    </a>
+                    <a href="/catalog/" class="storefront-side-nav-link {% if request.path == '/catalog/' %}is-active{% endif %}">
+                        {% include "shared/partials/icon.html" with name="shopping-bag" size="sm" %}
+                        <span>Loja</span>
+                    </a>
+                    <a href="/cart/{% if request.is_demo_read_only %}?demo_flow=cart{% endif %}" class="storefront-side-nav-link {% if request.path == '/cart/' %}is-active{% endif %}">
+                        {% include "shared/partials/icon.html" with name="shopping-cart" size="sm" %}
+                        <span>Carrinho</span>
+                    </a>
+                    <a href="/accounts/account/orders/" class="storefront-side-nav-link {% if request.path == '/accounts/account/orders/' %}is-active{% endif %}">
+                        {% include "shared/partials/icon.html" with name="receipt-text" size="sm" %}
+                        <span>Pedidos</span>
+                    </a>
+                    <a href="/accounts/account/" class="storefront-side-nav-link {% if request.path == '/accounts/account/' %}is-active{% endif %}">
+                        {% include "shared/partials/icon.html" with name="user" size="sm" %}
+                        <span>Minha conta</span>
+                    </a>
+                    {% if request.is_demo_read_only or request.user.is_authenticated %}
+                        <form method="post" action="/accounts/logout/" class="m-0">
+                            {% csrf_token %}
+                            {% if request.is_demo_read_only and request.GET.return_url %}
+                                <input type="hidden" name="return_url" value="{{ request.GET.return_url }}">
+                            {% endif %}
+                            <button type="submit" class="storefront-side-nav-link">
+                                {% include "shared/partials/icon.html" with name="log-out" size="sm" %}
+                                <span>Sair</span>
+                            </button>
+                        </form>
+                    {% else %}
+                        <a href="/accounts/login/" class="storefront-side-nav-link">
+                            {% include "shared/partials/icon.html" with name="log-in" size="sm" %}
+                            <span>Entrar</span>
+                        </a>
+                    {% endif %}
+                </nav>
+            </div>
+        </header>
+        {% include "shared/partials/demo_read_only_banner.html" %}
+        <main class="storefront-content mx-auto max-w-7xl px-6 py-8">
+            {% block content %}{% endblock %}
+        </main>
+        {% include "shared/partials/footer.html" %}
+    </div>
 </div>
 {% endblock %}

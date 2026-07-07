@@ -1,0 +1,444 @@
+{
+  "generatedAt": "2026-07-02T13:46:57.352Z",
+  "routes": [
+    {
+      "key": "home",
+      "url": "http://127.0.0.1:8002/",
+      "logs": [],
+      "brand": {
+        "bottom": 54,
+        "h": 38,
+        "right": 334,
+        "w": 310,
+        "x": 24,
+        "y": 16
+      },
+      "brokenImages": [],
+      "buttons": [
+        "Solicitar aquisição",
+        "Ver planos",
+        "Acessar demo"
+      ],
+      "cssHref": "http://127.0.0.1:8002/static/css/app.css?v=ds-public-flows-20260702",
+      "cssMatches": [
+        ".site-header-inner .brand-identity { flex: 1 1 auto; }",
+        ".site-header-inner .global-nav { flex: 0 0 auto; }",
+        "@media (max-width: 639px) {\n  .site-header-inner { gap: 0.75rem; }\n  .public-nav-label { clip: rect(0px, 0px, 0px, 0px); white-space: nowrap; border: 0px; width: 1px; height: 1px; margin: -1px; padding: 0px; position: absolute; overflow: hidden; }\n}",
+        "(max-width: 639px) => .site-header-inner { gap: 0.75rem; }",
+        "(max-width: 639px) => .public-nav-label { clip: rect(0px, 0px, 0px, 0px); white-space: nowrap; border: 0px; width: 1px; height: 1px; margin: -1px; padding: 0px; position: absolute; overflow: hidden; }",
+        "@media (max-width: 479px) {\n  .site-header-inner { flex-direction: column; align-items: flex-start; }\n  .site-header-inner .global-nav { justify-content: space-between; width: 100%; }\n}",
+        "(max-width: 479px) => .site-header-inner { flex-direction: column; align-items: flex-start; }",
+        "(max-width: 479px) => .site-header-inner .global-nav { justify-content: space-between; width: 100%; }"
+      ],
+      "currentUrl": "http://127.0.0.1:8002/",
+      "forms": [],
+      "h1": "Crie sua loja virtual com uma operação pronta para vender.",
+      "hasHorizontalOverflow": false,
+      "header": {
+        "bottom": 70,
+        "h": 70,
+        "right": 533,
+        "w": 533,
+        "x": 0,
+        "y": 0
+      },
+      "headerStyle": {
+        "alignItems": "center",
+        "flexDirection": "row",
+        "gap": "12px"
+      },
+      "hero": {
+        "bottom": 631,
+        "h": 560,
+        "right": 533,
+        "w": 533,
+        "x": 0,
+        "y": 71
+      },
+      "innerHeight": 698,
+      "innerWidth": 548,
+      "labelStyle": {
+        "clip": "rect(0px, 0px, 0px, 0px)",
+        "height": "1px",
+        "overflow": "hidden",
+        "position": "absolute",
+        "width": "1px"
+      },
+      "labelVisible": false,
+      "matchMax639": true,
+      "nav": {
+        "bottom": 53,
+        "h": 36,
+        "right": 509,
+        "w": 162,
+        "x": 346,
+        "y": 17
+      },
+      "navStyle": {
+        "flexWrap": "wrap",
+        "gap": "4px",
+        "justifyContent": "flex-end"
+      },
+      "scrollHeight": 1210,
+      "scrollWidth": 533,
+      "title": "Hubx Market",
+      "visualViewportWidth": 532.7999877929688
+    },
+    {
+      "key": "login",
+      "url": "http://127.0.0.1:8002/accounts/login/",
+      "logs": [],
+      "brand": {
+        "bottom": 54,
+        "h": 38,
+        "right": 334,
+        "w": 310,
+        "x": 24,
+        "y": 16
+      },
+      "brokenImages": [],
+      "buttons": [
+        "Acessar conta",
+        "Criar conta"
+      ],
+      "cssHref": "http://127.0.0.1:8002/static/css/app.css?v=ds-public-flows-20260702",
+      "cssMatches": [
+        ".site-header-inner .brand-identity { flex: 1 1 auto; }",
+        ".site-header-inner .global-nav { flex: 0 0 auto; }",
+        "@media (max-width: 639px) {\n  .site-header-inner { gap: 0.75rem; }\n  .public-nav-label { clip: rect(0px, 0px, 0px, 0px); white-space: nowrap; border: 0px; width: 1px; height: 1px; margin: -1px; padding: 0px; position: absolute; overflow: hidden; }\n}",
+        "(max-width: 639px) => .site-header-inner { gap: 0.75rem; }",
+        "(max-width: 639px) => .public-nav-label { clip: rect(0px, 0px, 0px, 0px); white-space: nowrap; border: 0px; width: 1px; height: 1px; margin: -1px; padding: 0px; position: absolute; overflow: hidden; }",
+        "@media (max-width: 479px) {\n  .site-header-inner { flex-direction: column; align-items: flex-start; }\n  .site-header-inner .global-nav { justify-content: space-between; width: 100%; }\n}",
+        "(max-width: 479px) => .site-header-inner { flex-direction: column; align-items: flex-start; }",
+        "(max-width: 479px) => .site-header-inner .global-nav { justify-content: space-between; width: 100%; }"
+      ],
+      "currentUrl": "http://127.0.0.1:8002/accounts/login/",
+      "firstSurface": {
+        "bottom": 248,
+        "h": 138,
+        "right": 509,
+        "w": 485,
+        "x": 24,
+        "y": 111
+      },
+      "forms": [
+        {
+          "action": "http://127.0.0.1:8002/accounts/login/",
+          "fields": [
+            "csrfmiddlewaretoken",
+            "login",
+            "password",
+            "remember_me"
+          ],
+          "method": "post"
+        }
+      ],
+      "h1": "Entrar",
+      "hasHorizontalOverflow": false,
+      "header": {
+        "bottom": 70,
+        "h": 70,
+        "right": 533,
+        "w": 533,
+        "x": 0,
+        "y": 0
+      },
+      "headerStyle": {
+        "alignItems": "center",
+        "flexDirection": "row",
+        "gap": "12px"
+      },
+      "hero": {
+        "bottom": 765,
+        "h": 654,
+        "right": 509,
+        "w": 485,
+        "x": 24,
+        "y": 111
+      },
+      "innerHeight": 698,
+      "innerWidth": 548,
+      "labelStyle": {
+        "clip": "rect(0px, 0px, 0px, 0px)",
+        "height": "1px",
+        "overflow": "hidden",
+        "position": "absolute",
+        "width": "1px"
+      },
+      "labelVisible": false,
+      "matchMax639": true,
+      "nav": {
+        "bottom": 53,
+        "h": 36,
+        "right": 509,
+        "w": 162,
+        "x": 346,
+        "y": 17
+      },
+      "navStyle": {
+        "flexWrap": "wrap",
+        "gap": "4px",
+        "justifyContent": "flex-end"
+      },
+      "scrollHeight": 910,
+      "scrollWidth": 533,
+      "title": "Entrar",
+      "visualViewportWidth": 532.7999877929688
+    },
+    {
+      "key": "plans",
+      "url": "http://127.0.0.1:8002/plans/",
+      "logs": [],
+      "brand": {
+        "bottom": 54,
+        "h": 38,
+        "right": 334,
+        "w": 310,
+        "x": 24,
+        "y": 16
+      },
+      "brokenImages": [],
+      "buttons": [
+        "Solicitar aquisição",
+        "Ver planos",
+        "Acessar demo",
+        "Solicitar Starter",
+        "Solicitar Pro",
+        "Solicitar Enterprise",
+        "Enviar intenção"
+      ],
+      "cssHref": "http://127.0.0.1:8002/static/css/app.css?v=ds-public-flows-20260702",
+      "cssMatches": [
+        ".site-header-inner .brand-identity { flex: 1 1 auto; }",
+        ".site-header-inner .global-nav { flex: 0 0 auto; }",
+        "@media (max-width: 639px) {\n  .site-header-inner { gap: 0.75rem; }\n  .public-nav-label { clip: rect(0px, 0px, 0px, 0px); white-space: nowrap; border: 0px; width: 1px; height: 1px; margin: -1px; padding: 0px; position: absolute; overflow: hidden; }\n}",
+        "(max-width: 639px) => .site-header-inner { gap: 0.75rem; }",
+        "(max-width: 639px) => .public-nav-label { clip: rect(0px, 0px, 0px, 0px); white-space: nowrap; border: 0px; width: 1px; height: 1px; margin: -1px; padding: 0px; position: absolute; overflow: hidden; }",
+        "@media (max-width: 479px) {\n  .site-header-inner { flex-direction: column; align-items: flex-start; }\n  .site-header-inner .global-nav { justify-content: space-between; width: 100%; }\n}",
+        "(max-width: 479px) => .site-header-inner { flex-direction: column; align-items: flex-start; }",
+        "(max-width: 479px) => .site-header-inner .global-nav { justify-content: space-between; width: 100%; }"
+      ],
+      "currentUrl": "http://127.0.0.1:8002/plans/",
+      "firstSurface": {
+        "bottom": 1216,
+        "h": 398,
+        "right": 509,
+        "w": 485,
+        "x": 24,
+        "y": 819
+      },
+      "forms": [
+        {
+          "action": "http://127.0.0.1:8002/plans/",
+          "fields": [
+            "csrfmiddlewaretoken",
+            "plan_code",
+            "store_name",
+            "desired_subdomain",
+            "contact_name",
+            "contact_email",
+            "contact_phone",
+            "message"
+          ],
+          "method": "post"
+        }
+      ],
+      "h1": "Escolha o plano para criar sua loja virtual.",
+      "hasHorizontalOverflow": false,
+      "header": {
+        "bottom": 70,
+        "h": 70,
+        "right": 533,
+        "w": 533,
+        "x": 0,
+        "y": 0
+      },
+      "headerStyle": {
+        "alignItems": "center",
+        "flexDirection": "row",
+        "gap": "12px"
+      },
+      "hero": {
+        "bottom": 631,
+        "h": 560,
+        "right": 533,
+        "w": 533,
+        "x": 0,
+        "y": 71
+      },
+      "innerHeight": 698,
+      "innerWidth": 548,
+      "labelStyle": {
+        "clip": "rect(0px, 0px, 0px, 0px)",
+        "height": "1px",
+        "overflow": "hidden",
+        "position": "absolute",
+        "width": "1px"
+      },
+      "labelVisible": false,
+      "matchMax639": true,
+      "nav": {
+        "bottom": 53,
+        "h": 36,
+        "right": 509,
+        "w": 162,
+        "x": 346,
+        "y": 17
+      },
+      "navStyle": {
+        "flexWrap": "wrap",
+        "gap": "4px",
+        "justifyContent": "flex-end"
+      },
+      "scrollHeight": 3478,
+      "scrollWidth": 533,
+      "title": "Planos Hubx Market",
+      "visualViewportWidth": 532.7999877929688
+    },
+    {
+      "key": "demo",
+      "url": "http://127.0.0.1:8002/demo/",
+      "logs": [],
+      "brand": {
+        "bottom": 54,
+        "h": 38,
+        "right": 334,
+        "w": 310,
+        "x": 24,
+        "y": 16
+      },
+      "brokenImages": [],
+      "buttons": [
+        "Ver vitrine sem login",
+        "Entrar como admin",
+        "Entrar como cliente"
+      ],
+      "cssHref": "http://127.0.0.1:8002/static/css/app.css?v=ds-public-flows-20260702",
+      "cssMatches": [
+        ".site-header-inner .brand-identity { flex: 1 1 auto; }",
+        ".site-header-inner .global-nav { flex: 0 0 auto; }",
+        "@media (max-width: 639px) {\n  .site-header-inner { gap: 0.75rem; }\n  .public-nav-label { clip: rect(0px, 0px, 0px, 0px); white-space: nowrap; border: 0px; width: 1px; height: 1px; margin: -1px; padding: 0px; position: absolute; overflow: hidden; }\n}",
+        "(max-width: 639px) => .site-header-inner { gap: 0.75rem; }",
+        "(max-width: 639px) => .public-nav-label { clip: rect(0px, 0px, 0px, 0px); white-space: nowrap; border: 0px; width: 1px; height: 1px; margin: -1px; padding: 0px; position: absolute; overflow: hidden; }",
+        "@media (max-width: 479px) {\n  .site-header-inner { flex-direction: column; align-items: flex-start; }\n  .site-header-inner .global-nav { justify-content: space-between; width: 100%; }\n}",
+        "(max-width: 479px) => .site-header-inner { flex-direction: column; align-items: flex-start; }",
+        "(max-width: 479px) => .site-header-inner .global-nav { justify-content: space-between; width: 100%; }"
+      ],
+      "currentUrl": "http://127.0.0.1:8002/demo/",
+      "firstSurface": {
+        "bottom": 636,
+        "h": 202,
+        "right": 509,
+        "w": 485,
+        "x": 24,
+        "y": 435
+      },
+      "forms": [],
+      "h1": "Escolha como deseja acessar a loja demo.",
+      "hasHorizontalOverflow": false,
+      "header": {
+        "bottom": 70,
+        "h": 70,
+        "right": 533,
+        "w": 533,
+        "x": 0,
+        "y": 0
+      },
+      "headerStyle": {
+        "alignItems": "center",
+        "flexDirection": "row",
+        "gap": "12px"
+      },
+      "hero": {
+        "bottom": 878,
+        "h": 767,
+        "right": 509,
+        "w": 485,
+        "x": 24,
+        "y": 111
+      },
+      "innerHeight": 698,
+      "innerWidth": 548,
+      "labelStyle": {
+        "clip": "rect(0px, 0px, 0px, 0px)",
+        "height": "1px",
+        "overflow": "hidden",
+        "position": "absolute",
+        "width": "1px"
+      },
+      "labelVisible": false,
+      "matchMax639": true,
+      "nav": {
+        "bottom": 53,
+        "h": 36,
+        "right": 509,
+        "w": 162,
+        "x": 346,
+        "y": 17
+      },
+      "navStyle": {
+        "flexWrap": "wrap",
+        "gap": "4px",
+        "justifyContent": "flex-end"
+      },
+      "scrollHeight": 1022,
+      "scrollWidth": 533,
+      "title": "Acessar demo Hubx Market",
+      "visualViewportWidth": 532.7999877929688
+    }
+  ],
+  "interactions": [
+    {
+      "from": "home",
+      "action": "Solicitar aquisição",
+      "finalUrl": "http://127.0.0.1:8002/plans/#aquisicao"
+    },
+    {
+      "from": "plans",
+      "action": "Acessar demo",
+      "finalUrl": "http://127.0.0.1:8002/demo/"
+    },
+    {
+      "from": "demo",
+      "action": "Ver vitrine sem login",
+      "href": "http://hubx-demo.localhost:8002/",
+      "finalUrl": "http://hubx-demo.localhost:8002/",
+      "page": {
+        "brokenImages": [],
+        "h1": "Hubx Market Demo",
+        "hasHorizontalOverflow": false,
+        "innerWidth": 548,
+        "scrollWidth": 533,
+        "title": "Início"
+      }
+    },
+    {
+      "from": "demo",
+      "action": "Entrar como admin",
+      "href": "http://hubx-demo.localhost:8002/accounts/demo-session/?profile=admin",
+      "finalUrl": "http://hubx-demo.localhost:8002/ops/",
+      "page": {
+        "brokenImages": [],
+        "h1": "Operação da loja",
+        "hasHorizontalOverflow": true,
+        "innerWidth": 548,
+        "scrollWidth": 662,
+        "title": "Operação da loja"
+      }
+    },
+    {
+      "from": "demo",
+      "action": "Entrar como cliente",
+      "href": "http://hubx-demo.localhost:8002/accounts/demo-session/?profile=customer",
+      "finalUrl": "http://hubx-demo.localhost:8002/",
+      "page": {
+        "brokenImages": [],
+        "h1": "Hubx Market Demo",
+        "hasHorizontalOverflow": false,
+        "innerWidth": 548,
+        "scrollWidth": 533,
+        "title": "Início"
+      }
+    }
+  ]
+}

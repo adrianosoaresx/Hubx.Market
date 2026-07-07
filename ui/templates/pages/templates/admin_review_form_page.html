@@ -6,11 +6,11 @@
 {% block content %}
 <section class="space-y-6">
     {% with eyebrow=page_eyebrow|default:"Prova social" title=page_title|default:"Nova avaliação" description=page_description|default:"Crie uma avaliação pendente para moderação." %}
-        {% include "shared/components/layout/page_header.html" %}
+        {% include "shared/components/layout/admin_page_header.html" %}
     {% endwith %}
 
     {% if form_error %}
-        <div class="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{{ form_error }}</div>
+        {% include "shared/components/feedback/alert.html" with variant="danger" title="Corrija o formulário" description=form_error %}
     {% endif %}
 
     <form method="post" action="{{ form_action }}" class="space-y-6">

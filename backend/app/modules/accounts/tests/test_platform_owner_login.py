@@ -18,7 +18,7 @@ class PlatformOwnerLoginTests(TestCase):
         )
         OwnerUser.objects.create(
             tenant=self.tenant,
-            email="store.owner@hubx.market",
+            email="admin@hubx-demo.market",
             role="owner",
             is_active=True,
         )
@@ -28,8 +28,8 @@ class PlatformOwnerLoginTests(TestCase):
             password="secret",
         )
         User.objects.create_user(
-            username="store.owner@hubx.market",
-            email="store.owner@hubx.market",
+            username="admin@hubx-demo.market",
+            email="admin@hubx-demo.market",
             password="secret",
         )
 
@@ -42,6 +42,23 @@ class PlatformOwnerLoginTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response["Location"], "/ops/platform/onboarding/")
+
+    def test_central_login_uses_public_navigation(self):
+        response = self.client.get("/accounts/login/", HTTP_HOST="hubx.market")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'href="/plans/"')
+        self.assertContains(response, 'href="/demo/"')
+        self.assertNotContains(response, 'href="/catalog/"')
+        self.assertNotContains(response, 'href="/accounts/account/orders/"')
+
+    def test_store_login_preserves_tenant_navigation(self):
+        response = self.client.get("/accounts/login/", HTTP_HOST="hubx-demo.hubx.market")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'href="/catalog/"')
+        self.assertContains(response, 'href="/accounts/account/orders/"')
+        self.assertNotContains(response, 'href="/plans/"')
 
     def test_platform_owner_without_next_goes_to_platform_tenants(self):
         response = self.client.post(
@@ -65,7 +82,7 @@ class PlatformOwnerLoginTests(TestCase):
     def test_store_owner_login_from_central_host_redirects_to_owned_store(self):
         response = self.client.post(
             "/accounts/login/",
-            {"login": "store.owner@hubx.market", "password": "secret"},
+            {"login": "admin@hubx-demo.market", "password": "secret"},
             HTTP_HOST="hubx.market",
         )
 
@@ -76,7 +93,7 @@ class PlatformOwnerLoginTests(TestCase):
     def test_store_owner_local_login_redirect_preserves_public_port(self):
         response = self.client.post(
             "/accounts/login/",
-            {"login": "store.owner@hubx.market", "password": "secret"},
+            {"login": "admin@hubx-demo.market", "password": "secret"},
             HTTP_HOST="hubx.market:8002",
         )
 
@@ -91,7 +108,7 @@ class PlatformOwnerLoginTests(TestCase):
     def test_store_owner_localhost_login_redirect_uses_localhost_subdomain(self):
         response = self.client.post(
             "/accounts/login/",
-            {"login": "store.owner@hubx.market", "password": "secret"},
+            {"login": "admin@hubx-demo.market", "password": "secret"},
             HTTP_HOST="localhost:8002",
         )
 
@@ -102,14 +119,14 @@ class PlatformOwnerLoginTests(TestCase):
         other_tenant = Tenant.objects.create(name="Outra Loja", slug="outra-loja", subdomain="outra-loja")
         OwnerUser.objects.create(
             tenant=other_tenant,
-            email="store.owner@hubx.market",
+            email="admin@hubx-demo.market",
             role="owner",
             is_active=True,
         )
 
         response = self.client.post(
             "/accounts/login/",
-            {"login": "store.owner@hubx.market", "password": "secret"},
+            {"login": "admin@hubx-demo.market", "password": "secret"},
             HTTP_HOST="hubx.market",
         )
 

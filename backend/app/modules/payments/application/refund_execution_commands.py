@@ -61,7 +61,13 @@ class DjangoOrmPaymentRefundExecutionRepository:
 class PaymentRefundExecutionCommandService:
     repository: DjangoOrmPaymentRefundExecutionRepository
 
-    def execute_refund(self, *, tenant_id: int | None, refund_key: str) -> tuple[str, object | None]:
+    def execute_refund(
+        self,
+        *,
+        tenant_id: int | None,
+        refund_key: str,
+        actor_label: str = "system",
+    ) -> tuple[str, object | None]:
         if not tenant_id or not _string(refund_key):
             return "refund-execution-unavailable", None
 
@@ -94,12 +100,21 @@ class PaymentRefundExecutionCommandService:
             refund.status = self.repository.payment_refund_model.Status.FAILED
             refund.failed_at = timezone.now()
             self.repository.save_refund(refund)
-            self._record_execution_audit(refund=refund, result="failed", reason_code=str(exc))
+            self._record_execution_audit(
+                refund=refund,
+                result="failed",
+                reason_code=str(exc),
+                actor_label=actor_label,
+            )
             return "refund-execution-failed", refund
 
         self._apply_provider_response(refund=refund, response=response)
         self.repository.save_refund(refund)
-        self._record_execution_audit(refund=refund, result=_string(getattr(response, "status", "")) or "failed")
+        self._record_execution_audit(
+            refund=refund,
+            result=_string(getattr(response, "status", "")) or "failed",
+            actor_label=actor_label,
+        )
         if response.status == "failed":
             return "refund-execution-failed", refund
         if response.status == "succeeded":
@@ -166,14 +181,21 @@ class PaymentRefundExecutionCommandService:
             refund.status = self.repository.payment_refund_model.Status.FAILED
             refund.failed_at = timezone.now()
 
-    def _record_execution_audit(self, *, refund, result: str, reason_code: str = "") -> None:
+    def _record_execution_audit(
+        self,
+        *,
+        refund,
+        result: str,
+        reason_code: str = "",
+        actor_label: str = "system",
+    ) -> None:
         audit_log_commands.record_event(
             tenant_id=getattr(refund, "tenant_id", None),
             module="payments",
             action="refund.execution_recorded",
             entity_type="PaymentRefund",
             entity_id=str(getattr(refund, "id", "")),
-            actor_label="system",
+            actor_label=_string(actor_label) or "system",
             summary=f"Execução de refund {getattr(refund, 'refund_key', '')} registrada como {_string(result)}",
             metadata={
                 "refund_key": str(getattr(refund, "refund_key", "")),

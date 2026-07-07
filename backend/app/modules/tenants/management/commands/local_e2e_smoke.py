@@ -2,14 +2,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from html.parser import HTMLParser
+from pathlib import Path
 from urllib.parse import urlparse
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.staticfiles import finders
 from django.core.management.base import BaseCommand, CommandError
 from django.test import Client, override_settings
 
-from app.modules.accounts.models import OwnerUser
+from app.modules.accounts.models import AccountProfile, OwnerUser
+from app.modules.customers.models import Customer
 
 
 @dataclass(frozen=True)
@@ -40,7 +43,8 @@ class Command(BaseCommand):
         parser.add_argument("--central-host", default="localhost:8002")
         parser.add_argument("--store-host", default="hubx-demo.localhost:8002")
         parser.add_argument("--platform-email", default="platform.owner@hubx.market")
-        parser.add_argument("--store-email", default="store.owner@hubx.market")
+        parser.add_argument("--store-email", default="admin@hubx-demo.market")
+        parser.add_argument("--customer-email", default="cliente@hubx-demo.market")
         parser.add_argument("--password", default="secret")
         parser.add_argument("--fail-on-blockers", action="store_true")
 
@@ -49,6 +53,7 @@ class Command(BaseCommand):
         store_host = str(options["store_host"])
         platform_email = str(options["platform_email"])
         store_email = str(options["store_email"])
+        customer_email = str(options["customer_email"])
         password = str(options["password"])
         allowed_hosts = list(getattr(settings, "ALLOWED_HOSTS", []) or [])
         for host in (central_host, store_host, central_host.split(":")[0], store_host.split(":")[0], ".localhost"):
@@ -58,6 +63,7 @@ class Command(BaseCommand):
         with override_settings(
             HUBX_MARKET_ROOT_DOMAIN="localhost",
             HUBX_MARKET_PUBLIC_PORT=central_host.split(":")[-1] if ":" in central_host else "",
+            HUBX_MARKET_DEMO_TENANT_SUBDOMAIN="hubx-demo",
             ALLOWED_HOSTS=allowed_hosts,
             HUBX_OPS_AUTH_GATE_ENFORCED=True,
         ):
@@ -66,6 +72,7 @@ class Command(BaseCommand):
                 store_host=store_host,
                 platform_email=platform_email,
                 store_email=store_email,
+                customer_email=customer_email,
                 password=password,
             )
 
@@ -78,25 +85,39 @@ class Command(BaseCommand):
         if blockers and options["fail_on_blockers"]:
             raise CommandError("Local E2E smoke is blocked.")
 
-    def _run(self, *, central_host: str, store_host: str, platform_email: str, store_email: str, password: str) -> list[E2EResult]:
+    def _run(
+        self,
+        *,
+        central_host: str,
+        store_host: str,
+        platform_email: str,
+        store_email: str,
+        customer_email: str,
+        password: str,
+    ) -> list[E2EResult]:
         results: list[E2EResult] = []
-        results.extend(self._validate_seed(platform_email=platform_email, store_email=store_email))
+        results.extend(self._validate_seed(platform_email=platform_email, store_email=store_email, customer_email=customer_email))
+        results.extend(self._visitor_central_portal(host=central_host))
         results.extend(self._platform_flow(host=central_host, email=platform_email, password=password))
         results.extend(self._store_flow(host=store_host, central_host=central_host, email=store_email, password=password))
+        results.extend(self._customer_flow(host=store_host, email=customer_email, password=password))
         results.extend(self._visitor_storefront(host=store_host))
         return results
 
-    def _validate_seed(self, *, platform_email: str, store_email: str) -> list[E2EResult]:
+    def _validate_seed(self, *, platform_email: str, store_email: str, customer_email: str) -> list[E2EResult]:
         platform_owner = OwnerUser.objects.filter(
             email__iexact=platform_email,
             tenant__slug=getattr(settings, "HUBX_PLATFORM_TENANT_SLUG", "platform-system"),
             is_active=True,
         ).exists()
         store_owner = OwnerUser.objects.filter(email__iexact=store_email, tenant__slug="hubx-demo", is_active=True).exists()
+        customer = Customer.objects.filter(email__iexact=customer_email, tenant__slug="hubx-demo", status="active").exists()
+        profile = AccountProfile.objects.filter(email__iexact=customer_email, tenant__slug="hubx-demo", is_active=True).exists()
         platform_cross_store = OwnerUser.objects.filter(email__iexact=platform_email, tenant__slug="hubx-demo", is_active=True).exists()
         return [
             E2EResult("seed-platform-owner", platform_owner, "platform owner ativo no tenant platform-system"),
-            E2EResult("seed-store-owner", store_owner, "store owner ativo na hubx-demo"),
+            E2EResult("seed-store-owner", store_owner, "admin da loja ativo na hubx-demo"),
+            E2EResult("seed-store-customer", customer and profile, "cliente da loja ativo com Customer e AccountProfile na hubx-demo"),
             E2EResult("seed-no-platform-owner-store-leak", not platform_cross_store, "platform owner não está ativo na loja demo"),
         ]
 
@@ -116,6 +137,11 @@ class Command(BaseCommand):
             (
                 "/ops/platform/onboarding/",
                 ("Platform admin", "Onboarding de lojas", "Lojas", "Portal central"),
+                ("Dashboard", "Pedidos", "Catálogo", "Admin da loja"),
+            ),
+            (
+                "/ops/platform/acquisitions/",
+                ("Platform admin", "Aquisições", "Lojas", "Portal central"),
                 ("Dashboard", "Pedidos", "Catálogo", "Admin da loja"),
             ),
         ):
@@ -162,12 +188,88 @@ class Command(BaseCommand):
         results.extend(self._check_page_links(client=client, host=host, path="/ops/", html=html, scope="store-admin"))
         return results
 
+    def _customer_flow(self, *, host: str, email: str, password: str) -> list[E2EResult]:
+        client = Client(HTTP_HOST=host)
+        results: list[E2EResult] = []
+        response = client.post("/accounts/login/", {"login": email, "password": password}, HTTP_HOST=host)
+        results.append(
+            E2EResult(
+                "customer-login-redirect",
+                response.status_code == 302 and response["Location"] == "/accounts/account/",
+                f"status={response.status_code} location={response.get('Location', '')}",
+            )
+        )
+        account = client.get("/accounts/account/", HTTP_HOST=host)
+        html = account.content.decode("utf-8", errors="replace")
+        results.append(
+            self._markers_result(
+                key="customer-account-template",
+                response=account,
+                html=html,
+                markers=("Minha conta", "Ver pedidos", "Gerenciar endereços"),
+                forbidden=("Admin da loja", "Platform admin", "/ops/platform/tenants/"),
+            )
+        )
+        ops_response = client.get("/ops/", HTTP_HOST=host)
+        results.append(E2EResult("customer-cannot-open-store-admin", ops_response.status_code == 403, f"status={ops_response.status_code}"))
+        return results
+
+    def _visitor_central_portal(self, *, host: str) -> list[E2EResult]:
+        client = Client(HTTP_HOST=host)
+        results: list[E2EResult] = []
+        for path, markers, forbidden in (
+            (
+                "/",
+                (
+                    "Hubx Market",
+                    "Crie sua loja virtual",
+                    "Iniciar onboarding",
+                    'href="/accounts/login/"',
+                    'href="/plans/"',
+                    'href="/plans/#aquisicao"',
+                    'href="/demo/"',
+                ),
+                ("/ops/platform/", 'href="/catalog/"', 'href="/accounts/account/orders/"'),
+            ),
+            (
+                "/accounts/login/",
+                ("Criar conta", 'href="/plans/"', 'href="/demo/"'),
+                ('href="/catalog/"', 'href="/accounts/account/orders/"'),
+            ),
+            (
+                "/plans/",
+                ("Planos Hubx Market", "Iniciar onboarding", "Acessar demo", "Onboarding assistido"),
+                ("/ops/platform/", 'href="/catalog/"', 'href="/accounts/account/orders/"', "Demo lifestyle", "/media/demo-catalog/fixtures/"),
+            ),
+        ):
+            response = client.get(path, HTTP_HOST=host)
+            html = response.content.decode("utf-8", errors="replace")
+            results.append(self._markers_result(key=f"central-public-template:{path}", response=response, html=html, markers=markers, forbidden=forbidden))
+            results.extend(self._check_page_links(client=client, host=host, path=path, html=html, scope="central-public"))
+            results.extend(self._check_page_images(client=client, host=host, path=path, html=html))
+
+        response = client.get("/demo/", HTTP_HOST=host)
+        demo_html = response.content.decode("utf-8", errors="replace")
+        results.append(
+            E2EResult(
+                "central-demo-access",
+                response.status_code == 200
+                and "Admin da loja" in demo_html
+                and "Cliente da loja" in demo_html
+                and "http://hubx-demo.localhost" in demo_html
+                and "/accounts/demo-session/?profile=admin" in demo_html
+                and "/accounts/demo-session/?profile=customer" in demo_html,
+                f"status={response.status_code}",
+            )
+        )
+        return results
+
     def _visitor_storefront(self, *, host: str) -> list[E2EResult]:
         client = Client(HTTP_HOST=host)
         results: list[E2EResult] = []
         for path, markers, forbidden in (
-            ("/", ("Hubx Market", "Loja", "Entrar"), ("Page not found", 'href="/orders/"')),
-            ("/catalog/", ("Loja", "Filtrar produtos", "storefront-product-grid"), ("Page not found", 'href="/orders/"')),
+            ("/", ("Hubx Market", "Loja", "Entrar|Sair"), ("Page not found", 'href="/orders/"', 'href="/plans/"', 'href="/demo/"')),
+            ("/catalog/", ("Loja", "Filtrar produtos", "storefront-product-grid"), ("Page not found", 'href="/orders/"', 'href="/plans/"', 'href="/demo/"')),
         ):
             response = client.get(path, HTTP_HOST=host)
             html = response.content.decode("utf-8", errors="replace")
@@ -177,10 +279,15 @@ class Command(BaseCommand):
         return results
 
     def _markers_result(self, *, key: str, response, html: str, markers: tuple[str, ...], forbidden: tuple[str, ...]) -> E2EResult:
-        missing = [marker for marker in markers if marker not in html]
+        missing = [marker for marker in markers if not self._marker_present(html=html, marker=marker)]
         forbidden_found = [marker for marker in forbidden if marker in html]
         ready = response.status_code == 200 and not missing and not forbidden_found
         return E2EResult(key, ready, f"status={response.status_code} missing={missing} forbidden={forbidden_found}")
+
+    def _marker_present(self, *, html: str, marker: str) -> bool:
+        if "|" in marker:
+            return any(candidate in html for candidate in marker.split("|"))
+        return marker in html
 
     def _check_page_links(self, *, client: Client, host: str, path: str, html: str, scope: str) -> list[E2EResult]:
         parser = LinkImageParser()
@@ -206,10 +313,28 @@ class Command(BaseCommand):
             target = self._local_path(href=src, host=host)
             if not target:
                 continue
+            if target.lower().endswith(".svg"):
+                results.append(E2EResult(f"image:{path}:{target}", False, "demo image should be raster, got svg fallback"))
+                continue
+            static_result = self._static_image_result(path=path, target=target)
+            if static_result is not None:
+                results.append(static_result)
+                continue
             response = client.get(target, HTTP_HOST=host)
             size = self._response_size(response)
             results.append(E2EResult(f"image:{path}:{target}", response.status_code == 200 and size > 0, f"status={response.status_code} bytes={size}"))
         return results
+
+    def _static_image_result(self, *, path: str, target: str) -> E2EResult | None:
+        static_url = str(getattr(settings, "STATIC_URL", "/static/") or "/static/")
+        if not target.startswith(static_url):
+            return None
+        relative_path = target[len(static_url) :].split("?", 1)[0].lstrip("/")
+        found_path = finders.find(relative_path)
+        if not found_path:
+            return E2EResult(f"image:{path}:{target}", False, "staticfiles=missing bytes=0")
+        size = Path(found_path).stat().st_size
+        return E2EResult(f"image:{path}:{target}", size > 0, f"staticfiles=found bytes={size}")
 
     def _local_path(self, *, href: str, host: str) -> str:
         href = str(href or "").strip()

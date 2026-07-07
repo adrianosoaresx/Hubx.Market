@@ -1,8 +1,9 @@
-{% with input_type=input_type|default:"text" %}
+{% with input_id=id|default:name input_type=input_type|default:"text" %}
 <div class="space-y-2">
     {% if label %}
-        <label for="{{ id|default:name }}" class="block text-sm font-medium text-[var(--color-text-primary)]">
+        <label for="{{ input_id }}" class="block text-sm font-medium text-[var(--color-text-primary)]">
             {{ label }}
+            {% if required %}<span class="text-[var(--color-feedback-danger)]" aria-hidden="true">*</span>{% endif %}
         </label>
     {% endif %}
     <div class="relative">
@@ -10,12 +11,14 @@
             <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-[var(--color-text-secondary)]">{{ prefix }}</span>
         {% endif %}
         <input
-            id="{{ id|default:name }}"
+            id="{{ input_id }}"
             name="{{ name }}"
             type="{{ input_type }}"
             value="{{ value|default:'' }}"
             placeholder="{{ placeholder|default:'' }}"
-            class="ds-input {% if prefix %}pl-10{% endif %} {% if suffix %}pr-10{% endif %} {% if invalid %}!border-[var(--color-feedback-danger)]{% endif %} {% if disabled %}cursor-not-allowed bg-slate-50 text-slate-400{% endif %}"
+            class="ds-input {% if size == 'sm' %}ds-input-sm{% elif size == 'lg' %}ds-input-lg{% endif %} {% if prefix %}pl-10{% endif %} {% if suffix %}pr-10{% endif %}"
+            aria-invalid="{% if invalid %}true{% else %}false{% endif %}"
+            {% if invalid and error_text %}aria-describedby="{{ input_id }}-error"{% elif help_text %}aria-describedby="{{ input_id }}-help"{% endif %}
             {% if required %}required{% endif %}
             {% if disabled %}disabled{% endif %}
             {% if readonly %}readonly{% endif %}
@@ -26,10 +29,10 @@
         {% endif %}
     </div>
     {% if help_text and not invalid %}
-        <p class="text-sm text-[var(--color-text-secondary)]">{{ help_text }}</p>
+        {% include "shared/components/forms/field_help.html" with id=input_id|add:"-help" text=help_text %}
     {% endif %}
     {% if invalid and error_text %}
-        <p class="text-sm text-[var(--color-feedback-danger)]">{{ error_text }}</p>
+        {% include "shared/components/forms/field_error.html" with id=input_id|add:"-error" text=error_text %}
     {% endif %}
 </div>
 {% endwith %}

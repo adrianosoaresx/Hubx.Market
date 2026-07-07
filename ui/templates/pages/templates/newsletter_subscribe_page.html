@@ -11,13 +11,11 @@
     </header>
 
     {% if feedback_result == "subscribed" %}
-        <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
-            Inscrição registrada. Vamos manter você por perto — do jeito certo, com consentimento claro.
-        </div>
+        {% include "shared/components/feedback/alert.html" with variant="success" title="Inscrição registrada" description="Vamos manter você por perto, do jeito certo, com consentimento claro." %}
     {% endif %}
 
     {% if form_error %}
-        <div class="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{{ form_error }}</div>
+        {% include "shared/components/feedback/alert.html" with variant="danger" title="Corrija o formulário" description=form_error %}
     {% endif %}
 
     <form method="post" action="{{ form_action }}" class="ds-surface space-y-6 p-6">

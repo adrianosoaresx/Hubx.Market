@@ -58,6 +58,7 @@ class PaymentRefundLedgerQueryService:
                     "order_number": _string(getattr(order, "number", "")),
                     "attempt_key": _string(getattr(attempt, "attempt_key", "")),
                     "external_reference": _string(getattr(refund, "external_reference", "")),
+                    "provider_code": _string(getattr(refund, "provider_code", "")),
                     "provider_refund_reference": _string(getattr(refund, "provider_refund_reference", "")),
                     "reason_code": _string(getattr(refund, "reason_code", "")),
                     "blockers": list(getattr(refund, "blockers", []) or []),

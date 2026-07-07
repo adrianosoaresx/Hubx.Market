@@ -1,15 +1,15 @@
 # Catalog
 
 ## Responsabilidade
-Gerenciar produtos, variantes, categorias, marcas, tags e imagens.
+Gerenciar produtos, variantes, imagens, publicação e descoberta do catálogo.
+
+Categorias, marcas e tags normalizadas continuam planejadas para evolução futura. No corte atual, marca e categoria são campos simples do produto.
 
 ## Entidades principais
 - Product
 - ProductVariant
-- Category
-- Brand
-- Tag
 - ProductImage
+- StorefrontDiscoveryEventLog
 
 ## Casos de uso
 - criar produto
@@ -19,30 +19,65 @@ Gerenciar produtos, variantes, categorias, marcas, tags e imagens.
 
 ## Regras de negócio
 - preço e estoque pertencem à variante
+- produto inativo/desativado não é deletado fisicamente
 
 ## Integração UI
 - views HTTP devem permanecer finas em `interfaces/`
 - templates oficiais do Design System podem ser usados como contrato de apresentação
 - adapters de contexto podem preparar dados para list/detail/form sem mover regra de negócio para a view
 - o mesmo módulo pode expor rotas administrativas e storefront, desde que a separação de URLs e adapters de apresentação permaneça clara
-- queries de leitura para Admin Products devem viver fora das views; enquanto o módulo ainda não expõe modelos/serviços reais, a camada `application/` pode centralizar fallback temporário sem quebrar o contrato dos templates
+- queries de leitura para Admin Products devem viver fora das views; a camada `application/` centraliza fallback operacional apenas quando o contexto administrativo legado permitir
 - queries de leitura para o storefront também devem viver em `application/`; tenant-awareness e fallback temporário devem ficar nessa camada, não nas views públicas
 - storefront é uma superfície tenant-required:
   - listagem
   - detalhe de produto
   devem responder `404` quando a loja não for resolvida pelo middleware
-- no estado atual do repositório, `Admin Products` ainda não possui modelo/tabela persistida utilizável; a query layer detecta essa indisponibilidade explicitamente e mantém fallback seguro até a fonte real existir
-- readiness mínima agora existe no módulo:
+- readiness persistida atual:
   - `Product` com `tenant`, status e metadados principais
   - `ProductVariant` para respeitar a regra de preço/estoque por variante
   - `ProductImage` para mídia mínima persistida por URL, com ordenação e imagem principal
+  - `StorefrontDiscoveryEventLog` para analytics brutos tenant-scoped de descoberta/PDP/CTA
 - as query layers de `Admin Products` e do storefront já consomem essa estrutura quando houver migração aplicada e registros persistidos
 - o seed mínimo `catalog_minimal_seed` permite validar a primeira leitura persistida sem alterar o contrato visual
+- o seed `seed_demo_catalog` gera catálogo lifestyle tenant-scoped com imagens raster locais; o caminho padrão usa fixtures JPG geradas por IA em vez de SVG placeholder
+- para a demo oficial, `seed_demo_catalog --reset-tenant-catalog --clear-discovery-events` pode resetar todo o catálogo do tenant `hubx-demo`, atualizar o nome comercial e remover eventos de descoberta anteriores
+- analytics de descoberta storefront descarta eventos do tenant demo oficial para preservar o contrato de demo somente leitura
 - enquanto não houver tenant resolvido, o fallback administrativo continua intencionalmente ativo como compatibilidade
 - quando houver tenant resolvido e nenhum produto persistido correspondente, `Admin Products` passa a expor ausência real em vez de reutilizar fixtures de demonstração
 - na listagem administrativa tenant-scoped, esse caso também aparece com empty state explícito de loja sem catálogo persistido, em vez de parecer apenas uma tabela vazia
 - quando houver fonte persistida, leituras do storefront devem sempre ser filtradas por `tenant_id`
 - ausência de tenant não deve cair em catálogo demo/fallback como se fosse uma loja válida
+
+## Admin Product CRUD Execution
+- o admin de catálogo agora conecta as rotas:
+  - `GET/POST /ops/catalog/products/new/`;
+  - `GET/POST /ops/catalog/products/<slug>/edit/`;
+  - `POST /ops/catalog/products/<slug>/actions/deactivate/`.
+- writes passam por `catalog.application.admin_product_commands`.
+- criação e edição persistem `Product` e a `ProductVariant` padrão, preservando a regra de que preço e estoque pertencem à variante.
+- o lookup e a escrita exigem `tenant_id`; não há fallback de fixture para writes.
+- `catalog.manage` é exigido quando o papel owner/admin está resolvido; ausência de role ainda preserva compatibilidade legada.
+- a ação de “delete” do CRUD é uma desativação operacional: `status=inactive`, `is_active=False`, `is_featured=False`, sem chamar `delete()` no produto.
+- auditoria registra `product.created`, `product.updated` e `product.deactivated`.
+
+## Admin advanced variants
+- o detalhe administrativo do produto agora expõe gestão mínima de múltiplas variantes.
+- endpoints:
+  - `POST /ops/catalog/products/<slug>/variants/new/`;
+  - `POST /ops/catalog/products/<slug>/variants/<variant_id>/default/`;
+  - `POST /ops/catalog/products/<slug>/variants/<variant_id>/deactivate/`.
+- writes passam por `catalog.application.admin_product_commands`.
+- `ProductVariant` passa a preservar:
+  - `label`;
+  - `option_values` em JSON, como `Cor=Preto` e `Tamanho=42`;
+  - `barcode`;
+  - `weight_grams`;
+  - `is_active`;
+  - `position`.
+- apenas uma variante deve ser padrão por produto.
+- variante inativa não pode ser definida como padrão.
+- desativar variante não chama `delete()` e bloqueia a operação quando ela deixaria o produto sem nenhuma variante ativa.
+- auditoria registra `product.variant_created`, `product.variant_default_set` e `product.variant_deactivated`.
 
 ## PDP: mídia e variantes
 - o storefront agora prefere `ProductImage` para:
@@ -90,10 +125,12 @@ Gerenciar produtos, variantes, categorias, marcas, tags e imagens.
   - variante padrão efetiva
   - contexto de oferta, estoque e disponibilidade
 - isso permite enriquecer os cards com:
-  - subtítulo mais coerente com categoria + variante
-  - meta curta com SKU + contexto comercial
-  - helper de preço mais orientado à decisão
+  - subtítulo curto de categoria
+  - badge comercial enxuto, como `Oferta`, `Últimas unidades`, `Sob encomenda` ou `Indisponível`
+  - disponibilidade pública curta, sem SKU ou detalhes operacionais
+  - CTA `Comprar` para reduzir atrito no funil, levando ao PDP onde variante, quantidade e compra são confirmadas
 - a página de catálogo também passa a comunicar melhor quando os resultados já refletem preço, mídia e disponibilidade atualizados
+- SKU e detalhes internos de variante permanecem fora do card público; quando necessários, devem ficar em superfícies administrativas, checkout ou integrações técnicas.
 
 ## Continuidade entre catálogo e PDP
 - o storefront agora reforça melhor que a combinação em destaque na listagem continua sendo a mesma base comercial no PDP

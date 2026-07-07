@@ -43,7 +43,7 @@ subscriptions
 
 Readiness:
 - tenant resolution por subdomínio;
-- custom domain ainda contract-only;
+- custom domain cadastrado em `Tenant` e resolvido por middleware apenas atrás de flag;
 - Battery J adiciona closure sistêmica de produção e Go/No-Go por comando `system_production_closure`;
 - closure não altera runtime, settings, providers ou tenants.
 - Platform Store Management define contrato inicial para `/ops/platform/tenants/`, ainda sem surface HTTP implementada.
@@ -77,6 +77,8 @@ Readiness:
 - System ROI Re-Selection executável em `tenants` recomenda `System Validation Pass 2 — Storefront/Admin Smoke & Template Regression` quando há regressão visível confirmada.
 - System Validation Pass 2 adiciona `system_template_regression_smoke` para validar Home, Loja, Login, Meus pedidos, `/ops/` e `/ops/platform/tenants/` contra 404/link legado/template quebrado.
 - Platform Self-Service Tenant Onboarding adiciona `/ops/platform/onboarding/` com wizard controlado para loja, plano interno, owner, branding mínimo, domínio e conclusão auditável.
+- Storefront Institutional Hero adiciona campos `storefront_hero_*` em `Tenant` e query service de branding para renderizar hero tenant-owned na home da loja, com fallback visual para imagem de produto do próprio tenant.
+- Storefront Branding Settings adiciona `/ops/branding/` para lojistas configurarem `Tenant.logo_url` e campos `Tenant.storefront_hero_*`, com permissão `storefront.branding.manage` e auditoria tenant-scoped.
 
 ---
 
@@ -93,15 +95,16 @@ OwnerMfaRecoveryCode
 
 Dependências:
 tenants
-accounts
 audit
 
 Readiness:
-- modelo `ApiKey` tenant-scoped
-- segredo persistido apenas como hash
-- command service de criação/revogação
-- eventos `api_key.created` e `api_key.revoked`
-- runtime authentication e API pública ainda pendentes
+- customer area, auth pages e reset/forgot password
+- login owner/admin tenant-scoped com rate limit e política de sessão
+- `OwnerUser` separado de `Customer`
+- `/ops/owners/` com CRUD administrativo, convite/reset e RBAC
+- MFA owner/admin com fatores, recovery codes, challenge e readiness operacional
+- métricas protegidas para owner access e MFA provider health
+- platform owner context para portal central `hubx.market`
 
 ---
 
@@ -112,9 +115,19 @@ Gerenciar planos e assinaturas SaaS da plataforma.
 
 Entidades principais:
 SubscriptionPlan
+SubscriptionCoupon
 TenantSubscription
+SubscriptionAcquisitionLead
 
 Eventos:
+subscription.acquisition_requested
+subscription.acquisition_converted
+subscription.acquisition_discarded
+subscription.coupon_created
+subscription.coupon_status_changed
+subscription.coupon_applied
+tenant.self_service_created
+tenant.self_service_signup_completed
 subscription.activated  
 subscription.canceled
 
@@ -124,50 +137,20 @@ accounts
 audit
 
 Readiness:
-- modelo `SubscriptionPlan`
-- modelo `TenantSubscription`
+- modelo `SubscriptionPlan` com preço, quota, trial, requisito de payment method e features públicas
+- modelo `SubscriptionCoupon` platform-scope para descontos comerciais de planos SaaS
+- modelo `TenantSubscription` com estado tenant-scoped e fim de trial
+- modelo `SubscriptionAcquisitionLead`
+- snapshots promocionais em lead, onboarding e assinatura sem alterar `SubscriptionPlan.monthly_price`
 - setup auditável por `subscription_commands`
 - admin read-only em `/ops/subscriptions/`
-- provider de cobrança real e enforcement de plano fora da fundação
-
-Readiness:
-- modelo `ApiKey` tenant-scoped
-- segredo persistido apenas como hash
-- criação/revogação auditáveis
-- contrato runtime revisado para `Authorization: Bearer`
-- service runtime mínimo `api_key_runtime_authentication`
-- adapter DRF revisado como opt-in por view
-- adapter DRF mínimo `ApiKeyAuthentication`
-- permission mínima `HasApiKeyScope`
-- API key segue proibida em `DEFAULT_AUTHENTICATION_CLASSES`
-- primeiro piloto público criado: `GET /api/v1/catalog/products/` com `read:catalog`
-- endpoint público protegido por flag `API_KEYS_PUBLIC_CATALOG_PRODUCTS_ENABLED`
-- rate limit revisado para política `tenant+api_key+endpoint`
-- rate limit real opt-in via `ApiKeyRateLimitThrottle`
-- observabilidade pública revisada para métricas Prometheus e dashboard mínimos
-- métricas Prometheus públicas em `/api-keys/metrics/public-endpoints/`
-- contrato de dashboard Grafana público revisado com painéis mínimos e baixa cardinalidade
-- dashboard Grafana público versionado em `infra/observability/grafana/api-key-public-endpoints-dashboard.json`
-- contrato de alert rules Prometheus revisado para auth failures, rate limit e endpoint disabled
-- alert rules Prometheus públicas versionadas em `infra/observability/prometheus/api-keys-alert-rules.yml`
-- closure de observabilidade pública revisa métricas, endpoint, dashboard, alert rules e riscos residuais
-- rollout produtivo de observabilidade pública possui review executável com smoke, evidência e rollback
-- evidência de ativação produtiva pública possui command sanitizado sem token/API key em claro
-- monitoramento pós-ativação pública possui review para estabilidade, ruído e decisão de expansão
-- expansão pública recomenda contrato de detalhe de produto read-only `GET /api/v1/catalog/products/<slug>/`
-- contrato do endpoint público de detalhe de produto define slug, tenant-scope, `read:catalog`, rate limit e rollout flag
-- endpoint público de detalhe de produto executado em `GET /api/v1/catalog/products/<slug>/`
-- observabilidade do detalhe público reaproveita dashboard/alertas por label `endpoint`, sem artefatos novos
-- expansão inicial de endpoints públicos fechada com listagem + detalhe e sem novo endpoint selecionado
-- governança de API keys fechada para ciclo atual com modelo, runtime auth, DRF adapter, endpoints públicos e observabilidade
-- re-seleção ROI sistêmica pós-governança recomenda documentação/onboarding de parceiros antes de quotas, novos endpoints ou UX admin
-- onboarding de parceiros para API pública de catálogo possui guia versionado, checklist, contrato de erro e exemplos com placeholder seguro
-- execution review de documentação de parceiros valida canal de entrega, suporte, smoke evidence template e change control sem publicar credencial
-- publication evidence de documentação de parceiros registra entrega sanitizada sem credencial, smoke real ou runtime activation
-- closure de onboarding de parceiros fecha docs/pacote/evidência e devolve a decisão para re-seleção sistêmica de ROI
-- re-seleção pós-onboarding recomenda smoke controlado de ativação de parceiro antes de quotas comerciais ou novos endpoints
-- contrato de smoke de ativação de parceiro limita execução futura a list/detail, observabilidade, rollback e evidência sanitizada
-- contrato de quotas comerciais define tenant/key/endpoint/window, limite diário, 429, visibilidade admin e mantém billing/enforcement runtime fora da wave
+- gestão platform de cupons SaaS em `/ops/platform/subscription-coupons/` com `subscriptions.manage`
+- planos públicos em `/plans/` com 30 dias grátis/cartão obrigatório quando configurado
+- `/plans/` e `/plans/signup/` aceitam `coupon_code` opcional validado por `subscriptions`
+- signup público controlado por feature flag/token em `/plans/signup/`
+- fila platform de aquisições em `/ops/platform/acquisitions/`
+- provider-alvo de billing SaaS registrado na assinatura, com Asaas como default
+- cobrança recorrente real e enforcement de plano fora da fundação
 
 ---
 
@@ -234,15 +217,16 @@ Gerenciar produtos e estrutura de catálogo.
 Entidades principais:
 Product  
 ProductVariant  
-Category  
-Brand  
-Tag  
 ProductImage
 StorefrontDiscoveryEventLog
+
+Observação:
+`Brand`, `Category`, `Tag`, `ProductCategory` e `ProductTag` ainda não existem como modelos normalizados. O corte atual usa campos simples em `Product`, como `brand_name` e `category_label`.
 
 Eventos:
 product.created
 product.updated
+product.deactivated
 catalog.discovery_viewed
 catalog.search_performed
 catalog.facets_applied
@@ -256,9 +240,11 @@ tenants
 Readiness:
 - produtos/variantes/imagens tenant-scoped;
 - storefront e admin reais;
+- CRUD administrativo básico de produtos implementado em `/ops/catalog/products/`, com create/update em `Product` + variante padrão e desativação sem exclusão física;
 - analytics brutos de discovery/PDP/CTA;
 - Battery I adiciona baseline de conversão, funil PDP/CTA, drop-off de busca/facet e experimento `product_card_priority_v1`;
 - o experimento altera ranking de cards com base em sinais recentes, sem redesenhar storefront inteiro.
+- API pública read-only list/detail protegida por API key `read:catalog`.
 
 ---
 
@@ -353,6 +339,7 @@ Dependências:
 orders
 
 Readiness:
+- provider Asaas para checkout hospedado de pedidos, com Pagar.me como alternativa configurável
 - provider production gate/evidence com comando `payments_production_readiness`
 - webhook production smoke revisável
 - refund production gate/evidence limitado e manual
@@ -424,9 +411,10 @@ catalog
 customers
 
 Readiness:
-- modelo tenant-scoped inicial
+- modelo tenant-scoped
 - agregados approved-only para PDP por application query
-- moderação admin/ops ainda pendente
+- submissão customer e elegibilidade inicial
+- moderação admin/ops implementada em `/ops/reviews/`
 
 ---
 
@@ -511,6 +499,7 @@ Antes de implementar qualquer funcionalidade:
 5. Para operação/produção, consulte docs/operational-runbooks.md.
 6. Para priorização de evolução, consulte docs/system-module-status-audit.md.
 7. Para execução por baterias de ondas, consulte docs/system-execution-wave-batteries.md.
+8. Para a fotografia atual da implementação, consulte docs/implementation-inventory.md.
 
 ---
 

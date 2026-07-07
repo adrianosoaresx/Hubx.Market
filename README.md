@@ -27,10 +27,13 @@ Hubx Market é uma plataforma SaaS de e-commerce multi-tenant para criação e o
 - `AGENTS.md`
 - `ARCHITECTURE.md`
 - `PRODUCT_RULES.md`
+- `docs/implementation-inventory.md`
 - `docs/brand.md`
 - `docs/domain-model.md`
 - `docs/data/erd.md`
 - `docs/ui/design-system.md`
 
 ## Status
-Este repositório representa o blueprint documental inicial do Hubx Market.
+Este repositório já contém uma aplicação Django modular funcional, com storefront, admin `/ops/`, checkout, catálogo, carrinho, pedidos, pagamentos, frete, API pública de catálogo, auditoria, subscriptions foundation, notifications e design system.
+
+A fotografia atual do que está implementado vive em `docs/implementation-inventory.md`.

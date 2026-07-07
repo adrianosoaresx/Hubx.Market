@@ -335,6 +335,10 @@ Gerenciar lojas, subdomínios, branding, modo manutenção, configurações do t
 
 ### Observação
 `tenants` é o núcleo do contexto SaaS.
+- identidade institucional da storefront pertence a `tenants`; páginas de commerce devem consumir contratos de application/query como `storefront_branding_queries`, sem reimplementar fallback de branding por conta própria.
+- campos `Tenant.storefront_hero_*` representam configuração leve da home tenant-owned; eles não devem carregar regra de catálogo, estoque, pedido, pagamento ou page builder.
+- quando uma storefront precisar de imagem fallback para o hero, ela pode passar uma URL já tenant-scoped do próprio catálogo para o query service; esse fallback não autoriza leitura cross-tenant nem transforma `catalog` em dono do branding.
+- a configuração administrativa desses campos e de `Tenant.logo_url` nasce em `/ops/branding/`, com view fina em `tenants.interfaces`, command service em `tenants.application`, permissão `storefront.branding.manage` definida em `accounts` e `AuditLog` tenant-scoped.
 
 ### Platform Store Management
 
@@ -354,7 +358,7 @@ Gerenciar lojas, subdomínios, branding, modo manutenção, configurações do t
 - se `AuditLog` platform-scope não registrar, a criação de tenant deve ser revertida.
 - a surface HTTP `/ops/platform/tenants/new/` deve permanecer fina: renderiza formulário, repassa payload/ator/role e delega o write para `platform_tenant_admin_commands`.
 - mudanças de estado futuras devem ficar em `/ops/platform/tenants/<tenant_slug>/state/`, aceitar apenas `activate`, `deactivate`, `maintenance-on` e `maintenance-off`.
-- `is_active` afeta o resolver por subdomínio; `maintenance_mode` é flag operacional e não deve encerrar fluxos de commerce por si só.
+- `is_active` afeta o resolver por subdomínio; `maintenance_mode` é flag operacional de publicação e o middleware de `tenants` deve bloquear storefront/checkout com 503 sem alterar dados de commerce.
 - a execução de state command altera apenas `is_active` ou `maintenance_mode`, registra `AuditLog` platform-scope e não toca slug/subdomain/custom_domain ou módulos de commerce.
 - a surface HTTP de state management deve permanecer como action view fina: recebe `action`, delega a `platform_tenant_admin_commands.update_tenant_state(...)` e redireciona para o detalhe.
 - a execução do command de `custom_domain` exige `platform.tenants.manage`, normaliza/persiste apenas `Tenant.custom_domain`, bloqueia duplicidade entre tenants, registra `AuditLog` platform-scope e não altera middleware, resolver HTTP, DNS, TLS, redirects ou subdomain principal.
@@ -667,6 +671,31 @@ Gerenciar planos, assinatura SaaS, invoices e cobrança da plataforma.
 
 ### Observação
 Pagamentos de assinatura SaaS são um contexto diferente dos pagamentos de pedido.
+Aquisição pública de plano pertence a `subscriptions` como `SubscriptionAcquisitionLead`.
+Esse lead pode chamar `tenants.application.tenant_onboarding_commands` somente na conversão platform controlada, para criar/preencher uma jornada.
+O fluxo assistido de `/plans/` não deve importar commands de `tenants` nem criar tenant, owner, assinatura, catálogo, pedido ou pagamento.
+O signup self-service de `/plans/signup/` é exceção explícita: a view pública em `subscriptions` delega para `tenants.application.public_tenant_signup_commands`, que orquestra tenant, assinatura trial e owner inicial sem criar dados de commerce.
+Cupons comerciais de planos SaaS pertencem a `subscriptions.models.SubscriptionCoupon` e não devem reutilizar `coupons.Coupon`.
+`subscriptions.application.subscription_coupon_queries.validate_plan_coupon(...)` é a boundary pública para validar `coupon_code` em `/plans/` e `/plans/signup/`.
+
+### Public acquisition guardrails
+
+- `/plans/` pode ler `SubscriptionPlan` ativo e criar `SubscriptionAcquisitionLead`.
+- `/plans/signup/` pode ler `SubscriptionPlan` ativo e chamar o command público de `tenants` somente com `HUBX_PUBLIC_SIGNUP_ENABLED=1` e controle de acesso satisfeito.
+- `/plans/` e `/plans/signup/` podem validar `SubscriptionCoupon`; cupom inválido deve bloquear side effects.
+- snapshots promocionais devem ser copiados de lead para `TenantOnboarding` e de onboarding/signup para `TenantSubscription`.
+- `SubscriptionPlan.monthly_price` não deve ser alterado por cupom; somente snapshots podem guardar preço efetivo.
+- `/ops/platform/subscription-coupons/` gerencia cupons SaaS com `subscriptions.manage`.
+- `/ops/platform/acquisitions/` pode listar/revisar leads com permissão platform.
+- converter lead cria apenas `TenantOnboarding`; conclusão continua responsabilidade do wizard de onboarding em `tenants`.
+- descartar lead altera apenas status/audit.
+- signup self-service cria `Tenant` em `maintenance_mode`, `TenantSubscription(status=trialing)` com fim de trial calculado pelo plano e `OwnerUser`; não cria `Customer`, catálogo, pedido, pagamento ou invoice.
+- `subscriptions` registra provider-alvo de billing SaaS, por padrão Asaas, mas não chama API externa nem cria cobrança recorrente.
+- `subscriptions` pode expor `requires_payment_method` como requisito comercial do plano, mas `/plans/` e `/plans/signup/` não podem coletar dados de cartão.
+- `payments` é o único módulo que conhece adapters de provider de checkout de pedidos; Asaas e Pagar.me não devem vazar para `checkout` ou `orders` além de contratos normalizados.
+- corrida concorrente de slug/subdomínio deve ser tratada pelo command público como erro de formulário.
+- `coupons.Coupon` permanece tenant-scoped para cart/checkout/order e não deve validar plano SaaS.
+- provider de billing real, invoices e checkout de assinatura exigem boundary futura.
 
 ---
 
@@ -842,6 +871,12 @@ Dono: `customers`
 ## Product pricing
 Dono: `catalog` / `ProductVariant`
 
+- CRUD administrativo de produto pertence a `catalog.interfaces` como view fina e a `catalog.application.admin_product_commands` como boundary de escrita.
+- criação/edição administrativa deve persistir `Product` e a variante padrão, mantendo preço e estoque em `ProductVariant`.
+- writes administrativos de produto devem receber `tenant_id` explícito, validar unicidade de slug no tenant e SKU de variante, e registrar `AuditLog`.
+- permissão de escrita usa `catalog.manage` quando `request.owner_user`/role estiver disponível; `catalog.view` permanece para navegação/leitura da área.
+- a ação equivalente a delete deve desativar produto (`status=inactive`, `is_active=False`) e não remover o registro.
+
 ## Cart state
 Dono: `cart`
 
@@ -872,7 +907,9 @@ Dono: `reviews`
 Dono: `subscriptions`
 
 - fundação de plano/assinatura pertence a `subscriptions.models.SubscriptionPlan` e `subscriptions.models.TenantSubscription`.
+- cupom comercial de plano pertence a `subscriptions.models.SubscriptionCoupon`.
 - comandos de setup pertencem a `subscriptions.application.subscription_commands`.
+- validação e administração de cupom SaaS pertencem a `subscriptions.application.subscription_coupon_queries` e `subscriptions.application.subscription_coupon_commands`.
 - leitura admin pertence a `subscriptions.application.subscription_queries` e `subscriptions.interfaces`.
 - `subscriptions` não deve chamar pagamentos de pedido, checkout, cart ou shipping para decidir plano SaaS.
 - provider de billing real e enforcement de plano exigem trilhas próprias.
@@ -1086,6 +1123,7 @@ Este documento existe para manter o Hubx Market:
 - matriz de roles/permissões administrativas pertence a `accounts.application.admin_permissions`.
 - helpers de interface para extrair role/permissão de `request.owner_user` pertencem a `accounts.interfaces.admin_rbac`.
 - módulos operacionais podem consultar esse helper para renderizar actions, mas writes sensíveis devem continuar validando permissão no command service dono.
+- writes administrativos de `customers`, `orders` e `shipping` devem exigir `tenant_id` resolvido e role explícita com `customers.manage`, `orders.manage` ou `shipping.manage`; compatibilidade de leitura sem role não autoriza mudança de estado.
 - o cockpit `/ops/` pode personalizar navegação usando permissões de `accounts`, mas não deve criar regras próprias de autorização fora dessa matriz.
 - enforcement HTTP granular de `/ops/` pertence a `accounts.interfaces.middleware`.
 - módulos operacionais não devem implementar middleware próprio de RBAC para `/ops/`; devem manter validação de writes nos command services.

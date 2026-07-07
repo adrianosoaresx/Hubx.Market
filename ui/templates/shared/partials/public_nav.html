@@ -1,0 +1,31 @@
+<nav class="global-nav flex items-center gap-2 text-sm text-[var(--color-text-secondary)]" aria-label="{{ nav_label|default:'Navegação pública' }}">
+    <a href="{{ portal_href|default:'/' }}" class="global-nav-link" aria-label="Portal">
+        {% include "shared/partials/icon.html" with name="home" size="sm" %}
+        <span class="public-nav-label">Portal</span>
+    </a>
+    <a href="{{ plans_href|default:'/plans/' }}" class="global-nav-link" aria-label="Planos">
+        {% include "shared/partials/icon.html" with name="receipt-text" size="sm" %}
+        <span class="public-nav-label">Planos</span>
+    </a>
+    <a href="{{ demo_href|default:'/demo/' }}" class="global-nav-link" aria-label="Demo">
+        {% include "shared/partials/icon.html" with name="store" size="sm" %}
+        <span class="public-nav-label">Demo</span>
+    </a>
+    {% if request.is_demo_read_only or request.user.is_authenticated %}
+        <form method="post" action="/accounts/logout/" class="m-0">
+            {% csrf_token %}
+            {% if request.is_demo_read_only and request.GET.return_url %}
+                <input type="hidden" name="return_url" value="{{ request.GET.return_url }}">
+            {% endif %}
+            <button type="submit" class="global-nav-link" aria-label="Sair">
+                {% include "shared/partials/icon.html" with name="log-out" size="sm" %}
+                <span class="public-nav-label">Sair</span>
+            </button>
+        </form>
+    {% else %}
+        <a href="{{ login_href|default:'/accounts/login/' }}" class="global-nav-link" aria-label="Entrar">
+            {% include "shared/partials/icon.html" with name="log-in" size="sm" %}
+            <span class="public-nav-label">Entrar</span>
+        </a>
+    {% endif %}
+</nav>

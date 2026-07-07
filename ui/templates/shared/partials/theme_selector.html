@@ -1,0 +1,15 @@
+<div class="theme-selector" role="group" aria-label="Tema da interface">
+    <span class="theme-selector-label">Tema</span>
+    <button type="button" class="theme-selector-option" data-theme-option="light">
+        {% include "shared/partials/icon.html" with name="sun" size="sm" %}
+        <span>Claro</span>
+    </button>
+    <button type="button" class="theme-selector-option" data-theme-option="dark">
+        {% include "shared/partials/icon.html" with name="moon" size="sm" %}
+        <span>Escuro</span>
+    </button>
+    <button type="button" class="theme-selector-option" data-theme-option="system">
+        {% include "shared/partials/icon.html" with name="monitor" size="sm" %}
+        <span>Sistema</span>
+    </button>
+</div>

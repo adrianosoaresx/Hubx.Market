@@ -89,6 +89,43 @@ class CartStorefrontViewTests(TestCase):
         self.assertContains(response, "Pedido ainda não criado")
         self.assertContains(response, "Ir para checkout")
 
+    @override_settings(HUBX_MARKET_DEMO_TENANT_SUBDOMAIN="hubx-demo")
+    def test_demo_cart_page_renders_simulated_checkout_link_without_mutating_state(self):
+        demo_tenant = Tenant.objects.create(name="Hubx Demo", slug="hubx-demo", subdomain="hubx-demo")
+        demo_product = Product.objects.create(
+            tenant=demo_tenant,
+            name="Produto Demo Cart",
+            slug="produto-demo-cart",
+            brand_name="Hubx Demo",
+            category_label="Demo",
+            status=Product.Status.ACTIVE,
+            is_active=True,
+        )
+        ProductVariant.objects.create(
+            product=demo_product,
+            sku="DEMO-CART-001",
+            price="149.90",
+            compare_price="199.90",
+            stock=5,
+            reserved_stock=0,
+            is_default=True,
+        )
+
+        response = self.client.get(
+            reverse("cart:cart-page"),
+            {"demo_flow": "cart"},
+            HTTP_HOST="hubx-demo.hubx.market",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Carrinho demonstrativo")
+        self.assertContains(response, "Produto Demo Cart")
+        self.assertContains(response, "Simular checkout")
+        self.assertContains(response, 'href="/checkout/?demo_flow=checkout&amp;stage=review"')
+        self.assertContains(response, "nenhum estoque é alterado")
+        self.assertEqual(Cart.objects.filter(tenant=demo_tenant).count(), 0)
+        self.assertEqual(CheckoutSession.objects.filter(tenant=demo_tenant).count(), 0)
+
     def test_cart_page_post_updates_and_removes_items_by_tenant_session(self):
         self.client.get(reverse("cart:cart-page"), HTTP_HOST=self.storefront_host)
         session_key = self.client.session.session_key

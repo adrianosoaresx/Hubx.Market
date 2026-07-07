@@ -1,9 +1,9 @@
 {% if text %}
-<p class="text-sm text-[var(--color-text-secondary)]">
+<p {% if id %}id="{{ id }}"{% endif %} class="text-sm text-[var(--color-text-secondary)]">
     {{ text }}
 </p>
 {% elif help_text %}
-<p class="text-sm text-[var(--color-text-secondary)]">
+<p {% if id %}id="{{ id }}"{% endif %} class="text-sm text-[var(--color-text-secondary)]">
     {{ help_text }}
 </p>
 {% endif %}

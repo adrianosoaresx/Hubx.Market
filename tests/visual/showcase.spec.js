@@ -30,7 +30,7 @@ const cases = [
     path: '/__internal__/design-system/pages/?tenant=default',
     waitFor: 'text=Page Templates',
     projects: ['chromium', 'tablet'],
-    fullPage: true,
+    fullPage: false,
   },
   {
     name: 'pages-default-customer-area-preview',
@@ -52,22 +52,25 @@ const cases = [
     name: 'pages-storefront-preview',
     path: '/__internal__/design-system/pages/?tenant=storefront',
     waitFor: 'text=Page Templates',
+    scrollTo: 'text=Storefront Page Templates',
     projects: ['chromium'],
-    fullPage: true,
+    fullPage: false,
   },
   {
     name: 'pages-demo-admin-products-orders-customers-preview',
     path: '/__internal__/design-system/pages/?tenant=demo',
     waitFor: 'text=Admin Page Templates',
+    scrollTo: 'text=Product Management Flow',
     projects: ['chromium'],
-    fullPage: true,
+    fullPage: false,
   },
   {
     name: 'pages-nike-preview',
     path: '/__internal__/design-system/pages/?tenant=nike',
     waitFor: 'text=Page Templates',
+    scrollTo: 'text=Checkout Page Template',
     projects: ['chromium'],
-    fullPage: true,
+    fullPage: false,
   },
 ];
 

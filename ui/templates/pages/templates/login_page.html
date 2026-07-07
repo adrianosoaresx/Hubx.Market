@@ -26,7 +26,7 @@
         {% endblock %}
 
         {% if form_error %}
-            <p class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{{ form_error }}</p>
+            {% include "shared/components/feedback/alert.html" with variant="danger" title="Não foi possível entrar" description=form_error %}
         {% endif %}
 
         <div class="flex items-center justify-between gap-3 text-sm">

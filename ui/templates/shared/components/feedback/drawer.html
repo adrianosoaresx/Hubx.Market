@@ -1,24 +1,26 @@
 {% if open %}
-<div class="fixed inset-0 z-40 bg-slate-950/40"></div>
-<aside class="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col border-l border-[var(--color-border-default)] bg-[var(--color-surface-panel)] shadow-2xl">
-    <header class="flex items-start justify-between gap-4 border-b border-[var(--color-border-default)] px-6 py-4">
+{% with drawer_id=id|default:"ds-drawer" %}
+<div class="ds-drawer-backdrop"></div>
+<aside class="ds-drawer {% if size == 'lg' %}ds-drawer-lg{% endif %}" role="dialog" aria-modal="true" aria-labelledby="{{ drawer_id }}-title" {% if description %}aria-describedby="{{ drawer_id }}-description"{% endif %}>
+    <header class="ds-drawer-header">
         <div>
-            <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">{{ title|default:"Painel" }}</h2>
-            {% if description %}<p class="mt-1 text-sm text-[var(--color-text-secondary)]">{{ description }}</p>{% endif %}
+            <h2 id="{{ drawer_id }}-title" class="ds-drawer-title">{{ title|default:"Painel" }}</h2>
+            {% if description %}<p id="{{ drawer_id }}-description" class="ds-drawer-description">{{ description }}</p>{% endif %}
         </div>
         {% if dismissible %}
-            <button type="button" class="text-sm text-[var(--color-text-secondary)]">Fechar</button>
+            <button type="button" class="ds-drawer-dismiss" aria-label="Fechar painel">Fechar</button>
         {% endif %}
     </header>
 
-    <div class="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+    <div class="ds-drawer-body">
         {{ body|default:"Conteúdo do drawer" }}
     </div>
 
     {% if footer %}
-        <footer class="border-t border-[var(--color-border-default)] px-6 py-4">
+        <footer class="ds-drawer-footer">
             {{ footer }}
         </footer>
     {% endif %}
 </aside>
+{% endwith %}
 {% endif %}

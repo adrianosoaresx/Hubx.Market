@@ -28,6 +28,7 @@ Agents must always read:
 AGENTS.md
 PRODUCT_RULES.md
 ARCHITECTURE.md
+docs/implementation-inventory.md
 docs/ui/*
 docs/modules/*
 docs/data/*

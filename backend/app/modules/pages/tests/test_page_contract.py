@@ -1,8 +1,12 @@
+from io import StringIO
+
 from django.contrib.auth.models import User
-from django.test import TestCase, override_settings
+from django.core.management import call_command
+from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
 
 from app.modules.accounts.models import OwnerUser
+from app.modules.pages.interfaces.views import DesignSystemPagesView
 from app.modules.pages.application.admin_page_commands import admin_page_commands
 from app.modules.pages.application.admin_page_queries import admin_page_queries
 from app.modules.pages.application.storefront_page_queries import storefront_page_queries
@@ -88,6 +92,23 @@ class PageContractTests(TestCase):
             "Outro",
         )
 
+    def test_storefront_footer_links_use_only_published_pages_for_current_tenant(self):
+        Page.objects.create(tenant=self.tenant, slug="contato", title="Contato", status=Page.Status.PUBLISHED)
+        Page.objects.create(
+            tenant=self.tenant,
+            slug="politica-de-privacidade",
+            title="Política de privacidade",
+            status=Page.Status.PUBLISHED,
+        )
+        Page.objects.create(tenant=self.tenant, slug="rascunho", title="Rascunho", status=Page.Status.DRAFT)
+        Page.objects.create(tenant=self.other_tenant, slug="contato", title="Contato externo", status=Page.Status.PUBLISHED)
+
+        links = storefront_page_queries.list_footer_links(tenant_id=self.tenant.id)
+
+        self.assertEqual([link["slug"] for link in links], ["politica-de-privacidade", "contato"])
+        self.assertEqual(links[0]["href"], "/pages/politica-de-privacidade/")
+        self.assertEqual(links[1]["icon"], "mail")
+
     def test_storefront_view_renders_published_page(self):
         Page.objects.create(
             tenant=self.tenant,
@@ -106,6 +127,22 @@ class PageContractTests(TestCase):
         self.assertContains(response, "Conteúdo institucional")
         self.assertContains(response, "Conheça nossa curadoria")
 
+    def test_storefront_footer_renders_published_pages_from_context(self):
+        Page.objects.create(tenant=self.tenant, slug="contato", title="Contato", status=Page.Status.PUBLISHED)
+        Page.objects.create(tenant=self.tenant, slug="rascunho", title="Rascunho", status=Page.Status.DRAFT)
+        Page.objects.create(tenant=self.other_tenant, slug="contato", title="Contato externo", status=Page.Status.PUBLISHED)
+        Page.objects.create(tenant=self.tenant, slug="sobre", title="Sobre", status=Page.Status.PUBLISHED)
+
+        response = self.client.get(
+            reverse("storefront_pages:page-detail", kwargs={"page_slug": "sobre"}),
+            HTTP_HOST=self.host,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'href="/pages/contato/"')
+        self.assertNotContains(response, "Rascunho")
+        self.assertNotContains(response, "Contato externo")
+
     def test_storefront_view_hides_draft_and_other_tenant_page(self):
         Page.objects.create(tenant=self.tenant, slug="rascunho", title="Rascunho", status=Page.Status.DRAFT)
         Page.objects.create(tenant=self.other_tenant, slug="sobre", title="Outro", status=Page.Status.PUBLISHED)
@@ -121,6 +158,16 @@ class PageContractTests(TestCase):
 
         self.assertEqual(draft_response.status_code, 404)
         self.assertEqual(other_response.status_code, 404)
+
+    def test_design_system_pages_showcase_renders_checkout_preview(self):
+        request = RequestFactory().get("/__internal__/design-system/pages/?tenant=default")
+
+        response = DesignSystemPagesView.as_view()(request)
+        response.render()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Checkout Page Template", response.content.decode())
+        self.assertIn("Salvar entrega e seguir", response.content.decode())
 
     def test_admin_list_and_create_views(self):
         list_response = self.client.get(reverse("pages:admin-pages-list"), HTTP_HOST=self.host)
@@ -192,3 +239,24 @@ class PageContractTests(TestCase):
         self.assertEqual(page.title, "Sobre atualizado")
         self.assertEqual(page.slug, "sobre-atualizado")
         self.assertEqual(page.status, Page.Status.PUBLISHED)
+
+    def test_seed_demo_pages_command_creates_institutional_pages_idempotently(self):
+        output = StringIO()
+
+        call_command("seed_demo_pages", "--tenant-subdomain", self.tenant.subdomain, stdout=output)
+        call_command("seed_demo_pages", "--tenant-subdomain", self.tenant.subdomain, stdout=output)
+
+        pages = Page.objects.filter(
+            tenant=self.tenant,
+            slug__in=[
+                "sobre-a-loja",
+                "trocas-e-devolucoes",
+                "politica-de-privacidade",
+                "termos-de-uso",
+                "contato",
+            ],
+        )
+        self.assertEqual(pages.count(), 5)
+        self.assertEqual(pages.filter(status=Page.Status.PUBLISHED).count(), 5)
+        self.assertTrue(pages.filter(slug="trocas-e-devolucoes", title="Trocas e devoluções").exists())
+        self.assertIn("demo_pages_seeded", output.getvalue())

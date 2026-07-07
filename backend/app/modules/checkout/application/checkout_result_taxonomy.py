@@ -4,6 +4,9 @@ from __future__ import annotations
 CHECKOUT_RESULT_TAXONOMY = {
     "checkout-saved": ("progress", "success", "continue_session"),
     "checkout-save-unavailable": ("session", "warning", "restart_from_product"),
+    "checkout-shipping-quote-failed": ("shipping", "warning", "complete_current_session"),
+    "checkout-shipping-quote-unavailable": ("shipping", "warning", "restart_from_product"),
+    "checkout-shipping-method-invalid": ("shipping", "warning", "complete_current_session"),
     "checkout-completed": ("completion", "success", "view_order"),
     "checkout-completion-blocked": ("readiness", "warning", "complete_current_session"),
     "checkout-completion-unavailable": ("session", "warning", "restart_from_product"),

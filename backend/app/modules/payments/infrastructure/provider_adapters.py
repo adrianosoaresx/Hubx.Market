@@ -3,11 +3,13 @@ from __future__ import annotations
 import base64
 import json
 from dataclasses import dataclass
+from datetime import timedelta
 from decimal import Decimal, ROUND_HALF_UP
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from django.conf import settings
+from django.utils import timezone
 
 from app.modules.payments.application.gateway_bootstrap_commands import GatewayBootstrapContract
 from app.modules.payments.domain.provider_rollout import decide_provider_rollout
@@ -39,11 +41,29 @@ def _money_to_cents(value: object) -> int:
     return max(int(cents), 0)
 
 
+def _money_decimal(value: object) -> Decimal:
+    try:
+        return Decimal(str(value or "0.00")).quantize(Decimal("0.01"))
+    except Exception:
+        return Decimal("0.00")
+
+
 def _payment_method_list(payment_method_code: str) -> list[str]:
     normalized = _string(payment_method_code).lower()
     if normalized in {"credit_card", "pix", "boleto"}:
         return [normalized]
     return ["credit_card"]
+
+
+def _asaas_billing_type(payment_method_code: str) -> str:
+    normalized = _string(payment_method_code).lower()
+    if normalized == "pix":
+        return "PIX"
+    if normalized == "boleto":
+        return "BOLETO"
+    if normalized == "credit_card":
+        return "CREDIT_CARD"
+    return "UNDEFINED"
 
 
 def _payment_settings_payload(payment_method_code: str) -> dict[str, object]:
@@ -68,6 +88,14 @@ def _payment_settings_payload(payment_method_code: str) -> dict[str, object]:
             }
         }
     return settings
+
+
+def _safe_external_reference(contract: GatewayBootstrapContract) -> str:
+    tenant = _string(contract.metadata.get("tenant_subdomain") or contract.metadata.get("tenant_slug"))
+    order_number = _string(contract.order_number)
+    if tenant and order_number:
+        return f"hubx-market:{tenant}:{order_number}"[:120]
+    return _string(contract.provider_request_key)[:120]
 
 
 def _extract_response_value(payload: dict[str, object], *keys: str) -> str:
@@ -308,9 +336,172 @@ class PagarmeProviderAdapter:
         return payload
 
 
+class AsaasProviderAdapter:
+    provider_code = "asaas"
+    provider_label = "Asaas"
+
+    def create_intent(self, *, contract: GatewayBootstrapContract, attempt=None) -> ProviderIntentResponse:
+        api_key = _string(getattr(settings, "ASAAS_API_KEY", ""))
+        if not api_key:
+            raise ProviderAdapterError("asaas-api-key-missing")
+
+        customer_payload = self._build_customer_payload(contract=contract)
+        customer_response = self._request("POST", "/customers", customer_payload)
+        customer_id = _extract_response_value(customer_response, "id")
+        if not customer_id:
+            raise ProviderAdapterError("asaas-missing-customer-id")
+
+        payment_payload = self._build_payment_payload(
+            contract=contract,
+            attempt=attempt,
+            customer_id=customer_id,
+        )
+        payment_response = self._request("POST", "/payments", payment_payload)
+        action_url = _extract_response_value(payment_response, "invoiceUrl", "bankSlipUrl", "transactionReceiptUrl")
+        if not action_url:
+            raise ProviderAdapterError("asaas-missing-action-url")
+
+        external_reference = _extract_response_value(payment_response, "id")
+        if not external_reference:
+            external_reference = _safe_external_reference(contract)
+
+        return ProviderIntentResponse(
+            provider_code=self.provider_code,
+            provider_label=self.provider_label,
+            external_reference=external_reference,
+            action_url=action_url,
+            payload_snapshot={
+                "request": {
+                    "customer": _json_ready(customer_payload),
+                    "payment": _json_ready(payment_payload),
+                },
+                "response": {
+                    "customer": _json_ready(customer_response),
+                    "payment": _json_ready(payment_response),
+                },
+            },
+        )
+
+    def create_refund(self, *, contract: RefundProviderContract) -> RefundProviderResponse:
+        api_key = _string(getattr(settings, "ASAAS_API_KEY", ""))
+        if not api_key:
+            raise ProviderAdapterError("asaas-api-key-missing")
+        payment_id = _string(contract.external_reference)
+        if not payment_id:
+            raise ProviderAdapterError("asaas-refund-payment-id-missing")
+
+        payload = self._build_refund_payload(contract=contract)
+        response_payload = self._request("POST", f"/payments/{payment_id}/refund", payload)
+        provider_refund_reference = _extract_response_value(
+            response_payload,
+            "id",
+            "refundId",
+            "paymentId",
+        )
+        if not provider_refund_reference:
+            provider_refund_reference = f"asaas-refund-{payment_id}-{_string(contract.refund_key)}"
+
+        return RefundProviderResponse(
+            provider_code=self.provider_code,
+            provider_refund_reference=provider_refund_reference,
+            status=self._refund_response_status(response_payload),
+            payload_snapshot={
+                "request": _json_ready(payload),
+                "response": _json_ready(response_payload),
+            },
+        )
+
+    def _request(self, method: str, path: str, payload: dict[str, object] | None = None) -> dict[str, object]:
+        body = json.dumps(_compact(_json_ready(payload or {}))).encode("utf-8")
+        request = Request(
+            url=f'{_string(getattr(settings, "ASAAS_BASE_URL", "https://api-sandbox.asaas.com/v3")).rstrip("/")}{path}',
+            data=body if method != "GET" else None,
+            headers={
+                "access_token": _string(getattr(settings, "ASAAS_API_KEY", "")),
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "User-Agent": "hubx.market/0.1",
+            },
+            method=method,
+        )
+        timeout = float(getattr(settings, "ASAAS_HTTP_TIMEOUT_SECONDS", 15) or 15)
+        try:
+            with urlopen(request, timeout=timeout) as response:
+                return json.loads(response.read().decode("utf-8") or "{}")
+        except HTTPError as exc:
+            body_text = exc.read().decode("utf-8", errors="ignore")
+            raise ProviderAdapterError(body_text or f"asaas-http-{exc.code}") from exc
+        except URLError as exc:
+            raise ProviderAdapterError("asaas-network-unavailable") from exc
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ProviderAdapterError("asaas-invalid-json-response") from exc
+
+    def _build_customer_payload(self, *, contract: GatewayBootstrapContract) -> dict[str, object]:
+        fallback_name = f"Cliente pedido {contract.order_number}" if _string(contract.order_number) else "Cliente Hubx Market"
+        return {
+            "name": _normalize_title(contract.customer_name, fallback=fallback_name),
+            "email": _string(contract.customer_email),
+            "externalReference": _safe_external_reference(contract),
+        }
+
+    def _build_payment_payload(self, *, contract: GatewayBootstrapContract, attempt=None, customer_id: str) -> dict[str, object]:
+        payment_method_code = getattr(attempt, "payment_method_code", "")
+        due_date = timezone.localdate()
+        if _string(payment_method_code).lower() == "boleto":
+            due_date = due_date + timedelta(days=3)
+        return {
+            "customer": customer_id,
+            "billingType": _asaas_billing_type(str(payment_method_code or "")),
+            "value": Decimal(str(contract.amount or "0.00")),
+            "dueDate": due_date.isoformat(),
+            "description": _normalize_title(f"Pedido #{contract.order_number} - Hubx Market", fallback="Pedido Hubx Market"),
+            "externalReference": _safe_external_reference(contract),
+        }
+
+    def _build_refund_payload(self, *, contract: RefundProviderContract) -> dict[str, object]:
+        payload: dict[str, object] = {
+            "description": _normalize_title(
+                contract.reason_code or f"Refund {contract.refund_key}",
+                fallback="Refund Hubx Market",
+            ),
+        }
+        amount = _money_decimal(contract.amount)
+        if amount > Decimal("0.00"):
+            payload["value"] = amount
+        return payload
+
+    def _refund_response_status(self, payload: dict[str, object]) -> str:
+        status = _extract_response_value(payload, "status", "refundStatus").upper()
+        if status in {"DONE", "REFUNDED", "SUCCEEDED", "SUCCESS"}:
+            return "succeeded"
+        if status in {"CANCELLED", "CANCELED", "FAILED", "ERROR"}:
+            return "failed"
+        return "accepted"
+
+
+def _compact(data: dict[str, object]) -> dict[str, object]:
+    return {key: value for key, value in data.items() if value not in ("", None, [])}
+
+
+def _json_ready(value):
+    if isinstance(value, Decimal):
+        return float(value)
+    if isinstance(value, dict):
+        return {key: _json_ready(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_json_ready(item) for item in value]
+    return value
+
+
 def get_provider_adapter(*, provider_code: str, tenant=None):
     normalized_provider = _string(provider_code).lower()
     rollout = decide_provider_rollout(provider_code=normalized_provider, tenant=tenant)
+    if (
+        normalized_provider == "asaas"
+        and rollout.allow_real_provider
+        and _string(getattr(settings, "ASAAS_API_KEY", ""))
+    ):
+        return AsaasProviderAdapter()
     if (
         normalized_provider == "pagarme"
         and rollout.allow_real_provider

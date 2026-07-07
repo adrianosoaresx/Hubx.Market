@@ -6,6 +6,7 @@ from django.core.paginator import Paginator
 from django.conf import settings
 from django.http import HttpResponseRedirect
 from django.http import HttpResponse, HttpResponseNotFound
+from django.middleware.csrf import get_token
 from django.urls import reverse
 from django.utils.html import format_html, format_html_join
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -13,9 +14,12 @@ from django.utils.safestring import mark_safe
 from django.views import View
 from django.views.generic import TemplateView
 
+from app.modules.accounts.application.admin_permissions import PERMISSION_SHIPPING_MANAGE
+from app.modules.accounts.interfaces.admin_rbac import request_admin_can, request_owner_role
 from app.modules.shipping.application.admin_shipment_queries import AdminShipmentItem, admin_shipment_queries
 from app.modules.shipping.application.admin_provider_settings import admin_provider_settings
 from app.modules.shipping.application.shipment_commands import shipment_commands
+from app.modules.shipping.application.shipment_label_queries import shipment_label_queries
 from app.modules.shipping.application.shipping_metrics_queries import shipping_metrics_queries
 
 
@@ -58,12 +62,17 @@ def _action_feedback(result: str) -> str:
         "shipment-delivery-blocked": "Entrega bloqueada: marque a remessa como enviada antes de concluir.",
         "shipment-order-not-found": "Ação ignorada: pedido não encontrado neste tenant.",
         "shipment-not-found": "Ação ignorada: shipment ainda não existe para este pedido.",
+        "shipment-label-generated": "Etiqueta logística gerada para impressão.",
+        "shipment-label-already-generated": "Nenhuma alteração aplicada: etiqueta já estava gerada.",
         "shipment-action-invalid": "Ação ignorada: operação logística inválida.",
+        "shipment-permission-denied": "Permissão insuficiente para alterar shipping.",
+        "shipment-tenant-missing": "Tenant ausente: ação logística não aplicada.",
         "provider-settings-updated": "Configuração do provider de tracking atualizada.",
         "provider-settings-base-url-required": "Informe a base URL para ativar o provider HTTP.",
         "provider-settings-timeout-invalid": "Timeout inválido: informe um número maior que zero.",
         "provider-settings-invalid-provider": "Provider inválido.",
         "provider-settings-tenant-missing": "Tenant ausente: configuração não aplicada.",
+        "provider-settings-permission-denied": "Permissão insuficiente para alterar provider de shipping.",
     }.get(result, "")
 
 
@@ -84,6 +93,16 @@ def _shipment_tracking_cell(item: AdminShipmentItem) -> str:
     return details or "Sem rastreio"
 
 
+def _shipment_label_cell(item: AdminShipmentItem) -> str:
+    if not item.label_code:
+        return "Sem etiqueta"
+    return format_html(
+        '<a class="ds-btn ds-btn-secondary ds-btn-sm" href="{}" target="_blank" rel="noopener noreferrer">{}</a>',
+        item.label_url,
+        item.label_code,
+    )
+
+
 def _shipment_history_cell(item: AdminShipmentItem) -> str:
     if not item.history_summary:
         return "Sem histórico"
@@ -97,31 +116,56 @@ def _shipment_history_cell(item: AdminShipmentItem) -> str:
     )
 
 
-def _shipment_actions_cell(item: AdminShipmentItem, *, current_url: str) -> str:
+def _shipment_actions_cell(item: AdminShipmentItem, *, current_url: str, csrf_token: str) -> str:
     action_url = reverse("shipping:admin-shipping-action", kwargs={"order_number": item.order_number})
+    forms = []
+    if not item.label_code:
+        forms.append(
+            format_html(
+                '<form method="post" action="{}" class="inline-flex">'
+                '<input type="hidden" name="csrfmiddlewaretoken" value="{}" />'
+                '<input type="hidden" name="action_type" value="generate_label" />'
+                '<input type="hidden" name="next" value="{}" />'
+                '<button type="submit" class="ds-btn ds-btn-secondary ds-btn-sm">Gerar etiqueta</button>'
+                "</form>",
+                action_url,
+                csrf_token,
+                current_url,
+            )
+        )
     if item.shipment_status in {"missing", "created"}:
-        return format_html(
-            '<form method="post" action="{}" class="flex flex-col gap-2">'
-            '<input type="hidden" name="action_type" value="mark_sent" />'
-            '<input type="hidden" name="next" value="{}" />'
-            '<input name="tracking_code" class="rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-surface-raised)] px-3 py-2 text-sm" placeholder="Código de rastreio" />'
-            '<input name="carrier_name" class="rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-surface-raised)] px-3 py-2 text-sm" placeholder="Transportadora" />'
-            '<button type="submit" class="ds-btn-secondary">Marcar enviado</button>'
-            "</form>",
-            action_url,
-            current_url,
+        forms.append(
+            format_html(
+                '<form method="post" action="{}" class="flex flex-col gap-2">'
+                '<input type="hidden" name="csrfmiddlewaretoken" value="{}" />'
+                '<input type="hidden" name="action_type" value="mark_sent" />'
+                '<input type="hidden" name="next" value="{}" />'
+                '<input name="tracking_code" class="rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-surface-raised)] px-3 py-2 text-sm" placeholder="Código de rastreio" />'
+                '<input name="carrier_name" class="rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-surface-raised)] px-3 py-2 text-sm" placeholder="Transportadora" />'
+                '<button type="submit" class="ds-btn ds-btn-secondary ds-btn-sm">Marcar enviado</button>'
+                "</form>",
+                action_url,
+                csrf_token,
+                current_url,
+            )
         )
-    if item.shipment_status == "sent":
-        return format_html(
-            '<form method="post" action="{}" class="inline-flex">'
-            '<input type="hidden" name="action_type" value="mark_delivered" />'
-            '<input type="hidden" name="next" value="{}" />'
-            '<button type="submit" class="ds-btn-secondary">Confirmar entrega</button>'
-            "</form>",
-            action_url,
-            current_url,
+    elif item.shipment_status == "sent":
+        forms.append(
+            format_html(
+                '<form method="post" action="{}" class="inline-flex">'
+                '<input type="hidden" name="csrfmiddlewaretoken" value="{}" />'
+                '<input type="hidden" name="action_type" value="mark_delivered" />'
+                '<input type="hidden" name="next" value="{}" />'
+                '<button type="submit" class="ds-btn ds-btn-secondary ds-btn-sm">Confirmar entrega</button>'
+                "</form>",
+                action_url,
+                csrf_token,
+                current_url,
+            )
         )
-    return "Sem ação pendente"
+    if not forms:
+        return "Sem ação pendente"
+    return format_html('<div class="flex flex-col gap-2">{}</div>', format_html_join("", "{}", ((form,) for form in forms)))
 
 
 def _resolve_next_target(*, request, result: str) -> str:
@@ -145,6 +189,7 @@ class AdminShippingListView(TemplateView):
         search_value = self.request.GET.get("q", "").strip()
         result = self.request.GET.get("result", "").strip()
         shipments = admin_shipment_queries.list_shipments(tenant_id=_request_tenant_id(self.request), search=search_value)
+        can_manage_shipping = request_admin_can(self.request, PERMISSION_SHIPPING_MANAGE)
         paginator = Paginator(shipments, 20)
         page_obj = paginator.get_page(self.request.GET.get("page") or 1)
         base_url = reverse("shipping:admin-shipping-list")
@@ -171,6 +216,7 @@ class AdminShippingListView(TemplateView):
                     {"label": "Pedido"},
                     {"label": "Shipment"},
                     {"label": "Rastreio"},
+                    {"label": "Etiqueta"},
                     {"label": "Histórico"},
                     {"label": "Ações"},
                 ],
@@ -182,8 +228,17 @@ class AdminShippingListView(TemplateView):
                             item.order_status or "Indisponível",
                             _shipment_status_label(item.shipment_status),
                             _shipment_tracking_cell(item),
+                            _shipment_label_cell(item),
                             _shipment_history_cell(item),
-                            _shipment_actions_cell(item, current_url=self.request.get_full_path()),
+                            (
+                                _shipment_actions_cell(
+                                    item,
+                                    current_url=self.request.get_full_path(),
+                                    csrf_token=get_token(self.request),
+                                )
+                                if can_manage_shipping
+                                else "Sem permissão para alterar shipping"
+                            ),
                         ]
                     }
                     for item in page_obj.object_list
@@ -213,18 +268,51 @@ class AdminShippingActionView(View):
                 tracking_code=request.POST.get("tracking_code", ""),
                 tracking_url=request.POST.get("tracking_url", ""),
                 carrier_name=request.POST.get("carrier_name", ""),
+                actor_role=request_owner_role(request),
             )
         elif action_type == "mark_delivered":
             result = shipment_commands.mark_shipment_delivered(
                 tenant_id=_request_tenant_id(request),
                 order_number=order_number,
+                actor_role=request_owner_role(request),
+            )
+        elif action_type == "generate_label":
+            result = shipment_commands.generate_shipping_label(
+                tenant_id=_request_tenant_id(request),
+                order_number=order_number,
+                actor_role=request_owner_role(request),
             )
         else:
             result = "shipment-action-invalid"
         return HttpResponseRedirect(_resolve_next_target(request=request, result=result))
 
 
-def _provider_settings_form_cell(settings_item, *, current_url: str) -> str:
+class AdminShippingLabelView(View):
+    http_method_names = ["get"]
+
+    def get(self, request, order_number: str):
+        label = shipment_label_queries.get_label(tenant_id=_request_tenant_id(request), order_number=order_number)
+        if label is None:
+            return HttpResponseNotFound("Etiqueta não encontrada.")
+        content = "\n".join(
+            [
+                "HUBX MARKET - ETIQUETA LOGISTICA",
+                f"Etiqueta: {label['label_code']}",
+                f"Pedido: #{label['order_number']}",
+                f"Loja: {label['store_name']}",
+                f"Destinatario: {label['customer_name'] or label['customer_email']}",
+                f"E-mail: {label['customer_email']}",
+                f"Endereco: {label['shipping_address'] or 'Endereco nao informado'}",
+                f"Transportadora: {label['carrier_name']}",
+                f"Rastreio: {label['tracking_code'] or 'A definir'}",
+                f"Gerada em: {label['label_created_at']}",
+                "",
+            ]
+        )
+        return HttpResponse(content, content_type="text/plain; charset=utf-8")
+
+
+def _provider_settings_form_cell(settings_item, *, current_url: str, csrf_token: str) -> str:
     action_url = reverse("shipping:admin-shipping-provider-update")
     active_checked = mark_safe(' checked="checked"') if settings_item.is_active else ""
     manual_selected = mark_safe(' selected="selected"') if settings_item.provider_name == "manual" else ""
@@ -232,6 +320,7 @@ def _provider_settings_form_cell(settings_item, *, current_url: str) -> str:
     token_placeholder = "Token já configurado; preencha apenas para trocar" if settings_item.token_configured else "Novo token opcional"
     return format_html(
         '<form method="post" action="{}" class="grid gap-2 md:grid-cols-2">'
+        '<input type="hidden" name="csrfmiddlewaretoken" value="{}" />'
         '<input type="hidden" name="next" value="{}" />'
         '<label class="flex flex-col gap-1 text-xs text-[var(--color-text-secondary)]">Provider'
         '<select name="provider_name" class="rounded-lg border border-[var(--color-border-primary)] bg-[var(--color-surface-raised)] px-3 py-2 text-sm">'
@@ -247,9 +336,10 @@ def _provider_settings_form_cell(settings_item, *, current_url: str) -> str:
         '<label class="flex items-center gap-2 text-sm text-[var(--color-text-primary)] md:col-span-2">'
         '<input type="checkbox" name="is_active" value="1"{} /> Ativo'
         '</label>'
-        '<button type="submit" class="ds-btn-secondary md:col-span-2">Salvar provider</button>'
+        '<button type="submit" class="ds-btn ds-btn-secondary ds-btn-md md:col-span-2">Salvar provider</button>'
         '</form>',
         action_url,
+        csrf_token,
         current_url,
         manual_selected,
         http_selected,
@@ -280,6 +370,7 @@ class AdminShippingProviderSettingsView(TemplateView):
         context = super().get_context_data(**kwargs)
         result = self.request.GET.get("result", "").strip()
         settings_item = admin_provider_settings.get_settings_item(tenant_id=_request_tenant_id(self.request))
+        can_manage_shipping = request_admin_can(self.request, PERMISSION_SHIPPING_MANAGE)
         base_url = reverse("shipping:admin-shipping-provider")
         context.update(
             {
@@ -303,7 +394,15 @@ class AdminShippingProviderSettingsView(TemplateView):
                             "Configurado" if settings_item.token_configured else "Não configurado",
                             "Sim" if settings_item.is_active else "Não",
                             _provider_settings_history_cell(settings_item),
-                            _provider_settings_form_cell(settings_item, current_url=self.request.get_full_path()),
+                            (
+                                _provider_settings_form_cell(
+                                    settings_item,
+                                    current_url=self.request.get_full_path(),
+                                    csrf_token=get_token(self.request),
+                                )
+                                if can_manage_shipping
+                                else "Sem permissão para alterar provider de shipping"
+                            ),
                         ]
                     }
                 ],
@@ -331,6 +430,7 @@ class AdminShippingProviderSettingsActionView(View):
             api_token=request.POST.get("api_token", ""),
             timeout_seconds=request.POST.get("timeout_seconds", ""),
             is_active=str(request.POST.get("is_active", "")).strip() == "1",
+            actor_role=request_owner_role(request),
         )
         default_target = reverse("shipping:admin-shipping-provider")
         next_target = str(request.POST.get("next", "") or "").strip()

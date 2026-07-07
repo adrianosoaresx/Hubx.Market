@@ -18,13 +18,13 @@ from app.modules.tenants.application.tenant_onboarding_queries import tenant_onb
 
 def _status_badge(tenant: dict[str, object]) -> str:
     variant_classes = {
-        "success": "bg-emerald-100 text-emerald-800",
-        "warning": "bg-amber-100 text-amber-800",
-        "danger": "bg-rose-100 text-rose-800",
+        "success": "ds-badge-success",
+        "warning": "ds-badge-warning",
+        "danger": "ds-badge-danger",
     }
     return format_html(
-        '<span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium {}">{}</span>',
-        variant_classes.get(str(tenant["status_variant"]), "bg-slate-100 text-slate-700"),
+        '<span class="ds-badge ds-badge-xs {}">{}</span>',
+        variant_classes.get(str(tenant["status_variant"]), "ds-badge-neutral"),
         tenant["status_label"],
     )
 
@@ -412,7 +412,7 @@ class TenantOnboardingCreateView(TemplateView):
             "values": {
                 "store_name": values.get("store_name", ""),
                 "store_display_name": values.get("store_display_name", ""),
-                "primary_color": values.get("primary_color", "#4f46e5"),
+                "primary_color": values.get("primary_color", "#9a6410"),
             },
             "errors": errors,
             "form_error": errors.get("__all__", ""),

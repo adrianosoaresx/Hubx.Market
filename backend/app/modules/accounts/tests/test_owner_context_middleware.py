@@ -16,7 +16,9 @@ def owner_probe_view(request):
 
 urlpatterns = [
     path("ops/owner-probe/", owner_probe_view),
+    path("ops/api-keys/probe/", owner_probe_view),
     path("ops/platform/onboarding/probe/", owner_probe_view),
+    path("ops/subscriptions/probe/", owner_probe_view),
     path("accounts/owner-probe/", owner_probe_view),
 ]
 
@@ -135,6 +137,27 @@ class OwnerContextMiddlewareTests(TestCase):
         response = self.client.get("/ops/platform/onboarding/probe/", HTTP_HOST="hubx.market")
 
         self.assertEqual(response.status_code, 403)
+
+    @override_settings(
+        HUBX_MARKET_ROOT_DOMAIN="hubx.market",
+        ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver"],
+        HUBX_OPS_AUTH_GATE_ENFORCED=True,
+    )
+    def test_ops_gate_covers_api_keys_and_subscriptions_prefixes(self):
+        OwnerUser.objects.create(
+            tenant=self.tenant,
+            email="support.context@hubx.market",
+            role="support",
+            is_active=True,
+        )
+        user = User.objects.create_user(username="support-prefix", email="support.context@hubx.market", password="secret")
+        self.client.force_login(user)
+
+        api_keys_response = self.client.get("/ops/api-keys/probe/", HTTP_HOST=self.host)
+        subscriptions_response = self.client.get("/ops/subscriptions/probe/", HTTP_HOST=self.host)
+
+        self.assertEqual(api_keys_response.status_code, 403)
+        self.assertEqual(subscriptions_response.status_code, 200)
 
     def test_ignores_inactive_or_cross_tenant_owner(self):
         other_tenant = Tenant.objects.create(name="Outra Owner Context", slug="outra-owner-context", subdomain="outra-owner-context")

@@ -1,41 +1,46 @@
 <nav class="global-nav flex items-center gap-3 text-sm text-[var(--color-text-secondary)]" aria-label="Navegação principal">
     {% if is_platform_admin_shell %}
-        <a href="/" class="global-nav-link rounded-lg px-3 py-2 hover:bg-slate-100 hover:text-[var(--color-text-primary)]">
+        <a href="/" class="global-nav-link">
             {% include "shared/partials/icon.html" with name="home" size="sm" %}
             <span>Portal</span>
         </a>
-        <a href="/ops/platform/tenants/" class="global-nav-link rounded-lg px-3 py-2 hover:bg-slate-100 hover:text-[var(--color-text-primary)]">
-            {% include "shared/partials/icon.html" with name="store" size="sm" %}
-            <span>Lojas</span>
-        </a>
-        <a href="/ops/platform/onboarding/" class="global-nav-link rounded-lg px-3 py-2 hover:bg-slate-100 hover:text-[var(--color-text-primary)]">
-            {% include "shared/partials/icon.html" with name="list" size="sm" %}
-            <span>Onboarding</span>
-        </a>
+        {% for item in platform_nav_items %}
+            <a href="{{ item.href }}" class="global-nav-link">
+                {% include "shared/partials/icon.html" with name=item.icon size="sm" %}
+                <span>{{ item.label }}</span>
+            </a>
+        {% endfor %}
     {% else %}
-        <a href="/" class="global-nav-link rounded-lg px-3 py-2 hover:bg-slate-100 hover:text-[var(--color-text-primary)]">
+        <a href="/" class="global-nav-link">
             {% include "shared/partials/icon.html" with name="home" size="sm" %}
             <span>Início</span>
         </a>
-        <a href="/catalog/" class="global-nav-link rounded-lg px-3 py-2 hover:bg-slate-100 hover:text-[var(--color-text-primary)]">
+        <a href="/catalog/" class="global-nav-link">
             {% include "shared/partials/icon.html" with name="shopping-bag" size="sm" %}
             <span>Loja</span>
         </a>
-        <a href="/accounts/account/orders/" class="global-nav-link rounded-lg px-3 py-2 hover:bg-slate-100 hover:text-[var(--color-text-primary)]">
+        <a href="/cart/{% if request.is_demo_read_only %}?demo_flow=cart{% endif %}" class="global-nav-link">
+            {% include "shared/partials/icon.html" with name="shopping-cart" size="sm" %}
+            <span>Carrinho</span>
+        </a>
+        <a href="/accounts/account/orders/" class="global-nav-link">
             {% include "shared/partials/icon.html" with name="receipt-text" size="sm" %}
             <span>Pedidos</span>
         </a>
     {% endif %}
-    {% if request.user.is_authenticated %}
+    {% if request.is_demo_read_only or request.user.is_authenticated %}
         <form method="post" action="/accounts/logout/" class="m-0">
             {% csrf_token %}
-            <button type="submit" class="global-nav-link rounded-lg px-3 py-2 hover:bg-slate-100 hover:text-[var(--color-text-primary)]">
+            {% if request.is_demo_read_only and request.GET.return_url %}
+                <input type="hidden" name="return_url" value="{{ request.GET.return_url }}">
+            {% endif %}
+            <button type="submit" class="global-nav-link">
                 {% include "shared/partials/icon.html" with name="log-out" size="sm" %}
                 <span>Sair</span>
             </button>
         </form>
     {% else %}
-        <a href="/accounts/login/" class="global-nav-link rounded-lg px-3 py-2 hover:bg-slate-100 hover:text-[var(--color-text-primary)]">
+        <a href="/accounts/login/" class="global-nav-link">
             {% include "shared/partials/icon.html" with name="log-in" size="sm" %}
             <span>Entrar</span>
         </a>

@@ -8,6 +8,10 @@ from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
 
 from app.modules.accounts.application.account_page_queries import account_page_queries
+from app.modules.accounts.application.demo_session_login_commands import (
+    DEMO_SESSION_RETURN_URL_KEY,
+    DEMO_SESSION_SOURCE_KEY,
+)
 from app.modules.accounts.application.owner_session_policy import (
     OWNER_SESSION_KIND_KEY,
     OWNER_SESSION_REMEMBERED_KEY,
@@ -578,6 +582,201 @@ class OwnerLoginViewTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.user.refresh_from_db()
         self.assertFalse(self.user.check_password("OwnerPass-12345"))
+
+
+@override_settings(
+    ALLOWED_HOSTS=["testserver", ".hubx.market", ".localhost", "localhost"],
+    HUBX_MARKET_DEMO_TENANT_SUBDOMAIN="hubx-demo",
+)
+class DemoSessionLoginViewTests(TestCase):
+    def setUp(self):
+        self.tenant = Tenant.objects.create(
+            name="Hubx Demo",
+            slug="hubx-demo",
+            subdomain="hubx-demo",
+            is_active=True,
+        )
+        self.admin_user = User.objects.create_user(
+            username="demo-admin",
+            email="admin@hubx-demo.market",
+            password="unused-pass",
+        )
+        self.owner = OwnerUser.objects.create(
+            tenant=self.tenant,
+            email="admin@hubx-demo.market",
+            full_name="Admin Demo",
+            role="owner",
+            is_active=True,
+        )
+        self.customer = Customer.objects.create(
+            tenant=self.tenant,
+            slug="cliente-demo",
+            full_name="Cliente Demo",
+            email="cliente@hubx-demo.market",
+            status=Customer.Status.ACTIVE,
+        )
+        self.profile = AccountProfile.objects.create(
+            tenant=self.tenant,
+            customer=self.customer,
+            email="cliente@hubx-demo.market",
+            first_name="Cliente",
+            last_name="Demo",
+            is_active=True,
+        )
+        self.customer_user = User.objects.create_user(
+            username="demo-customer",
+            email="cliente@hubx-demo.market",
+            password="unused-pass",
+        )
+
+    def test_demo_session_login_admin_authenticates_directly_and_redirects_to_ops(self):
+        response = self.client.get(
+            reverse("accounts:demo-session-login"),
+            {"profile": "admin"},
+            HTTP_HOST="hubx-demo.hubx.market",
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], "/ops/")
+        self.assertEqual(str(self.client.session[SESSION_KEY]), str(self.admin_user.id))
+        self.assertEqual(self.client.session[OWNER_SESSION_KIND_KEY], "owner")
+        self.assertFalse(self.client.session[OWNER_SESSION_REMEMBERED_KEY])
+        self.assertEqual(self.client.session[DEMO_SESSION_SOURCE_KEY], "public-demo")
+        self.assertNotIn(DEMO_SESSION_RETURN_URL_KEY, self.client.session)
+        self.assertNotIn("hubx_account_session_kind", self.client.session)
+
+    def test_demo_session_login_customer_authenticates_directly_and_redirects_to_storefront(self):
+        response = self.client.get(
+            reverse("accounts:demo-session-login"),
+            {"profile": "customer"},
+            HTTP_HOST="hubx-demo.hubx.market",
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], "/")
+        self.assertEqual(str(self.client.session[SESSION_KEY]), str(self.customer_user.id))
+        self.assertEqual(self.client.session["hubx_account_profile_id"], self.profile.id)
+        self.assertEqual(self.client.session["hubx_account_session_kind"], "customer")
+        self.assertEqual(self.client.session[DEMO_SESSION_SOURCE_KEY], "public-demo")
+        self.assertNotIn(DEMO_SESSION_RETURN_URL_KEY, self.client.session)
+        self.assertNotIn(OWNER_SESSION_KIND_KEY, self.client.session)
+
+    def test_demo_session_login_stores_safe_central_return_url(self):
+        return_url = "http://hubx.market/demo/"
+
+        response = self.client.get(
+            reverse("accounts:demo-session-login"),
+            {"profile": "admin", "return_url": return_url},
+            HTTP_HOST="hubx-demo.hubx.market",
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(self.client.session[DEMO_SESSION_RETURN_URL_KEY], return_url)
+
+    def test_demo_session_login_ignores_unsafe_return_url(self):
+        response = self.client.get(
+            reverse("accounts:demo-session-login"),
+            {"profile": "admin", "return_url": "https://evil.example/demo/"},
+            HTTP_HOST="hubx-demo.hubx.market",
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(self.client.session[DEMO_SESSION_SOURCE_KEY], "public-demo")
+        self.assertNotIn(DEMO_SESSION_RETURN_URL_KEY, self.client.session)
+
+    def test_demo_admin_logout_returns_to_central_demo_entry(self):
+        self.client.get(
+            reverse("accounts:demo-session-login"),
+            {"profile": "admin"},
+            HTTP_HOST="hubx-demo.hubx.market",
+        )
+
+        response = self.client.post(reverse("accounts:logout"), HTTP_HOST="hubx-demo.hubx.market")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], "http://hubx.market/demo/")
+        self.assertNotIn(SESSION_KEY, self.client.session)
+
+    def test_demo_logout_without_authenticated_session_returns_to_central_demo_entry(self):
+        response = self.client.post(reverse("accounts:logout"), HTTP_HOST="hubx-demo.hubx.market")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], "http://hubx.market/demo/")
+        self.assertNotIn(SESSION_KEY, self.client.session)
+
+    @override_settings(HUBX_MARKET_ROOT_DOMAIN="hubx.market")
+    def test_demo_logout_without_authenticated_session_uses_safe_return_url(self):
+        return_url = "http://127.0.0.1:8002/demo/"
+
+        response = self.client.post(
+            reverse("accounts:logout"),
+            {"return_url": return_url},
+            HTTP_HOST="hubx-demo.localhost:8002",
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], return_url)
+        self.assertNotIn(SESSION_KEY, self.client.session)
+
+    @override_settings(HUBX_MARKET_ROOT_DOMAIN="hubx.market")
+    def test_demo_customer_logout_returns_to_exact_local_demo_entry(self):
+        return_url = "http://127.0.0.1:8002/demo/"
+        self.client.get(
+            reverse("accounts:demo-session-login"),
+            {"profile": "customer", "return_url": return_url},
+            HTTP_HOST="hubx-demo.localhost:8002",
+        )
+
+        response = self.client.post(reverse("accounts:logout"), HTTP_HOST="hubx-demo.localhost:8002")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], return_url)
+        self.assertNotIn(SESSION_KEY, self.client.session)
+
+    def test_demo_logout_with_unsafe_return_url_falls_back_to_central_demo_entry(self):
+        self.client.get(
+            reverse("accounts:demo-session-login"),
+            {"profile": "admin", "return_url": "https://evil.example/demo/"},
+            HTTP_HOST="hubx-demo.hubx.market",
+        )
+
+        response = self.client.post(reverse("accounts:logout"), HTTP_HOST="hubx-demo.hubx.market")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], "http://hubx.market/demo/")
+        self.assertNotIn(SESSION_KEY, self.client.session)
+
+    @override_settings(HUBX_MARKET_ROOT_DOMAIN="hubx.market")
+    def test_demo_session_login_works_on_localhost_demo_subdomain(self):
+        response = self.client.get(
+            reverse("accounts:demo-session-login"),
+            {"profile": "admin"},
+            HTTP_HOST="hubx-demo.localhost:8002",
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], "/ops/")
+        self.assertEqual(str(self.client.session[SESSION_KEY]), str(self.admin_user.id))
+
+    def test_demo_session_login_rejects_central_host_without_demo_tenant_context(self):
+        response = self.client.get(
+            reverse("accounts:demo-session-login"),
+            {"profile": "admin"},
+            HTTP_HOST="hubx.market",
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertNotIn(SESSION_KEY, self.client.session)
+
+    def test_demo_session_login_rejects_unknown_profile(self):
+        response = self.client.get(
+            reverse("accounts:demo-session-login"),
+            {"profile": "support"},
+            HTTP_HOST="hubx-demo.hubx.market",
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertNotIn(SESSION_KEY, self.client.session)
 
 
 class AccountPersistedReadTests(TestCase):

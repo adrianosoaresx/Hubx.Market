@@ -96,6 +96,9 @@ class CustomerAreaViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "pages/templates/profile_page.html")
         self.assertContains(response, "Meu perfil")
+        self.assertContains(response, "account-customer-sidebar")
+        self.assertContains(response, 'aria-label="Navegação da área do cliente"')
+        self.assertContains(response, 'href="/accounts/account/profile/"')
         self.assertNotContains(response, "ana@hubx.market")
         self.assertContains(response, "Ainda não encontramos um perfil persistido")
 

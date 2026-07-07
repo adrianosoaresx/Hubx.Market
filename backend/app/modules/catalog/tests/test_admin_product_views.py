@@ -1,8 +1,11 @@
+from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
+from app.modules.accounts.models import OwnerUser
+from app.modules.audit.models import AuditLog
 from app.modules.catalog.application.admin_product_queries import admin_product_queries
-from app.modules.catalog.models import StorefrontDiscoveryEventLog
+from app.modules.catalog.models import Product, ProductVariant, StorefrontDiscoveryEventLog
 from app.modules.orders.models import Order, OrderItem
 from app.modules.tenants.models import Tenant
 
@@ -60,6 +63,288 @@ class AdminProductViewTests(TestCase):
 
     def test_admin_product_query_service_reports_persisted_source_readiness(self):
         self.assertFalse(admin_product_queries.using_persisted_source())
+
+
+@override_settings(HUBX_MARKET_ROOT_DOMAIN="hubx.market", ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver"])
+class AdminProductCrudTests(TestCase):
+    def setUp(self):
+        self.tenant = Tenant.objects.create(
+            name="Loja CRUD Catálogo",
+            slug="loja-crud-catalogo",
+            subdomain="loja-crud-catalogo",
+        )
+        self.host = f"{self.tenant.subdomain}.hubx.market"
+
+    def _payload(self, **overrides):
+        payload = {
+            "name": "Produto CRUD",
+            "slug": "produto-crud",
+            "sku": "CRUD-001",
+            "brand": "Hubx",
+            "category_label": "Operacional",
+            "description": "Produto criado pelo admin de catálogo.",
+            "price": "129.90",
+            "compare_price": "149.90",
+            "stock": "12",
+            "reserved_stock": "2",
+            "status": Product.Status.ACTIVE,
+            "is_active": "1",
+            "is_featured": "1",
+            "track_inventory": "1",
+        }
+        payload.update(overrides)
+        return payload
+
+    def _create_product(self, *, slug="produto-original", sku="ORIGINAL-001"):
+        product = Product.objects.create(
+            tenant=self.tenant,
+            name="Produto Original",
+            slug=slug,
+            description="Descrição original.",
+            brand_name="Marca Original",
+            category_label="Categoria Original",
+            status=Product.Status.DRAFT,
+            is_active=False,
+            is_featured=False,
+        )
+        variant = ProductVariant.objects.create(
+            product=product,
+            sku=sku,
+            price="50.00",
+            compare_price=None,
+            stock=5,
+            reserved_stock=0,
+            track_inventory=True,
+            allow_backorder=False,
+            is_default=True,
+        )
+        return product, variant
+
+    def test_admin_product_create_persists_product_and_default_variant(self):
+        response = self.client.post(
+            reverse("catalog:admin-products-create"),
+            self._payload(),
+            HTTP_HOST=self.host,
+        )
+
+        self.assertEqual(response.status_code, 302)
+        product = Product.objects.get(tenant=self.tenant, slug="produto-crud")
+        variant = ProductVariant.objects.get(product=product, is_default=True)
+        self.assertEqual(product.name, "Produto CRUD")
+        self.assertEqual(product.brand_name, "Hubx")
+        self.assertEqual(product.category_label, "Operacional")
+        self.assertTrue(product.is_active)
+        self.assertTrue(product.is_featured)
+        self.assertEqual(variant.sku, "CRUD-001")
+        self.assertEqual(str(variant.price), "129.90")
+        self.assertEqual(variant.stock, 12)
+        self.assertEqual(variant.reserved_stock, 2)
+        self.assertTrue(AuditLog.objects.filter(tenant=self.tenant, module="catalog", action="product.created").exists())
+
+    def test_admin_product_edit_updates_product_and_default_variant(self):
+        self._create_product()
+
+        response = self.client.post(
+            reverse("catalog:admin-products-edit", kwargs={"product_slug": "produto-original"}),
+            self._payload(
+                name="Produto Editado",
+                slug="produto-editado",
+                sku="EDIT-001",
+                brand="Marca Editada",
+                category_label="Categoria Editada",
+                price="199.90",
+                compare_price="",
+                stock="20",
+                reserved_stock="1",
+                status=Product.Status.ACTIVE,
+                allow_backorder="1",
+            ),
+            HTTP_HOST=self.host,
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], reverse("catalog:admin-products-detail", kwargs={"product_slug": "produto-editado"}))
+        product = Product.objects.get(tenant=self.tenant, slug="produto-editado")
+        variant = ProductVariant.objects.get(product=product, is_default=True)
+        self.assertEqual(product.name, "Produto Editado")
+        self.assertEqual(product.brand_name, "Marca Editada")
+        self.assertEqual(product.category_label, "Categoria Editada")
+        self.assertEqual(product.status, Product.Status.ACTIVE)
+        self.assertTrue(product.is_active)
+        self.assertTrue(product.is_featured)
+        self.assertEqual(variant.sku, "EDIT-001")
+        self.assertEqual(str(variant.price), "199.90")
+        self.assertIsNone(variant.compare_price)
+        self.assertEqual(variant.stock, 20)
+        self.assertEqual(variant.reserved_stock, 1)
+        self.assertTrue(variant.allow_backorder)
+        self.assertTrue(AuditLog.objects.filter(tenant=self.tenant, module="catalog", action="product.updated").exists())
+
+    def test_admin_product_form_rejects_duplicate_slug_for_tenant(self):
+        self._create_product(slug="produto-existente", sku="EXIST-001")
+
+        response = self.client.post(
+            reverse("catalog:admin-products-create"),
+            self._payload(slug="produto-existente", sku="NOVO-001"),
+            HTTP_HOST=self.host,
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertContains(response, "Já existe um produto com este slug neste tenant.", status_code=400)
+        self.assertEqual(Product.objects.filter(tenant=self.tenant, slug="produto-existente").count(), 1)
+
+    def test_admin_product_deactivate_does_not_delete_product(self):
+        product, _variant = self._create_product(slug="produto-ativo", sku="ACTIVE-001")
+        Product.objects.filter(pk=product.pk).update(
+            status=Product.Status.ACTIVE,
+            is_active=True,
+            is_featured=True,
+        )
+
+        response = self.client.post(
+            reverse("catalog:admin-products-deactivate", kwargs={"product_slug": "produto-ativo"}),
+            HTTP_HOST=self.host,
+        )
+
+        self.assertEqual(response.status_code, 302)
+        product.refresh_from_db()
+        self.assertEqual(Product.objects.filter(pk=product.pk).count(), 1)
+        self.assertEqual(product.status, Product.Status.INACTIVE)
+        self.assertFalse(product.is_active)
+        self.assertFalse(product.is_featured)
+        self.assertTrue(AuditLog.objects.filter(tenant=self.tenant, module="catalog", action="product.deactivated").exists())
+
+    def test_admin_product_write_requires_catalog_manage_when_owner_role_is_resolved(self):
+        OwnerUser.objects.create(tenant=self.tenant, email="viewer.catalog@hubx.market", role="viewer", is_active=True)
+        user = User.objects.create_user(username="viewer-catalog", email="viewer.catalog@hubx.market", password="secret")
+        self.client.force_login(user)
+
+        response = self.client.post(
+            reverse("catalog:admin-products-create"),
+            self._payload(slug="produto-negado", sku="DENIED-001"),
+            HTTP_HOST=self.host,
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertContains(response, "Permissão insuficiente para gerenciar produtos.", status_code=400)
+        self.assertFalse(Product.objects.filter(tenant=self.tenant, slug="produto-negado").exists())
+
+    def test_admin_product_detail_renders_variant_management(self):
+        self._create_product(slug="produto-variantes", sku="VAR-001")
+
+        response = self.client.get(
+            reverse("catalog:admin-products-detail", kwargs={"product_slug": "produto-variantes"}),
+            HTTP_HOST=self.host,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Variantes")
+        self.assertContains(response, "VAR-001")
+        self.assertContains(response, "Adicionar variante")
+
+    def test_admin_product_variant_create_persists_advanced_fields(self):
+        product, default_variant = self._create_product(slug="produto-variantes", sku="VAR-001")
+
+        response = self.client.post(
+            reverse("catalog:admin-product-variant-create", kwargs={"product_slug": "produto-variantes"}),
+            {
+                "sku": "VAR-002",
+                "label": "Azul · M",
+                "option_values": "Cor=Azul\nTamanho=M",
+                "barcode": "789000000002",
+                "price": "159.90",
+                "compare_price": "179.90",
+                "stock": "8",
+                "reserved_stock": "1",
+                "weight_grams": "450",
+                "track_inventory": "1",
+                "is_active": "1",
+                "is_default": "1",
+                "position": "2",
+            },
+            HTTP_HOST=self.host,
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            response["Location"],
+            f"{reverse('catalog:admin-products-detail', kwargs={'product_slug': 'produto-variantes'})}?variant_result=created",
+        )
+        variant = ProductVariant.objects.get(product=product, sku="VAR-002")
+        default_variant.refresh_from_db()
+        self.assertEqual(variant.label, "Azul · M")
+        self.assertEqual(variant.option_values, {"Cor": "Azul", "Tamanho": "M"})
+        self.assertEqual(variant.barcode, "789000000002")
+        self.assertEqual(str(variant.price), "159.90")
+        self.assertEqual(str(variant.compare_price), "179.90")
+        self.assertEqual(variant.stock, 8)
+        self.assertEqual(variant.reserved_stock, 1)
+        self.assertEqual(variant.weight_grams, 450)
+        self.assertTrue(variant.is_default)
+        self.assertFalse(default_variant.is_default)
+        self.assertTrue(AuditLog.objects.filter(tenant=self.tenant, module="catalog", action="product.variant_created").exists())
+
+    def test_admin_product_variant_default_and_deactivate_are_tenant_scoped_and_non_destructive(self):
+        product, default_variant = self._create_product(slug="produto-variantes", sku="VAR-001")
+        variant = ProductVariant.objects.create(
+            product=product,
+            sku="VAR-002",
+            label="Preto · G",
+            option_values={"Cor": "Preto", "Tamanho": "G"},
+            price="89.90",
+            stock=4,
+            is_active=True,
+            is_default=False,
+            position=2,
+        )
+
+        default_response = self.client.post(
+            reverse(
+                "catalog:admin-product-variant-default",
+                kwargs={"product_slug": "produto-variantes", "variant_id": variant.id},
+            ),
+            HTTP_HOST=self.host,
+        )
+
+        default_variant.refresh_from_db()
+        variant.refresh_from_db()
+        self.assertEqual(default_response.status_code, 302)
+        self.assertFalse(default_variant.is_default)
+        self.assertTrue(variant.is_default)
+
+        deactivate_response = self.client.post(
+            reverse(
+                "catalog:admin-product-variant-deactivate",
+                kwargs={"product_slug": "produto-variantes", "variant_id": variant.id},
+            ),
+            HTTP_HOST=self.host,
+        )
+
+        default_variant.refresh_from_db()
+        variant.refresh_from_db()
+        self.assertEqual(deactivate_response.status_code, 302)
+        self.assertEqual(ProductVariant.objects.filter(pk=variant.pk).count(), 1)
+        self.assertFalse(variant.is_active)
+        self.assertFalse(variant.is_default)
+        self.assertTrue(default_variant.is_default)
+        self.assertTrue(AuditLog.objects.filter(tenant=self.tenant, module="catalog", action="product.variant_deactivated").exists())
+
+    def test_admin_product_variant_deactivate_blocks_last_active_variant(self):
+        _product, variant = self._create_product(slug="produto-variantes", sku="VAR-001")
+
+        response = self.client.post(
+            reverse(
+                "catalog:admin-product-variant-deactivate",
+                kwargs={"product_slug": "produto-variantes", "variant_id": variant.id},
+            ),
+            HTTP_HOST=self.host,
+        )
+
+        variant.refresh_from_db()
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("variant_result=blocked", response["Location"])
+        self.assertTrue(variant.is_active)
+        self.assertTrue(variant.is_default)
 
 
 class AdminProductPersistedReadTests(TestCase):

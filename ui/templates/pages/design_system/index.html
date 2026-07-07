@@ -6,11 +6,7 @@
 
 {% block content %}
 <section class="space-y-8">
-    {% include "shared/components/layout/page_header.html" with
-        eyebrow="UI"
-        title="Design System Showcase"
-        description="Referência interna dos componentes, composites e page templates oficiais já implementados no Hubx.market."
-    %}
+    {% include "shared/components/layout/page_header.html" with eyebrow="UI" title="Design System Showcase" description="Referência interna dos componentes, composites e page templates oficiais já implementados no Hubx.market." %}
     {% include "shared/partials/design_system_preview_context.html" %}
 
     <section class="space-y-3 rounded-2xl border border-dashed border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-5">
@@ -32,26 +28,10 @@
     </section>
 
     <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-        {% include "shared/components/data_display/card.html" with
-            title="Components"
-            subtitle="Building blocks reutilizáveis."
-            content="Demonstra componentes isolados, composites e blocos reutilizáveis do Design System."
-        %}
-        {% include "shared/components/data_display/card.html" with
-            title="Forms"
-            subtitle="Componentes de formulário."
-            content="Exemplos práticos de campos, mensagens, seleção e ações para CRUDs e fluxos internos."
-        %}
-        {% include "shared/components/data_display/card.html" with
-            title="Ecommerce"
-            subtitle="Commerce / Storefront components."
-            content="Demonstra componentes e composites da trilha pública de catálogo, produto, carrinho e resumo, sem páginas completas."
-        %}
-        {% include "shared/components/data_display/card.html" with
-            title="Page Templates"
-            subtitle="Admin, catálogo, clientes, pedidos, checkout, auth/account e customer area."
-            content="Área dedicada para visualizar a composição completa das page templates oficiais, incluindo dashboard admin e fluxos operacionais de produtos, pedidos e clientes."
-        %}
+        {% include "shared/components/data_display/card.html" with title="Components" subtitle="Building blocks reutilizáveis." content="Demonstra componentes isolados, composites e blocos reutilizáveis do Design System." %}
+        {% include "shared/components/data_display/card.html" with title="Forms" subtitle="Componentes de formulário." content="Exemplos práticos de campos, mensagens, seleção e ações para CRUDs e fluxos internos." %}
+        {% include "shared/components/data_display/card.html" with title="Ecommerce" subtitle="Commerce / Storefront components." content="Demonstra componentes e composites da trilha pública de catálogo, produto, carrinho e resumo, sem páginas completas." %}
+        {% include "shared/components/data_display/card.html" with title="Page Templates" subtitle="Admin, catálogo, clientes, pedidos, checkout, auth/account e customer area." content="Área dedicada para visualizar a composição completa das page templates oficiais, incluindo dashboard admin e fluxos operacionais de produtos, pedidos e clientes." %}
     </div>
 
     <div class="flex flex-wrap gap-3">

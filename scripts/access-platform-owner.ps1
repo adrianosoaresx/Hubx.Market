@@ -14,7 +14,7 @@ if (-not (Test-Path $EnsureScript)) {
     throw "Script auxiliar não encontrado em $EnsureScript"
 }
 
-& $EnsureScript
+& $EnsureScript -PublicPort "$Port"
 
 $PlatformBaseUrl = "http://localhost:$Port"
 $TargetPath = switch ($Target) {

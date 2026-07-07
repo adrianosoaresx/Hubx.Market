@@ -93,7 +93,7 @@ def _owner_notification_cell(owner: AdminOwnerItem) -> str:
     return "Recebe notificações" if owner.receives_notifications else "Notificações pausadas"
 
 
-def _owner_actions_cell(owner: AdminOwnerItem, *, current_url: str, can_manage: bool) -> str:
+def _owner_actions_cell(owner: AdminOwnerItem, *, current_url: str, csrf_token: str, can_manage: bool) -> str:
     if not can_manage:
         return "Sem permissão para gerenciar owners"
     action_url = reverse("owners:admin-owner-update", kwargs={"owner_id": owner.id})
@@ -103,23 +103,27 @@ def _owner_actions_cell(owner: AdminOwnerItem, *, current_url: str, can_manage: 
     label = "Pausar notificações" if owner.receives_notifications else "Ativar notificações"
     return format_html(
         '<div class="flex flex-wrap gap-2">'
-        '<a class="ds-btn-secondary" href="{}">Editar acesso</a>'
+        '<a class="ds-btn ds-btn-secondary ds-btn-sm" href="{}">Editar acesso</a>'
         '<form method="post" action="{}" class="inline-flex">'
+        '<input type="hidden" name="csrfmiddlewaretoken" value="{}" />'
         '<input type="hidden" name="receives_notifications" value="{}" />'
         '<input type="hidden" name="next" value="{}" />'
-        '<button type="submit" class="ds-btn-secondary">{}</button>'
+        '<button type="submit" class="ds-btn ds-btn-secondary ds-btn-sm">{}</button>'
         "</form>"
         '<form method="post" action="{}" class="inline-flex">'
+        '<input type="hidden" name="csrfmiddlewaretoken" value="{}" />'
         '<input type="hidden" name="next" value="{}" />'
-        '<button type="submit" class="ds-btn-secondary">Gerar convite</button>'
+        '<button type="submit" class="ds-btn ds-btn-secondary ds-btn-sm">Gerar convite</button>'
         "</form>"
         "</div>",
         edit_url,
         action_url,
+        csrf_token,
         next_value,
         current_url,
         label,
         invite_url,
+        csrf_token,
         current_url,
     )
 
@@ -178,7 +182,7 @@ def _mfa_actions_cell(factor: OwnerMfaAdminFactorItem, *, current_url: str, csrf
             '<input type="hidden" name="csrfmiddlewaretoken" value="{}" />'
             '<input type="hidden" name="next" value="{}" />'
             '<input class="ds-input max-w-[8rem]" name="challenge" placeholder="000000" inputmode="numeric" />'
-            '<button type="submit" class="ds-btn-secondary">Verificar</button>'
+            '<button type="submit" class="ds-btn ds-btn-secondary ds-btn-sm">Verificar</button>'
             "</form>"
         )
     deactivate_form = ""
@@ -187,7 +191,7 @@ def _mfa_actions_cell(factor: OwnerMfaAdminFactorItem, *, current_url: str, csrf
             '<form method="post" action="{}" class="inline-flex">'
             '<input type="hidden" name="csrfmiddlewaretoken" value="{}" />'
             '<input type="hidden" name="next" value="{}" />'
-            '<button type="submit" class="ds-btn-secondary">Desativar</button>'
+            '<button type="submit" class="ds-btn ds-btn-secondary ds-btn-sm">Desativar</button>'
             "</form>"
         )
     return format_html(
@@ -222,7 +226,7 @@ class AdminOwnersListView(TemplateView):
                 "page_description": "Gerencie owners administrativos habilitados para notificações operacionais.",
                 "page_meta": _action_feedback(result),
                 "page_actions": format_html(
-                    '<a class="ds-btn-primary" href="{}">Novo owner</a>',
+                    '<a class="ds-btn ds-btn-primary ds-btn-md" href="{}">Novo owner</a>',
                     reverse("owners:admin-owner-create"),
                 )
                 if can_manage_owners
@@ -249,7 +253,12 @@ class AdminOwnersListView(TemplateView):
                             owner.role,
                             _owner_status_cell(owner),
                             _owner_notification_cell(owner),
-                            _owner_actions_cell(owner, current_url=self.request.get_full_path(), can_manage=can_manage_owners),
+                            _owner_actions_cell(
+                                owner,
+                                current_url=self.request.get_full_path(),
+                                csrf_token=get_token(self.request),
+                                can_manage=can_manage_owners,
+                            ),
                         ]
                     }
                     for owner in page_obj.object_list

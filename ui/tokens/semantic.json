@@ -19,13 +19,13 @@
     "secondary": { "value": "{color.neutral.900.value}" }
   },
   "feedback": {
-    "success": { "value": "{color.accent.500.value}" },
+    "success": { "value": "{color.success.500.value}" },
     "info": { "value": "{color.info.500.value}" },
     "warning": { "value": "{color.warning.500.value}" },
     "danger": { "value": "{color.danger.500.value}" }
   },
   "focus": {
-    "ring": { "value": "rgba(79, 70, 229, 0.35)" }
+    "ring": { "value": "rgba(154, 100, 16, 0.35)" }
   },
   "icon": {
     "sm": { "value": "1rem" },
@@ -45,7 +45,7 @@
       "header": { "value": "2.375rem" },
       "banner": { "value": "3rem" }
     },
-    "banner_bg": { "value": "rgba(79, 70, 229, 0.08)" },
+    "banner_bg": { "value": "rgba(255, 231, 151, 0.32)" },
     "banner_text": { "value": "{text.primary.value}" },
     "banner_accent": { "value": "{action.primary.value}" }
   },
@@ -53,12 +53,12 @@
     "sidebar_width": { "value": "16rem" },
     "topbar_height": { "value": "4.5rem" },
     "content_max": { "value": "80rem" },
-    "nav_active_bg": { "value": "rgba(34, 197, 94, 0.10)" },
-    "nav_active_text": { "value": "#0F766E" },
+    "nav_active_bg": { "value": "rgba(255, 231, 151, 0.34)" },
+    "nav_active_text": { "value": "#794A0C" },
     "nav_muted": { "value": "{text.secondary.value}" },
     "surface_raised": { "value": "{surface.panel.value}" },
     "risk_accent": { "value": "#B42318" },
-    "platform_accent": { "value": "#2563EB" }
+    "platform_accent": { "value": "#9A6410" }
   },
   "footer": {
     "bg": { "value": "{surface.panel.value}" },

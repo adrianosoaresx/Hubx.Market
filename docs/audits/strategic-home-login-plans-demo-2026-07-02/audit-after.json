@@ -1,0 +1,557 @@
+{
+  "generatedAt": "2026-07-02T13:44:55.817Z",
+  "viewport": {
+    "width": 548,
+    "height": 698
+  },
+  "routes": [
+    {
+      "key": "home",
+      "url": "http://127.0.0.1:8002/",
+      "status": null,
+      "logs": [],
+      "brand": {
+        "bottom": 73,
+        "h": 38,
+        "right": 165,
+        "w": 141,
+        "x": 24,
+        "y": 35
+      },
+      "brokenImages": [],
+      "buttons": [
+        "Solicitar aquisição",
+        "Ver planos",
+        "Acessar demo"
+      ],
+      "currentUrl": "http://127.0.0.1:8002/",
+      "forms": [],
+      "h1": "Crie sua loja virtual com uma operação pronta para vender.",
+      "hasHorizontalOverflow": false,
+      "header": {
+        "bottom": 108,
+        "h": 108,
+        "right": 533,
+        "w": 533,
+        "x": 0,
+        "y": 0
+      },
+      "headerStyle": {
+        "alignItems": "center",
+        "flexDirection": "row",
+        "gap": "16px"
+      },
+      "hero": {
+        "bottom": 705,
+        "h": 596,
+        "right": 533,
+        "w": 533,
+        "x": 0,
+        "y": 109
+      },
+      "innerHeight": 698,
+      "innerWidth": 548,
+      "labelStyle": {
+        "clip": "auto",
+        "height": "14px",
+        "overflow": "visible",
+        "position": "static",
+        "width": "35.65px"
+      },
+      "labelVisible": true,
+      "links": [
+        {
+          "href": "http://127.0.0.1:8002/",
+          "text": "Hubx Market Portal central"
+        },
+        {
+          "href": "http://127.0.0.1:8002/",
+          "text": "Portal"
+        },
+        {
+          "href": "http://127.0.0.1:8002/plans/",
+          "text": "Planos"
+        },
+        {
+          "href": "http://127.0.0.1:8002/demo/",
+          "text": "Demo"
+        },
+        {
+          "href": "http://127.0.0.1:8002/accounts/login/",
+          "text": "Entrar"
+        },
+        {
+          "href": "http://127.0.0.1:8002/plans/#aquisicao",
+          "text": "Solicitar aquisição"
+        },
+        {
+          "href": "http://127.0.0.1:8002/plans/#planos",
+          "text": "Ver planos"
+        },
+        {
+          "href": "http://127.0.0.1:8002/demo/",
+          "text": "Acessar demo"
+        },
+        {
+          "href": "http://127.0.0.1:8002/",
+          "text": "Hubx Market"
+        }
+      ],
+      "nav": {
+        "bottom": 92,
+        "h": 76,
+        "right": 509,
+        "w": 327,
+        "x": 181,
+        "y": 16
+      },
+      "navStyle": {
+        "flexWrap": "wrap",
+        "gap": "4px",
+        "justifyContent": "flex-end"
+      },
+      "scrollHeight": 1283,
+      "scrollWidth": 533,
+      "title": "Hubx Market"
+    },
+    {
+      "key": "login",
+      "url": "http://127.0.0.1:8002/accounts/login/",
+      "status": null,
+      "logs": [],
+      "brand": {
+        "bottom": 73,
+        "h": 38,
+        "right": 165,
+        "w": 141,
+        "x": 24,
+        "y": 35
+      },
+      "brokenImages": [],
+      "buttons": [
+        "Acessar conta",
+        "Criar conta"
+      ],
+      "currentUrl": "http://127.0.0.1:8002/accounts/login/",
+      "firstSurface": {
+        "bottom": 286,
+        "h": 138,
+        "right": 509,
+        "w": 485,
+        "x": 24,
+        "y": 149
+      },
+      "forms": [
+        {
+          "action": "http://127.0.0.1:8002/accounts/login/",
+          "fields": [
+            "csrfmiddlewaretoken",
+            "login",
+            "password",
+            "remember_me"
+          ],
+          "method": "post"
+        }
+      ],
+      "h1": "Entrar",
+      "hasHorizontalOverflow": false,
+      "header": {
+        "bottom": 108,
+        "h": 108,
+        "right": 533,
+        "w": 533,
+        "x": 0,
+        "y": 0
+      },
+      "headerStyle": {
+        "alignItems": "center",
+        "flexDirection": "row",
+        "gap": "16px"
+      },
+      "hero": {
+        "bottom": 803,
+        "h": 654,
+        "right": 509,
+        "w": 485,
+        "x": 24,
+        "y": 149
+      },
+      "innerHeight": 698,
+      "innerWidth": 548,
+      "labelStyle": {
+        "clip": "auto",
+        "height": "14px",
+        "overflow": "visible",
+        "position": "static",
+        "width": "35.65px"
+      },
+      "labelVisible": true,
+      "links": [
+        {
+          "href": "http://127.0.0.1:8002/",
+          "text": "Hubx Market Acesso ao portal"
+        },
+        {
+          "href": "http://127.0.0.1:8002/",
+          "text": "Portal"
+        },
+        {
+          "href": "http://127.0.0.1:8002/plans/",
+          "text": "Planos"
+        },
+        {
+          "href": "http://127.0.0.1:8002/demo/",
+          "text": "Demo"
+        },
+        {
+          "href": "http://127.0.0.1:8002/accounts/login/",
+          "text": "Entrar"
+        },
+        {
+          "href": "http://127.0.0.1:8002/accounts/forgot-password/",
+          "text": "Esqueci minha senha"
+        },
+        {
+          "href": "http://127.0.0.1:8002/accounts/register/",
+          "text": "Criar conta"
+        },
+        {
+          "href": "http://127.0.0.1:8002/",
+          "text": "Hubx Market"
+        }
+      ],
+      "nav": {
+        "bottom": 92,
+        "h": 76,
+        "right": 509,
+        "w": 327,
+        "x": 181,
+        "y": 16
+      },
+      "navStyle": {
+        "flexWrap": "wrap",
+        "gap": "4px",
+        "justifyContent": "flex-end"
+      },
+      "scrollHeight": 948,
+      "scrollWidth": 533,
+      "title": "Entrar"
+    },
+    {
+      "key": "plans",
+      "url": "http://127.0.0.1:8002/plans/",
+      "status": null,
+      "logs": [],
+      "brand": {
+        "bottom": 73,
+        "h": 38,
+        "right": 165,
+        "w": 141,
+        "x": 24,
+        "y": 35
+      },
+      "brokenImages": [],
+      "buttons": [
+        "Solicitar aquisição",
+        "Ver planos",
+        "Acessar demo",
+        "Solicitar Starter",
+        "Solicitar Pro",
+        "Solicitar Enterprise",
+        "Enviar intenção"
+      ],
+      "currentUrl": "http://127.0.0.1:8002/plans/",
+      "firstSurface": {
+        "bottom": 1163,
+        "h": 318,
+        "right": 509,
+        "w": 485,
+        "x": 24,
+        "y": 845
+      },
+      "forms": [
+        {
+          "action": "http://127.0.0.1:8002/plans/",
+          "fields": [
+            "csrfmiddlewaretoken",
+            "plan_code",
+            "store_name",
+            "desired_subdomain",
+            "contact_name",
+            "contact_email",
+            "contact_phone",
+            "message"
+          ],
+          "method": "post"
+        }
+      ],
+      "h1": "Escolha o plano para criar sua loja virtual.",
+      "hasHorizontalOverflow": false,
+      "header": {
+        "bottom": 108,
+        "h": 108,
+        "right": 533,
+        "w": 533,
+        "x": 0,
+        "y": 0
+      },
+      "headerStyle": {
+        "alignItems": "center",
+        "flexDirection": "row",
+        "gap": "16px"
+      },
+      "hero": {
+        "bottom": 705,
+        "h": 596,
+        "right": 533,
+        "w": 533,
+        "x": 0,
+        "y": 109
+      },
+      "innerHeight": 698,
+      "innerWidth": 548,
+      "labelStyle": {
+        "clip": "auto",
+        "height": "14px",
+        "overflow": "visible",
+        "position": "static",
+        "width": "35.65px"
+      },
+      "labelVisible": true,
+      "links": [
+        {
+          "href": "http://127.0.0.1:8002/",
+          "text": "Hubx Market Planos SaaS"
+        },
+        {
+          "href": "http://127.0.0.1:8002/",
+          "text": "Portal"
+        },
+        {
+          "href": "http://127.0.0.1:8002/plans/",
+          "text": "Planos"
+        },
+        {
+          "href": "http://127.0.0.1:8002/demo/",
+          "text": "Demo"
+        },
+        {
+          "href": "http://127.0.0.1:8002/accounts/login/",
+          "text": "Entrar"
+        },
+        {
+          "href": "http://127.0.0.1:8002/plans/#aquisicao",
+          "text": "Solicitar aquisição"
+        },
+        {
+          "href": "http://127.0.0.1:8002/plans/#planos",
+          "text": "Ver planos"
+        },
+        {
+          "href": "http://127.0.0.1:8002/demo/",
+          "text": "Acessar demo"
+        },
+        {
+          "href": "http://127.0.0.1:8002/plans/?plan=starter#aquisicao",
+          "text": "Solicitar Starter"
+        },
+        {
+          "href": "http://127.0.0.1:8002/plans/?plan=pro#aquisicao",
+          "text": "Solicitar Pro"
+        },
+        {
+          "href": "http://127.0.0.1:8002/plans/?plan=enterprise#aquisicao",
+          "text": "Solicitar Enterprise"
+        },
+        {
+          "href": "http://127.0.0.1:8002/",
+          "text": "Hubx Market"
+        }
+      ],
+      "nav": {
+        "bottom": 92,
+        "h": 76,
+        "right": 509,
+        "w": 327,
+        "x": 181,
+        "y": 16
+      },
+      "navStyle": {
+        "flexWrap": "wrap",
+        "gap": "4px",
+        "justifyContent": "flex-end"
+      },
+      "scrollHeight": 3072,
+      "scrollWidth": 533,
+      "title": "Planos Hubx Market"
+    },
+    {
+      "key": "demo",
+      "url": "http://127.0.0.1:8002/demo/",
+      "status": null,
+      "logs": [],
+      "brand": {
+        "bottom": 73,
+        "h": 38,
+        "right": 165,
+        "w": 141,
+        "x": 24,
+        "y": 35
+      },
+      "brokenImages": [],
+      "buttons": [
+        "Ver vitrine sem login",
+        "Entrar como admin",
+        "Entrar como cliente"
+      ],
+      "currentUrl": "http://127.0.0.1:8002/demo/",
+      "firstSurface": {
+        "bottom": 626,
+        "h": 154,
+        "right": 509,
+        "w": 485,
+        "x": 24,
+        "y": 473
+      },
+      "forms": [],
+      "h1": "Escolha como deseja acessar a loja demo.",
+      "hasHorizontalOverflow": false,
+      "header": {
+        "bottom": 108,
+        "h": 108,
+        "right": 533,
+        "w": 533,
+        "x": 0,
+        "y": 0
+      },
+      "headerStyle": {
+        "alignItems": "center",
+        "flexDirection": "row",
+        "gap": "16px"
+      },
+      "hero": {
+        "bottom": 820,
+        "h": 671,
+        "right": 509,
+        "w": 485,
+        "x": 24,
+        "y": 149
+      },
+      "innerHeight": 698,
+      "innerWidth": 548,
+      "labelStyle": {
+        "clip": "auto",
+        "height": "14px",
+        "overflow": "visible",
+        "position": "static",
+        "width": "35.65px"
+      },
+      "labelVisible": true,
+      "links": [
+        {
+          "href": "http://127.0.0.1:8002/",
+          "text": "Hubx Market Demo"
+        },
+        {
+          "href": "http://127.0.0.1:8002/",
+          "text": "Portal"
+        },
+        {
+          "href": "http://127.0.0.1:8002/plans/",
+          "text": "Planos"
+        },
+        {
+          "href": "http://127.0.0.1:8002/demo/",
+          "text": "Demo"
+        },
+        {
+          "href": "http://127.0.0.1:8002/accounts/login/",
+          "text": "Entrar"
+        },
+        {
+          "href": "http://hubx-demo.localhost:8002/",
+          "text": "Ver vitrine sem login"
+        },
+        {
+          "href": "http://hubx-demo.localhost:8002/accounts/demo-session/?profile=admin",
+          "text": "Entrar como admin"
+        },
+        {
+          "href": "http://hubx-demo.localhost:8002/accounts/demo-session/?profile=customer",
+          "text": "Entrar como cliente"
+        },
+        {
+          "href": "http://127.0.0.1:8002/",
+          "text": "Hubx Market"
+        }
+      ],
+      "nav": {
+        "bottom": 92,
+        "h": 76,
+        "right": 509,
+        "w": 327,
+        "x": 181,
+        "y": 16
+      },
+      "navStyle": {
+        "flexWrap": "wrap",
+        "gap": "4px",
+        "justifyContent": "flex-end"
+      },
+      "scrollHeight": 965,
+      "scrollWidth": 533,
+      "title": "Acessar demo Hubx Market"
+    }
+  ],
+  "interactions": [
+    {
+      "from": "home",
+      "action": "Solicitar aquisição",
+      "finalUrl": "http://127.0.0.1:8002/plans/#aquisicao"
+    },
+    {
+      "from": "plans",
+      "action": "Acessar demo",
+      "finalUrl": "http://127.0.0.1:8002/demo/"
+    },
+    {
+      "from": "demo",
+      "action": "Ver vitrine sem login",
+      "href": "http://hubx-demo.localhost:8002/",
+      "status": null,
+      "finalUrl": "http://hubx-demo.localhost:8002/",
+      "page": {
+        "brokenImages": [],
+        "h1": "Hubx Market Demo",
+        "hasHorizontalOverflow": false,
+        "title": "Início"
+      }
+    },
+    {
+      "from": "demo",
+      "action": "Entrar como admin",
+      "href": "http://hubx-demo.localhost:8002/accounts/demo-session/?profile=admin",
+      "status": null,
+      "finalUrl": "http://hubx-demo.localhost:8002/ops/",
+      "page": {
+        "brokenImages": [],
+        "h1": "Operação da loja",
+        "hasHorizontalOverflow": true,
+        "title": "Operação da loja"
+      }
+    },
+    {
+      "from": "demo",
+      "action": "Entrar como cliente",
+      "href": "http://hubx-demo.localhost:8002/accounts/demo-session/?profile=customer",
+      "status": null,
+      "finalUrl": "http://hubx-demo.localhost:8002/",
+      "page": {
+        "brokenImages": [],
+        "h1": "Hubx Market Demo",
+        "hasHorizontalOverflow": false,
+        "title": "Início"
+      }
+    }
+  ]
+}

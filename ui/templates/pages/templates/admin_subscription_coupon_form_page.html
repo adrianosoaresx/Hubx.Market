@@ -1,0 +1,76 @@
+{% extends layout_template|default:"layouts/admin_shell.html" %}
+
+{% block page_title %}{{ page_title|default:"Novo cupom SaaS" }}{% endblock %}
+{% block shell_title %}{% if shell_title %}{{ shell_title }}{% elif page_title %}{{ page_title }}{% else %}Novo cupom SaaS{% endif %}{% endblock %}
+
+{% block content %}
+<section class="space-y-6">
+    {% with eyebrow=page_eyebrow|default:"Promoções platform" title=page_title|default:"Novo cupom SaaS" description=page_description|default:"Crie um cupom comercial para planos SaaS." %}
+        {% include "shared/components/layout/admin_page_header.html" %}
+    {% endwith %}
+
+    {% if form_error %}
+        {% include "shared/components/feedback/alert.html" with variant="danger" title="Corrija o formulário" description=form_error %}
+    {% endif %}
+
+    <form method="post" action="{{ form_action }}" class="space-y-6">
+        {% csrf_token %}
+
+        <section class="ds-surface space-y-6 p-6">
+            <div class="space-y-1">
+                <h2 class="text-base font-semibold text-[var(--color-text-primary)]">Informações do cupom</h2>
+                <p class="text-sm text-[var(--color-text-secondary)]">O código é único na plataforma e será normalizado em uppercase.</p>
+            </div>
+
+            <div class="grid gap-6 md:grid-cols-2">
+                {% with name="code" label="Código" value=code placeholder="SAAS10" required=True invalid=errors.code error_text=errors.code help_text="Usado nos formulários públicos de planos." %}
+                    {% include "shared/components/forms/input.html" %}
+                {% endwith %}
+
+                {% with name="name" label="Nome interno" value=name placeholder="Campanha SaaS de lançamento" %}
+                    {% include "shared/components/forms/input.html" %}
+                {% endwith %}
+            </div>
+
+            <div class="grid gap-6 md:grid-cols-4">
+                {% with name="status" label="Status" options=status_options selected=status_selected invalid=errors.status error_text=errors.status %}
+                    {% include "shared/components/forms/select.html" %}
+                {% endwith %}
+
+                {% with name="discount_type" label="Tipo" options=discount_type_options selected=discount_type_selected invalid=errors.discount_type error_text=errors.discount_type %}
+                    {% include "shared/components/forms/select.html" %}
+                {% endwith %}
+
+                {% with name="discount_value" label="Valor do desconto" value=discount_value input_type="number" placeholder="10.00" required=True invalid=errors.discount_value error_text=errors.discount_value help_text="Percentual até 100 ou valor fixo em reais." %}
+                    {% include "shared/components/forms/input.html" %}
+                {% endwith %}
+
+                {% with name="plan_code" label="Plano" options=plan_options selected=plan_code_selected invalid=errors.plan_code error_text=errors.plan_code help_text="Vazio aplica a qualquer plano ativo." %}
+                    {% include "shared/components/forms/select.html" %}
+                {% endwith %}
+            </div>
+        </section>
+
+        <section class="ds-surface space-y-6 p-6">
+            <div class="space-y-1">
+                <h2 class="text-base font-semibold text-[var(--color-text-primary)]">Validade opcional</h2>
+                <p class="text-sm text-[var(--color-text-secondary)]">Sem datas, o cupom vale enquanto estiver ativo.</p>
+            </div>
+
+            <div class="grid gap-6 md:grid-cols-2">
+                {% with name="starts_at" label="Início" value=starts_at input_type="datetime-local" invalid=errors.starts_at error_text=errors.starts_at %}
+                    {% include "shared/components/forms/input.html" %}
+                {% endwith %}
+
+                {% with name="ends_at" label="Fim" value=ends_at input_type="datetime-local" invalid=errors.ends_at error_text=errors.ends_at %}
+                    {% include "shared/components/forms/input.html" %}
+                {% endwith %}
+            </div>
+        </section>
+
+        {% with primary_label="Criar cupom SaaS" secondary_label="Cancelar" secondary_href=cancel_href %}
+            {% include "shared/components/forms/form_actions.html" %}
+        {% endwith %}
+    </form>
+</section>
+{% endblock %}

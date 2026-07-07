@@ -103,6 +103,7 @@ Exemplo:
 
 product.created
 product.updated
+product.deactivated
 
 ---
 
@@ -144,6 +145,7 @@ Prefira:
 Antes de executar tarefas, a IA deve considerar:
 
 docs/AGENTS.md
+docs/implementation-inventory.md
 docs/context-map.md
 docs/module-boundaries.md
 docs/events-map.md

@@ -4,12 +4,15 @@ from django.contrib import admin
 from django.urls import include, path
 from django.views.generic import TemplateView
 
-from app.modules.catalog.interfaces.views import StorefrontHomeView
+from app.modules.catalog.interfaces.views import PublicDemoAccessView, StorefrontHomeView
+from app.modules.pages.interfaces.views import DesignSystemPagesView
 
 urlpatterns = [
     path("", StorefrontHomeView.as_view(), name="storefront-home"),
+    path("demo/", PublicDemoAccessView.as_view(), name="public-demo"),
     path("admin/", admin.site.urls),
     path("accounts/", include(("app.modules.accounts.interfaces.urls", "accounts"), namespace="accounts")),
+    path("plans/", include(("app.modules.subscriptions.interfaces.public_urls", "subscription_public"), namespace="subscription_public")),
     path("api-keys/", include(("app.modules.api_keys.interfaces.urls", "api_keys"), namespace="api_keys")),
     path("api/v1/catalog/", include(("app.modules.catalog.interfaces.public_api_urls", "catalog_public_api"), namespace="catalog_public_api")),
     path("cart/", include(("app.modules.cart.interfaces.urls", "cart"), namespace="cart")),
@@ -18,6 +21,7 @@ urlpatterns = [
     path("payments/", include(("app.modules.payments.interfaces.urls", "payments"), namespace="payments")),
     path("notifications/", include(("app.modules.notifications.interfaces.urls", "notifications"), namespace="notifications")),
     path("newsletter/", include(("app.modules.newsletter.interfaces.storefront_urls", "storefront_newsletter"), namespace="storefront_newsletter")),
+    path("ops/branding/", include(("app.modules.tenants.interfaces.ops_urls", "tenant_branding"), namespace="tenant_branding")),
     path("ops/", include(("app.modules.accounts.interfaces.merchant_ops_urls", "merchant_ops"), namespace="merchant_ops")),
     path("ops/audit/", include(("app.modules.audit.interfaces.urls", "audit"), namespace="audit")),
     path("ops/api-keys/", include(("app.modules.api_keys.interfaces.ops_urls", "api_keys_ops"), namespace="api_keys_ops")),
@@ -30,6 +34,8 @@ urlpatterns = [
     path("ops/orders/", include(("app.modules.orders.interfaces.urls", "orders"), namespace="orders")),
     path("ops/payments/", include(("app.modules.payments.interfaces.ops_urls", "payments_ops"), namespace="payments_ops")),
     path("ops/pages/", include(("app.modules.pages.interfaces.urls", "pages"), namespace="pages")),
+    path("ops/platform/acquisitions/", include(("app.modules.subscriptions.interfaces.acquisition_urls", "subscription_acquisitions"), namespace="subscription_acquisitions")),
+    path("ops/platform/subscription-coupons/", include(("app.modules.subscriptions.interfaces.coupon_urls", "subscription_coupons"), namespace="subscription_coupons")),
     path("ops/platform/onboarding/", include(("app.modules.tenants.interfaces.onboarding_urls", "tenant_onboarding"), namespace="tenant_onboarding")),
     path("ops/platform/tenants/", include(("app.modules.tenants.interfaces.urls", "tenants"), namespace="tenants")),
     path("ops/reviews/", include(("app.modules.reviews.interfaces.urls", "reviews"), namespace="reviews")),
@@ -62,7 +68,7 @@ if settings.DEBUG:
         ),
         path(
             "__internal__/design-system/pages/",
-            TemplateView.as_view(template_name="pages/design_system/pages.html"),
+            DesignSystemPagesView.as_view(),
             name="design-system-pages",
         ),
     ]

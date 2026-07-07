@@ -10,6 +10,7 @@ from .views import (
     AccountOrdersView,
     AccountOverviewView,
     AccountProfileView,
+    DemoSessionLoginView,
     ForgotPasswordView,
     LoginView,
     LogoutView,
@@ -26,6 +27,7 @@ app_name = "accounts"
 
 
 urlpatterns = [
+    path("demo-session/", DemoSessionLoginView.as_view(), name="demo-session-login"),
     path("login/", LoginView.as_view(), name="login"),
     path("login/mfa/", OwnerMfaChallengeView.as_view(), name="owner-mfa-challenge"),
     path("logout/", LogoutView.as_view(), name="logout"),

@@ -10,6 +10,7 @@ from django.urls import reverse
 
 from app.modules.accounts.application.admin_permissions import (
     PERMISSION_AUDIT_VIEW,
+    PERMISSION_API_KEYS_VIEW,
     PERMISSION_CATALOG_VIEW,
     PERMISSION_CHECKOUT_VIEW,
     PERMISSION_COUPONS_MANAGE,
@@ -22,6 +23,9 @@ from app.modules.accounts.application.admin_permissions import (
     PERMISSION_PLATFORM_TENANTS_VIEW,
     PERMISSION_REVIEWS_MODERATE,
     PERMISSION_SHIPPING_VIEW,
+    PERMISSION_STOREFRONT_BRANDING_MANAGE,
+    PERMISSION_SUBSCRIPTIONS_MANAGE,
+    PERMISSION_SUBSCRIPTIONS_VIEW,
     admin_permissions,
 )
 from app.modules.audit.application.audit_log_commands import audit_log_commands
@@ -29,8 +33,10 @@ from app.modules.audit.application.audit_log_commands import audit_log_commands
 
 OPS_PERMISSION_PREFIXES = (
     ("/ops/audit/", PERMISSION_AUDIT_VIEW),
+    ("/ops/api-keys/", PERMISSION_API_KEYS_VIEW),
     ("/ops/catalog/", PERMISSION_CATALOG_VIEW),
     ("/ops/checkout/", PERMISSION_CHECKOUT_VIEW),
+    ("/ops/branding/", PERMISSION_STOREFRONT_BRANDING_MANAGE),
     ("/ops/coupons/", PERMISSION_COUPONS_MANAGE),
     ("/ops/customers/", PERMISSION_CUSTOMERS_VIEW),
     ("/ops/newsletter/", PERMISSION_NEWSLETTER_VIEW),
@@ -38,10 +44,13 @@ OPS_PERMISSION_PREFIXES = (
     ("/ops/orders/", PERMISSION_ORDERS_VIEW),
     ("/ops/payments/", PERMISSION_PAYMENTS_VIEW),
     ("/ops/pages/", PERMISSION_PAGES_MANAGE),
+    ("/ops/platform/acquisitions/", PERMISSION_PLATFORM_TENANTS_VIEW),
     ("/ops/platform/onboarding/", PERMISSION_PLATFORM_TENANTS_VIEW),
+    ("/ops/platform/subscription-coupons/", PERMISSION_SUBSCRIPTIONS_MANAGE),
     ("/ops/platform/tenants/", PERMISSION_PLATFORM_TENANTS_VIEW),
     ("/ops/reviews/", PERMISSION_REVIEWS_MODERATE),
     ("/ops/shipping/", PERMISSION_SHIPPING_VIEW),
+    ("/ops/subscriptions/", PERMISSION_SUBSCRIPTIONS_VIEW),
 )
 
 PLATFORM_OWNER_ROLE_PRIORITY = {

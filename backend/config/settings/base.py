@@ -7,9 +7,19 @@ REPO_ROOT = BASE_DIR.parent
 SECRET_KEY = os.getenv("SECRET_KEY", "insecure-dev-key")
 DEBUG = os.getenv("DEBUG", "1") == "1"
 
-ALLOWED_HOSTS = [host for host in os.getenv("ALLOWED_HOSTS", "").split(",") if host] or (
-    ["*"] if DEBUG else ["localhost"]
-)
+
+def _allowed_hosts_from_env(raw_value: str, *, debug: bool) -> list[str]:
+    hosts = [host.strip() for host in raw_value.split(",") if host.strip()]
+    if not hosts:
+        return ["*"] if debug else ["localhost"]
+    if debug and "*" not in hosts:
+        for local_host in (".localhost", "localhost", "127.0.0.1"):
+            if local_host not in hosts:
+                hosts.append(local_host)
+    return hosts
+
+
+ALLOWED_HOSTS = _allowed_hosts_from_env(os.getenv("ALLOWED_HOSTS", ""), debug=DEBUG)
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -43,6 +53,7 @@ MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "app.modules.tenants.interfaces.middleware.TenantSubdomainMiddleware",
+    "app.modules.tenants.interfaces.middleware.DemoTenantReadOnlyMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "app.modules.accounts.interfaces.middleware.OwnerContextMiddleware",
@@ -108,6 +119,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "app.modules.accounts.interfaces.context_processors.admin_shell_context",
+                "app.modules.pages.interfaces.context_processors.storefront_pages_context",
             ]
         },
     }
@@ -156,6 +168,12 @@ NOTIFICATIONS_EMAIL_BATCH_SIZE = int(os.getenv("NOTIFICATIONS_EMAIL_BATCH_SIZE",
 HUBX_MARKET_ROOT_DOMAIN = os.getenv("HUBX_MARKET_ROOT_DOMAIN", "hubx.market")
 HUBX_MARKET_PUBLIC_PORT = os.getenv("HUBX_MARKET_PUBLIC_PORT", "")
 HUBX_PLATFORM_TENANT_SLUG = os.getenv("HUBX_PLATFORM_TENANT_SLUG", "platform-system")
+HUBX_MARKET_DEMO_TENANT_SUBDOMAIN = os.getenv("HUBX_MARKET_DEMO_TENANT_SUBDOMAIN", "hubx-demo")
+HUBX_PUBLIC_SIGNUP_ENABLED = os.getenv("HUBX_PUBLIC_SIGNUP_ENABLED", "0") == "1"
+HUBX_PUBLIC_SIGNUP_REQUIRE_ACCESS_TOKEN = os.getenv("HUBX_PUBLIC_SIGNUP_REQUIRE_ACCESS_TOKEN", "1") == "1"
+HUBX_PUBLIC_SIGNUP_ACCESS_TOKEN = os.getenv("HUBX_PUBLIC_SIGNUP_ACCESS_TOKEN", "")
+HUBX_PUBLIC_SIGNUP_RATE_LIMIT_MAX_ATTEMPTS = int(os.getenv("HUBX_PUBLIC_SIGNUP_RATE_LIMIT_MAX_ATTEMPTS", "5"))
+HUBX_PUBLIC_SIGNUP_RATE_LIMIT_WINDOW_SECONDS = int(os.getenv("HUBX_PUBLIC_SIGNUP_RATE_LIMIT_WINDOW_SECONDS", "900"))
 PAYMENTS_WEBHOOK_TOKEN = os.getenv("PAYMENTS_WEBHOOK_TOKEN", "")
 PAYMENTS_OBSERVABILITY_TOKEN = os.getenv("PAYMENTS_OBSERVABILITY_TOKEN", "")
 NOTIFICATIONS_OBSERVABILITY_TOKEN = os.getenv("NOTIFICATIONS_OBSERVABILITY_TOKEN", "")
@@ -183,7 +201,7 @@ API_KEYS_PUBLIC_CATALOG_PRODUCT_DETAIL_RATE_LIMIT_WINDOW_SECONDS = int(
         str(API_KEYS_RATE_LIMIT_DEFAULT_WINDOW_SECONDS),
     )
 )
-PAYMENTS_PROVIDER_DEFAULT = os.getenv("PAYMENTS_PROVIDER_DEFAULT", "pagarme")
+PAYMENTS_PROVIDER_DEFAULT = os.getenv("PAYMENTS_PROVIDER_DEFAULT", "asaas")
 PAYMENTS_REAL_PROVIDER_ROLLOUT_MODE = os.getenv("PAYMENTS_REAL_PROVIDER_ROLLOUT_MODE", "sandbox")
 PAYMENTS_REAL_PROVIDER_ENABLED_TENANTS = [
     tenant.strip()
@@ -191,6 +209,15 @@ PAYMENTS_REAL_PROVIDER_ENABLED_TENANTS = [
     if tenant.strip()
 ]
 PAYMENTS_REAL_PROVIDER_FALLBACK_MODE = os.getenv("PAYMENTS_REAL_PROVIDER_FALLBACK_MODE", "lite")
+ASAAS_API_KEY = os.getenv("ASAAS_API_KEY", "").strip()
+ASAAS_SANDBOX = os.getenv("ASAAS_SANDBOX", "1").strip().lower() in {"1", "true", "yes", "on"}
+ASAAS_BASE_URL = os.getenv(
+    "ASAAS_BASE_URL",
+    "https://api-sandbox.asaas.com/v3" if ASAAS_SANDBOX else "https://api.asaas.com/v3",
+).rstrip("/")
+ASAAS_WEBHOOK_TOKEN = os.getenv("ASAAS_WEBHOOK_TOKEN", "")
+ASAAS_HTTP_TIMEOUT_SECONDS = float(os.getenv("ASAAS_HTTP_TIMEOUT_SECONDS", "15"))
+SUBSCRIPTIONS_BILLING_PROVIDER_DEFAULT = os.getenv("SUBSCRIPTIONS_BILLING_PROVIDER_DEFAULT", "asaas").strip().lower()
 PAGARME_API_BASE_URL = os.getenv("PAGARME_API_BASE_URL", "https://api.pagar.me/core/v5")
 PAGARME_SECRET_KEY = os.getenv("PAGARME_SECRET_KEY") or os.getenv("PAGARME_API_KEY", "")
 PAGARME_WEBHOOK_SIGNATURE_HEADER = os.getenv("PAGARME_WEBHOOK_SIGNATURE_HEADER", "X-Hub-Signature")

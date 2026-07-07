@@ -1,0 +1,95 @@
+{% extends "layouts/admin_shell.html" %}
+
+{% block page_title %}{{ page_title|default:"Detalhe da aquisição" }}{% endblock %}
+{% block shell_title %}{{ page_title|default:"Detalhe da aquisição" }}{% endblock %}
+
+{% block content %}
+<section class="admin-ops-page admin-subscription-acquisition-detail-page space-y-8">
+    <div class="admin-ops-hero">
+        {% include "shared/components/layout/page_header.html" with eyebrow=page_eyebrow title=page_title description=page_description %}
+        <div class="mt-5 flex flex-wrap gap-3">
+            <a class="ds-btn ds-btn-secondary ds-btn-md" href="{{ back_href }}">Voltar para aquisições</a>
+            {% if lead.onboarding_href %}
+                <a class="ds-btn ds-btn-primary ds-btn-md" href="{{ lead.onboarding_href }}">Abrir onboarding</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <section class="admin-ops-panel ds-surface p-6">
+        <div class="flex flex-wrap items-start justify-between gap-4">
+            <div>
+                <p class="text-sm text-[var(--color-text-secondary)]">Lead #{{ lead.id }} · {{ lead.created_at }}</p>
+                <h2 class="mt-1 text-2xl font-semibold text-[var(--color-text-primary)]">{{ lead.store_name }}</h2>
+                <p class="mt-2 text-sm text-[var(--color-text-secondary)]">{{ lead.store_url_preview }}</p>
+            </div>
+            <div>{{ status_badge }}</div>
+        </div>
+    </section>
+
+    <section class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.7fr)]">
+        <div class="space-y-6">
+            <section class="admin-ops-panel ds-surface p-6">
+                <h3 class="text-base font-semibold text-[var(--color-text-primary)]">Plano solicitado</h3>
+                <dl class="mt-4 grid gap-4 text-sm md:grid-cols-3">
+                    <div><dt class="text-[var(--color-text-secondary)]">Plano</dt><dd class="font-medium">{{ lead.plan_name }} ({{ lead.plan_code }})</dd></div>
+                    <div><dt class="text-[var(--color-text-secondary)]">Mensalidade</dt><dd class="font-medium">{{ lead.plan_monthly_price }}</dd></div>
+                    <div><dt class="text-[var(--color-text-secondary)]">Moeda</dt><dd class="font-medium">{{ lead.plan_currency }}</dd></div>
+                    {% if lead.coupon_visible %}
+                        <div><dt class="text-[var(--color-text-secondary)]">Cupom</dt><dd class="font-medium">{{ lead.coupon_code }}</dd></div>
+                        <div><dt class="text-[var(--color-text-secondary)]">Desconto</dt><dd class="font-medium">{{ lead.coupon_discount_total }}</dd></div>
+                        <div><dt class="text-[var(--color-text-secondary)]">Preço efetivo</dt><dd class="font-medium">{{ lead.effective_monthly_price }}</dd></div>
+                    {% endif %}
+                </dl>
+            </section>
+
+            <section class="admin-ops-panel ds-surface p-6">
+                <h3 class="text-base font-semibold text-[var(--color-text-primary)]">Contato</h3>
+                <dl class="mt-4 grid gap-4 text-sm md:grid-cols-2">
+                    <div><dt class="text-[var(--color-text-secondary)]">Nome</dt><dd class="font-medium">{{ lead.contact_name|default:"—" }}</dd></div>
+                    <div><dt class="text-[var(--color-text-secondary)]">E-mail</dt><dd class="font-medium">{{ lead.contact_email }}</dd></div>
+                    <div><dt class="text-[var(--color-text-secondary)]">Telefone</dt><dd class="font-medium">{{ lead.contact_phone|default:"—" }}</dd></div>
+                    <div><dt class="text-[var(--color-text-secondary)]">Origem</dt><dd class="font-medium">{{ lead.source }}</dd></div>
+                </dl>
+                {% if lead.message %}
+                    <div class="ds-subpanel mt-5 text-sm text-[var(--color-text-secondary)]">
+                        {{ lead.message }}
+                    </div>
+                {% endif %}
+            </section>
+        </div>
+
+        <aside class="space-y-6">
+            <section class="admin-ops-panel ds-surface p-6">
+                <h3 class="text-base font-semibold text-[var(--color-text-primary)]">Ações</h3>
+                {% if can_manage_acquisitions and lead.can_convert %}
+                    <form method="post" action="{{ convert_action }}" class="mt-4">
+                        {% csrf_token %}
+                        {% include "shared/components/actions/button.html" with label="Converter para onboarding" variant="primary" type="submit" icon_name="arrow-right" full_width=True %}
+                    </form>
+                {% endif %}
+                {% if can_manage_acquisitions and lead.can_discard %}
+                    <form method="post" action="{{ discard_action }}" class="mt-3">
+                        {% csrf_token %}
+                        {% include "shared/components/actions/button.html" with label="Descartar lead" variant="secondary" type="submit" icon_name="x" full_width=True %}
+                    </form>
+                {% endif %}
+                {% if not can_manage_acquisitions %}
+                    <p class="mt-4 text-sm text-[var(--color-text-secondary)]">Seu perfil atual permite revisar o lead, mas não converter ou descartar aquisições.</p>
+                {% endif %}
+                {% if not lead.can_convert %}
+                    <p class="mt-4 text-sm text-[var(--color-text-secondary)]">Lead já saiu da fila de conversão.</p>
+                {% endif %}
+            </section>
+
+            <section class="admin-ops-panel ds-surface p-6">
+                <h3 class="text-base font-semibold text-[var(--color-text-primary)]">Resultado</h3>
+                <dl class="mt-4 space-y-3 text-sm">
+                    <div><dt class="text-[var(--color-text-secondary)]">Convertido em</dt><dd class="font-medium">{{ lead.converted_at|default:"—" }}</dd></div>
+                    <div><dt class="text-[var(--color-text-secondary)]">Descartado em</dt><dd class="font-medium">{{ lead.discarded_at|default:"—" }}</dd></div>
+                    <div><dt class="text-[var(--color-text-secondary)]">Onboarding</dt><dd class="font-medium">{{ lead.onboarding_id|default:"—" }}</dd></div>
+                </dl>
+            </section>
+        </aside>
+    </section>
+</section>
+{% endblock %}

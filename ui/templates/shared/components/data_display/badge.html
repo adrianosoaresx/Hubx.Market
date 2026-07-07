@@ -1,22 +1,12 @@
 {% with variant=variant|default:"neutral" size=size|default:"sm" %}
 <span
-    class="
-        inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-medium
-        {% if size == 'xs' %}text-xs{% else %}text-sm{% endif %}
-        {% if variant == 'success' or variant == 'active' or variant == 'paid' or variant == 'delivered' %}
-            bg-emerald-100 text-emerald-800
-        {% elif variant == 'warning' or variant == 'pending' %}
-            bg-amber-100 text-amber-800
-        {% elif variant == 'danger' or variant == 'inactive' or variant == 'canceled' %}
-            bg-rose-100 text-rose-800
-        {% elif variant == 'info' or variant == 'shipped' %}
-            bg-sky-100 text-sky-800
-        {% else %}
-            bg-slate-100 text-slate-700
-        {% endif %}
-    "
+    class="ds-badge {% if size == 'xs' %}ds-badge-xs{% endif %} {% if variant == 'success' or variant == 'active' or variant == 'paid' or variant == 'delivered' %}ds-badge-success{% elif variant == 'warning' or variant == 'pending' %}ds-badge-warning{% elif variant == 'danger' or variant == 'inactive' or variant == 'canceled' %}ds-badge-danger{% elif variant == 'info' or variant == 'shipped' %}ds-badge-info{% else %}ds-badge-neutral{% endif %}"
 >
-    {% if icon %}<span aria-hidden="true">{{ icon }}</span>{% endif %}
+    {% if icon_name %}
+        {% include "shared/partials/icon.html" with name=icon_name size="sm" %}
+    {% elif icon %}
+        <span aria-hidden="true">{{ icon }}</span>
+    {% endif %}
     <span>{{ label|default:variant|title }}</span>
 </span>
 {% endwith %}

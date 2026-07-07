@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from django.utils import timezone
 
+from app.modules.accounts.application.admin_permissions import PERMISSION_SHIPPING_MANAGE, admin_permissions
 from app.modules.shipping.application.shipping_event_publisher import shipping_event_publisher
 from app.modules.shipping.models import Shipment, ShipmentStatusHistory
 
@@ -37,6 +38,17 @@ class DjangoOrmShipmentCommandRepository:
 class ShipmentCommandService:
     repository: DjangoOrmShipmentCommandRepository
 
+    @staticmethod
+    def _write_guard(*, tenant_id: int | str, actor_role: str) -> str:
+        if not str(tenant_id or "").strip():
+            return "shipment-tenant-missing"
+        normalized_role = str(actor_role or "").strip()
+        if not normalized_role:
+            return "shipment-permission-denied"
+        if not admin_permissions.check(role=normalized_role, permission=PERMISSION_SHIPPING_MANAGE).allowed:
+            return "shipment-permission-denied"
+        return ""
+
     def _create_history_entry(
         self,
         *,
@@ -64,7 +76,11 @@ class ShipmentCommandService:
         tracking_code: str = "",
         tracking_url: str = "",
         carrier_name: str = "",
+        actor_role: str = "",
     ) -> str:
+        guard_result = self._write_guard(tenant_id=tenant_id, actor_role=actor_role)
+        if guard_result:
+            return guard_result
         order = self.repository.get_order(tenant_id=tenant_id, order_number=order_number)
         if order is None:
             return "shipment-order-not-found"
@@ -94,12 +110,46 @@ class ShipmentCommandService:
         shipping_event_publisher.publish_shipment_sent(tenant_id=tenant_id, order_number=order.number)
         return "shipment-sent"
 
+    def generate_shipping_label(
+        self,
+        *,
+        tenant_id: int | str,
+        order_number: str,
+        actor_role: str = "",
+    ) -> str:
+        guard_result = self._write_guard(tenant_id=tenant_id, actor_role=actor_role)
+        if guard_result:
+            return guard_result
+        order = self.repository.get_order(tenant_id=tenant_id, order_number=order_number)
+        if order is None:
+            return "shipment-order-not-found"
+        shipment, _ = Shipment.objects.get_or_create(tenant_id=tenant_id, order=order)
+        if shipment.label_status == Shipment.LabelStatus.GENERATED and shipment.label_code:
+            return "shipment-label-already-generated"
+
+        shipment.label_status = Shipment.LabelStatus.GENERATED
+        shipment.label_code = self._build_label_code(tenant_id=tenant_id, order_number=order.number, shipment_id=shipment.id)
+        shipment.label_url = f"/ops/shipping/{order.number}/label/"
+        shipment.label_created_at = timezone.now()
+        shipment.save(update_fields=("label_status", "label_code", "label_url", "label_created_at", "updated_at"))
+        self._create_history_entry(
+            shipment=shipment,
+            event_type="shipment_label_generated",
+            title="Etiqueta gerada",
+            description="Etiqueta logística interna gerada para impressão no admin.",
+        )
+        return "shipment-label-generated"
+
     def mark_shipment_delivered(
         self,
         *,
         tenant_id: int | str,
         order_number: str,
+        actor_role: str = "",
     ) -> str:
+        guard_result = self._write_guard(tenant_id=tenant_id, actor_role=actor_role)
+        if guard_result:
+            return guard_result
         order = self.repository.get_order(tenant_id=tenant_id, order_number=order_number)
         if order is None:
             return "shipment-order-not-found"
@@ -121,6 +171,9 @@ class ShipmentCommandService:
         )
         shipping_event_publisher.publish_shipment_delivered(tenant_id=tenant_id, order_number=order.number)
         return "shipment-delivered"
+
+    def _build_label_code(self, *, tenant_id: int | str, order_number: str, shipment_id: int | str) -> str:
+        return f"HBX-{tenant_id}-{str(order_number).strip()}-{shipment_id}"
 
 
 shipment_commands = ShipmentCommandService(repository=DjangoOrmShipmentCommandRepository())

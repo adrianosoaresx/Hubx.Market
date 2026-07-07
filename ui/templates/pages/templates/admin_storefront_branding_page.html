@@ -1,0 +1,104 @@
+{% extends layout_template|default:"layouts/admin_shell.html" %}
+
+{% block page_title %}{{ page_title|default:"Branding da loja" }}{% endblock %}
+{% block shell_title %}{% if shell_title %}{{ shell_title }}{% elif page_title %}{{ page_title }}{% else %}Branding da loja{% endif %}{% endblock %}
+
+{% block content %}
+<section class="space-y-6">
+    {% with eyebrow=page_eyebrow|default:"Conteúdo" title=page_title|default:"Branding da loja" description=page_description meta=page_meta %}
+        {% include "shared/components/layout/admin_page_header.html" %}
+    {% endwith %}
+
+    {% if success_message %}
+        {% include "shared/components/feedback/alert.html" with variant="success" title="Alterações salvas" description=success_message %}
+    {% endif %}
+
+    {% if form_error %}
+        {% include "shared/components/feedback/alert.html" with variant="danger" title="Corrija o formulário" description=form_error %}
+    {% endif %}
+
+    <div class="grid gap-6 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+        <form method="post" action="{{ form_action }}" class="space-y-6">
+            {% csrf_token %}
+
+            <section class="ds-surface space-y-6 p-6">
+                <div class="space-y-1">
+                    <h2 class="text-base font-semibold text-[var(--color-text-primary)]">Identidade da marca</h2>
+                    <p class="text-sm text-[var(--color-text-secondary)]">O logo aparece na navegação, admin da loja e blocos institucionais.</p>
+                </div>
+
+                {% with name="logo_url" label="URL do logo" value=logo_url placeholder="https://cdn.exemplo.com/logo-loja.png" input_type="url" invalid=errors.logo_url error_text=errors.logo_url help_text="Use uma URL pública, preferencialmente PNG ou SVG em fundo transparente." disabled=can_save_storefront_branding|yesno:",1" %}
+                    {% include "shared/components/forms/input.html" %}
+                {% endwith %}
+            </section>
+
+            <section class="ds-surface space-y-6 p-6">
+                <div class="space-y-1">
+                    <h2 class="text-base font-semibold text-[var(--color-text-primary)]">Hero institucional</h2>
+                    <p class="text-sm text-[var(--color-text-secondary)]">Imagem recomendada: 1600x720px, com assunto principal centralizado.</p>
+                </div>
+
+                {% with name="storefront_hero_enabled" label="Exibir hero no storefront" description="Quando desligado, a home e a loja voltam para a vitrine sem bloco institucional." checked=storefront_hero_enabled invalid=errors.storefront_hero_enabled error_text=errors.storefront_hero_enabled disabled=can_save_storefront_branding|yesno:",1" %}
+                    {% include "shared/components/forms/switch.html" %}
+                {% endwith %}
+
+                {% with name="storefront_hero_title" label="Título" value=storefront_hero_title placeholder=request.tenant.name invalid=errors.storefront_hero_title error_text=errors.storefront_hero_title disabled=can_save_storefront_branding|yesno:",1" %}
+                    {% include "shared/components/forms/input.html" %}
+                {% endwith %}
+
+                {% with name="storefront_hero_description" label="Descrição" value=storefront_hero_description placeholder="Apresente a curadoria, proposta e confiança da loja." rows=5 invalid=errors.storefront_hero_description error_text=errors.storefront_hero_description help_text="Até 600 caracteres para manter o hero compacto em mobile." disabled=can_save_storefront_branding|yesno:",1" %}
+                    {% include "shared/components/forms/textarea.html" %}
+                {% endwith %}
+
+                {% with name="storefront_hero_image_url" label="URL da imagem" value=storefront_hero_image_url placeholder="https://cdn.exemplo.com/banner-loja.jpg" input_type="url" invalid=errors.storefront_hero_image_url error_text=errors.storefront_hero_image_url help_text="Use uma URL pública em proporção panorâmica." disabled=can_save_storefront_branding|yesno:",1" %}
+                    {% include "shared/components/forms/input.html" %}
+                {% endwith %}
+            </section>
+
+            <section class="ds-surface space-y-6 p-6">
+                <div class="space-y-1">
+                    <h2 class="text-base font-semibold text-[var(--color-text-primary)]">Chamada principal</h2>
+                    <p class="text-sm text-[var(--color-text-secondary)]">O link precisa apontar para um caminho interno da loja.</p>
+                </div>
+
+                <div class="grid gap-6 md:grid-cols-2">
+                    {% with name="storefront_hero_cta_label" label="Texto do botão" value=storefront_hero_cta_label placeholder="Ver produtos" invalid=errors.storefront_hero_cta_label error_text=errors.storefront_hero_cta_label disabled=can_save_storefront_branding|yesno:",1" %}
+                        {% include "shared/components/forms/input.html" %}
+                    {% endwith %}
+
+                    {% with name="storefront_hero_cta_href" label="Destino" value=storefront_hero_cta_href placeholder="/catalog/" invalid=errors.storefront_hero_cta_href error_text=errors.storefront_hero_cta_href disabled=can_save_storefront_branding|yesno:",1" %}
+                        {% include "shared/components/forms/input.html" %}
+                    {% endwith %}
+                </div>
+            </section>
+
+            {% if can_save_storefront_branding %}
+                {% with primary_label="Salvar branding" secondary_label="Voltar" secondary_href=cancel_href %}
+                    {% include "shared/components/forms/form_actions.html" %}
+                {% endwith %}
+            {% else %}
+                {% with title="Edição indisponível" description=save_blocked_message variant="warning" %}
+                    {% include "shared/components/feedback/alert.html" %}
+                {% endwith %}
+            {% endif %}
+        </form>
+
+        <section class="ds-surface space-y-6 p-6">
+            <div class="space-y-1">
+                <h2 class="text-base font-semibold text-[var(--color-text-primary)]">Prévia</h2>
+                <p class="text-sm text-[var(--color-text-secondary)]">Renderização aproximada do hero com o tema atual da loja.</p>
+            </div>
+
+            <div class="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-border-default)] bg-[var(--color-surface-canvas)] p-4">
+                {% if storefront_hero.enabled %}
+                    {% include "shared/partials/storefront_institutional_hero.html" with storefront_hero=storefront_hero %}
+                {% else %}
+                    <div class="min-h-48 content-center text-center text-sm text-[var(--color-text-secondary)]">
+                        Hero institucional desativado.
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+    </div>
+</section>
+{% endblock %}

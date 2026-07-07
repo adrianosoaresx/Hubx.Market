@@ -1,9 +1,13 @@
+from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
+from app.modules.accounts.models import OwnerUser
+from app.modules.newsletter.application.newsletter_campaign_commands import newsletter_campaign_commands
 from app.modules.newsletter.application.admin_newsletter_queries import admin_newsletter_queries
 from app.modules.newsletter.application.newsletter_subscription_commands import newsletter_subscription_commands
-from app.modules.newsletter.models import NewsletterSubscriber
+from app.modules.newsletter.models import NewsletterCampaign, NewsletterSubscriber
+from app.modules.notifications.models import EmailLog
 from app.modules.tenants.models import Tenant
 
 
@@ -14,6 +18,20 @@ class NewsletterContractTests(TestCase):
         self.other_tenant = Tenant.objects.create(name="Outra Newsletter", slug="outra-newsletter", subdomain="outra-newsletter")
         self.host = f"{self.tenant.subdomain}.hubx.market"
         self.other_host = f"{self.other_tenant.subdomain}.hubx.market"
+        self.user = get_user_model().objects.create_user(
+            username="marketing@hubx.market",
+            email="marketing@hubx.market",
+            password="secret",
+        )
+
+    def _login_owner(self, *, role: str = "owner"):
+        OwnerUser.objects.update_or_create(
+            tenant=self.tenant,
+            email=self.user.email,
+            defaults={"role": role, "is_active": True},
+        )
+        self.client.force_login(self.user)
+        self.client.defaults["HTTP_HOST"] = self.host
 
     def test_subscribe_creates_tenant_scoped_opt_in(self):
         result = newsletter_subscription_commands.subscribe(
@@ -135,3 +153,137 @@ class NewsletterContractTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "off@email.com")
         self.assertNotContains(response, "ativo@email.com")
+
+    def test_campaign_command_creates_tenant_scoped_draft(self):
+        result = newsletter_campaign_commands.create_campaign(
+            tenant_id=self.tenant.id,
+            title="Lançamento",
+            subject="Novidades da loja",
+            body_text="Confira a nova coleção.",
+            actor_label="marketing@hubx.market",
+        )
+
+        self.assertEqual(result["result"], "newsletter-campaign-created")
+        campaign = NewsletterCampaign.objects.get()
+        self.assertEqual(campaign.tenant, self.tenant)
+        self.assertEqual(campaign.status, NewsletterCampaign.Status.DRAFT)
+        self.assertEqual(campaign.created_by_label, "marketing@hubx.market")
+
+    def test_send_campaign_creates_email_logs_for_active_subscribers_only(self):
+        active = NewsletterSubscriber.objects.create(tenant=self.tenant, email="ativo@email.com", name="Ativo")
+        NewsletterSubscriber.objects.create(
+            tenant=self.tenant,
+            email="off@email.com",
+            status=NewsletterSubscriber.Status.UNSUBSCRIBED,
+        )
+        NewsletterSubscriber.objects.create(tenant=self.other_tenant, email="outro@email.com")
+        campaign = NewsletterCampaign.objects.create(
+            tenant=self.tenant,
+            title="Lançamento",
+            subject="Novidades da loja",
+            body_text="Confira a nova coleção.",
+        )
+
+        result = newsletter_campaign_commands.send_campaign(
+            tenant_id=self.tenant.id,
+            campaign_id=campaign.id,
+            actor_label="marketing@hubx.market",
+        )
+
+        self.assertEqual(result["result"], "newsletter-campaign-sent")
+        campaign.refresh_from_db()
+        self.assertEqual(campaign.status, NewsletterCampaign.Status.SENT)
+        self.assertEqual(campaign.recipient_count, 1)
+        log = EmailLog.objects.get()
+        self.assertEqual(log.tenant, self.tenant)
+        self.assertEqual(log.recipient_email, active.email)
+        self.assertEqual(log.source_event, "newsletter.campaign.sent")
+        self.assertEqual(log.status, EmailLog.Status.PLANNED)
+
+    def test_send_campaign_is_idempotent_after_sent(self):
+        NewsletterSubscriber.objects.create(tenant=self.tenant, email="ativo@email.com")
+        campaign = NewsletterCampaign.objects.create(
+            tenant=self.tenant,
+            title="Lançamento",
+            subject="Novidades da loja",
+            body_text="Confira a nova coleção.",
+        )
+
+        first = newsletter_campaign_commands.send_campaign(tenant_id=self.tenant.id, campaign_id=campaign.id)
+        second = newsletter_campaign_commands.send_campaign(tenant_id=self.tenant.id, campaign_id=campaign.id)
+
+        self.assertEqual(first["result"], "newsletter-campaign-sent")
+        self.assertEqual(second["result"], "newsletter-campaign-already-sent")
+        self.assertEqual(EmailLog.objects.count(), 1)
+
+    def test_campaign_send_is_tenant_scoped(self):
+        NewsletterSubscriber.objects.create(tenant=self.other_tenant, email="outro@email.com")
+        campaign = NewsletterCampaign.objects.create(
+            tenant=self.tenant,
+            title="Lançamento",
+            subject="Novidades da loja",
+            body_text="Confira a nova coleção.",
+        )
+
+        result = newsletter_campaign_commands.send_campaign(
+            tenant_id=self.other_tenant.id,
+            campaign_id=campaign.id,
+        )
+
+        self.assertEqual(result["result"], "newsletter-campaign-not-found")
+        self.assertEqual(EmailLog.objects.count(), 0)
+
+    def test_admin_campaign_create_and_send_views_require_manage_permission(self):
+        self._login_owner(role="marketing")
+        NewsletterSubscriber.objects.create(tenant=self.tenant, email="ativo@email.com")
+
+        create_response = self.client.post(
+            reverse("newsletter:admin-newsletter-campaign-create"),
+            {
+                "title": "Lançamento",
+                "subject": "Novidades da loja",
+                "body_text": "Confira a nova coleção.",
+            },
+        )
+        campaign = NewsletterCampaign.objects.get()
+        send_response = self.client.post(
+            reverse("newsletter:admin-newsletter-campaign-send", kwargs={"campaign_id": campaign.id}),
+        )
+
+        self.assertEqual(create_response.status_code, 302)
+        self.assertIn("status=created", create_response["Location"])
+        self.assertEqual(send_response.status_code, 302)
+        self.assertIn("status=sent", send_response["Location"])
+        self.assertEqual(EmailLog.objects.count(), 1)
+
+    def test_viewer_cannot_read_or_manage_newsletter_campaigns(self):
+        self._login_owner(role="viewer")
+        NewsletterSubscriber.objects.create(tenant=self.tenant, email="ativo@email.com")
+        campaign = NewsletterCampaign.objects.create(
+            tenant=self.tenant,
+            title="Lançamento",
+            subject="Novidades da loja",
+            body_text="Confira a nova coleção.",
+        )
+
+        list_response = self.client.get(reverse("newsletter:admin-newsletter-list"))
+        create_response = self.client.post(
+            reverse("newsletter:admin-newsletter-campaign-create"),
+            {
+                "title": "Bloqueada",
+                "subject": "Bloqueada",
+                "body_text": "Bloqueada",
+            },
+        )
+        send_response = self.client.post(
+            reverse("newsletter:admin-newsletter-campaign-send", kwargs={"campaign_id": campaign.id}),
+        )
+
+        self.assertEqual(list_response.status_code, 200)
+        self.assertContains(list_response, "Permissão necessária")
+        self.assertNotContains(list_response, "ativo@email.com")
+        self.assertNotContains(list_response, "Criar campanha")
+        self.assertNotContains(list_response, "Enviar")
+        self.assertEqual(create_response.status_code, 403)
+        self.assertEqual(send_response.status_code, 302)
+        self.assertEqual(EmailLog.objects.count(), 0)

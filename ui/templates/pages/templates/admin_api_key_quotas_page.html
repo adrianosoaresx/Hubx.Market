@@ -6,10 +6,10 @@
 {% block content %}
 <section class="space-y-6">
     {% with eyebrow=page_eyebrow|default:"API pública" title=page_title|default:"Quotas de API keys" description=page_description|default:"Visibilidade read-only de quotas comerciais por tenant." %}
-        {% include "shared/components/layout/page_header.html" %}
+        {% include "shared/components/layout/admin_page_header.html" %}
     {% endwith %}
 
-    <div class="rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
+    <div class="ds-subpanel">
         <p class="text-sm text-[var(--color-text-secondary)]">
             Esta tela não cria cobrança, plano ou segredo. Ela mostra apenas quota, uso agregado e prefixo público da API key.
         </p>

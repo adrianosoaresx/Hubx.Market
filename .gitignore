@@ -7,4 +7,11 @@ dist/
 build/
 *.sqlite3
 media/
+!backend/media/
+backend/media/*
+!backend/media/demo-catalog/
+backend/media/demo-catalog/*
+!backend/media/demo-catalog/fixtures/
+backend/media/demo-catalog/fixtures/*
+!backend/media/demo-catalog/fixtures/*.jpg
 staticfiles/

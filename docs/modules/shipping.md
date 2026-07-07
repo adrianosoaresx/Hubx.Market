@@ -5,14 +5,56 @@ Gerenciar frete e rastreio.
 
 ## Entidades principais
 - Shipment
+- ShipmentStatusHistory
+- ShippingProviderSettings
 
 ## Casos de uso
 - cotar frete
 - registrar envio
 - registrar rastreio
+- gerar etiqueta logística interna
 
 ## Regras de negócio
 - shipment tem tracking code no MVP
+- etiqueta pertence a `Shipment`
+- geração de etiqueta não marca pedido como enviado
+- envio e entrega continuam como ações operacionais separadas
+
+## Shipping Label Admin Execution
+
+- o módulo `shipping` agora possui geração de etiqueta logística tenant-scoped.
+- campos adicionados em `Shipment`:
+  - `label_status`;
+  - `label_code`;
+  - `label_url`;
+  - `label_created_at`.
+- command service:
+  - `shipping.application.shipment_commands.generate_shipping_label`.
+- query service:
+  - `shipping.application.shipment_label_queries`.
+- admin:
+  - `/ops/shipping/` mostra a coluna `Etiqueta`;
+  - `/ops/shipping/<order_number>/label/` renderiza etiqueta imprimível em texto.
+
+### Regras
+
+- geração exige `shipping.manage`.
+- geração usa `tenant_id + order_number`.
+- pedido de outro tenant retorna `shipment-order-not-found`.
+- se ainda não existir `Shipment`, a geração cria um shipment em `created`.
+- etiqueta gerada é idempotente:
+  - nova tentativa retorna `shipment-label-already-generated`;
+  - histórico não é duplicado.
+- `label_code` inicial segue o padrão `HBX-<tenant_id>-<order_number>-<shipment_id>`.
+- geração registra `ShipmentStatusHistory.event_type=shipment_label_generated`.
+
+### Escopo deliberado
+
+- sem contratar provider real de etiqueta.
+- sem compra de frete.
+- sem PDF ou código de barras.
+- sem cancelar/estornar etiqueta.
+- sem marcar shipment como enviado automaticamente.
 
 ## Wave AX — Shipping Product Experience Review
 - a revisão do eixo de frete/entrega mostra que `shipping` ainda é mais contrato futuro do que módulo operacional implementado

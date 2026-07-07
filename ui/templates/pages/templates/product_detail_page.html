@@ -36,7 +36,7 @@
 
                     {% if review_summary.review_count %}
                         <a href="#product-reviews" class="inline-flex w-fit items-center gap-2 rounded-full border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] px-3 py-1.5 text-sm font-medium text-[var(--color-text-primary)] hover:border-[var(--color-border-strong)]">
-                            <span aria-hidden="true">⭐</span>
+                            {% include "shared/partials/icon.html" with name="star" size="sm" %}
                             <span>{{ review_summary.rating_average }}/5</span>
                             <span class="text-[var(--color-text-secondary)]">· {{ review_summary.review_count }} avaliação(ões) aprovada(s)</span>
                             <span class="text-[var(--color-brand-primary)]">Ver avaliações</span>
@@ -53,9 +53,6 @@
                         {% include "shared/components/commerce/stock_indicator.html" %}
                     {% endwith %}
 
-                    {% if effective_variant_summary %}
-                        {% include "shared/components/forms/field_help.html" with text=effective_variant_summary %}
-                    {% endif %}
                     {% if availability_note %}
                         {% include "shared/components/forms/field_help.html" with text=availability_note %}
                     {% endif %}
@@ -64,9 +61,11 @@
 
             {% if approved_reviews %}
                 {% with featured_review=approved_reviews.0 %}
-                    <section class="rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-5" aria-label="Avaliação em destaque">
+                    <section class="ds-card ds-surface" aria-label="Avaliação em destaque">
                         <div class="flex items-start gap-3">
-                            <span class="mt-0.5 text-lg" aria-hidden="true">⭐</span>
+                            <span class="mt-0.5 text-[var(--color-action-primary-bg)]" aria-hidden="true">
+                                {% include "shared/partials/icon.html" with name="star" size="md" %}
+                            </span>
                             <div class="min-w-0 space-y-2">
                                 <div class="flex flex-wrap items-center gap-2">
                                     <p class="text-sm font-semibold text-[var(--color-text-primary)]">{{ featured_review.title|default:"Cliente recomenda este produto" }}</p>
@@ -84,14 +83,8 @@
                 {% endwith %}
             {% endif %}
 
-            {% if short_description %}
-                <div class="rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-5">
-                    <p class="text-sm leading-6 text-[var(--color-text-secondary)]">{{ short_description }}</p>
-                </div>
-            {% endif %}
-
             {% if pdp_decision_checks %}
-                <section class="grid gap-3 rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-5 sm:grid-cols-3" aria-label="Resumo para decisão de compra">
+                <section class="ds-card ds-surface grid gap-3 sm:grid-cols-3" aria-label="Resumo para decisão de compra">
                     {% for check in pdp_decision_checks %}
                         <article class="space-y-1">
                             <p class="text-sm font-semibold text-[var(--color-text-primary)]">{{ check.title }}</p>
@@ -102,7 +95,7 @@
             {% endif %}
 
             {% if approved_reviews %}
-                <section id="product-reviews" class="space-y-4 rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-5 scroll-mt-24" aria-label="Avaliações de clientes">
+                <section id="product-reviews" class="ds-card ds-surface space-y-4 scroll-mt-24" aria-label="Avaliações de clientes">
                     <div class="space-y-1">
                         <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">Avaliações de clientes</h2>
                         <p class="text-sm text-[var(--color-text-secondary)]">
@@ -111,7 +104,7 @@
                     </div>
                     <div class="space-y-3">
                         {% for review in approved_reviews %}
-                            <article class="rounded-xl border border-[var(--color-border-muted)] bg-[var(--color-surface-subtle)] p-4">
+                            <article class="ds-subpanel">
                                 <div class="flex flex-wrap items-center justify-between gap-2">
                                     <p class="text-sm font-semibold text-[var(--color-text-primary)]">{{ review.title|default:"Avaliação do produto" }}</p>
                                     <p class="text-xs font-medium text-[var(--color-text-secondary)]">{{ review.rating }}/5</p>
@@ -129,7 +122,7 @@
             <form
                 method="{{ form_method|default:'post' }}"
                 action="{{ form_action|default:'' }}"
-                class="storefront-pdp-purchase-card space-y-6 rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-6"
+                class="storefront-pdp-purchase-card ds-card ds-surface space-y-6"
             >
                 {% csrf_token %}
                 {% if cart_idempotency_key %}
@@ -170,7 +163,7 @@
                     </div>
 
                     <div class="flex w-full flex-col gap-3 sm:w-auto sm:min-w-72">
-                        {% with label=primary_action_label|default:"Adicionar ao carrinho" variant=primary_action_variant|default:"primary" type=primary_action_type|default:"submit" name=primary_action_name value=primary_action_value full_width=True disabled=primary_action_disabled loading=primary_action_loading %}
+                        {% with label=primary_action_label|default:"Adicionar ao carrinho" variant=primary_action_variant|default:"primary" href=primary_action_href type=primary_action_type|default:"submit" name=primary_action_name value=primary_action_value full_width=True disabled=primary_action_disabled loading=primary_action_loading %}
                             {% include "shared/components/actions/button.html" %}
                         {% endwith %}
 
@@ -187,7 +180,7 @@
             </form>
 
             {% if long_description %}
-                <section class="space-y-3 rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-6">
+                <section class="ds-card ds-surface space-y-3">
                     <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">{{ long_description_title|default:"Descrição" }}</h2>
                     <div class="prose prose-slate max-w-none text-sm text-[var(--color-text-secondary)]">
                         {{ long_description }}

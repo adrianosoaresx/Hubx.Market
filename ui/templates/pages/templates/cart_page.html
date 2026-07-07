@@ -15,6 +15,10 @@
         </div>
     </header>
 
+    {% if demo_simulation_notice %}
+        {% include "shared/components/feedback/alert.html" with variant=demo_simulation_notice.variant icon_name=demo_simulation_notice.icon_name title=demo_simulation_notice.title description=demo_simulation_notice.description %}
+    {% endif %}
+
     {% if cart_items %}
         <div class="cart-checkout-layout grid gap-8 lg:grid-cols-[minmax(0,1.5fr)_minmax(22rem,26rem)]">
             <section class="cart-items-stack space-y-4">
@@ -36,20 +40,20 @@
                     {% include "shared/components/composite/order_summary.html" %}
                 {% endwith %}
                 {% if delivery_promise.items %}
-                    <section class="cart-checkout-panel space-y-4 rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-4" aria-label="Promessa de entrega">
+                    <section class="cart-checkout-panel ds-card ds-surface" aria-label="Promessa de entrega">
                         <header class="space-y-1">
                             <h2 class="text-sm font-semibold text-[var(--color-text-primary)]">{{ delivery_promise.title }}</h2>
                             <p class="text-xs leading-5 text-[var(--color-text-secondary)]">{{ delivery_promise.description }}</p>
                         </header>
                         <div class="space-y-3">
                             {% for item in delivery_promise.items %}
-                                <div class="rounded-xl border border-[var(--color-border-default)] bg-[var(--color-surface-default)] px-3 py-2">
+                                <div class="ds-subpanel">
                                     <div class="flex items-start justify-between gap-3">
                                         <div>
                                             <p class="text-sm font-medium text-[var(--color-text-primary)]">{{ item.label }}</p>
                                             <p class="mt-1 text-xs leading-5 text-[var(--color-text-secondary)]">{{ item.description }}</p>
                                         </div>
-                                        <span class="shrink-0 rounded-full bg-[var(--color-surface-muted)] px-3 py-1 text-xs font-medium text-[var(--color-text-secondary)]">
+                                        <span class="ds-pill">
                                             {{ item.price_hint }}
                                         </span>
                                     </div>
@@ -62,16 +66,23 @@
                     </section>
                 {% endif %}
                 {% if conversion_readiness_items %}
-                    <section class="cart-checkout-panel space-y-4 rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-4" aria-label="Próximo passo seguro">
+                    <section class="cart-checkout-panel ds-card ds-surface" aria-label="Próximo passo seguro">
                         <header class="space-y-1">
                             <h2 class="text-sm font-semibold text-[var(--color-text-primary)]">{{ conversion_readiness_title }}</h2>
                             <p class="text-xs leading-5 text-[var(--color-text-secondary)]">{{ conversion_readiness_description }}</p>
                         </header>
                         <div class="space-y-3">
                             {% for item in conversion_readiness_items %}
-                                <div class="rounded-xl border border-[var(--color-border-default)] bg-[var(--color-surface-default)] px-3 py-2">
-                                    <p class="text-sm font-medium text-[var(--color-text-primary)]">
-                                        {% if item.ready %}✅{% else %}⏳{% endif %} {{ item.label }}
+                                <div class="ds-check-item">
+                                    <p class="ds-check-item-title">
+                                        <span class="ds-check-item-icon {% if item.ready %}is-ready{% endif %}" aria-hidden="true">
+                                            {% if item.ready %}
+                                                {% include "shared/partials/icon.html" with name="check" size="sm" %}
+                                            {% else %}
+                                                {% include "shared/partials/icon.html" with name="clock" size="sm" %}
+                                            {% endif %}
+                                        </span>
+                                        <span>{{ item.label }}</span>
                                     </p>
                                     <p class="mt-1 text-xs leading-5 text-[var(--color-text-secondary)]">{{ item.description }}</p>
                                 </div>
@@ -79,53 +90,59 @@
                         </div>
                     </section>
                 {% endif %}
-                <section class="cart-checkout-panel space-y-4 rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-4" aria-label="Cupom">
-                    <header class="space-y-1">
-                        <h2 class="text-sm font-semibold text-[var(--color-text-primary)]">Cupom</h2>
-                        <p class="text-xs leading-5 text-[var(--color-text-secondary)]">
-                            Informe um cupom para validar desconto no carrinho. O total só muda quando o código for válido para esta loja.
-                        </p>
-                    </header>
-                    <form method="post" action="" class="space-y-3">
-                        {% csrf_token %}
-                        <label class="sr-only" for="coupon-code">Código do cupom</label>
-                        <input
-                            id="coupon-code"
-                            name="coupon_code"
-                            value="{{ coupon_code }}"
-                            placeholder="Digite seu cupom"
-                            class="w-full rounded-xl border border-[var(--color-border-default)] bg-[var(--color-surface-default)] px-3 py-2 text-sm text-[var(--color-text-primary)]"
-                        >
-                        <div class="flex flex-col gap-2 sm:flex-row">
-                            <button class="ds-btn ds-btn-secondary ds-btn-md w-full" type="submit" name="cart_intent" value="apply_coupon">
-                                <span>Salvar cupom</span>
-                            </button>
-                            {% if coupon_code %}
-                                <button class="ds-btn ds-btn-secondary ds-btn-md w-full" type="submit" name="cart_intent" value="remove_coupon">
-                                    <span>Remover</span>
+                {% if not checkout_action_href %}
+                    <section class="cart-checkout-panel ds-card ds-surface" aria-label="Cupom">
+                        <header class="space-y-1">
+                            <h2 class="text-sm font-semibold text-[var(--color-text-primary)]">Cupom</h2>
+                            <p class="text-xs leading-5 text-[var(--color-text-secondary)]">
+                                Informe um cupom para validar desconto no carrinho. O total só muda quando o código for válido para esta loja.
+                            </p>
+                        </header>
+                        <form method="post" action="" class="space-y-3">
+                            {% csrf_token %}
+                            <label class="sr-only" for="coupon-code">Código do cupom</label>
+                            <input
+                                id="coupon-code"
+                                name="coupon_code"
+                                value="{{ coupon_code }}"
+                                placeholder="Digite seu cupom"
+                                class="ds-input w-full"
+                            >
+                            <div class="flex flex-col gap-2 sm:flex-row">
+                                <button class="ds-btn ds-btn-secondary ds-btn-md w-full" type="submit" name="cart_intent" value="apply_coupon">
+                                    <span>Salvar cupom</span>
                                 </button>
-                            {% endif %}
-                        </div>
-                    </form>
-                    {% if coupon_message %}
-                        <p class="text-xs leading-5 text-[var(--color-text-secondary)]">{{ coupon_message }}</p>
-                    {% endif %}
-                </section>
-                {% if checkout_action_enabled %}
-                    <form method="post" action="" class="cart-checkout-panel rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-4">
+                                {% if coupon_code %}
+                                    <button class="ds-btn ds-btn-secondary ds-btn-md w-full" type="submit" name="cart_intent" value="remove_coupon">
+                                        <span>Remover</span>
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </form>
+                        {% if coupon_message %}
+                            <p class="text-xs leading-5 text-[var(--color-text-secondary)]">{{ coupon_message }}</p>
+                        {% endif %}
+                    </section>
+                {% endif %}
+                {% if checkout_action_href %}
+                    <div class="cart-checkout-panel ds-card ds-surface">
+                        {% include "shared/components/actions/button.html" with label=checkout_action_label|default:"Simular checkout" href=checkout_action_href variant="primary" full_width=True %}
+                    </div>
+                {% elif checkout_action_enabled %}
+                    <form method="post" action="" class="cart-checkout-panel ds-card ds-surface">
                         {% csrf_token %}
                         <button class="ds-btn ds-btn-primary ds-btn-md w-full" type="submit" name="cart_intent" value="checkout">
                             <span>Ir para checkout</span>
                         </button>
                     </form>
                 {% endif %}
-                <div class="cart-checkout-panel rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-4">
+                <div class="cart-checkout-panel ds-card ds-surface">
                     {{ continue_shopping_action }}
                 </div>
             </aside>
         </div>
     {% else %}
-        {% include "shared/components/feedback/empty_state.html" with icon="🛒" title=empty_title description=empty_description primary_action=continue_shopping_action %}
+        {% include "shared/components/feedback/empty_state.html" with icon_name="shopping-cart" title=empty_title description=empty_description primary_action=continue_shopping_action %}
     {% endif %}
 </section>
 {% endblock %}

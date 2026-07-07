@@ -10,12 +10,16 @@
         {% if page_meta %}
             <p class="mt-3 text-sm text-[var(--color-text-secondary)]">{{ page_meta }}</p>
         {% endif %}
-        {% if create_href %}
-            <div class="mt-5">
-                <a class="ds-btn-primary" href="{{ create_href }}">Nova jornada</a>
-            </div>
-        {% endif %}
     </div>
+
+    {% if create_href %}
+        <div class="admin-ops-toolbar flex flex-wrap items-center justify-between gap-3">
+            <div class="flex flex-wrap gap-3">
+                {% include "shared/components/actions/button.html" with label="Nova jornada" href=create_href variant="primary" %}
+            </div>
+            <p class="text-sm text-[var(--color-text-secondary)]">Jornadas criam lojas somente após conversão platform explícita.</p>
+        </div>
+    {% endif %}
 
     <section class="admin-ops-panel ds-surface p-6">
         {% include "shared/components/data_display/data_table.html" with title="Jornadas de onboarding" description="Fluxos guiados para criar lojas com plano interno, owner, branding mínimo e domínio contract-only." count=table_count columns=columns rows=rows table_id="tenant-onboarding-table" empty_title=empty_title empty_description=empty_description showcase_mode=False %}
@@ -24,9 +28,9 @@
     <section class="admin-ops-panel ds-surface p-6">
         <div class="space-y-3">
             <p class="text-sm font-medium text-[var(--color-text-primary)]">Guardrails do portal</p>
-            <ul class="space-y-2 text-sm text-[var(--color-text-secondary)]">
+            <ul class="ds-callout-list text-sm text-[var(--color-text-secondary)]">
                 {% for note in contract_notes %}
-                    <li>• {{ note }}</li>
+                    <li>{{ note }}</li>
                 {% endfor %}
             </ul>
         </div>

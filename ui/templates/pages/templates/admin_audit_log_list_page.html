@@ -4,16 +4,16 @@
 {% block shell_title %}{% if shell_title %}{{ shell_title }}{% elif page_title %}{{ page_title }}{% else %}Audit log{% endif %}{% endblock %}
 
 {% block content %}
-<section class="space-y-6">
+<section class="admin-ops-page admin-audit-log-page space-y-6">
     {% with eyebrow=page_eyebrow|default:"Governança" title=page_title|default:"Audit log" description=page_description|default:"Eventos auditáveis por tenant." %}
-        {% include "shared/components/layout/page_header.html" %}
+        {% include "shared/components/layout/admin_page_header.html" %}
     {% endwith %}
 
-    <div class="rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-4 text-sm text-[var(--color-text-secondary)]">
+    <div class="ds-subpanel text-sm text-[var(--color-text-secondary)]">
         Fundação inicial: leitura de eventos já registrados. A instrumentação de cada módulo deve entrar por waves específicas.
     </div>
 
-    <div class="flex justify-end">
+    <div class="admin-ops-toolbar flex justify-end">
         {% include "shared/components/actions/button.html" with label="Exportar evidência JSONL" href=export_url variant="secondary" %}
     </div>
 

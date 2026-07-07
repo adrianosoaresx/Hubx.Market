@@ -2,10 +2,11 @@
 
 {% block title %}{% block page_title %}{% if is_platform_admin_shell %}Hubx Market Admin{% else %}{% firstof store_display_name request.tenant.store_display_name request.tenant.name "Admin da loja" %}{% endif %}{% endblock %}{% endblock %}
 {% block ui_context %}admin{% endblock %}
-{% block body_class %}bg-slate-50{% endblock %}
+{% block tenant_theme %}{% if is_platform_admin_shell %}default{% else %}{{ request.tenant.slug|default:"default" }}{% endif %}{% endblock %}
+{% block body_class %}admin-ops-shell{% endblock %}
 
 {% block body %}
-<div class="admin-ops-shell min-h-screen lg:grid lg:grid-cols-[16rem_minmax(0,1fr)]">
+<div class="min-h-screen lg:grid lg:grid-cols-[16rem_minmax(0,1fr)]">
     <aside class="admin-ops-sidebar border-r border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-6">
         <div class="mb-8">
             {% if is_platform_admin_shell %}
@@ -25,17 +26,27 @@
                     </p>
                     <h1 class="text-xl font-semibold text-[var(--color-text-primary)]">{% block shell_title %}Painel{% endblock %}</h1>
                 </div>
-                {% include "shared/partials/navbar.html" %}
+                {% if is_platform_admin_shell %}
+                    {% include "shared/partials/navbar.html" %}
+                {% elif request.is_demo_read_only or request.user.is_authenticated %}
+                    <form method="post" action="/accounts/logout/" class="m-0">
+                        {% csrf_token %}
+                        {% if request.is_demo_read_only and request.GET.return_url %}
+                            <input type="hidden" name="return_url" value="{{ request.GET.return_url }}">
+                        {% endif %}
+                        <button type="submit" class="global-nav-link">
+                            {% include "shared/partials/icon.html" with name="log-out" size="sm" %}
+                            <span>Sair</span>
+                        </button>
+                    </form>
+                {% endif %}
             </div>
         </header>
+        {% include "shared/partials/demo_read_only_banner.html" %}
         <main class="admin-ops-content mx-auto max-w-7xl px-6 py-8">
             {% block content %}{% endblock %}
         </main>
-        <footer class="admin-ops-footer mx-auto max-w-7xl px-6 pb-8 text-xs text-[var(--color-text-secondary)]">
-            <span>Hubx Market</span>
-            <span aria-hidden="true"> · </span>
-            <span>{% if is_platform_admin_shell %}Escopo platform{% else %}Escopo tenant{% endif %}</span>
-        </footer>
+        {% include "shared/partials/footer.html" with footer_variant="compact" %}
     </div>
 </div>
 {% endblock %}

@@ -4,6 +4,7 @@ from django.db import IntegrityError
 from django.db import transaction
 from django.urls import path
 
+from config.settings.base import _allowed_hosts_from_env
 from app.modules.tenants.models import Tenant
 
 
@@ -13,8 +14,15 @@ def tenant_probe_view(request):
     return HttpResponse(f"{tenant.subdomain}:{source}" if tenant else "none")
 
 
+def write_probe_view(request):
+    return HttpResponse("write-ok")
+
+
 urlpatterns = [
     path("tenant-probe/", tenant_probe_view),
+    path("write-probe/", write_probe_view),
+    path("ops/probe/", write_probe_view),
+    path("accounts/logout/", write_probe_view),
 ]
 
 
@@ -37,10 +45,17 @@ class TenantModelTests(TestCase):
 
 @override_settings(
     HUBX_MARKET_ROOT_DOMAIN="hubx.market",
-    ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver", "shop.example.com", "unknown.example.com"],
+    ALLOWED_HOSTS=[".hubx.market", ".localhost", "localhost", "testserver", "shop.example.com", "unknown.example.com"],
     ROOT_URLCONF="app.modules.tenants.tests.test_tenant_and_middleware",
 )
 class TenantMiddlewareTests(TestCase):
+    def test_debug_allowed_hosts_env_includes_localhost_subdomains(self):
+        hosts = _allowed_hosts_from_env("localhost,127.0.0.1,testserver", debug=True)
+
+        self.assertIn(".localhost", hosts)
+        self.assertIn("localhost", hosts)
+        self.assertIn("127.0.0.1", hosts)
+
     def test_resolves_valid_tenant_and_injects_request_tenant(self):
         Tenant.objects.create(name="Loja X", slug="lojax", subdomain="lojax")
         response = self.client.get("/tenant-probe/", HTTP_HOST="lojax.hubx.market")
@@ -81,10 +96,61 @@ class TenantMiddlewareTests(TestCase):
         response = self.client.get("/tenant-probe/", HTTP_HOST="ghost.hubx.market")
         self.assertEqual(response.status_code, 404)
 
+    def test_maintenance_tenant_blocks_storefront_paths(self):
+        Tenant.objects.create(name="Loja Em Setup", slug="setup", subdomain="setup", maintenance_mode=True)
+
+        response = self.client.get("/tenant-probe/", HTTP_HOST="setup.hubx.market")
+
+        self.assertEqual(response.status_code, 503)
+        self.assertIn("manutencao inicial", response.content.decode())
+
+    def test_maintenance_tenant_allows_owner_admin_paths(self):
+        Tenant.objects.create(name="Loja Em Setup", slug="setup", subdomain="setup", maintenance_mode=True)
+
+        response = self.client.get("/ops/probe/", HTTP_HOST="setup.hubx.market")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content.decode(), "write-ok")
+
     def test_localhost_is_ignored_and_sets_tenant_none(self):
         response = self.client.get("/tenant-probe/", HTTP_HOST="localhost:8000")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content.decode(), "none")
+
+    def test_localhost_subdomain_resolves_tenant_for_demo_dev_hosts(self):
+        Tenant.objects.create(name="Hubx Demo", slug="hubx-demo", subdomain="hubx-demo")
+
+        response = self.client.get("/tenant-probe/", HTTP_HOST="hubx-demo.localhost:8002")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content.decode(), "hubx-demo:subdomain")
+
+    @override_settings(HUBX_MARKET_DEMO_TENANT_SUBDOMAIN="hubx-demo")
+    def test_demo_tenant_blocks_write_paths_as_read_only(self):
+        Tenant.objects.create(name="Hubx Demo", slug="hubx-demo", subdomain="hubx-demo")
+
+        response = self.client.post("/write-probe/", HTTP_HOST="hubx-demo.hubx.market")
+
+        self.assertEqual(response.status_code, 403)
+        self.assertIn("Demo somente leitura", response.content.decode())
+
+    @override_settings(HUBX_MARKET_DEMO_TENANT_SUBDOMAIN="hubx-demo")
+    def test_demo_tenant_allows_session_paths(self):
+        Tenant.objects.create(name="Hubx Demo", slug="hubx-demo", subdomain="hubx-demo")
+
+        response = self.client.post("/accounts/logout/", HTTP_HOST="hubx-demo.hubx.market")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content.decode(), "write-ok")
+
+    @override_settings(HUBX_MARKET_DEMO_TENANT_SUBDOMAIN="hubx-demo")
+    def test_non_demo_tenant_allows_write_paths(self):
+        Tenant.objects.create(name="Loja X", slug="lojax", subdomain="lojax")
+
+        response = self.client.post("/write-probe/", HTTP_HOST="lojax.hubx.market")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content.decode(), "write-ok")
 
     def test_custom_domain_configured_on_tenant_is_still_ignored_until_supported(self):
         Tenant.objects.create(
@@ -114,6 +180,22 @@ class TenantMiddlewareTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content.decode(), "lojacustomruntime:custom_domain")
+
+    @override_settings(HUBX_MARKET_CUSTOM_DOMAIN_RESOLVER_ENABLED=True)
+    def test_custom_domain_blocks_maintenance_tenant_storefront_paths(self):
+        Tenant.objects.create(
+            name="Loja Custom Runtime",
+            slug="loja-custom-runtime",
+            subdomain="lojacustomruntime",
+            custom_domain="shop.example.com",
+            is_active=True,
+            maintenance_mode=True,
+        )
+
+        response = self.client.get("/tenant-probe/", HTTP_HOST="shop.example.com")
+
+        self.assertEqual(response.status_code, 503)
+        self.assertIn("manutencao inicial", response.content.decode())
 
     @override_settings(HUBX_MARKET_CUSTOM_DOMAIN_RESOLVER_ENABLED=True)
     def test_custom_domain_resolver_ignores_inactive_tenant(self):

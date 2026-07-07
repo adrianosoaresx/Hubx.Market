@@ -1,0 +1,281 @@
+{
+  "generatedAt": "2026-07-02T13:48:58.633Z",
+  "green": true,
+  "routes": [
+    {
+      "key": "home",
+      "url": "http://127.0.0.1:8002/",
+      "logs": [],
+      "brokenImages": [],
+      "buttons": [
+        "Solicitar aquisição",
+        "Ver planos",
+        "Acessar demo"
+      ],
+      "cssHref": "http://127.0.0.1:8002/static/css/app.css?v=ds-public-flows-20260702-2",
+      "currentUrl": "http://127.0.0.1:8002/",
+      "forms": [],
+      "h1": "Crie sua loja virtual com uma operação pronta para vender.",
+      "hasHorizontalOverflow": false,
+      "header": {
+        "bottom": 70,
+        "h": 70,
+        "right": 533,
+        "w": 533,
+        "x": 0,
+        "y": 0
+      },
+      "innerWidth": 548,
+      "labelStyle": {
+        "clip": "rect(0px, 0px, 0px, 0px)",
+        "height": "1px",
+        "overflow": "hidden",
+        "position": "absolute",
+        "width": "1px"
+      },
+      "labelVisible": false,
+      "nav": {
+        "bottom": 53,
+        "h": 36,
+        "right": 509,
+        "w": 162,
+        "x": 346,
+        "y": 17
+      },
+      "scrollHeight": 1210,
+      "scrollWidth": 533,
+      "title": "Hubx Market"
+    },
+    {
+      "key": "login",
+      "url": "http://127.0.0.1:8002/accounts/login/",
+      "logs": [],
+      "brokenImages": [],
+      "buttons": [
+        "Acessar conta",
+        "Criar conta"
+      ],
+      "cssHref": "http://127.0.0.1:8002/static/css/app.css?v=ds-public-flows-20260702-2",
+      "currentUrl": "http://127.0.0.1:8002/accounts/login/",
+      "forms": [
+        {
+          "action": "http://127.0.0.1:8002/accounts/login/",
+          "fields": [
+            "csrfmiddlewaretoken",
+            "login",
+            "password",
+            "remember_me"
+          ],
+          "method": "post"
+        }
+      ],
+      "h1": "Entrar",
+      "hasHorizontalOverflow": false,
+      "header": {
+        "bottom": 70,
+        "h": 70,
+        "right": 533,
+        "w": 533,
+        "x": 0,
+        "y": 0
+      },
+      "innerWidth": 548,
+      "labelStyle": {
+        "clip": "rect(0px, 0px, 0px, 0px)",
+        "height": "1px",
+        "overflow": "hidden",
+        "position": "absolute",
+        "width": "1px"
+      },
+      "labelVisible": false,
+      "nav": {
+        "bottom": 53,
+        "h": 36,
+        "right": 509,
+        "w": 162,
+        "x": 346,
+        "y": 17
+      },
+      "scrollHeight": 910,
+      "scrollWidth": 533,
+      "title": "Entrar"
+    },
+    {
+      "key": "plans",
+      "url": "http://127.0.0.1:8002/plans/",
+      "logs": [],
+      "brokenImages": [],
+      "buttons": [
+        "Solicitar aquisição",
+        "Ver planos",
+        "Acessar demo",
+        "Solicitar Starter",
+        "Solicitar Pro",
+        "Solicitar Enterprise",
+        "Enviar intenção"
+      ],
+      "cssHref": "http://127.0.0.1:8002/static/css/app.css?v=ds-public-flows-20260702-2",
+      "currentUrl": "http://127.0.0.1:8002/plans/",
+      "forms": [
+        {
+          "action": "http://127.0.0.1:8002/plans/",
+          "fields": [
+            "csrfmiddlewaretoken",
+            "plan_code",
+            "store_name",
+            "desired_subdomain",
+            "contact_name",
+            "contact_email",
+            "contact_phone",
+            "message"
+          ],
+          "method": "post"
+        }
+      ],
+      "h1": "Escolha o plano para criar sua loja virtual.",
+      "hasHorizontalOverflow": false,
+      "header": {
+        "bottom": 70,
+        "h": 70,
+        "right": 533,
+        "w": 533,
+        "x": 0,
+        "y": 0
+      },
+      "innerWidth": 548,
+      "labelStyle": {
+        "clip": "rect(0px, 0px, 0px, 0px)",
+        "height": "1px",
+        "overflow": "hidden",
+        "position": "absolute",
+        "width": "1px"
+      },
+      "labelVisible": false,
+      "nav": {
+        "bottom": 53,
+        "h": 36,
+        "right": 509,
+        "w": 162,
+        "x": 346,
+        "y": 17
+      },
+      "scrollHeight": 3478,
+      "scrollWidth": 533,
+      "title": "Planos Hubx Market"
+    },
+    {
+      "key": "demo",
+      "url": "http://127.0.0.1:8002/demo/",
+      "logs": [],
+      "brokenImages": [],
+      "buttons": [
+        "Ver vitrine sem login",
+        "Entrar como admin",
+        "Entrar como cliente"
+      ],
+      "cssHref": "http://127.0.0.1:8002/static/css/app.css?v=ds-public-flows-20260702-2",
+      "currentUrl": "http://127.0.0.1:8002/demo/",
+      "forms": [],
+      "h1": "Escolha como deseja acessar a loja demo.",
+      "hasHorizontalOverflow": false,
+      "header": {
+        "bottom": 70,
+        "h": 70,
+        "right": 533,
+        "w": 533,
+        "x": 0,
+        "y": 0
+      },
+      "innerWidth": 548,
+      "labelStyle": {
+        "clip": "rect(0px, 0px, 0px, 0px)",
+        "height": "1px",
+        "overflow": "hidden",
+        "position": "absolute",
+        "width": "1px"
+      },
+      "labelVisible": false,
+      "nav": {
+        "bottom": 53,
+        "h": 36,
+        "right": 509,
+        "w": 162,
+        "x": 346,
+        "y": 17
+      },
+      "scrollHeight": 1022,
+      "scrollWidth": 533,
+      "title": "Acessar demo Hubx Market"
+    }
+  ],
+  "interactions": [
+    {
+      "from": "home",
+      "action": "Solicitar aquisição",
+      "finalUrl": "http://127.0.0.1:8002/plans/#aquisicao",
+      "page": {
+        "brokenImages": [],
+        "h1": "Escolha o plano para criar sua loja virtual.",
+        "hasHorizontalOverflow": false,
+        "innerWidth": 548,
+        "scrollWidth": 533,
+        "title": "Planos Hubx Market"
+      }
+    },
+    {
+      "from": "plans",
+      "action": "Acessar demo",
+      "finalUrl": "http://127.0.0.1:8002/demo/",
+      "page": {
+        "brokenImages": [],
+        "h1": "Escolha como deseja acessar a loja demo.",
+        "hasHorizontalOverflow": false,
+        "innerWidth": 548,
+        "scrollWidth": 533,
+        "title": "Acessar demo Hubx Market"
+      }
+    },
+    {
+      "from": "demo",
+      "action": "Ver vitrine sem login",
+      "href": "http://hubx-demo.localhost:8002/",
+      "finalUrl": "http://hubx-demo.localhost:8002/",
+      "page": {
+        "brokenImages": [],
+        "h1": "Hubx Market Demo",
+        "hasHorizontalOverflow": false,
+        "innerWidth": 548,
+        "scrollWidth": 533,
+        "title": "Início"
+      }
+    },
+    {
+      "from": "demo",
+      "action": "Entrar como admin",
+      "href": "http://hubx-demo.localhost:8002/accounts/demo-session/?profile=admin",
+      "finalUrl": "http://hubx-demo.localhost:8002/ops/",
+      "page": {
+        "brokenImages": [],
+        "h1": "Operação da loja",
+        "hasHorizontalOverflow": false,
+        "innerWidth": 548,
+        "scrollWidth": 533,
+        "title": "Operação da loja"
+      }
+    },
+    {
+      "from": "demo",
+      "action": "Entrar como cliente",
+      "href": "http://hubx-demo.localhost:8002/accounts/demo-session/?profile=customer",
+      "finalUrl": "http://hubx-demo.localhost:8002/",
+      "page": {
+        "brokenImages": [],
+        "h1": "Hubx Market Demo",
+        "hasHorizontalOverflow": false,
+        "innerWidth": 548,
+        "scrollWidth": 533,
+        "title": "Início"
+      }
+    }
+  ]
+}

@@ -1,18 +1,18 @@
 {% if items %}
-<nav aria-label="{{ aria_label|default:'Breadcrumb' }}">
-    <ol class="flex flex-wrap items-center gap-2 text-sm text-[var(--color-text-secondary)]">
+<nav class="ds-breadcrumb" aria-label="{{ aria_label|default:'Breadcrumb' }}">
+    <ol class="ds-breadcrumb-list">
         {% for item in items %}
-            <li class="flex items-center gap-2">
+            <li class="ds-breadcrumb-item">
                 {% if not forloop.first %}
-                    <span aria-hidden="true">/</span>
+                    <span class="ds-breadcrumb-separator" aria-hidden="true">/</span>
                 {% endif %}
                 {% if item.href and not forloop.last %}
-                    <a href="{{ item.href }}" class="hover:text-[var(--color-text-primary)]">
+                    <a href="{{ item.href }}" class="ds-breadcrumb-link">
                         {% if item.icon %}<span aria-hidden="true">{{ item.icon }}</span>{% endif %}
                         {{ item.label }}
                     </a>
                 {% else %}
-                    <span class="{% if forloop.last %}font-medium text-[var(--color-text-primary)]{% endif %}">
+                    <span class="ds-breadcrumb-current" {% if forloop.last %}aria-current="page"{% endif %}>
                         {% if item.icon %}<span aria-hidden="true">{{ item.icon }}</span>{% endif %}
                         {{ item.label }}
                     </span>

@@ -6,11 +6,7 @@
 
 {% block content %}
 <section class="space-y-8">
-    {% include "shared/components/layout/page_header.html" with
-        eyebrow="Showcase"
-        title="Forms"
-        description="Catálogo interno dos componentes oficiais de formulário do Design System."
-    %}
+    {% include "shared/components/layout/page_header.html" with eyebrow="Showcase" title="Forms" description="Catálogo interno dos componentes oficiais de formulário do Design System." %}
     {% include "shared/partials/design_system_preview_context.html" %}
     <div class="flex flex-wrap items-center gap-3">
         <a href="/__internal__/design-system/?tenant={{ request.GET.tenant|default:'default' }}" class="ds-btn ds-btn-secondary ds-btn-sm">Voltar</a>

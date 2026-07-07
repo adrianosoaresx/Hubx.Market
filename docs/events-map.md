@@ -118,6 +118,63 @@ Status do pedido foi alterado.
 
 ---
 
+# Eventos administrativos de catálogo
+
+## product.created
+
+Origem: catalog
+
+Consumidores:
+- audit
+
+Descrição:
+Produto foi criado por uma superfície administrativa tenant-scoped.
+
+Readiness atual:
+
+- emitido como `AuditLog` por `catalog.application.admin_product_commands`;
+- payload registra produto, slug, status e tenant;
+- preço e estoque iniciais são persistidos na `ProductVariant` padrão;
+- não cria marca/categoria/tag normalizada.
+
+---
+
+## product.updated
+
+Origem: catalog
+
+Consumidores:
+- audit
+
+Descrição:
+Produto e sua variante padrão foram atualizados por uma superfície administrativa tenant-scoped.
+
+Readiness atual:
+
+- emitido como `AuditLog` por `catalog.application.admin_product_commands`;
+- preserva tenant-scope e registra slug/status/SKU;
+- não recalcula pedidos nem altera snapshots de pedidos já criados.
+
+---
+
+## product.deactivated
+
+Origem: catalog
+
+Consumidores:
+- audit
+
+Descrição:
+Produto foi desativado operacionalmente sem exclusão física.
+
+Readiness atual:
+
+- emitido como `AuditLog` por `catalog.application.admin_product_commands`;
+- atualiza `status=inactive`, `is_active=False` e `is_featured=False`;
+- não chama `delete()` e preserva histórico, variantes, imagens e referências operacionais.
+
+---
+
 # Eventos de descoberta storefront
 
 ## catalog.discovery_viewed
@@ -154,6 +211,7 @@ Readiness atual:
 - evento agora possui log persistente mínimo em `StorefrontDiscoveryEventLog`
 - publisher persistente salva apenas payload allowlisted e `session_key_hash`
 - deve descartar execução sem tenant resolvido
+- deve descartar execução para o tenant demo oficial configurado em `HUBX_MARKET_DEMO_TENANT_SUBDOMAIN`, porque a demo é somente leitura
 - não deve armazenar PII
 - não deve bloquear renderização do storefront
 
@@ -302,9 +360,10 @@ Pagamento iniciado.
 Readiness atual:
 
 - a criação inicial de `PaymentAttempt` agora pode acontecer quando o checkout materializa o pedido e abre a trilha pendente de pagamento
-- isso ainda não representa captura real no gateway; apenas cria um contrato persistido para futura integração
+- isso ainda não representa captura confirmada no gateway; apenas cria um contrato persistido para integração hospedada
 - a partir dessa tentativa pendente, `payments` também já pode gerar um contrato idempotente de bootstrap para futura criação real de cobrança/intenção externa
-- com o provider inicial `Pagar.me`, essa tentativa já pode materializar um `payment link` hospedado real quando a chave secreta estiver configurada
+- com o provider inicial `Asaas`, essa tentativa já pode materializar um checkout/invoice hospedado real quando `ASAAS_API_KEY` estiver configurada
+- `Pagar.me` permanece como provider alternativo configurável
 
 ---
 
@@ -330,7 +389,7 @@ Efeitos comuns:
 
 Readiness atual:
 
-- para `Pagar.me`, a confirmação segura continua vindo de webhook
+- para `Asaas` e `Pagar.me`, a confirmação segura continua vindo de webhook normalizado por `payments`
 - a URL de retorno hospedada pode trazer apenas hint de status; ela não substitui `payment.paid`
 - notifications agora cria `EmailLog` planejado customer-facing após `payment.paid` confirmado pela primeira vez
 - replay/idempotência do webhook não deve gerar nova unidade de delivery para o mesmo recipient
@@ -357,7 +416,7 @@ Efeitos comuns:
 
 Readiness atual:
 
-- para `Pagar.me`, `payment.failed` também entra por webhook assinado
+- para `Asaas` e `Pagar.me`, `payment.failed` também entra por webhook autenticado/assinado
 - a customer area pode usar esse estado para abrir um retry leve de pagamento sem gerar novo pedido
 - notifications agora possui piloto idempotente para criar `EmailLog` planejado customer-facing após `payment.failed`
 - esse piloto ainda não envia e-mail nem aciona worker/provider
@@ -492,6 +551,23 @@ Nova loja criada na plataforma.
 
 ---
 
+## tenant.storefront_branding_updated
+
+Origem: tenants
+
+Consumidores:
+- audit
+
+Branding institucional do storefront foi alterado por uma superfície administrativa tenant-scoped.
+
+Observações:
+- emitido como `AuditLog` por `tenants.application.storefront_branding_commands`;
+- payload registra tenant, flag de exibição e presença de logo, título, descrição, imagem e CTA;
+- não deve carregar URL secreta, arquivo binário, dados de catálogo, pedidos, clientes ou pagamentos;
+- exige tenant resolvido e permissão administrativa `storefront.branding.manage`.
+
+---
+
 ## subscription.activated
 
 Origem: subscriptions
@@ -503,6 +579,176 @@ Consumidores:
 
 Descrição:
 Plano da loja foi ativado.
+
+---
+
+## subscription.acquisition_requested
+
+Origem: subscriptions
+
+Consumidores:
+- audit
+- platform-admin
+
+Descrição:
+Intenção pública de aquisição de plano SaaS foi recebida por `/plans/`.
+
+Payload mínimo:
+
+{
+  "lead_id": "...",
+  "plan_code": "...",
+  "desired_subdomain": "...",
+  "coupon_code": "opcional",
+  "effective_monthly_price": "opcional"
+}
+
+Readiness atual:
+
+- evento é registrado como `AuditLog` platform-scope.
+- não cria tenant, owner, assinatura, invoice, pagamento ou catálogo.
+- quando houver cupom SaaS válido, metadata pode incluir código, desconto total e preço efetivo snapshotado.
+- metadata não deve carregar mensagem livre nem PII desnecessária.
+
+---
+
+## tenant.self_service_created
+
+Origem: tenants
+
+Consumidores:
+- audit
+- platform-admin
+
+Descrição:
+Tenant foi criado pelo signup público controlado de `/plans/signup/`.
+
+Readiness atual:
+
+- evento é registrado como `AuditLog` tenant-scoped.
+- tenant nasce ativo em `maintenance_mode`.
+- metadata pode incluir `plan_code`, `trial_days` e `requires_payment_method`.
+- metadata pode incluir `coupon_code` e `effective_monthly_price` quando o signup aplicar cupom SaaS válido.
+- quando configurado, o signup exige token de acesso antes da criação.
+- storefront/checkout do tenant em manutenção retornam 503 até publicação operacional.
+- não cria customer, catálogo, pedido, pagamento, invoice ou domínio customizado.
+- não registra dados de cartão ou token de payment method.
+
+---
+
+## tenant.self_service_signup_completed
+
+Origem: tenants
+
+Consumidores:
+- audit
+- accounts
+- subscriptions
+
+Descrição:
+Signup público concluiu a orquestração mínima: tenant, owner inicial, assinatura trial e onboarding concluído.
+
+Readiness atual:
+
+- exige `HUBX_PUBLIC_SIGNUP_ENABLED=1`.
+- assinatura SaaS fica `trialing` e herda `trial_ends_at` calculado pelo plano.
+- metadata pode incluir `plan_code`, `trial_days` e `requires_payment_method`.
+- metadata pode incluir snapshots promocionais sem alterar `SubscriptionPlan.monthly_price`.
+- owner inicial é `OwnerUser`, não `Customer`.
+- não registra dados de cartão ou token de payment method.
+
+---
+
+## subscription.coupon_created
+
+Origem: subscriptions
+
+Consumidores:
+- audit
+- platform-admin
+
+Descrição:
+Cupom comercial de plano SaaS foi criado em `/ops/platform/subscription-coupons/`.
+
+Readiness atual:
+
+- evento é registrado como `AuditLog` platform-scope.
+- exige `subscriptions.manage`.
+- metadata pode incluir `code`, `status`, `discount_type`, `discount_value` e `plan_code`.
+- não cria invoice, cobrança recorrente, checkout externo ou alteração de preço do plano.
+
+---
+
+## subscription.coupon_status_changed
+
+Origem: subscriptions
+
+Consumidores:
+- audit
+- platform-admin
+
+Descrição:
+Status de cupom SaaS foi ativado ou inativado por operação platform.
+
+Readiness atual:
+
+- evento é registrado como `AuditLog` platform-scope.
+- exige `subscriptions.manage`.
+- metadata inclui código e transição de status.
+
+---
+
+## subscription.coupon_applied
+
+Origem: subscriptions
+
+Consumidores:
+- audit
+- platform-admin
+
+Descrição:
+Cupom SaaS válido foi aplicado a um lead público, signup self-service ou assinatura criada por onboarding.
+
+Readiness atual:
+
+- evento é registrado como `AuditLog` platform-scope.
+- metadata inclui `coupon_code`, `plan_code`, `discount_type`, `discount_total`, `effective_monthly_price` e `source`.
+- aplicação não recalcula cobrança externa e não altera `SubscriptionPlan.monthly_price`.
+- cupons tenant-scoped de carrinho/pedido continuam no módulo `coupons`.
+
+---
+
+## subscription.acquisition_converted
+
+Origem: subscriptions
+
+Consumidores:
+- audit
+- tenants
+
+Descrição:
+Lead público de aquisição SaaS foi convertido por platform admin em uma jornada de onboarding.
+
+Readiness atual:
+
+- conversão cria/preenche `TenantOnboarding`.
+- não conclui onboarding e não provisiona tenant/owner/assinatura.
+
+---
+
+## subscription.acquisition_discarded
+
+Origem: subscriptions
+
+Consumidores:
+- audit
+
+Descrição:
+Lead público de aquisição SaaS foi descartado por platform admin.
+
+Readiness atual:
+
+- descarte altera apenas `SubscriptionAcquisitionLead.status`.
 
 ---
 

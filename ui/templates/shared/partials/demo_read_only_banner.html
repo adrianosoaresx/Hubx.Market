@@ -1,0 +1,11 @@
+{% if request.is_demo_read_only %}
+    <div class="ds-demo-banner">
+        <div class="ds-demo-banner-inner">
+            <span class="ds-demo-banner-title">
+                {% include "shared/partials/icon.html" with name="shield" size="sm" %}
+                <span>Demo somente leitura</span>
+            </span>
+            <span class="ds-demo-banner-description">Ações de compra, cadastro e edição ficam bloqueadas para preservar a base demo.</span>
+        </div>
+    </div>
+{% endif %}

@@ -1,33 +1,47 @@
 {% firstof footer_variant "standard" as resolved_footer_variant %}
+{% firstof footer_brand_scope "Loja online" as resolved_footer_brand_scope %}
+{% firstof footer_description "Compra segura, catálogo tenant-scoped e atendimento pela loja." as resolved_footer_description %}
 <footer class="global-footer border-t border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
     {% if resolved_footer_variant == "compact" %}
-        <div class="mx-auto flex max-w-7xl flex-col gap-3 px-6 py-5 text-sm text-[var(--color-text-secondary)] md:flex-row md:items-center md:justify-between">
+        <div class="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-5 text-sm text-[var(--color-text-secondary)] lg:flex-row lg:items-center lg:justify-between">
             {% include "shared/partials/brand_identity.html" with size="sm" brand_scope="" brand_href="/" %}
-            <p class="inline-flex items-center gap-2">
-                {% include "shared/partials/icon.html" with name="shield" size="sm" %}
-                <span>Operado com Hubx Market</span>
-            </p>
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between lg:justify-end">
+                {% include "shared/partials/theme_selector.html" %}
+                <p class="inline-flex items-center gap-2">
+                    {% include "shared/partials/icon.html" with name="shield" size="sm" %}
+                    <span>Operado com Hubx Market</span>
+                </p>
+            </div>
         </div>
     {% else %}
         <div class="mx-auto grid max-w-7xl gap-8 px-6 py-8 text-sm text-[var(--color-text-secondary)] md:grid-cols-[minmax(0,1.1fr)_minmax(0,1.4fr)_auto] md:items-start">
             <div class="space-y-3">
-                {% include "shared/partials/brand_identity.html" with brand_scope="Loja online" brand_href="/" %}
-                <p class="max-w-sm">Compra segura, catálogo tenant-scoped e atendimento pela loja.</p>
+                {% include "shared/partials/brand_identity.html" with brand_scope=resolved_footer_brand_scope brand_href="/" %}
+                <p class="max-w-sm">{{ resolved_footer_description }}</p>
             </div>
 
             <nav class="storefront-footer-links" aria-label="Links úteis da loja">
-                <a href="/catalog/">
-                    {% include "shared/partials/icon.html" with name="shopping-bag" size="sm" %}
-                    <span>Catálogo</span>
-                </a>
-                <a href="/accounts/account/">
-                    {% include "shared/partials/icon.html" with name="user" size="sm" %}
-                    <span>Minha conta</span>
-                </a>
-                <a href="/accounts/account/orders/">
-                    {% include "shared/partials/icon.html" with name="receipt-text" size="sm" %}
-                    <span>Meus pedidos</span>
-                </a>
+                {% if footer_links %}
+                    {% for link in footer_links %}
+                        <a href="{{ link.href }}">
+                            {% include "shared/partials/icon.html" with name=link.icon|default:"file-text" size="sm" %}
+                            <span>{{ link.label }}</span>
+                        </a>
+                    {% endfor %}
+                {% else %}
+                    <a href="/catalog/">
+                        {% include "shared/partials/icon.html" with name="shopping-bag" size="sm" %}
+                        <span>Catálogo</span>
+                    </a>
+                    <a href="/accounts/account/">
+                        {% include "shared/partials/icon.html" with name="user" size="sm" %}
+                        <span>Minha conta</span>
+                    </a>
+                    <a href="/accounts/account/orders/">
+                        {% include "shared/partials/icon.html" with name="receipt-text" size="sm" %}
+                        <span>Meus pedidos</span>
+                    </a>
+                {% endif %}
                 {% for link in storefront_footer_links %}
                     <a href="{{ link.href }}">
                         {% include "shared/partials/icon.html" with name=link.icon|default:"file-text" size="sm" %}
@@ -37,6 +51,7 @@
             </nav>
 
             <div class="storefront-footer-hubx">
+                {% include "shared/partials/theme_selector.html" %}
                 <span class="inline-flex items-center gap-2">
                     {% include "shared/partials/icon.html" with name="shield" size="sm" %}
                     <span>Operado com Hubx Market</span>

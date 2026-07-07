@@ -11,6 +11,9 @@ Garantir consistência visual, reutilização de componentes e previsibilidade d
 - feedback de estado
 - responsividade
 - baixo acoplamento entre visual e regra de negócio
+- densidade operacional em dashboards, evitando composição promocional em telas de trabalho
+- tipografia estável, sem escala dependente de `vw`
+- decoração contida: sem orbs/bokeh; fundos devem priorizar superfície, borda, hierarquia e imagem real quando houver hero
 
 ## Stack
 - Django Templates
@@ -21,9 +24,11 @@ Garantir consistência visual, reutilização de componentes e previsibilidade d
 ## Tokens visuais iniciais
 
 ### Cores
-- Primary: `#4F46E5`
-- Secondary: `#06B6D4`
-- Accent: `#22C55E`
+- Brand Highlight: `#FFE797`
+- Brand Gold: `#D6A937`
+- Primary: `#9A6410`
+- Primary Hover: `#794A0C`
+- Accent: `#D6A937`
 - Surface: `#FFFFFF`
 - Background: `#F8FAFC`
 - Text: `#0F172A`
@@ -32,6 +37,15 @@ Garantir consistência visual, reutilização de componentes e previsibilidade d
 - Danger: `#DC2626`
 - Warning: `#D97706`
 - Success: `#16A34A`
+
+Observação: a paleta de marca segue o logo ouro do Hubx Market. Cores funcionais continuam separadas para preservar leitura de estados.
+
+### Modos claro e escuro
+- O tema claro é o padrão inicial e usa os tokens semânticos definidos em `:root`.
+- O tema escuro é aplicado por `html[data-color-theme="dark"]`, sobrescrevendo apenas tokens semânticos e aliases de compatibilidade.
+- A preferência do usuário fica no navegador em `localStorage` pela chave `hubx-color-theme`.
+- Valores aceitos: `light`, `dark` e `system`; `system` segue `prefers-color-scheme`.
+- O menu oficial de seleção fica em `ui/templates/shared/partials/navbar.html` e deve ser herdado pelos shells compartilhados.
 
 ### Tipografia
 Escala base sugerida:
@@ -52,10 +66,32 @@ Escala base sugerida:
 - `shadow`
 - `shadow-md`
 
+### Aliases runtime de compatibilidade
+O build de tokens também exporta aliases antigos ainda usados por alguns templates:
+
+- `--color-surface`
+- `--color-surface-default`
+- `--color-surface-muted`
+- `--color-surface-raised`
+- `--color-border`
+- `--color-border-muted`
+- `--color-border-subtle`
+- `--color-border-primary`
+- `--color-text`
+
+Esses aliases devem ser tratados como ponte de migração. Novos templates devem preferir os tokens semânticos atuais, como `--color-surface-panel`, `--color-border-default` e `--color-text-primary`.
+
 ## Padrão v1 aplicado
 
 O modelo padrão da loja demo agora cobre storefront, área do cliente, checkout, auth,
 admin da loja, project/platform owner e portal central.
+
+### Demo oficial
+- o tenant `hubx-demo` usa o logo raster oficial Hubx e a paleta ouro definida em `docs/brand.md`
+- shells tenant-owned devem aplicar `data-tenant` com o slug real do tenant para ativar a paleta correta
+- a demo oficial exibe aviso de "Demo somente leitura" em storefront, admin, conta, auth e checkout
+- ações de compra, cadastro e edição devem parecer indisponíveis ou retornar bloqueio seguro quando acionadas
+- imagens do catálogo demo devem ser raster realistas, nunca placeholder SVG
 
 ### Iconografia
 - usar Lucide linear em ações, navegação, estados, confiança e escopo operacional
@@ -80,9 +116,11 @@ admin da loja, project/platform owner e portal central.
   - `brand/banner-accent`
 
 ### Banner compacto
-- home deve abrir com banner de identidade curto, formal e orientado a conversão
+- home deve abrir com hero institucional curto, formal e orientado a conversão
 - produtos precisam continuar visíveis logo abaixo no primeiro viewport
-- o banner deve reforçar confiança, frete/disponibilidade e suporte sem virar landing page
+- o hero pode usar imagem institucional real configurada no tenant ou fallback de produto do próprio tenant
+- o hero deve reforçar confiança, frete/disponibilidade e suporte sem virar landing page
+- fundos de hero usam superfície/borda/tokens da marca e imagem raster real, não orbs ou gradientes decorativos
 
 ### Admin e platform owner
 - admin da loja usa identidade do tenant como contexto operacional

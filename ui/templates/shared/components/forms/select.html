@@ -1,13 +1,18 @@
+{% with select_id=id|default:name %}
 <div class="space-y-2">
     {% if label %}
-        <label for="{{ id|default:name }}" class="block text-sm font-medium text-[var(--color-text-primary)]">
+        <label for="{{ select_id }}" class="block text-sm font-medium text-[var(--color-text-primary)]">
             {{ label }}
+            {% if required %}<span class="text-[var(--color-feedback-danger)]" aria-hidden="true">*</span>{% endif %}
         </label>
     {% endif %}
     <select
-        id="{{ id|default:name }}"
+        id="{{ select_id }}"
         name="{{ name }}"
-        class="ds-select {% if invalid %}!border-[var(--color-feedback-danger)]{% endif %} {% if disabled %}cursor-not-allowed bg-slate-50 text-slate-400{% endif %}"
+        class="ds-select {% if size == 'sm' %}ds-input-sm{% elif size == 'lg' %}ds-input-lg{% endif %}"
+        aria-invalid="{% if invalid %}true{% else %}false{% endif %}"
+        {% if invalid and error_text %}aria-describedby="{{ select_id }}-error"{% elif help_text %}aria-describedby="{{ select_id }}-help"{% endif %}
+        {% if required %}required{% endif %}
         {% if disabled %}disabled{% endif %}
         {% if multiple %}multiple{% endif %}
     >
@@ -19,9 +24,10 @@
         {% endfor %}
     </select>
     {% if help_text and not invalid %}
-        <p class="text-sm text-[var(--color-text-secondary)]">{{ help_text }}</p>
+        {% include "shared/components/forms/field_help.html" with id=select_id|add:"-help" text=help_text %}
     {% endif %}
     {% if invalid and error_text %}
-        <p class="text-sm text-[var(--color-feedback-danger)]">{{ error_text }}</p>
+        {% include "shared/components/forms/field_error.html" with id=select_id|add:"-error" text=error_text %}
     {% endif %}
 </div>
+{% endwith %}

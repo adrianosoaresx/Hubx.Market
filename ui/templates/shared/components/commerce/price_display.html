@@ -1,13 +1,13 @@
-<div class="{% if align == 'right' %}text-right{% endif %}">
-    <div class="flex items-end gap-2 {% if align == 'right' %}justify-end{% endif %}">
-        <span class="{% if size == 'lg' %}text-lg{% elif size == 'sm' %}text-sm{% else %}text-base{% endif %} font-semibold text-[var(--color-text-primary)]">
+<div class="ds-price {% if align == 'right' %}ds-price-right{% endif %}">
+    <div class="ds-price-row">
+        <span class="ds-price-amount {% if size == 'lg' %}ds-price-amount-lg{% elif size == 'sm' %}ds-price-amount-sm{% endif %}">
             {{ value|default:"R$ 0,00" }}
         </span>
         {% if compare_value %}
-            <span class="text-sm text-[var(--color-text-secondary)] line-through">{{ compare_value }}</span>
+            <span class="ds-price-compare">{{ compare_value }}</span>
         {% endif %}
     </div>
     {% if helper %}
-        <p class="mt-1 text-xs text-[var(--color-text-secondary)]">{{ helper }}</p>
+        <p class="ds-price-helper">{{ helper }}</p>
     {% endif %}
 </div>

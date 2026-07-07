@@ -1,0 +1,15 @@
+[03/Jul/2026 14:56:57] "GET /catalog/ HTTP/1.1" 200 53332
+[03/Jul/2026 14:57:06] "GET /catalog/ HTTP/1.1" 200 53332
+[03/Jul/2026 14:57:07] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[03/Jul/2026 14:57:07] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[03/Jul/2026 14:57:07] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 95268
+[03/Jul/2026 14:57:07] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[03/Jul/2026 14:57:07] "GET /static/js/app.js HTTP/1.1" 200 2101
+[03/Jul/2026 14:58:13] "GET /catalog/ HTTP/1.1" 200 53332
+[03/Jul/2026 14:58:13] "GET /static/js/htmx.min.js HTTP/1.1" 200 59
+[03/Jul/2026 14:58:13] "GET /static/css/app.css?v=ds-public-flows-20260702-4 HTTP/1.1" 200 95268
+[03/Jul/2026 14:58:13] "GET /static/img/brand/hubx-logo-gold.png HTTP/1.1" 200 107690
+[03/Jul/2026 14:58:13] "GET /static/js/alpine.min.js HTTP/1.1" 200 59
+[03/Jul/2026 14:58:13] "GET /static/js/app.js HTTP/1.1" 200 2101
+Not Found: /ops/branding/
+[03/Jul/2026 15:11:13] "GET /ops/branding/ HTTP/1.1" 404 8544

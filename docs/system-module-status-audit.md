@@ -1,5 +1,7 @@
 # System Module Status Audit
 
+Nota de leitura: este arquivo preserva o histórico das waves e contém matrizes antigas no início. Para a fotografia atual do que está implementado em 2026-06-30, use `docs/implementation-inventory.md`. As waves posteriores deste arquivo podem superseder estados registrados nas waves iniciais.
+
 ## Wave 1 — Module Inventory & Readiness Matrix
 
 Data: 2026-04-25

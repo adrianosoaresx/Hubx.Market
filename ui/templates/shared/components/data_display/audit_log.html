@@ -8,56 +8,57 @@
             </header>
         {% endif %}
 
-        <div class="overflow-hidden rounded-xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-[var(--color-border-default)] text-sm">
-                    <thead class="bg-slate-50">
+        <div class="ds-table-shell">
+            <div class="ds-table-scroll">
+                <table class="ds-table" {% if title %}aria-label="{{ title }}"{% endif %}>
+                    {% if title %}<caption class="sr-only">{{ title }}</caption>{% endif %}
+                    <thead class="ds-table-head">
                         <tr>
-                            <th class="px-4 py-3 text-left font-medium text-[var(--color-text-secondary)]">Data/Hora</th>
-                            <th class="px-4 py-3 text-left font-medium text-[var(--color-text-secondary)]">Ator</th>
-                            <th class="px-4 py-3 text-left font-medium text-[var(--color-text-secondary)]">Ação</th>
-                            <th class="px-4 py-3 text-left font-medium text-[var(--color-text-secondary)]">Objeto</th>
-                            <th class="px-4 py-3 text-left font-medium text-[var(--color-text-secondary)]">Meta</th>
+                            <th scope="col" class="ds-table-th">Data/Hora</th>
+                            <th scope="col" class="ds-table-th">Ator</th>
+                            <th scope="col" class="ds-table-th">Ação</th>
+                            <th scope="col" class="ds-table-th">Objeto</th>
+                            <th scope="col" class="ds-table-th">Meta</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-[var(--color-border-default)]">
+                    <tbody class="ds-table-body">
                         {% if entries %}
                             {% for entry in entries %}
-                                <tr class="hover:bg-slate-50">
-                                    <td class="px-4 py-3 text-[var(--color-text-primary)]">{{ entry.timestamp }}</td>
-                                    <td class="px-4 py-3 text-[var(--color-text-primary)]">{{ entry.actor|default:"Sistema" }}</td>
-                                    <td class="px-4 py-3">
+                                <tr class="ds-table-row">
+                                    <td class="ds-table-cell">{{ entry.timestamp }}</td>
+                                    <td class="ds-table-cell">{{ entry.actor|default:"Sistema" }}</td>
+                                    <td class="ds-table-cell">
                                         {% if entry.badge_label %}
                                             {% include "shared/components/data_display/badge.html" with label=entry.badge_label variant=entry.badge_variant|default:"neutral" size="xs" %}
                                         {% else %}
                                             <span class="text-[var(--color-text-primary)]">{{ entry.action }}</span>
                                         {% endif %}
                                     </td>
-                                    <td class="px-4 py-3 text-[var(--color-text-primary)]">{{ entry.target|default:"-" }}</td>
-                                    <td class="px-4 py-3 text-[var(--color-text-secondary)]">{{ entry.meta|default:"-" }}</td>
+                                    <td class="ds-table-cell">{{ entry.target|default:"-" }}</td>
+                                    <td class="ds-table-cell ds-table-cell-muted">{{ entry.meta|default:"-" }}</td>
                                 </tr>
                             {% endfor %}
                         {% else %}
-                            <tr class="hover:bg-slate-50">
-                                <td class="px-4 py-3 text-[var(--color-text-primary)]">2026-04-12 10:30</td>
-                                <td class="px-4 py-3 text-[var(--color-text-primary)]">ana@hubx.market</td>
-                                <td class="px-4 py-3">{% include "shared/components/data_display/badge.html" with label="Atualização" variant="info" size="xs" %}</td>
-                                <td class="px-4 py-3 text-[var(--color-text-primary)]">Produto / Tênis Hubx Runner</td>
-                                <td class="px-4 py-3 text-[var(--color-text-secondary)]">Preço alterado de R$ 349,90 para R$ 299,90</td>
+                            <tr class="ds-table-row">
+                                <td class="ds-table-cell">2026-04-12 10:30</td>
+                                <td class="ds-table-cell">ana@hubx.market</td>
+                                <td class="ds-table-cell">{% include "shared/components/data_display/badge.html" with label="Atualização" variant="info" size="xs" %}</td>
+                                <td class="ds-table-cell">Produto / Tênis Hubx Runner</td>
+                                <td class="ds-table-cell ds-table-cell-muted">Preço alterado de R$ 349,90 para R$ 299,90</td>
                             </tr>
-                            <tr class="hover:bg-slate-50">
-                                <td class="px-4 py-3 text-[var(--color-text-primary)]">2026-04-12 09:12</td>
-                                <td class="px-4 py-3 text-[var(--color-text-primary)]">system</td>
-                                <td class="px-4 py-3">{% include "shared/components/data_display/badge.html" with label="Integração" variant="success" size="xs" %}</td>
-                                <td class="px-4 py-3 text-[var(--color-text-primary)]">Canal marketplace</td>
-                                <td class="px-4 py-3 text-[var(--color-text-secondary)]">Sincronização concluída com 24 registros</td>
+                            <tr class="ds-table-row">
+                                <td class="ds-table-cell">2026-04-12 09:12</td>
+                                <td class="ds-table-cell">system</td>
+                                <td class="ds-table-cell">{% include "shared/components/data_display/badge.html" with label="Integração" variant="success" size="xs" %}</td>
+                                <td class="ds-table-cell">Canal marketplace</td>
+                                <td class="ds-table-cell ds-table-cell-muted">Sincronização concluída com 24 registros</td>
                             </tr>
-                            <tr class="hover:bg-slate-50">
-                                <td class="px-4 py-3 text-[var(--color-text-primary)]">2026-04-11 18:47</td>
-                                <td class="px-4 py-3 text-[var(--color-text-primary)]">owner@hubx.market</td>
-                                <td class="px-4 py-3">{% include "shared/components/data_display/badge.html" with label="Acesso" variant="warning" size="xs" %}</td>
-                                <td class="px-4 py-3 text-[var(--color-text-primary)]">Painel financeiro</td>
-                                <td class="px-4 py-3 text-[var(--color-text-secondary)]">Exportação CSV iniciada</td>
+                            <tr class="ds-table-row">
+                                <td class="ds-table-cell">2026-04-11 18:47</td>
+                                <td class="ds-table-cell">owner@hubx.market</td>
+                                <td class="ds-table-cell">{% include "shared/components/data_display/badge.html" with label="Acesso" variant="warning" size="xs" %}</td>
+                                <td class="ds-table-cell">Painel financeiro</td>
+                                <td class="ds-table-cell ds-table-cell-muted">Exportação CSV iniciada</td>
                             </tr>
                         {% endif %}
                     </tbody>

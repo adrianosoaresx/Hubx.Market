@@ -41,8 +41,166 @@ class StorefrontViewTests(TestCase):
         self.assertContains(response, "Hubx Storefront Demo")
         self.assertContains(response, 'href="/"')
         self.assertContains(response, 'href="/catalog/"')
+        self.assertContains(response, 'href="/cart/"')
         self.assertContains(response, "Produtos para começar")
         self.assertContains(response, "Entrar")
+        self.assertNotContains(response, "/plans/")
+        self.assertNotContains(response, "/demo/")
+
+    def test_storefront_home_renders_tenant_institutional_hero(self):
+        self.tenant.storefront_hero_title = "Destaques da estação"
+        self.tenant.storefront_hero_description = "Uma curadoria institucional exclusiva desta loja."
+        self.tenant.storefront_hero_image_url = "https://cdn.example.com/store/hero.jpg"
+        self.tenant.storefront_hero_cta_label = "Explorar vitrine"
+        self.tenant.storefront_hero_cta_href = "/catalog/?quick_filter=featured"
+        self.tenant.save()
+
+        response = self.client.get(reverse("storefront-home"), HTTP_HOST=self.storefront_host)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "storefront-institutional-hero")
+        self.assertContains(response, "Destaques da estação")
+        self.assertContains(response, "Uma curadoria institucional exclusiva desta loja.")
+        self.assertContains(response, "https://cdn.example.com/store/hero.jpg")
+        self.assertContains(response, "Explorar vitrine")
+        self.assertContains(response, 'href="/catalog/?quick_filter=featured"')
+
+    def test_storefront_shell_renders_configured_tenant_logo(self):
+        self.tenant.logo_url = "https://cdn.example.com/store/logo.png"
+        self.tenant.save(update_fields=["logo_url"])
+
+        response = self.client.get(reverse("storefront-home"), HTTP_HOST=self.storefront_host)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "https://cdn.example.com/store/logo.png")
+        self.assertContains(response, "brand-identity-logo")
+
+    def test_central_home_view_renders_public_entrypoints_without_platform_links(self):
+        response = self.client.get(reverse("storefront-home"), HTTP_HOST="hubx.market")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "pages/templates/portal_home_page.html")
+        self.assertContains(response, "Crie sua loja virtual com uma operação pronta para vender.")
+        self.assertContains(response, "Iniciar onboarding")
+        self.assertContains(response, "Loja por subdomínio")
+        self.assertContains(response, 'href="/accounts/login/"')
+        self.assertContains(response, 'href="/plans/"')
+        self.assertContains(response, 'href="/plans/#aquisicao"')
+        self.assertContains(response, 'href="/demo/"')
+        self.assertContains(response, "Acessar demo")
+        self.assertNotContains(response, "Entrar no portal")
+        self.assertNotContains(response, "/ops/platform/")
+
+    def test_public_demo_renders_profile_choice_for_active_demo_tenant(self):
+        Tenant.objects.create(name="Hubx Demo", slug="hubx-demo", subdomain="hubx-demo", is_active=True)
+
+        response = self.client.get(reverse("public-demo"), HTTP_HOST="hubx.market")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "pages/templates/public_demo_access_page.html")
+        self.assertContains(response, "Escolha como deseja acessar a loja demo.")
+        self.assertContains(response, "Admin da loja")
+        self.assertContains(response, "Cliente da loja")
+        self.assertContains(response, "admin@hubx-demo.market")
+        self.assertContains(response, "cliente@hubx-demo.market")
+        storefront_query = urlencode({"return_url": "http://hubx.market/demo/"}).replace("&", "&amp;")
+        admin_query = urlencode({"profile": "admin", "return_url": "http://hubx.market/demo/"}).replace("&", "&amp;")
+        customer_query = urlencode({"profile": "customer", "return_url": "http://hubx.market/demo/"}).replace("&", "&amp;")
+        self.assertContains(response, f"http://hubx-demo.hubx.market/?{storefront_query}")
+        self.assertContains(response, f"http://hubx-demo.hubx.market/accounts/demo-session/?{admin_query}")
+        self.assertContains(response, f"http://hubx-demo.hubx.market/accounts/demo-session/?{customer_query}")
+
+    @override_settings(
+        HUBX_MARKET_ROOT_DOMAIN="hubx.market",
+        HUBX_MARKET_PUBLIC_PORT="",
+        ALLOWED_HOSTS=[".localhost", "localhost", "testserver"],
+    )
+    def test_public_demo_profile_links_use_localhost_request_host(self):
+        Tenant.objects.create(name="Hubx Demo", slug="hubx-demo", subdomain="hubx-demo", is_active=True)
+
+        response = self.client.get(reverse("public-demo"), HTTP_HOST="localhost:8002")
+
+        self.assertEqual(response.status_code, 200)
+        storefront_query = urlencode({"return_url": "http://localhost:8002/demo/"}).replace("&", "&amp;")
+        admin_query = urlencode({"profile": "admin", "return_url": "http://localhost:8002/demo/"}).replace("&", "&amp;")
+        customer_query = urlencode({"profile": "customer", "return_url": "http://localhost:8002/demo/"}).replace("&", "&amp;")
+        self.assertContains(response, f"http://hubx-demo.localhost:8002/?{storefront_query}")
+        self.assertContains(response, f"http://hubx-demo.localhost:8002/accounts/demo-session/?{admin_query}")
+        self.assertContains(response, f"http://hubx-demo.localhost:8002/accounts/demo-session/?{customer_query}")
+
+    @override_settings(
+        HUBX_MARKET_ROOT_DOMAIN="hubx.market",
+        HUBX_MARKET_PUBLIC_PORT="",
+        ALLOWED_HOSTS=["127.0.0.1", ".localhost", "localhost", "testserver"],
+    )
+    def test_public_demo_profile_links_preserve_127_return_host(self):
+        Tenant.objects.create(name="Hubx Demo", slug="hubx-demo", subdomain="hubx-demo", is_active=True)
+
+        response = self.client.get(reverse("public-demo"), HTTP_HOST="127.0.0.1:8002")
+
+        self.assertEqual(response.status_code, 200)
+        storefront_query = urlencode({"return_url": "http://127.0.0.1:8002/demo/"}).replace("&", "&amp;")
+        admin_query = urlencode({"profile": "admin", "return_url": "http://127.0.0.1:8002/demo/"}).replace("&", "&amp;")
+        self.assertContains(response, f"http://hubx-demo.localhost:8002/?{storefront_query}")
+        self.assertContains(response, f"http://hubx-demo.localhost:8002/accounts/demo-session/?{admin_query}")
+
+    @override_settings(HUBX_MARKET_DEMO_TENANT_SUBDOMAIN="missing-demo")
+    def test_public_demo_returns_404_for_missing_demo_tenant(self):
+        response = self.client.get(reverse("public-demo"), HTTP_HOST="hubx.market")
+
+        self.assertEqual(response.status_code, 404)
+
+    @override_settings(HUBX_MARKET_DEMO_TENANT_SUBDOMAIN="hubx-demo")
+    def test_demo_storefront_uses_demo_theme_logo_and_read_only_banner(self):
+        Tenant.objects.create(name="Hubx Market Demo", slug="hubx-demo", subdomain="hubx-demo", is_active=True)
+
+        response = self.client.get(reverse("storefront-home"), HTTP_HOST="hubx-demo.hubx.market")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'data-tenant="hubx-demo"')
+        self.assertContains(response, "hubx-logo-gold.png")
+        self.assertContains(response, "Demo somente leitura")
+        self.assertContains(response, "Ações de compra, cadastro e edição ficam bloqueadas")
+        self.assertContains(response, "storefront-topbar")
+        self.assertContains(response, 'aria-label="Navegação da loja"')
+        self.assertContains(response, "Carrinho")
+        self.assertContains(response, 'href="/cart/?demo_flow=cart"')
+        self.assertContains(response, 'action="/accounts/logout/"')
+        self.assertContains(response, "Sair")
+        self.assertNotContains(response, 'href="/accounts/login/"')
+
+    @override_settings(HUBX_MARKET_DEMO_TENANT_SUBDOMAIN="hubx-demo")
+    def test_demo_storefront_logout_form_preserves_return_url(self):
+        Tenant.objects.create(name="Hubx Market Demo", slug="hubx-demo", subdomain="hubx-demo", is_active=True)
+        return_url = "http://hubx.market/demo/"
+
+        response = self.client.get(
+            reverse("storefront-home"),
+            {"return_url": return_url},
+            HTTP_HOST="hubx-demo.hubx.market",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'action="/accounts/logout/"')
+        self.assertContains(response, f'name="return_url" value="{return_url}"')
+        self.assertNotContains(response, 'href="/accounts/login/"')
+
+    @override_settings(HUBX_MARKET_DEMO_TENANT_SUBDOMAIN="hubx-demo")
+    def test_demo_product_detail_links_to_simulated_purchase_flow(self):
+        Tenant.objects.create(name="Hubx Market Demo", slug="hubx-demo", subdomain="hubx-demo", is_active=True)
+
+        response = self.client.get(
+            reverse("storefront:product-detail", kwargs={"product_slug": "tenis-hubx-runner"}),
+            HTTP_HOST="hubx-demo.hubx.market",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Simular carrinho")
+        self.assertContains(response, "Simular checkout")
+        self.assertContains(response, 'href="/cart/?demo_flow=cart"')
+        self.assertContains(response, 'href="/checkout/?demo_flow=checkout&amp;stage=review"')
+        self.assertContains(response, "nenhuma alteração é gravada")
+        self.assertNotContains(response, "compras e edições estão bloqueadas")
 
     def test_storefront_navbar_shows_logout_for_authenticated_user(self):
         user = get_user_model().objects.create_user(
@@ -65,6 +223,8 @@ class StorefrontViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "pages/templates/catalog_page.html")
         self.assertContains(response, "Loja")
+        self.assertContains(response, "storefront-topbar")
+        self.assertContains(response, 'aria-label="Navegação da loja"')
         self.assertContains(response, "Tênis Hubx Runner")
         self.assertContains(response, "curadoria leve")
 
@@ -140,8 +300,8 @@ class StorefrontViewTests(TestCase):
         self.assertContains(response, "destaques atuais da vitrine")
         self.assertContains(response, "produtos priorizados pela vitrine usando sinais reais")
         self.assertContains(response, "Tênis Hubx Runner")
-        self.assertContains(response, "Destaque editorial atual para Preto · 42")
-        self.assertContains(response, "mesma leitura de destaque editorial mostrada neste card")
+        self.assertContains(response, "Oferta")
+        self.assertContains(response, "Comprar")
 
     def test_catalog_list_view_applies_quick_filter_quick_buy(self):
         response = self.client.get(reverse("storefront:catalog-list"), {"quick_filter": "quick_buy"}, HTTP_HOST=self.storefront_host)
@@ -152,8 +312,8 @@ class StorefrontViewTests(TestCase):
         self.assertContains(response, "combinações ativas, em estoque ou com poucas unidades")
         self.assertContains(response, "Use Limpar para voltar à vitrine completa")
         self.assertContains(response, "Tênis Hubx Runner")
-        self.assertContains(response, "Compra rápida disponível para Preto · 42")
-        self.assertContains(response, "seguir para checkout com a mesma base comercial mostrada neste card")
+        self.assertContains(response, "Pronta entrega")
+        self.assertContains(response, "Comprar")
         self.assertContains(response, "Compra rápida pronta para retomar sua navegação")
 
     def test_catalog_list_view_applies_quick_filter_offer(self):
@@ -164,8 +324,8 @@ class StorefrontViewTests(TestCase):
         self.assertContains(response, "ofertas ativas da vitrine")
         self.assertContains(response, "preço comparativo ativo já visível no card")
         self.assertContains(response, "Tênis Hubx Runner")
-        self.assertContains(response, "Oferta ativa para Preto · 42")
-        self.assertContains(response, "mesma leitura de oferta ativa mostrada neste card")
+        self.assertContains(response, "Oferta ativa")
+        self.assertContains(response, "Comprar")
         self.assertContains(response, "Use Limpar para voltar à vitrine completa")
 
     def test_catalog_list_view_applies_availability_facet(self):
@@ -331,6 +491,20 @@ class StorefrontViewTests(TestCase):
 
         self.assertFalse(StorefrontDiscoveryEventLog.objects.exists())
 
+    @override_settings(HUBX_MARKET_DEMO_TENANT_SUBDOMAIN="hubx-demo")
+    def test_discovery_analytics_skips_demo_tenant_read_only(self):
+        demo_tenant = Tenant.objects.create(name="Hubx Demo", slug="hubx-demo", subdomain="hubx-demo", is_active=True)
+
+        storefront_discovery_analytics.record_listing_view(
+            tenant_id=demo_tenant.id,
+            session_key="demo-session",
+            path="/catalog/",
+            query="runner",
+            result_count=1,
+        )
+
+        self.assertFalse(StorefrontDiscoveryEventLog.objects.filter(tenant=demo_tenant).exists())
+
     def test_catalog_list_view_applies_public_sort_by_lowest_price(self):
         response = self.client.get(reverse("storefront:catalog-list"), {"sort": "price_asc"}, HTTP_HOST=self.storefront_host)
 
@@ -443,7 +617,10 @@ class StorefrontViewTests(TestCase):
         self.assertEqual(response.status_code, 404)
 
 
-@override_settings(ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver"])
+@override_settings(
+    ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver"],
+    HUBX_MARKET_DEMO_TENANT_SUBDOMAIN="official-demo",
+)
 class StorefrontPersistedReadTests(TestCase):
     fixtures = ["catalog_minimal_seed.json"]
 
@@ -468,17 +645,17 @@ class StorefrontPersistedReadTests(TestCase):
         self.assertEqual(product["compare_price"], "449.90")
         self.assertEqual(product["stock_state"], "in_stock")
         self.assertEqual(product["stock_label"], "Em estoque")
-        self.assertEqual(product["stock_helper"], "12 unidades em pronta entrega · Preto · 42")
-        self.assertEqual(product["price_helper"], "oferta disponível para Preto · 42, com economia frente ao valor anterior e parcelamento em até 3x sem juros")
-        self.assertEqual(product["effective_variant_summary"], "Variante em destaque agora: Preto · 42 · SKU RUNNER-PERSIST-BLK-42.")
-        self.assertIn("reflete Preto · 42", product["availability_note"])
-        self.assertIn("já pode seguir para checkout", product["cta_helper"])
+        self.assertEqual(product["stock_helper"], "Pronta entrega")
+        self.assertEqual(product["price_helper"], "Oferta ativa com parcelamento disponível")
+        self.assertEqual(product["effective_variant_summary"], "")
+        self.assertEqual(product["availability_note"], "Disponível para compra.")
+        self.assertIn("preservados no checkout", product["cta_helper"])
         self.assertEqual(product["eyebrow"], "Hubx Persisted")
         self.assertEqual(product["primary_action_label"], "Ir para checkout")
         self.assertFalse(product["primary_action_disabled"])
         self.assertEqual(product["secondary_action_label"], "Ir para checkout")
         self.assertEqual(product["secondary_action_target"], "checkout")
-        self.assertEqual(product["badge_label"], "Oferta ativa · Preto · 42")
+        self.assertEqual(product["badge_label"], "Oferta")
         self.assertEqual(product["badge_variant"], "success")
         self.assertEqual(product["product_gallery_items"][0]["url"], "https://cdn.hubx.market/demo/catalog/runner-primary.jpg")
         self.assertEqual(product["main_image_url"], "https://cdn.hubx.market/demo/catalog/runner-primary.jpg")
@@ -531,31 +708,25 @@ class StorefrontPersistedReadTests(TestCase):
             [product["discovery_rank_score"] for product in products],
             sorted([product["discovery_rank_score"] for product in products], reverse=True),
         )
-        self.assertIn("Combinação em destaque · Preto · 42", product["purchase_note"])
-        self.assertIn("valor percebido mais alto", product["product_subtitle"])
-        self.assertIn("valor percebido mais alto", product["short_description"])
-        self.assertIn("valor percebido mais alto", product["purchase_note"])
+        self.assertEqual(product["purchase_note"], "Selecione a opção desejada e avance com segurança.")
+        self.assertEqual(product["product_subtitle"], "Produto persistido de demonstração para validar a primeira leitura real do catálogo.")
+        self.assertEqual(product["short_description"], "Produto persistido de demonstração para validar a primeira leitura real do catálogo.")
         self.assertEqual(product["variant_groups"][0]["label"], "Tamanho disponível")
         self.assertEqual(product["variant_groups"][0]["help_text"], "Preço e estoque exibidos refletem a variante padrão Preto · 42.")
         self.assertEqual([option["value"] for option in product["variant_groups"][0]["options"]], ["42", "43"])
         self.assertEqual([option["label"] for option in product["variant_groups"][1]["options"]], ["Preto", "Branco"])
         self.assertEqual(product["variant_groups"][1]["help_text"], "A mídia principal e os textos comerciais priorizam Preto · 42.")
-        self.assertEqual(product["catalog_card_subtitle"], "Calçados esportivos · Preto · 42")
-        self.assertEqual(product["catalog_card_meta"], "SKU RUNNER-PERSIST-BLK-42 · oferta ativa")
-        self.assertEqual(product["catalog_card_price_helper"], "oferta ativa para Preto · 42, com parcelamento em até 3x sem juros")
-        self.assertEqual(product["catalog_card_variant_summary"], "Combinação em destaque: Preto · 42.")
-        self.assertEqual(product["catalog_card_curation_note"], "Escolha editorial da vitrine com oferta ativa e caminho rápido para compra.")
+        self.assertEqual(product["catalog_card_subtitle"], "Calçados esportivos")
+        self.assertEqual(product["catalog_card_meta"], "Oferta ativa")
+        self.assertEqual(product["catalog_card_price_helper"], "Oferta ativa")
+        self.assertEqual(product["catalog_card_variant_summary"], "")
+        self.assertEqual(product["catalog_card_curation_note"], "")
         self.assertEqual(product["catalog_card_decision_signal"], "oferta_editorial")
-        self.assertEqual(product["catalog_card_availability_note"], "Preto · 42 pronta para compra imediata.")
-        self.assertIn("decidir com confiança", product["catalog_card_click_helper"])
-        self.assertIn("combinação destacada na loja continua sendo Preto · 42", product["product_subtitle"])
-        self.assertIn("combinação destacada na loja continua sendo Preto · 42", product["short_description"])
-        self.assertIn("combinação destacada na loja continua sendo Preto · 42", product["purchase_note"])
-        self.assertIn("já pode seguir para checkout", product["purchase_note"])
-        self.assertIn("decisão segura", product["cta_helper"])
-        self.assertEqual(product["pdp_decision_checks"][0]["title"], "Preço confirmado")
-        self.assertIn("R$ 399,90 para Preto · 42", product["pdp_decision_checks"][0]["description"])
-        self.assertEqual(product["pdp_decision_checks"][2]["title"], "Checkout sem surpresa")
+        self.assertEqual(product["catalog_card_availability_note"], "Pronta entrega")
+        self.assertEqual(product["catalog_card_click_helper"], "")
+        self.assertIn("preservados no checkout", product["cta_helper"])
+        self.assertEqual(product["pdp_decision_checks"][0]["title"], "Preço garantido")
+        self.assertEqual(product["pdp_decision_checks"][2]["title"], "Checkout seguro")
 
     def test_storefront_query_service_applies_selected_variant_when_valid(self):
         product = storefront_catalog_queries.get_product("tenis-hubx-runner-persistido", tenant_id=self.tenant.id, size="42", color="wht")
@@ -563,8 +734,8 @@ class StorefrontPersistedReadTests(TestCase):
         self.assertEqual(product["sku"], "RUNNER-PERSIST-WHT-42")
         self.assertEqual(product["stock_state"], "low_stock")
         self.assertEqual(product["stock_label"], "Estoque baixo")
-        self.assertEqual(product["stock_helper"], "Restam 5 unidades para envio imediato · Branco · 42")
-        self.assertEqual(product["effective_variant_summary"], "Variante em destaque agora: Branco · 42 · SKU RUNNER-PERSIST-WHT-42.")
+        self.assertEqual(product["stock_helper"], "Últimas unidades")
+        self.assertEqual(product["effective_variant_summary"], "")
         self.assertEqual(product["variant_groups"][0]["selected"], "42")
         self.assertEqual(product["variant_groups"][1]["selected"], "wht")
         self.assertFalse(product["variant_groups"][0].get("invalid"))
@@ -588,12 +759,12 @@ class StorefrontPersistedReadTests(TestCase):
         self.assertContains(list_response, "Tênis Hubx Runner Persistido")
         self.assertContains(list_response, "Hubx Persisted")
         self.assertContains(list_response, "https://cdn.hubx.market/demo/catalog/runner-primary.jpg")
-        self.assertContains(list_response, "Calçados esportivos · Preto · 42")
-        self.assertContains(list_response, "SKU RUNNER-PERSIST-BLK-42 · oferta ativa")
-        self.assertContains(list_response, "Combinação em destaque: Preto · 42.")
-        self.assertContains(list_response, "Preto · 42 pronta para compra imediata.")
-        self.assertContains(list_response, "decidir com confiança")
-        self.assertContains(list_response, "oferta ativa para Preto · 42, com parcelamento em até 3x sem juros")
+        self.assertContains(list_response, "Calçados esportivos")
+        self.assertContains(list_response, "Oferta ativa")
+        self.assertContains(list_response, "Pronta entrega")
+        self.assertContains(list_response, "Comprar")
+        self.assertNotContains(list_response, "SKU RUNNER-PERSIST-BLK-42")
+        self.assertNotContains(list_response, "Combinação em destaque")
         self.assertContains(list_response, "Explore produtos com combinações em destaque, disponibilidade atual e uma curadoria leve")
         self.assertContains(list_response, "cards já refletem variante efetiva, disponibilidade atual e sinais leves de curadoria da vitrine")
         self.assertContains(list_response, "A vitrine continua pronta para receber sua próxima compra")
@@ -603,21 +774,19 @@ class StorefrontPersistedReadTests(TestCase):
         self.assertContains(detail_response, "Tênis Hubx Runner Persistido")
         self.assertContains(detail_response, "R$ 399,90")
         self.assertContains(detail_response, "Hubx Persisted")
-        self.assertContains(detail_response, "12 unidades em pronta entrega · Preto · 42")
-        self.assertContains(detail_response, "Variante em destaque agora: Preto · 42 · SKU RUNNER-PERSIST-BLK-42.")
-        self.assertContains(detail_response, "A disponibilidade desta compra reflete Preto · 42")
-        self.assertContains(detail_response, "oferta disponível para Preto · 42, com economia frente ao valor anterior e parcelamento em até 3x sem juros")
-        self.assertContains(detail_response, "Combinação em destaque · Preto · 42, com disponibilidade imediata e compra segura no storefront.")
-        self.assertContains(detail_response, "valor percebido mais alto")
-        self.assertContains(detail_response, "A combinação destacada na loja continua sendo Preto · 42")
+        self.assertContains(detail_response, "Pronta entrega")
+        self.assertContains(detail_response, "Disponível para compra.")
+        self.assertContains(detail_response, "Oferta ativa com parcelamento disponível")
+        self.assertNotContains(detail_response, "Variante em destaque agora")
+        self.assertNotContains(detail_response, "SKU RUNNER-PERSIST-BLK-42")
+        self.assertNotContains(detail_response, "combinação destacada")
         self.assertContains(detail_response, "Adicionar ao carrinho")
         self.assertContains(detail_response, "Comprar agora")
-        self.assertContains(detail_response, "decisão segura")
-        self.assertContains(detail_response, "Esta combinação (Preto · 42) já pode seguir para checkout")
+        self.assertContains(detail_response, "Preço e disponibilidade serão preservados no checkout")
         self.assertContains(detail_response, "Resumo para decisão de compra")
-        self.assertContains(detail_response, "Preço confirmado")
+        self.assertContains(detail_response, "Preço garantido")
         self.assertContains(detail_response, "Disponibilidade atual")
-        self.assertContains(detail_response, "Checkout sem surpresa")
+        self.assertContains(detail_response, "Checkout seguro")
         self.assertContains(detail_response, "https://cdn.hubx.market/demo/catalog/runner-primary.jpg")
 
     def test_storefront_product_cards_render_approved_review_summary_only(self):
@@ -666,11 +835,11 @@ class StorefrontPersistedReadTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Restam 5 unidades para envio imediato · Branco · 42")
-        self.assertContains(response, "Variante em destaque agora: Branco · 42 · SKU RUNNER-PERSIST-WHT-42.")
-        self.assertContains(response, "A disponibilidade desta compra reflete Branco · 42")
-        self.assertContains(response, "decisão rápida")
-        self.assertContains(response, "Esta combinação (Branco · 42) já pode seguir para checkout agora")
+        self.assertContains(response, "Últimas unidades")
+        self.assertContains(response, "Últimas unidades disponíveis para envio imediato.")
+        self.assertContains(response, "Preço e disponibilidade serão preservados no checkout")
+        self.assertNotContains(response, "Variante em destaque agora")
+        self.assertNotContains(response, "SKU RUNNER-PERSIST-WHT-42")
 
     def test_product_detail_post_creates_checkout_session_and_redirects(self):
         response = self.client.post(reverse("storefront:product-detail", kwargs={"product_slug": "tenis-hubx-runner-persistido"}))
@@ -1119,8 +1288,8 @@ class StorefrontPersistedReadTests(TestCase):
 
         self.assertEqual(item["main_image_url"], "https://cdn.hubx.market/demo/catalog/match-white.jpg")
         self.assertEqual(item["product_gallery_items"][0]["url"], "https://cdn.hubx.market/demo/catalog/match-white.jpg")
-        self.assertIn("Branco · 41", item["stock_helper"])
-        self.assertIn("Branco · 41", item["price_helper"])
+        self.assertEqual(item["stock_helper"], "Pronta entrega")
+        self.assertEqual(item["price_helper"], "Parcelamento disponível")
 
     def test_storefront_variant_groups_reflect_real_variants_when_available(self):
         product = storefront_catalog_queries.get_product("tenis-hubx-runner-persistido", tenant_id=self.tenant.id)
@@ -1292,17 +1461,14 @@ class StorefrontPersistedReadTests(TestCase):
         self.assertEqual(item["primary_action_label"], "Reservar e ir para checkout")
         self.assertEqual(item["badge_label"], "Sob encomenda")
         self.assertEqual(item["secondary_action_label"], "Ir para checkout")
-        self.assertEqual(item["catalog_card_availability_note"], "Marinho · 40 disponível por encomenda.")
+        self.assertEqual(item["catalog_card_availability_note"], "Sob encomenda")
         self.assertEqual(item["catalog_card_curation_note"], "")
         self.assertEqual(item["catalog_card_decision_signal"], "reserva_planejada")
-        self.assertIn("confirmar o prazo da reserva", item["catalog_card_click_helper"])
-        self.assertIn("Variante disponível por encomenda · Marinho · 40", item["stock_helper"])
-        self.assertIn("reflete Marinho · 40", item["availability_note"])
-        self.assertIn("já pode seguir para checkout como reserva", item["cta_helper"])
-        self.assertIn("decisão de compra previsível", item["cta_helper"])
-        self.assertIn("Produto disponível por encomenda · Marinho · 40", item["purchase_note"])
-        self.assertIn("combinação comprável", item["purchase_note"])
-        self.assertIn("já pode seguir para checkout", item["purchase_note"])
+        self.assertEqual(item["catalog_card_click_helper"], "")
+        self.assertEqual(item["stock_helper"], "Sob encomenda")
+        self.assertIn("Produto liberado por encomenda", item["availability_note"])
+        self.assertIn("reserva segue para checkout", item["cta_helper"])
+        self.assertIn("Produto disponível por encomenda", item["purchase_note"])
 
     def test_storefront_pdp_uses_default_variant_out_of_stock_hints_when_backorder_is_disabled(self):
         tenant = Tenant.objects.create(name="Sem Estoque", slug="sem-estoque", subdomain="sem-estoque")
@@ -1334,18 +1500,17 @@ class StorefrontPersistedReadTests(TestCase):
         self.assertTrue(item["primary_action_disabled"])
         self.assertEqual(item["secondary_action_label"], "Ver loja")
         self.assertEqual(item["secondary_action_target"], "catalog")
-        self.assertEqual(item["badge_label"], "Reposição em acompanhamento · Vermelho · 39")
-        self.assertEqual(item["catalog_card_availability_note"], "Vermelho · 39 indisponível no momento.")
+        self.assertEqual(item["badge_label"], "Indisponível")
+        self.assertEqual(item["catalog_card_availability_note"], "Indisponível no momento")
         self.assertEqual(item["catalog_card_curation_note"], "")
         self.assertEqual(item["catalog_card_decision_signal"], "acompanhar_reposicao")
-        self.assertIn("acompanhar a reposição", item["catalog_card_click_helper"])
-        self.assertIn("Variante indisponível no momento · Vermelho · 39", item["stock_helper"])
-        self.assertIn("está sem estoque no momento", item["availability_note"])
+        self.assertEqual(item["catalog_card_click_helper"], "")
+        self.assertEqual(item["stock_helper"], "Indisponível no momento")
+        self.assertIn("sem estoque no momento", item["availability_note"])
         self.assertIn("não segue para checkout agora", item["cta_helper"])
-        self.assertIn("acompanhar a reposição com tranquilidade", item["cta_helper"])
-        self.assertIn("próximo passo mais seguro é acompanhar a reposição ou voltar à loja", item["purchase_note"])
+        self.assertIn("Produto indisponível no momento", item["purchase_note"])
         self.assertEqual(item["pdp_decision_checks"][1]["title"], "Sem checkout agora")
-        self.assertIn("não está disponível para compra imediata", item["pdp_decision_checks"][1]["description"])
+        self.assertIn("indisponível para compra imediata", item["pdp_decision_checks"][1]["description"])
 
     def test_storefront_pdp_uses_low_stock_commercial_messaging_when_variant_is_scarce(self):
         tenant = Tenant.objects.create(name="Baixo Estoque", slug="baixo-estoque", subdomain="baixo-estoque")
@@ -1373,15 +1538,15 @@ class StorefrontPersistedReadTests(TestCase):
         item = storefront_catalog_queries.get_product("produto-ultimas-unidades", tenant_id=tenant.id)
 
         self.assertEqual(item["stock_label"], "Estoque baixo")
-        self.assertEqual(item["badge_label"], "Últimas unidades · Preto · 38")
+        self.assertEqual(item["badge_label"], "Últimas unidades")
         self.assertEqual(item["badge_variant"], "warning")
-        self.assertEqual(item["catalog_card_availability_note"], "Preto · 38 com 2 unidade(s) pronta(s) para envio.")
-        self.assertEqual(item["catalog_card_curation_note"], "Oferta em evidência nesta vitrine, pronta para uma decisão rápida.")
+        self.assertEqual(item["catalog_card_availability_note"], "Últimas unidades para envio imediato")
+        self.assertEqual(item["catalog_card_curation_note"], "")
         self.assertEqual(item["catalog_card_decision_signal"], "decisao_rapida_com_oferta")
-        self.assertIn("uma das mais fortes da vitrine", item["catalog_card_click_helper"])
-        self.assertIn("2 unidade(s) pronta(s) para envio imediato", item["availability_note"])
-        self.assertIn("poucas unidades restantes", item["cta_helper"])
-        self.assertIn("Poucas unidades disponíveis · Preto · 38", item["purchase_note"])
-        self.assertIn("compra rápida para Preto · 38", item["price_helper"])
-        self.assertEqual(item["catalog_card_meta"], "SKU SPRINT-BLK-38 · saída rápida")
-        self.assertIn("economia pronta para checkout", item["catalog_card_price_helper"])
+        self.assertEqual(item["catalog_card_click_helper"], "")
+        self.assertIn("Últimas unidades disponíveis", item["availability_note"])
+        self.assertIn("preservados no checkout", item["cta_helper"])
+        self.assertIn("Poucas unidades disponíveis", item["purchase_note"])
+        self.assertIn("Poucas unidades", item["price_helper"])
+        self.assertEqual(item["catalog_card_meta"], "Últimas unidades")
+        self.assertEqual(item["catalog_card_price_helper"], "Últimas unidades")

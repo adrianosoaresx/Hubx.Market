@@ -17,6 +17,7 @@ from app.modules.checkout.application.checkout_page_queries import checkout_page
 from app.modules.checkout.application.checkout_recovery_event_commands import record_checkout_recovery_event
 from app.modules.checkout.application.checkout_result_taxonomy import classify_checkout_result
 from app.modules.checkout.application.checkout_session_commands import checkout_session_commands
+from app.modules.checkout.application.checkout_shipping_quote_commands import checkout_shipping_quote_commands
 
 
 def _build_checkout_recovery_context(*, request, result: str, back_url: str, session_key: str | None, stage: str | None) -> dict[str, object]:
@@ -138,6 +139,99 @@ class CheckoutPageView(TemplateView):
         stage = self.request.GET.get("stage") or self.request.POST.get("current_stage")
         return session_key, back_url, stage
 
+    def _posted_checkout_payload(self, request) -> dict[str, object]:
+        return {
+            "first_name": request.POST.get("first_name", ""),
+            "last_name": request.POST.get("last_name", ""),
+            "email": request.POST.get("email", ""),
+            "phone": request.POST.get("phone", ""),
+            "address_line_1": request.POST.get("address_line_1", ""),
+            "address_line_2": request.POST.get("address_line_2", ""),
+            "city": request.POST.get("city", ""),
+            "state": request.POST.get("state", ""),
+            "zip_code": request.POST.get("zip_code", ""),
+            "shipping_method_selected": request.POST.get("shipping_method", ""),
+            "payment_method_selected": request.POST.get("payment_method", ""),
+            "installments_selected": request.POST.get("installments", ""),
+            "accept_terms": bool(request.POST.get("accept_terms")),
+        }
+
+    def _post_includes_checkout_fields(self, request) -> bool:
+        checkout_field_names = {
+            "first_name",
+            "last_name",
+            "email",
+            "phone",
+            "address_line_1",
+            "address_line_2",
+            "city",
+            "state",
+            "zip_code",
+            "shipping_method",
+            "payment_method",
+            "installments",
+            "accept_terms",
+        }
+        return any(field_name in request.POST for field_name in checkout_field_names)
+
+    def _save_checkout_progress(self, request, *, tenant_id: int | None, session_key: str | None) -> str:
+        payload = self._posted_checkout_payload(request)
+        quote_result = checkout_shipping_quote_commands.refresh_quote(
+            tenant_id=tenant_id,
+            session_key=str(session_key or ""),
+            zip_code=payload["zip_code"],
+        )
+        result = checkout_session_commands.update_session(
+            session_key=str(session_key or ""),
+            payload=payload,
+        )
+        if result == "checkout-saved" and not bool(quote_result.get("ready")):
+            return str(quote_result.get("result") or result)
+        return result
+
+    def _apply_demo_checkout_context(self, context: dict[str, object]) -> None:
+        demo_flow = str(self.request.GET.get("demo_flow", "") or "").strip()
+        if not bool(getattr(self.request, "is_demo_read_only", False)) or demo_flow not in {"checkout", "complete"}:
+            return
+
+        context["checkout_session_readonly"] = True
+        context["page_meta"] = "Simulação da loja demo · nenhum pedido, pagamento ou estoque será alterado."
+        context["back_url"] = f'{reverse("cart:cart-page")}?{urlencode({"demo_flow": "cart"})}'
+        context["form_action"] = self.request.path
+        if demo_flow == "complete":
+            context.update(
+                {
+                    "page_title": "Pedido simulado recebido",
+                    "page_description": "Esta é a confirmação demonstrativa da jornada de compra da loja demo.",
+                    "checkout_feedback": {
+                        "variant": "success",
+                        "icon_name": "check-circle",
+                        "title": "Operação simulada até o fim",
+                        "description": "A experiência chegou à confirmação sem criar pedido, pagamento, carrinho ou baixa de estoque.",
+                    },
+                    "final_action_title": "Simulação concluída",
+                    "final_action_description": "Você revisou carrinho, entrega, pagamento e confirmação usando dados demonstrativos.",
+                    "final_action_helper": "As proteções de somente leitura da demo continuam bloqueando qualquer escrita real.",
+                    "demo_checkout_action_href": reverse("storefront:catalog-list"),
+                    "demo_checkout_action_label": "Voltar ao catálogo",
+                }
+            )
+            return
+
+        context.update(
+            {
+                "checkout_feedback": {
+                    "variant": "info",
+                    "icon_name": "info",
+                    "title": "Checkout demonstrativo",
+                    "description": "Revise entrega, pagamento e itens como exemplo da operação. O botão final apenas simula a confirmação.",
+                },
+                "submit_label": "Simular conclusão",
+                "demo_checkout_action_href": f'{reverse("checkout:checkout-page")}?{urlencode({"demo_flow": "complete", "stage": "review"})}',
+                "demo_checkout_action_label": "Simular conclusão",
+            }
+        )
+
     def post(self, request, *args, **kwargs):
         session_key, back_url, stage = self._base_query_context()
         tenant = getattr(request, "tenant", None)
@@ -181,6 +275,25 @@ class CheckoutPageView(TemplateView):
                 params["session_key"] = session_key
             return HttpResponseRedirect(f'{reverse("checkout:checkout-page")}?{urlencode(params)}')
         if stage == "review":
+            if self._post_includes_checkout_fields(request):
+                save_result = self._save_checkout_progress(
+                    request,
+                    tenant_id=tenant_id,
+                    session_key=session_key,
+                )
+                if save_result != "checkout-saved":
+                    fallback_stage = stage or "review"
+                    if session_key:
+                        payload = checkout_page_queries.get_checkout_page_data(
+                            tenant_id=tenant_id,
+                            session_key=session_key,
+                            requested_stage=stage,
+                        )
+                        fallback_stage = str(payload.get("current_stage", fallback_stage))
+                    params = {"back_url": back_url, "result": save_result, "stage": fallback_stage}
+                    if session_key:
+                        params["session_key"] = session_key
+                    return HttpResponseRedirect(f'{reverse("checkout:checkout-page")}?{urlencode(params)}')
             result, order_number = checkout_completion_commands.complete_checkout(session_key=str(session_key or ""))
             if result == "checkout-completed" and order_number:
                 return HttpResponseRedirect(
@@ -198,24 +311,7 @@ class CheckoutPageView(TemplateView):
             if session_key:
                 params["session_key"] = session_key
             return HttpResponseRedirect(f'{reverse("checkout:checkout-page")}?{urlencode(params)}')
-        result = checkout_session_commands.update_session(
-            session_key=str(session_key or ""),
-            payload={
-                "first_name": request.POST.get("first_name", ""),
-                "last_name": request.POST.get("last_name", ""),
-                "email": request.POST.get("email", ""),
-                "phone": request.POST.get("phone", ""),
-                "address_line_1": request.POST.get("address_line_1", ""),
-                "address_line_2": request.POST.get("address_line_2", ""),
-                "city": request.POST.get("city", ""),
-                "state": request.POST.get("state", ""),
-                "zip_code": request.POST.get("zip_code", ""),
-                "shipping_method_selected": request.POST.get("shipping_method", ""),
-                "payment_method_selected": request.POST.get("payment_method", ""),
-                "installments_selected": request.POST.get("installments", ""),
-                "accept_terms": bool(request.POST.get("accept_terms")),
-            },
-        )
+        result = self._save_checkout_progress(request, tenant_id=tenant_id, session_key=session_key)
         params = {"back_url": back_url, "result": result}
         if session_key:
             params["session_key"] = session_key
@@ -256,6 +352,7 @@ class CheckoutPageView(TemplateView):
         context["form_action"] = f'{self.request.path}?{urlencode(form_params)}'
         if session_key:
             context["session_key"] = session_key
+        self._apply_demo_checkout_context(context)
         result = self.request.GET.get("result", "").strip()
         if result:
             context["checkout_result_taxonomy"] = classify_checkout_result(result)
@@ -285,6 +382,20 @@ class CheckoutPageView(TemplateView):
                 "icon": "🚚",
                 "title": "Escolha uma entrega válida",
                 "description": "Selecione uma modalidade de frete disponível nesta sessão antes de seguir para pagamento ou revisão.",
+            }
+        elif result == "checkout-shipping-quote-failed":
+            context["checkout_feedback"] = {
+                "variant": "warning",
+                "icon": "🚚",
+                "title": "Não foi possível calcular o frete",
+                "description": "Revise o CEP informado para carregar modalidades de entrega antes de seguir.",
+            }
+        elif result == "checkout-shipping-quote-unavailable":
+            context["checkout_feedback"] = {
+                "variant": "warning",
+                "icon": "🚚",
+                "title": "Frete indisponível nesta sessão",
+                "description": "Reabra o checkout a partir do carrinho ou produto para recalcular a entrega com segurança.",
             }
         elif result == "checkout-payment-method-invalid":
             context["checkout_feedback"] = {

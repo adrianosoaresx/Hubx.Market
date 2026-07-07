@@ -36,7 +36,7 @@
                 </section>
             </section>
 
-            <section class="customer-area-panel space-y-4">
+            <section class="space-y-4">
                 <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">{{ items_title|default:"Itens do pedido" }}</h2>
                 {% with title=order_summary_title|default:"Resumo da compra" description=order_summary_description|default:"Itens, totais e condições do pedido." items=order_items subtotal=subtotal shipping=shipping discount=discount installments=installments total=total note=summary_note actions=order_review_actions showcase_mode=showcase_mode %}
                     {% include "shared/components/composite/order_summary.html" %}
@@ -62,9 +62,7 @@
             {% if delivery_tracking_visible %}
                 {% include "shared/components/feedback/alert.html" with variant=delivery_tracking_variant icon=delivery_tracking_icon title=delivery_tracking_title description=delivery_tracking_description %}
                 {% if delivery_tracking_url %}
-                    <a href="{{ delivery_tracking_url }}" class="ds-btn ds-btn-secondary ds-btn-md" target="_blank" rel="noopener noreferrer">
-                        {{ delivery_tracking_action_label|default:"Acompanhar entrega" }}
-                    </a>
+                    {% include "shared/components/actions/button.html" with label=delivery_tracking_action_label|default:"Acompanhar entrega" href=delivery_tracking_url variant="secondary" target="_blank" rel="noopener noreferrer" %}
                 {% endif %}
             {% endif %}
             {% if payment_attempt_operational_visible %}
@@ -73,17 +71,17 @@
                 {% endwith %}
             {% endif %}
             {% if pending_recovery_visible %}
-                {% include "shared/components/feedback/alert.html" with variant=pending_recovery_variant icon="🧭" title=pending_recovery_title description=pending_recovery_description %}
+                {% include "shared/components/feedback/alert.html" with variant=pending_recovery_variant title=pending_recovery_title description=pending_recovery_description %}
             {% endif %}
             {% if order_pending_recovery_visible %}
-                {% include "shared/components/feedback/alert.html" with variant=order_pending_recovery_variant icon="🕒" title=order_pending_recovery_title description=order_pending_recovery_description %}
+                {% include "shared/components/feedback/alert.html" with variant=order_pending_recovery_variant icon_name="clock" title=order_pending_recovery_title description=order_pending_recovery_description %}
             {% endif %}
             {% if activity_items or showcase_mode %}
                 {% with title=activity_title|default:"Linha do tempo" description=activity_description|default:"Acompanhe atualizações importantes do pedido." items=activity_items showcase_mode=showcase_mode %}
                     {% include "shared/components/data_display/activity_feed.html" %}
                 {% endwith %}
             {% else %}
-                {% with icon="🕒" title="Sem atualizações ainda" description="Assim que o pedido avançar, a linha do tempo aparecerá aqui." centered=False size="md" %}
+                {% with icon_name="clock" title="Sem atualizações ainda" description="Assim que o pedido avançar, a linha do tempo aparecerá aqui." centered=False size="md" %}
                     {% include "shared/components/feedback/empty_state.html" %}
                 {% endwith %}
             {% endif %}

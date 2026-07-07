@@ -9,6 +9,7 @@ from django.conf import settings
 from app.modules.orders.application.customer_order_payment_commands import customer_order_payment_commands
 from app.modules.payments.application.payment_attempt_commands import payment_attempt_commands
 from app.modules.payments.domain.webhook_normalization import (
+    looks_like_asaas_webhook,
     looks_like_pagarme_webhook,
     normalize_payment_webhook,
 )
@@ -64,7 +65,17 @@ class PaymentWebhookCommandService:
         raw_body: bytes,
         provided_signature: str,
     ) -> tuple[str, int]:
-        if looks_like_pagarme_webhook(payload):
+        if looks_like_asaas_webhook(payload):
+            configured_token = str(getattr(settings, "ASAAS_WEBHOOK_TOKEN", "") or "").strip()
+            fallback_token = str(getattr(settings, "PAYMENTS_WEBHOOK_TOKEN", "") or "").strip()
+            if configured_token:
+                if provided_token != configured_token:
+                    logger.warning("payments.webhook.forbidden_token", extra={"provider": "asaas"})
+                    return "payment-webhook-forbidden", 403
+            elif not fallback_token or provided_token != fallback_token:
+                logger.warning("payments.webhook.forbidden_fallback_token", extra={"provider": "asaas"})
+                return "payment-webhook-forbidden", 403
+        elif looks_like_pagarme_webhook(payload):
             secret_key = str(getattr(settings, "PAGARME_SECRET_KEY", "") or "").strip()
             if secret_key:
                 if not is_valid_hmac_sha1_signature(

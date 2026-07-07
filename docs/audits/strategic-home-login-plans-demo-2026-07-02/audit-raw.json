@@ -1,0 +1,276 @@
+[
+  {
+    "route": "/",
+    "url": "http://127.0.0.1:8002/",
+    "screenshot": "X:/Projeto/Hubx.market/docs/audits/strategic-home-login-plans-demo-2026-07-02/01-home.png",
+    "info": {
+      "bodyClasses": "min-h-screen bg-[var(--color-surface-page)] text-[var(--color-text-primary)] ",
+      "brokenImages": [],
+      "buttons": [],
+      "forms": [],
+      "h1": [
+        "Crie sua loja virtual com uma operação pronta para vender."
+      ],
+      "links": [
+        {
+          "href": "/",
+          "text": "Hubx Market Portal central"
+        },
+        {
+          "href": "/",
+          "text": "Portal"
+        },
+        {
+          "href": "/plans/",
+          "text": "Planos"
+        },
+        {
+          "href": "/demo/",
+          "text": "Demo"
+        },
+        {
+          "href": "/accounts/login/",
+          "text": "Entrar"
+        },
+        {
+          "href": "/plans/#aquisicao",
+          "text": "Solicitar aquisição"
+        },
+        {
+          "href": "/plans/#planos",
+          "text": "Ver planos"
+        },
+        {
+          "href": "/demo/",
+          "text": "Acessar demo"
+        },
+        {
+          "href": "/",
+          "text": "Hubx Market"
+        }
+      ],
+      "scrollHeight": 1283,
+      "title": "Hubx Market",
+      "viewport": {
+        "height": 698,
+        "width": 548
+      }
+    },
+    "logs": []
+  },
+  {
+    "route": "/accounts/login/",
+    "url": "http://127.0.0.1:8002/accounts/login/",
+    "screenshot": "X:/Projeto/Hubx.market/docs/audits/strategic-home-login-plans-demo-2026-07-02/02-login.png",
+    "info": {
+      "bodyClasses": "min-h-screen bg-[var(--color-surface-page)] text-[var(--color-text-primary)] ",
+      "brokenImages": [],
+      "buttons": [
+        "Acessar conta"
+      ],
+      "forms": [
+        {
+          "action": "/accounts/login/",
+          "fields": [
+            "csrfmiddlewaretoken",
+            "login",
+            "password",
+            "remember_me"
+          ],
+          "method": "post"
+        }
+      ],
+      "h1": [
+        "Entrar"
+      ],
+      "links": [
+        {
+          "href": "/",
+          "text": "Hubx Market Acesso ao portal"
+        },
+        {
+          "href": "/",
+          "text": "Portal"
+        },
+        {
+          "href": "/plans/",
+          "text": "Planos"
+        },
+        {
+          "href": "/demo/",
+          "text": "Demo"
+        },
+        {
+          "href": "/accounts/login/",
+          "text": "Entrar"
+        },
+        {
+          "href": "/accounts/forgot-password/",
+          "text": "Esqueci minha senha"
+        },
+        {
+          "href": "/accounts/register/",
+          "text": "Criar conta"
+        },
+        {
+          "href": "/",
+          "text": "Hubx Market"
+        }
+      ],
+      "scrollHeight": 948,
+      "title": "Entrar",
+      "viewport": {
+        "height": 698,
+        "width": 548
+      }
+    },
+    "logs": []
+  },
+  {
+    "route": "/plans/",
+    "url": "http://127.0.0.1:8002/plans/",
+    "screenshot": "X:/Projeto/Hubx.market/docs/audits/strategic-home-login-plans-demo-2026-07-02/03-plans.png",
+    "info": {
+      "bodyClasses": "min-h-screen bg-[var(--color-surface-page)] text-[var(--color-text-primary)] ",
+      "brokenImages": [],
+      "buttons": [
+        "Enviar intenção"
+      ],
+      "forms": [
+        {
+          "action": "/plans/",
+          "fields": [
+            "csrfmiddlewaretoken",
+            "plan_code",
+            "store_name",
+            "desired_subdomain",
+            "contact_name",
+            "contact_email",
+            "contact_phone",
+            "message"
+          ],
+          "method": "post"
+        }
+      ],
+      "h1": [
+        "Escolha o plano para criar sua loja virtual."
+      ],
+      "links": [
+        {
+          "href": "/",
+          "text": "Hubx Market Planos SaaS"
+        },
+        {
+          "href": "/",
+          "text": "Portal"
+        },
+        {
+          "href": "/plans/",
+          "text": "Planos"
+        },
+        {
+          "href": "/demo/",
+          "text": "Demo"
+        },
+        {
+          "href": "/accounts/login/",
+          "text": "Entrar"
+        },
+        {
+          "href": "#aquisicao",
+          "text": "Solicitar aquisição"
+        },
+        {
+          "href": "#planos",
+          "text": "Ver planos"
+        },
+        {
+          "href": "/demo/",
+          "text": "Acessar demo"
+        },
+        {
+          "href": "/plans/?plan=starter#aquisicao",
+          "text": "Solicitar Starter"
+        },
+        {
+          "href": "/plans/?plan=pro#aquisicao",
+          "text": "Solicitar Pro"
+        },
+        {
+          "href": "/plans/?plan=enterprise#aquisicao",
+          "text": "Solicitar Enterprise"
+        },
+        {
+          "href": "/",
+          "text": "Hubx Market"
+        }
+      ],
+      "scrollHeight": 3072,
+      "title": "Planos Hubx Market",
+      "viewport": {
+        "height": 698,
+        "width": 548
+      }
+    },
+    "logs": []
+  },
+  {
+    "route": "/demo/",
+    "url": "http://127.0.0.1:8002/demo/",
+    "screenshot": "X:/Projeto/Hubx.market/docs/audits/strategic-home-login-plans-demo-2026-07-02/04-demo.png",
+    "info": {
+      "bodyClasses": "min-h-screen bg-[var(--color-surface-page)] text-[var(--color-text-primary)] ",
+      "brokenImages": [],
+      "buttons": [],
+      "forms": [],
+      "h1": [
+        "Escolha como deseja acessar a loja demo."
+      ],
+      "links": [
+        {
+          "href": "/",
+          "text": "Hubx Market Demo"
+        },
+        {
+          "href": "/",
+          "text": "Portal"
+        },
+        {
+          "href": "/plans/",
+          "text": "Planos"
+        },
+        {
+          "href": "/demo/",
+          "text": "Demo"
+        },
+        {
+          "href": "/accounts/login/",
+          "text": "Entrar"
+        },
+        {
+          "href": "http://hubx-demo.localhost:8002/",
+          "text": "Ver vitrine sem login"
+        },
+        {
+          "href": "http://hubx-demo.localhost:8002/accounts/demo-session/?profile=admin",
+          "text": "Entrar como admin"
+        },
+        {
+          "href": "http://hubx-demo.localhost:8002/accounts/demo-session/?profile=customer",
+          "text": "Entrar como cliente"
+        },
+        {
+          "href": "/",
+          "text": "Hubx Market"
+        }
+      ],
+      "scrollHeight": 965,
+      "title": "Acessar demo Hubx Market",
+      "viewport": {
+        "height": 698,
+        "width": 548
+      }
+    },
+    "logs": []
+  }
+]

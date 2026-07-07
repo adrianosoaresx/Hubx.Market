@@ -30,6 +30,17 @@ class AdminOwnerViewTests(TestCase):
         self.assertContains(response, reverse("owners:admin-owner-create"))
         self.assertContains(response, reverse("owners:admin-owner-edit", kwargs={"owner_id": self.owner.id}))
 
+    def test_admin_owner_inline_actions_include_csrf_token(self):
+        response = self.client.get(
+            reverse("owners:admin-owners-list"),
+            HTTP_HOST=f"{self.tenant.subdomain}.hubx.market",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="csrfmiddlewaretoken"')
+        self.assertContains(response, reverse("owners:admin-owner-update", kwargs={"owner_id": self.owner.id}))
+        self.assertContains(response, reverse("owners:admin-owner-invite", kwargs={"owner_id": self.owner.id}))
+
     def test_admin_owner_action_toggles_notifications(self):
         response = self.client.post(
             reverse("owners:admin-owner-update", kwargs={"owner_id": self.owner.id}),

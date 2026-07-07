@@ -4,12 +4,12 @@
 {% block shell_title %}{% if shell_title %}{{ shell_title }}{% elif page_title %}{{ page_title }}{% else %}Detalhes do cliente{% endif %}{% endblock %}
 
 {% block content %}
-<section class="space-y-6">
+<section class="admin-ops-page admin-customer-detail-page space-y-6">
     {% with eyebrow=page_eyebrow|default:"Clientes" title=page_title|default:"Cliente" description=page_description|default:"Resumo operacional da conta, perfil e atividade recente." meta=page_meta %}
-        {% include "shared/components/layout/page_header.html" %}
+        {% include "shared/components/layout/admin_page_header.html" %}
     {% endwith %}
 
-    <div class="flex flex-wrap items-center justify-between gap-3">
+    <div class="admin-ops-toolbar flex flex-wrap items-center justify-between gap-3">
         <div class="flex flex-wrap items-center gap-3">
             {% if customer_status_label %}
                 {% include "shared/components/data_display/badge.html" with label=customer_status_label variant=customer_status_variant|default:"active" %}

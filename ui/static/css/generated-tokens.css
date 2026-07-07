@@ -15,10 +15,12 @@
   --color-neutral-300: #CBD5E1;
   --color-neutral-600: #475569;
   --color-neutral-900: #0F172A;
-  --color-brand-500: #6366F1;
-  --color-brand-600: #4F46E5;
-  --color-brand-700: #4338CA;
-  --color-accent-500: #22C55E;
+  --color-brand-300: #FFE797;
+  --color-brand-500: #D6A937;
+  --color-brand-600: #9A6410;
+  --color-brand-700: #794A0C;
+  --color-accent-500: #D6A937;
+  --color-success-500: #16A34A;
   --color-info-500: #0EA5E9;
   --color-warning-500: #D97706;
   --color-danger-500: #DC2626;
@@ -54,14 +56,14 @@
   --color-text-inverse: #FFFFFF;
   --color-border-default: #E2E8F0;
   --color-border-strong: #CBD5E1;
-  --color-action-primary: #4F46E5;
-  --color-action-primary-hover: #4338CA;
+  --color-action-primary: #9A6410;
+  --color-action-primary-hover: #794A0C;
   --color-action-secondary: #0F172A;
-  --color-feedback-success: #22C55E;
+  --color-feedback-success: #16A34A;
   --color-feedback-info: #0EA5E9;
   --color-feedback-warning: #D97706;
   --color-feedback-danger: #DC2626;
-  --focus-ring: rgba(79, 70, 229, 0.35);
+  --focus-ring: rgba(154, 100, 16, 0.35);
   --icon-sm: 1rem;
   --icon-md: 1.25rem;
   --icon-lg: 1.5rem;
@@ -69,32 +71,32 @@
   --icon-stroke: 2;
   --icon-default: #0F172A;
   --icon-muted: #475569;
-  --icon-brand: #4F46E5;
-  --icon-success: #22C55E;
+  --icon-brand: #9A6410;
+  --icon-success: #16A34A;
   --icon-warning: #D97706;
   --icon-danger: #DC2626;
   --brand-logo-size-header: 2.375rem;
   --brand-logo-size-banner: 3rem;
-  --brand-banner-bg: rgba(79, 70, 229, 0.08);
+  --brand-banner-bg: rgba(255, 231, 151, 0.32);
   --brand-banner-text: #0F172A;
-  --brand-banner-accent: #4F46E5;
+  --brand-banner-accent: #9A6410;
   --admin-sidebar-width: 16rem;
   --admin-topbar-height: 4.5rem;
   --admin-content-max: 80rem;
-  --admin-nav-active-bg: rgba(34, 197, 94, 0.10);
-  --admin-nav-active-text: #0F766E;
+  --admin-nav-active-bg: rgba(255, 231, 151, 0.34);
+  --admin-nav-active-text: #794A0C;
   --admin-nav-muted: #475569;
   --admin-surface-raised: #FFFFFF;
   --admin-risk-accent: #B42318;
-  --admin-platform-accent: #2563EB;
+  --admin-platform-accent: #9A6410;
   --footer-bg: #FFFFFF;
   --footer-text: #475569;
   --footer-link: #0F172A;
   --footer-hubx-text: #475569;
 
   /* Components tokens */
-  --component-button-primary-bg: #4F46E5;
-  --component-button-primary-bg-hover: #4338CA;
+  --component-button-primary-bg: #9A6410;
+  --component-button-primary-bg-hover: #794A0C;
   --component-button-primary-text: #FFFFFF;
   --component-button-primary-radius: 0.75rem;
   --component-button-secondary-bg: #FFFFFF;
@@ -102,7 +104,7 @@
   --component-button-secondary-text: #0F172A;
   --component-input-bg: #FFFFFF;
   --component-input-border: #E2E8F0;
-  --component-input-border-focus: #4F46E5;
+  --component-input-border-focus: #9A6410;
   --component-input-text: #0F172A;
   --component-input-placeholder: #475569;
   --component-card-bg: #FFFFFF;
@@ -111,10 +113,19 @@
   --component-alert-info-bg: rgba(14, 165, 233, 0.10);
   --component-alert-warning-bg: rgba(217, 119, 6, 0.10);
   --component-alert-danger-bg: rgba(220, 38, 38, 0.10);
-  --component-alert-success-bg: rgba(34, 197, 94, 0.10);
+  --component-alert-success-bg: rgba(22, 163, 74, 0.10);
 
   /* Runtime compatibility aliases */
   --color-action-primary-bg: var(--component-button-primary-bg);
   --color-action-primary-bg-hover: var(--component-button-primary-bg-hover);
   --color-action-primary-text: var(--component-button-primary-text);
+  --color-surface: var(--color-surface-panel);
+  --color-surface-default: var(--color-surface-panel);
+  --color-surface-muted: var(--color-surface-subtle);
+  --color-surface-raised: var(--admin-surface-raised);
+  --color-border: var(--color-border-default);
+  --color-border-muted: var(--color-border-default);
+  --color-border-subtle: var(--color-border-default);
+  --color-border-primary: var(--color-action-primary-bg);
+  --color-text: var(--color-text-primary);
 }

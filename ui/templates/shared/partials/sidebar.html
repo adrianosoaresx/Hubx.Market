@@ -1,57 +1,49 @@
-<nav class="admin-ops-nav space-y-2 text-sm">
+<nav class="admin-ops-nav text-sm" aria-label="Navegação administrativa">
     {% if is_platform_admin_shell %}
-        <a href="/ops/platform/tenants/" class="admin-ops-nav-link {% if request.path == '/ops/platform/tenants/' %}is-active{% endif %}">
-            {% include "shared/partials/icon.html" with name="store" size="sm" %}
-            <span>Lojas</span>
-        </a>
-        <a href="/ops/platform/onboarding/" class="admin-ops-nav-link {% if request.path == '/ops/platform/onboarding/' %}is-active{% endif %}">
-            {% include "shared/partials/icon.html" with name="list" size="sm" %}
-            <span>Onboarding</span>
-        </a>
+        {% for item in platform_nav_items %}
+            <a href="{{ item.href }}" class="admin-ops-nav-link {% if item.active %}is-active{% endif %}">
+                {% include "shared/partials/icon.html" with name=item.icon size="sm" %}
+                <span>{{ item.label }}</span>
+            </a>
+        {% endfor %}
         <a href="/" class="admin-ops-nav-link">
             {% include "shared/partials/icon.html" with name="home" size="sm" %}
             <span>Portal central</span>
         </a>
     {% else %}
-        <a href="/ops/" class="admin-ops-nav-link {% if request.path == '/ops/' or request.path == '/ops' %}is-active{% endif %}">
-            {% include "shared/partials/icon.html" with name="layout-dashboard" size="sm" %}
-            <span>Dashboard</span>
-        </a>
-        {% for item in admin_nav_items %}
-            {% if "/ops/platform/" not in item.href %}
-                <a href="{{ item.href }}" class="admin-ops-nav-link {% if request.path == item.href %}is-active{% endif %}">
-                    {% if item.label == "Pedidos" %}
-                        {% include "shared/partials/icon.html" with name="shopping-cart" size="sm" %}
-                    {% elif item.label == "Catálogo" %}
-                        {% include "shared/partials/icon.html" with name="package" size="sm" %}
-                    {% elif item.label == "Páginas" %}
-                        {% include "shared/partials/icon.html" with name="file-text" size="sm" %}
-                    {% elif item.label == "Newsletter" %}
-                        {% include "shared/partials/icon.html" with name="mail" size="sm" %}
-                    {% elif item.label == "Audit log" %}
-                        {% include "shared/partials/icon.html" with name="shield" size="sm" %}
-                    {% elif item.label == "API keys" %}
-                        {% include "shared/partials/icon.html" with name="key-round" size="sm" %}
-                    {% elif item.label == "Cupons" %}
-                        {% include "shared/partials/icon.html" with name="tag" size="sm" %}
-                    {% elif item.label == "Avaliações" %}
-                        {% include "shared/partials/icon.html" with name="check-circle" size="sm" %}
-                    {% elif item.label == "Clientes" %}
-                        {% include "shared/partials/icon.html" with name="users" size="sm" %}
-                    {% elif item.label == "Financeiro" %}
-                        {% include "shared/partials/icon.html" with name="credit-card" size="sm" %}
-                    {% elif item.label == "Refunds" %}
-                        {% include "shared/partials/icon.html" with name="rotate-ccw" size="sm" %}
-                    {% elif item.label == "Owners" or item.label == "MFA owners" %}
-                        {% include "shared/partials/icon.html" with name="user" size="sm" %}
-                    {% elif item.label == "Assinatura" %}
-                        {% include "shared/partials/icon.html" with name="receipt-text" size="sm" %}
-                    {% else %}
-                        {% include "shared/partials/icon.html" with name="list" size="sm" %}
-                    {% endif %}
-                    <span>{{ item.label }}</span>
+        <section class="admin-ops-nav-section" aria-labelledby="admin-nav-overview">
+            <p id="admin-nav-overview" class="admin-ops-nav-heading">Visão geral</p>
+            <div class="admin-ops-nav-group">
+                <a href="/ops/" class="admin-ops-nav-link {% if request.path == '/ops/' or request.path == '/ops' %}is-active{% endif %}">
+                    {% include "shared/partials/icon.html" with name="layout-dashboard" size="sm" %}
+                    <span>Dashboard</span>
                 </a>
-            {% endif %}
+            </div>
+        </section>
+
+        {% regroup admin_nav_items by group_label as grouped_admin_nav_items %}
+        {% for group in grouped_admin_nav_items %}
+            <section class="admin-ops-nav-section" aria-labelledby="admin-nav-group-{{ forloop.counter }}">
+                <p id="admin-nav-group-{{ forloop.counter }}" class="admin-ops-nav-heading">{{ group.grouper }}</p>
+                <div class="admin-ops-nav-group">
+                    {% for item in group.list %}
+                        {% if "/ops/platform/" not in item.href %}
+                            <a href="{{ item.href }}" class="admin-ops-nav-link {% if request.path == item.href %}is-active{% endif %}">
+                                {% include "shared/partials/icon.html" with name=item.icon|default:"list" size="sm" %}
+                                <span>{{ item.label }}</span>
+                            </a>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </section>
+        {% empty %}
+            <section class="admin-ops-nav-section" aria-labelledby="admin-nav-empty">
+                <p id="admin-nav-empty" class="admin-ops-nav-heading">Operação</p>
+                <span class="admin-ops-nav-link is-disabled">
+                    {% include "shared/partials/icon.html" with name="list" size="sm" %}
+                    <span>Nenhum item disponível</span>
+                </span>
+            </section>
         {% endfor %}
     {% endif %}
 </nav>

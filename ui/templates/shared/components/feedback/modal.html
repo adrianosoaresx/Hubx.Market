@@ -1,24 +1,26 @@
 {% if open %}
-<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
-    <div class="w-full {% if size == 'lg' %}max-w-3xl{% elif size == 'sm' %}max-w-md{% else %}max-w-2xl{% endif %} rounded-2xl bg-white shadow-2xl">
-        <div class="flex items-start justify-between border-b border-[var(--color-border-default)] px-6 py-4">
+{% with modal_id=id|default:"ds-modal" %}
+<div class="ds-modal-overlay">
+    <div class="ds-modal-panel {% if size == 'lg' %}ds-modal-panel-lg{% elif size == 'sm' %}ds-modal-panel-sm{% endif %}" role="dialog" aria-modal="true" aria-labelledby="{{ modal_id }}-title" {% if description %}aria-describedby="{{ modal_id }}-description"{% endif %}>
+        <div class="ds-modal-header">
             <div>
-                <h2 class="text-lg font-semibold text-[var(--color-text-primary)]">{{ title|default:"Modal" }}</h2>
-                {% if description %}<p class="mt-1 text-sm text-[var(--color-text-secondary)]">{{ description }}</p>{% endif %}
+                <h2 id="{{ modal_id }}-title" class="ds-modal-title">{{ title|default:"Modal" }}</h2>
+                {% if description %}<p id="{{ modal_id }}-description" class="ds-modal-description">{{ description }}</p>{% endif %}
             </div>
             {% if dismissible %}
-                <button type="button" class="text-sm text-[var(--color-text-secondary)]">Fechar</button>
+                <button type="button" class="ds-modal-dismiss" aria-label="Fechar modal">Fechar</button>
             {% endif %}
         </div>
-        <div class="px-6 py-5">
+        <div class="ds-modal-body">
             {{ body|default:"Conteúdo do modal" }}
         </div>
         {% if primary_action or secondary_action %}
-            <div class="flex justify-end gap-3 border-t border-[var(--color-border-default)] px-6 py-4">
+            <div class="ds-modal-footer">
                 {% if secondary_action %}{{ secondary_action }}{% endif %}
                 {% if primary_action %}{{ primary_action }}{% endif %}
             </div>
         {% endif %}
     </div>
 </div>
+{% endwith %}
 {% endif %}

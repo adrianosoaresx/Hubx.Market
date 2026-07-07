@@ -1,5 +1,96 @@
 # DECISIONS.md
 
+## 2026-07
+
+### Decisão: MVP segue como release candidate funcional, produção real permanece NO-GO
+Decisão:
+- em 2026-07-06, o MVP está apto para validação controlada como release candidate local/staging.
+- produção real permanece `NO-GO` até fechar evidências reais de pagamentos, notificações, shipping, observabilidade, rollback drill e aceite explícito de risco residual.
+- `npm run test:visual`, suíte Django, smokes locais e gates de accounts/RBAC são critérios obrigatórios antes de nova decisão.
+- flags produtivas devem ser ativadas de forma controlada por tenant: `HUBX_OPS_AUTH_GATE_ENFORCED=1`, signup público apenas com token operacional e tenants novos em `maintenance_mode`.
+
+Motivo:
+- evitar liberar tráfego real sem provider de pagamento/e-mail/frete comprovado, runbook testado e dono de incidente confirmado.
+- permitir avanço seguro do pacote técnico sem mascarar lacunas externas de produção.
+
+Guardrail:
+- não marcar Go sem `payments_production_readiness`, `notification_production_delivery`, `shipping_quote_productionization` e `system_production_closure` verdes com evidência real.
+- não registrar secrets, tokens, payload sensível ou dados financeiros em audit/evidence.
+- rollback inicial deve poder desligar signup público, manter tenants em manutenção e desativar rollout de provider.
+
+### Decisão: aquisição pública de plano SaaS cria lead seguro
+Decisão:
+- `/plans/` é uma superfície pública de aquisição de plano SaaS.
+- o POST público cria `SubscriptionAcquisitionLead` em `subscriptions`.
+- o lead pode ser revisado em `/ops/platform/acquisitions/`.
+- conversão por platform admin cria apenas uma jornada `TenantOnboarding`.
+- tenant, owner inicial e `TenantSubscription` só nascem na conclusão explícita do wizard de onboarding.
+
+Motivo:
+- evitar provisionamento público automático antes de antifraude, billing provider, verificação de contato e política comercial.
+- manter `subscriptions` como dono da intenção comercial e `tenants` como dono da criação de loja.
+- preservar isolamento multi-tenant: fluxo público não toca dados tenant-owned de commerce.
+
+Guardrail:
+- o fluxo público não cria tenant, owner, assinatura, invoice, pagamento, catálogo, pedido ou sessão de checkout.
+
+### Decisão: signup self-service público fica atrás de feature flag
+Decisão:
+- `/plans/signup/` é a superfície pública de self-service SaaS.
+- a rota só fica disponível com `HUBX_PUBLIC_SIGNUP_ENABLED=1`.
+- quando `HUBX_PUBLIC_SIGNUP_REQUIRE_ACCESS_TOKEN=1`, o POST exige `HUBX_PUBLIC_SIGNUP_ACCESS_TOKEN` antes de criar qualquer tenant.
+- o POST cria `Tenant` ativo em `maintenance_mode`, `TenantSubscription(status=trialing)`, `TenantOnboarding(status=completed)` e `OwnerUser` inicial com senha utilizável.
+- tenant em `maintenance_mode` resolve por subdomínio/custom domain, mas storefront/checkout respondem 503; `/accounts/`, `/ops/` e caminhos técnicos continuam disponíveis para configuração.
+- `/plans/` permanece como aquisição assistida via `SubscriptionAcquisitionLead`.
+
+Motivo:
+- permitir MVP self-service controlado sem ativar billing SaaS recorrente.
+- manter a loja recém-criada fechada para configuração antes de publicação.
+- preservar a separação entre `OwnerUser` e `Customer` e não criar dados de commerce no signup.
+
+Guardrail:
+- o signup self-service não cria customer, catálogo, pedido, pagamento de loja, invoice, domínio customizado ou recurso/cobrança externa no billing provider.
+- a assinatura trial pode registrar o provider-alvo de billing SaaS para onboarding operacional, mas nenhuma API externa deve ser chamada nessa etapa.
+- e-mails já vinculados a usuário/owner existente devem usar aquisição assistida.
+- corrida de slug/subdomínio deve retornar erro de formulário, não 500.
+- toda criação deve ser auditada tenant-scoped e manter isolamento por subdomínio.
+
+### Decisão: planos públicos exibem trial de 30 dias com cartão obrigatório
+Decisão:
+- `SubscriptionPlan` passa a declarar `trial_days`, `requires_payment_method` e `feature_list`.
+- os planos comerciais seedados iniciam com `trial_days=30` e `requires_payment_method=True`.
+- `/plans/` e `/plans/signup/` exibem 30 dias grátis, cartão obrigatório e preço mensal após o trial.
+- `TenantSubscription(status=trialing)` recebe `trial_ends_at` calculado a partir de `started_at + plan.trial_days`.
+
+Motivo:
+- responder ao contrato comercial de MVP: loja pode validar por 30 dias antes da cobrança.
+- deixar claro para o usuário que cartão é requisito de ativação comercial sem ativar billing SaaS recorrente no MVP.
+- manter a fundação de assinatura tenant-scoped pronta para provider futuro sem armazenar dados sensíveis.
+
+Guardrail:
+- formulário público não coleta número de cartão, CVV, validade, token de cartão ou dado bancário sensível.
+- captura real de payment method deve ocorrer somente em provider seguro de billing SaaS.
+- `requires_payment_method` não cria invoice, cobrança recorrente, checkout de assinatura ou enforcement automático.
+
+### Decisão: Asaas é o provider inicial de checkout hospedado e billing SaaS-alvo
+Decisão:
+- `PAYMENTS_PROVIDER_DEFAULT` passa a apontar para `asaas` em ambientes novos.
+- `payments` possui adapter Asaas para criar cliente e cobrança hospedada em `/customers` e `/payments`, usando `ASAAS_API_KEY`, `ASAAS_BASE_URL`, `ASAAS_SANDBOX` e `ASAAS_WEBHOOK_TOKEN`.
+- `subscriptions` registra `billing_provider_code`, `billing_provider_label`, `billing_external_reference` e `billing_checkout_url` em `TenantSubscription`.
+- `SUBSCRIPTIONS_BILLING_PROVIDER_DEFAULT=asaas` define o provider-alvo da assinatura SaaS.
+- Pagar.me permanece como provider alternativo e caminho de refund sandbox-first existente.
+
+Motivo:
+- alinhar onboarding ao fluxo comercial atual: lojas recebem pedidos via Asaas primeiro e o billing SaaS também começa preparado para Asaas.
+- manter uma interface extensível para incluir outros providers de recebimento/billing depois.
+- não armazenar dados de cartão no Hubx Market; coleta e validação ficam no checkout/interface hospedada do provider.
+
+Guardrail:
+- nenhuma chave Asaas deve ser versionada; usar apenas variáveis de ambiente e reaproveitar nomes já usados em sandbox quando disponíveis.
+- signup público não chama Asaas nem cria cobrança SaaS; ele só registra assinatura trial e provider-alvo.
+- pagamento real controlado vale para checkout de pedidos da loja; cobrança recorrente SaaS continua fora do MVP até nova decisão.
+- webhooks Asaas devem ser autenticados por token configurado e normalizados em `payment.paid`/`payment.failed` antes de chegar em `orders`.
+
 ## 2026-04
 ### Decisão: nome oficial do produto
 - Produto: Hubx Market
@@ -8086,3 +8177,31 @@ Consequências:
 - a conclusão orquestra criação de tenant, assinatura interna trialing e owner inicial por services existentes.
 - billing real, DNS/TLS automático, upload de logo, catálogo demo, frete, pagamentos e impersonação ficam fora do MVP.
 - o portal usa RBAC platform, Design System admin e AuditLog platform-scope.
+
+## 2026-07-06 — Refund Provider Admin Execution
+
+Decisão:
+
+- habilitar execução manual controlada de refund no admin da loja, após aprovação interna no ledger `PaymentRefund`.
+
+Consequências:
+
+- `/ops/payments/refunds/<refund_key>/execute/` chama `payments.application.refund_execution_commands.execute_refund(...)`.
+- writes financeiros passam a exigir role tenant-scoped resolvida e permissão `payments.manage`.
+- `AsaasProviderAdapter.create_refund(...)` usa `POST /payments/{id}/refund`; Pagar.me mantém o adapter conservador já existente para charge.
+- respostas de provider ficam registradas em `PaymentRefund.provider_refund_reference` e `metadata.provider_refund`.
+- `payment.refunded`, alteração de pedido, estoque, cupons, shipment e notifications continuam fora da execução automática.
+
+## 2026-07-06 — Advanced Catalog Variants MVP
+
+Decisão:
+
+- expandir `ProductVariant` como unidade administrável de preço, estoque, atributos e logística leve no admin do produto.
+
+Consequências:
+
+- `ProductVariant` passa a guardar `label`, `option_values`, `barcode`, `weight_grams`, `is_active` e `position`.
+- o admin do produto permite criar variante, definir variante padrão e desativar variante por POST tenant-scoped.
+- desativação é lógica; não há exclusão física de variante no fluxo administrativo.
+- o service bloqueia deixar o produto sem variante ativa e impede variante inativa como padrão.
+- storefront e checkout continuam consumindo a variante efetiva/padrão existente, sem alterar baixa de estoque ou criação de pedido.

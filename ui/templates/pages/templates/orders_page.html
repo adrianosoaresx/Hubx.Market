@@ -21,7 +21,7 @@
             {% include "shared/components/data_display/data_table.html" %}
         {% endwith %}
     {% else %}
-        {% with icon="📦" title=empty_title|default:"Nenhum pedido encontrado" description=empty_description|default:"Quando houver compras na conta, elas aparecerão aqui." %}
+        {% with icon_name="package" title=empty_title|default:"Nenhum pedido encontrado" description=empty_description|default:"Quando houver compras na conta, elas aparecerão aqui." %}
             {% include "shared/components/feedback/empty_state.html" %}
         {% endwith %}
     {% endif %}

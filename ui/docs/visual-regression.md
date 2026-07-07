@@ -4,7 +4,7 @@
 
 Esta é a primeira baseline de regressão visual do Design System do `Hubx.market`.
 
-Ela cobre as páginas internas do showcase em nível de página, com foco em detectar mudanças visuais amplas antes de expandir para cenários mais granulares.
+Ela cobre as páginas internas do showcase em nível de página e seções-chave, com foco em detectar mudanças visuais amplas antes de expandir para cenários mais granulares.
 
 ## Abordagem escolhida
 
@@ -13,9 +13,15 @@ Ferramenta: `Playwright`
 Motivo:
 
 - funciona bem com páginas Django renderizadas no navegador real
-- suporta snapshots de página completos com pouco setup
+- suporta snapshots de página completos e recortes por viewport com pouco setup
 - encaixa bem nas rotas internas do showcase já existentes
 - permite exercitar o preview por tenant via querystring sem lógica extra
+
+## Estratégia de captura
+
+Use snapshot full-page apenas para páginas internas de altura controlada, como `components`, `forms` e `ecommerce`.
+
+O preview `Page Templates` renderiza vários templates completos dentro de uma única página e pode ultrapassar dezenas de milhares de pixels de altura. Para esse caso, a suíte usa screenshots por viewport com `scrollTo` em seções representativas. Isso mantém a baseline rápida, legível e estável sem voltar a esconder bugs de composição.
 
 ## Cobertura atual
 

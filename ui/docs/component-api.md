@@ -52,15 +52,19 @@ Nem todo componente implementa todos os estados abaixo, mas esta é a matriz pad
 ### `button.html`
 
 - **Purpose:** ação principal ou secundária do usuário
-- **Variants:** `primary`, `secondary`
-- **Sizes:** `sm`, `md`
+- **Variants:** `primary`, `secondary`, `ghost`, `danger`, `success`, `link`
+- **Sizes:** `sm`, `md`, `lg`
 - **States:** `default`, `hover`, `focus`, `disabled`, `loading`
-- **Props:** `label`, `type`, `href`, `icon_left`, `icon_right`, `loading`, `disabled`, `full_width`
+- **Props:** `label`, `type`, `href`, `icon_name`, `icon_right_name`, `icon_left`, `icon_right`, `loading`, `disabled`, `full_width`
 - **Slots:** nenhum
 - **Example usage:**
 
 ```django
 {% include "shared/components/actions/button.html" with label="Salvar" variant="primary" type="submit" %}
+```
+
+```django
+{% include "shared/components/actions/button.html" with label="Descartar" variant="danger" icon_name="alert-triangle" %}
 ```
 
 ### `input.html`
@@ -71,6 +75,7 @@ Nem todo componente implementa todos os estados abaixo, mas esta é a matriz pad
 - **States:** `default`, `focus`, `disabled`, `invalid`
 - **Props:** `name`, `label`, `value`, `placeholder`, `prefix`, `suffix`, `help_text`, `error_text`, `invalid`, `disabled`, `id`, `input_type`
 - **Slots:** `prefix`, `suffix`
+- **Accessibility:** renderiza `aria-invalid`, associa ajuda/erro via `aria-describedby` e marca `required` visualmente.
 - **Example usage:**
 
 ```django
@@ -85,6 +90,7 @@ Nem todo componente implementa todos os estados abaixo, mas esta é a matriz pad
 - **States:** `default`, `focus`, `disabled`, `invalid`
 - **Props:** `name`, `label`, `options`, `selected`, `placeholder`, `help_text`, `error_text`, `invalid`, `disabled`, `multiple`, `id`
 - **Slots:** nenhum
+- **Accessibility:** segue o mesmo contrato de `aria-invalid`, `aria-describedby` e `required` de `input.html`.
 - **Example usage:**
 
 ```django
@@ -99,6 +105,7 @@ Nem todo componente implementa todos os estados abaixo, mas esta é a matriz pad
 - **States:** `default`, `focus`, `disabled`, `invalid`
 - **Props:** `name`, `label`, `value`, `rows`, `placeholder`, `help_text`, `error_text`, `invalid`, `disabled`, `id`
 - **Slots:** nenhum
+- **Accessibility:** usa `ds-textarea`, `aria-invalid` e `aria-describedby` para ajuda/erro.
 - **Example usage:**
 
 ```django
@@ -113,6 +120,7 @@ Nem todo componente implementa todos os estados abaixo, mas esta é a matriz pad
 - **States:** `default`, `checked`, `disabled`, `invalid`
 - **Props:** `name`, `label`, `description`, `value`, `checked`, `disabled`, `error_text`, `invalid`, `id`
 - **Slots:** nenhum
+- **Accessibility:** descrição e erro são associados ao controle por `aria-describedby`.
 - **Example usage:**
 
 ```django
@@ -127,6 +135,7 @@ Nem todo componente implementa todos os estados abaixo, mas esta é a matriz pad
 - **States:** `default`, `checked`, `disabled`, `invalid`
 - **Props:** `name`, `label`, `description`, `value`, `checked`, `disabled`, `error_text`, `invalid`, `id`
 - **Slots:** nenhum
+- **Accessibility:** descrição e erro são associados ao controle por `aria-describedby`.
 - **Example usage:**
 
 ```django
@@ -141,6 +150,7 @@ Nem todo componente implementa todos os estados abaixo, mas esta é a matriz pad
 - **States:** `default`, `checked`, `disabled`, `invalid`
 - **Props:** `name`, `label`, `description`, `value`, `checked`, `disabled`, `error_text`, `invalid`, `id`
 - **Slots:** nenhum
+- **Accessibility:** descrição e erro são associados ao controle por `aria-describedby`.
 - **Example usage:**
 
 ```django
@@ -153,7 +163,7 @@ Nem todo componente implementa todos os estados abaixo, mas esta é a matriz pad
 - **Variants:** `default`
 - **Sizes:** nenhum
 - **States:** `default`
-- **Props:** `text`, `help_text`
+- **Props:** `text`, `help_text`, `id`
 - **Slots:** nenhum
 - **Example usage:**
 
@@ -167,8 +177,9 @@ Nem todo componente implementa todos os estados abaixo, mas esta é a matriz pad
 - **Variants:** `default`
 - **Sizes:** nenhum
 - **States:** `error`
-- **Props:** `text`, `error_text`
+- **Props:** `text`, `error_text`, `id`
 - **Slots:** nenhum
+- **Accessibility:** renderiza `role="alert"`.
 - **Example usage:**
 
 ```django
@@ -213,7 +224,7 @@ Nem todo componente implementa todos os estados abaixo, mas esta é a matriz pad
 - **Variants:** `default`, `compact`
 - **Sizes:** nenhum
 - **States:** `default`, `empty`
-- **Props:** `columns`, `rows`, `empty_message`, `table_id`
+- **Props:** `columns`, `rows`, `empty_message`, `table_id`, `caption`, `table_label`
 - **Slots:** nenhum
 - **Example usage:**
 
@@ -221,19 +232,30 @@ Nem todo componente implementa todos os estados abaixo, mas esta é a matriz pad
 {% include "shared/components/data_display/table.html" with columns=columns rows=rows empty_message="Sem registros." %}
 ```
 
+**Accessibility notes**
+
+- Cabeçalhos usam `scope="col"`.
+- Use `caption` para contexto lido por tecnologia assistiva quando a tabela estiver dentro de uma composição complexa.
+- Use `table_label` quando não houver título/caption disponível.
+
 ### `badge.html`
 
 - **Purpose:** status curto e reutilizável
 - **Variants:** `neutral`, `success`, `warning`, `danger`, `info`, `active`, `inactive`, `pending`, `paid`, `shipped`, `delivered`
 - **Sizes:** `xs`, `sm`
 - **States:** `default`
-- **Props:** `label`, `icon`, `variant`, `size`
+- **Props:** `label`, `icon`, `icon_name`, `variant`, `size`
 - **Slots:** `icon`
 - **Example usage:**
 
 ```django
 {% include "shared/components/data_display/badge.html" with label="Pago" variant="paid" %}
 ```
+
+**Implementation notes**
+
+- Helpers em views devem emitir `ds-badge` + variante semântica (`ds-badge-success`, `ds-badge-warning`, `ds-badge-danger`, `ds-badge-info` ou `ds-badge-neutral`).
+- Não usar classes Tailwind de cor para status renderizado pelo backend.
 
 ### `pagination.html`
 
@@ -249,6 +271,11 @@ Nem todo componente implementa todos os estados abaixo, mas esta é a matriz pad
 {% include "shared/components/navigation/pagination.html" with page=2 total_pages=8 prev_url="?page=1" next_url="?page=3" page_items=page_items %}
 ```
 
+**Accessibility notes**
+
+- A página atual usa `aria-current="page"`.
+- Estados sem link usam `aria-disabled="true"`.
+
 ### `tabs.html`
 
 - **Purpose:** alternância entre painéis ou contextos relacionados
@@ -257,6 +284,7 @@ Nem todo componente implementa todos os estados abaixo, mas esta é a matriz pad
 - **States:** `default`, `active`, `disabled`
 - **Props:** `items`, `active_key`, `aria_label`
 - **Slots:** nenhum
+- **Accessibility:** item ativo usa `aria-current="page"`; item desabilitado usa `aria-disabled` e sai do tab order quando for link.
 - **Example usage:**
 
 ```django
@@ -271,6 +299,7 @@ Nem todo componente implementa todos os estados abaixo, mas esta é a matriz pad
 - **States:** `default`
 - **Props:** `items`, `aria_label`
 - **Slots:** nenhum
+- **Accessibility:** último item recebe `aria-current="page"`.
 - **Example usage:**
 
 ```django
@@ -305,6 +334,11 @@ Nem todo componente implementa todos os estados abaixo, mas esta é a matriz pad
 {% include "shared/components/data_display/stat_card.html" with title="Receita" value="R$ 42.500" delta="+12,4%" trend="positive" %}
 ```
 
+**Implementation notes**
+
+- Renderiza `ds-stat-card` e `ds-trend`; use `trend="positive"` ou `trend="negative"` para deltas.
+- Use em dashboards/admin; não recriar cards de KPI com HTML local.
+
 ### `chart_card.html`
 
 - **Purpose:** card analítico com título, métrica, delta e região opcional para gráfico
@@ -318,6 +352,11 @@ Nem todo componente implementa todos os estados abaixo, mas esta é a matriz pad
 ```django
 {% include "shared/components/data_display/chart_card.html" with title="Vendas" value="R$ 12.400" delta="+8,2%" trend="positive" chart=chart_markup %}
 ```
+
+**Implementation notes**
+
+- Renderiza `ds-chart-card`; `showcase_mode` usa barras tokenizadas apenas para preview visual.
+- Gráficos reais devem ser passados pelo slot/prop `chart`, mantendo o frame do DS.
 
 ### `activity_feed.html`
 
@@ -353,13 +392,18 @@ Nem todo componente implementa todos os estados abaixo, mas esta é a matriz pad
 - **Variants:** `default`, `dense`, `selectable`
 - **Sizes:** nenhum
 - **States:** `default`, `empty`
-- **Props:** `title`, `description`, `count`, `columns`, `rows`, `table_id`, `actions`, `selection_count`, `bulk_actions`, `page`, `total_pages`, `prev_url`, `next_url`, `page_items`, `empty_icon`, `empty_title`, `empty_description`, `empty_primary_action`, `empty_secondary_action`, `hx_target_id`
+- **Props:** `title`, `description`, `count`, `columns`, `rows`, `table_id`, `caption`, `table_label`, `actions`, `selection_count`, `bulk_actions`, `page`, `total_pages`, `prev_url`, `next_url`, `page_items`, `empty_icon`, `empty_title`, `empty_description`, `empty_primary_action`, `empty_secondary_action`, `hx_target_id`
 - **Slots:** `actions`, `bulk_actions`
 - **Example usage:**
 
 ```django
 {% include "shared/components/data_display/data_table.html" with title="Pedidos" columns=columns rows=rows page=page_obj.number total_pages=page_obj.paginator.num_pages %}
 ```
+
+**Implementation notes**
+
+- Prefira `filter_bar.html` para filtros complexos ou HTMX acima da tabela.
+- `data_table.html` deve preservar o mesmo `hx_target_id` entre loading, empty e rows para updates parciais previsíveis.
 
 **Legacy-supported props**
 
@@ -385,6 +429,11 @@ Estas props ainda são aceitas por compatibilidade, mas filtros complexos devem 
 {% include "shared/components/composite/data_table_toolbar.html" with title="Pedidos" count=orders_count actions=toolbar_actions %}
 ```
 
+**Implementation notes**
+
+- Busca simples usa input `type="search"` e tamanho compacto.
+- A barra de seleção usa superfície tokenizada e deve aparecer apenas quando houver seleção real.
+
 ### `bulk_actions_bar.html`
 
 - **Purpose:** barra de ações em massa para itens selecionados em listagens
@@ -399,13 +448,20 @@ Estas props ainda são aceitas por compatibilidade, mas filtros complexos devem 
 {% include "shared/components/composite/bulk_actions_bar.html" with selection_count=selected_count actions=bulk_actions %}
 ```
 
+### CSS-only page primitives
+
+- **Purpose:** primitives compartilhadas sem partial próprio para superfícies pequenas.
+- **Classes oficiais:** `ds-link-card`, `ds-link-danger`, `ds-progress`, `ds-progress-bar`, `ds-subpanel`, `ds-callout-list`, `ds-plan-card`, `ds-public-option-icon`.
+- **Usage:** usar em templates quando a estrutura local for simples demais para novo component include, mas ainda precisar de tokenização DS.
+- **Rule:** não combinar backgrounds/bordas Tailwind para recriar essas superfícies.
+
 ### `filter_bar.html`
 
 - **Purpose:** barra de busca e filtros para listagens e catálogos
-- **Variants:** `default`, `inline`, `drawer`
+- **Variants:** `default`, `accordion`
 - **Sizes:** nenhum
 - **States:** `default`
-- **Props:** `method`, `action`, `hx_get`, `hx_post`, `hx_target`, `hx_swap`, `title`, `description`, `search_name`, `search_value`, `search_label`, `search_placeholder`, `status_name`, `status_selected`, `status_label`, `status_placeholder`, `status_options`, `extra_filters`, `submit_label`, `reset_url`, `reset_label`, `show_actions`
+- **Props:** `method`, `action`, `hx_get`, `hx_post`, `hx_target`, `hx_swap`, `title`, `description`, `search_name`, `search_value`, `search_label`, `search_placeholder`, `status_name`, `status_selected`, `status_label`, `status_placeholder`, `status_options`, `extra_filters`, `submit_label`, `reset_url`, `reset_label`, `show_actions`, `accordion`, `accordion_open`
 - **Slots:** `extra_filters`
 - **Example usage:**
 
@@ -413,14 +469,21 @@ Estas props ainda são aceitas por compatibilidade, mas filtros complexos devem 
 {% include "shared/components/composite/filter_bar.html" with search_name="q" search_value=request.GET.q reset_url=reset_url %}
 ```
 
+**HTMX/accessibility notes**
+
+- Quando usar HTMX, sempre informe `hx_target` e `hx_swap`.
+- O loading indicator usa `aria-live="polite"`.
+- A variante accordion usa `<details>`/`<summary>` nativos para teclado.
+
 ### `empty_state.html`
 
 - **Purpose:** fallback visual para ausência de conteúdo
 - **Variants:** `default`, `search`, `filter`, `first_run`, `error`
 - **Sizes:** `md`, `lg`
 - **States:** `empty`
-- **Props:** `icon`, `title`, `description`, `primary_action`, `secondary_action`, `centered`, `size`
+- **Props:** `icon`, `icon_name`, `title`, `description`, `primary_action`, `secondary_action`, `centered`, `size`
 - **Slots:** `primary_action`, `secondary_action`
+- **Accessibility:** o ícone é decorativo; título e descrição carregam o significado.
 - **Example usage:**
 
 ```django
@@ -433,8 +496,9 @@ Estas props ainda são aceitas por compatibilidade, mas filtros complexos devem 
 - **Variants:** `info`, `success`, `warning`, `danger`
 - **Sizes:** nenhum
 - **States:** `default`
-- **Props:** `title`, `description`, `icon`, `dismissible`
+- **Props:** `title`, `description`, `icon`, `icon_name`, `dismissible`
 - **Slots:** nenhum
+- **Accessibility:** `danger`/`error` usam `role="alert"`; demais variantes usam `role="status"`.
 - **Example usage:**
 
 ```django
@@ -449,6 +513,7 @@ Estas props ainda são aceitas por compatibilidade, mas filtros complexos devem 
 - **States:** `default`, `open`
 - **Props:** `label`, `title`, `items`, `trigger`, `open`
 - **Slots:** `trigger`
+- **Accessibility:** usa `<details>/<summary>` nativos; itens desabilitados usam `aria-disabled` ou `disabled`.
 - **Example usage:**
 
 ```django
@@ -461,8 +526,9 @@ Estas props ainda são aceitas por compatibilidade, mas filtros complexos devem 
 - **Variants:** `default`
 - **Sizes:** `md`, `lg`
 - **States:** `default`, `open`
-- **Props:** `open`, `title`, `description`, `body`, `footer`, `dismissible`
+- **Props:** `open`, `title`, `description`, `body`, `footer`, `dismissible`, `id`
 - **Slots:** `body`, `footer`
+- **Accessibility:** quando aberto, renderiza `role="dialog"`, `aria-modal`, `aria-labelledby` e `aria-describedby` quando há descrição.
 - **Example usage:**
 
 ```django
@@ -475,13 +541,33 @@ Estas props ainda são aceitas por compatibilidade, mas filtros complexos devem 
 - **Variants:** `default`
 - **Sizes:** `sm`, `md`, `lg`
 - **States:** `default`, `open`
-- **Props:** `open`, `title`, `description`, `body`, `primary_action`, `secondary_action`, `dismissible`
+- **Props:** `open`, `title`, `description`, `body`, `primary_action`, `secondary_action`, `dismissible`, `id`
 - **Slots:** `body`, `primary_action`, `secondary_action`
+- **Accessibility:** quando aberto, renderiza `role="dialog"`, `aria-modal`, `aria-labelledby` e `aria-describedby` quando há descrição.
 - **Example usage:**
 
 ```django
 {% include "shared/components/feedback/modal.html" with open=True title="Confirmar ação" body=modal_body %}
 ```
+
+### `public_hero.html`
+
+- **Purpose:** hero oficial para superfícies públicas centrais do SaaS
+- **Variants:** `default`
+- **Sizes:** responsivo
+- **States:** `default`
+- **Props:** `hero_image_url`, `hero_eyebrow`, `hero_title`, `hero_description`, `primary_label`, `primary_href`, `primary_icon`, `secondary_label`, `secondary_href`, `secondary_icon`, `tertiary_label`, `tertiary_href`, `tertiary_icon`
+- **Slots:** nenhum
+- **Example usage:**
+
+```django
+{% include "shared/partials/public_hero.html" with hero_title="Escolha o plano para criar sua loja virtual." primary_label="Iniciar onboarding" primary_href="#aquisicao" %}
+```
+
+**Implementation notes**
+
+- Usa asset raster real e classes `public-hero-*` do DS.
+- Não inserir `<style>` local nem hero baseado em cards.
 
 ---
 
@@ -493,8 +579,11 @@ Estas props ainda são aceitas por compatibilidade, mas filtros complexos devem 
 - **Variants:** `default`, `featured`, `compact`
 - **Sizes:** nenhum
 - **States:** `default`, `hover`
-- **Props:** `href`, `image_url`, `image_alt`, `eyebrow`, `title`, `subtitle`, `badge_label`, `badge_variant`, `price`, `compare_price`, `price_helper`, `meta`, `stock_state`, `stock_label`, `stock_helper`, `actions`, `clickable`
+- **Props:** `href`, `image_url`, `image_alt`, `eyebrow`, `title`, `subtitle`, `badge_label`, `badge_variant`, `price`, `compare_price`, `price_helper`, `meta`, `stock_state`, `stock_label`, `stock_helper`, `action_label`, `actions`, `clickable`
+- **Default CTA:** `Comprar`, levando ao `href` do produto para confirmar variante, quantidade e compra.
 - **Slots:** `actions`
+- **DS contract:** `ds-product-card`, `ds-product-card-media`, `ds-product-card-body`, `ds-product-card-commerce`, `ds-product-card-actions`
+- **Accessibility:** `img` deve receber `image_alt` ou cair para `title`; links mantêm o título textual visível.
 - **Example usage:**
 
 ```django
@@ -509,6 +598,7 @@ Estas props ainda são aceitas por compatibilidade, mas filtros complexos devem 
 - **States:** `default`
 - **Props:** `title`, `description`, `steps`, `items`, `subtotal`, `shipping`, `discount`, `installments`, `total`, `note`, `actions`, `showcase_mode`
 - **Slots:** `actions`
+- **DS contract:** `ds-order-summary`, `ds-order-summary-items`, `ds-order-summary-totals`, `ds-order-summary-actions`
 - **Example usage:**
 
 ```django
@@ -523,6 +613,8 @@ Estas props ainda são aceitas por compatibilidade, mas filtros complexos devem 
 - **States:** `default`
 - **Props:** `steps`, `aria_label`, `showcase_mode`
 - **Slots:** nenhum
+- **DS contract:** `ds-checkout-steps`, `ds-checkout-step`, `ds-checkout-step-marker`, `ds-checkout-step-connector`
+- **Accessibility:** etapa atual usa `aria-current="step"`; `aria_label` deve nomear o fluxo quando houver mais de um stepper na página.
 - **Example usage:**
 
 ```django
@@ -537,6 +629,7 @@ Estas props ainda são aceitas por compatibilidade, mas filtros complexos devem 
 - **States:** `default`
 - **Props:** `image_url`, `image_alt`, `title`, `subtitle`, `meta`, `price`, `compare_price`, `quantity`, `actions`, `compact`, `quantity_readonly`
 - **Slots:** `actions`
+- **DS contract:** `ds-cart-item`, `ds-cart-item-media`, `ds-cart-item-body`, `ds-cart-item-controls`, `ds-cart-item-actions`
 - **Example usage:**
 
 ```django
@@ -551,6 +644,7 @@ Estas props ainda são aceitas por compatibilidade, mas filtros complexos devem 
 - **States:** `default`
 - **Props:** `value`, `compare_value`, `helper`, `align`
 - **Slots:** nenhum
+- **DS contract:** `ds-price`, `ds-price-row`, `ds-price-amount`, `ds-price-compare`, `ds-price-helper`
 - **Example usage:**
 
 ```django
@@ -563,8 +657,10 @@ Estas props ainda são aceitas por compatibilidade, mas filtros complexos devem 
 - **Variants:** `default`, `compact`
 - **Sizes:** `sm`, `md`
 - **States:** `default`, `disabled`
-- **Props:** `value`, `disabled`, `decrement_type`, `increment_type`
+- **Props:** `value`, `disabled`, `decrement_type`, `increment_type`, `decrement_label`, `increment_label`
 - **Slots:** nenhum
+- **DS contract:** `ds-quantity-selector`, `ds-quantity-btn`, `ds-quantity-value`
+- **Accessibility:** botões expõem `aria-label`; valor usa `aria-live="polite"` para atualizações parciais.
 - **Example usage:**
 
 ```django
@@ -579,6 +675,8 @@ Estas props ainda são aceitas por compatibilidade, mas filtros complexos devem 
 - **States:** `default`, `disabled`
 - **Props:** `name`, `methods`, `selected`
 - **Slots:** nenhum
+- **DS contract:** `ds-choice-list`, `ds-choice-card`, `ds-choice-radio`, `ds-choice-title`, `ds-choice-description`, `ds-choice-meta`
+- **Method contract:** cada `method` aceita `label`, `value`, `description`, `meta`, `badge`, `badge_variant`, `checked`, `disabled`.
 - **Example usage:**
 
 ```django
@@ -593,6 +691,8 @@ Estas props ainda são aceitas por compatibilidade, mas filtros complexos devem 
 - **States:** `default`, `disabled`
 - **Props:** `name`, `methods`, `selected`, `showcase_mode`
 - **Slots:** nenhum
+- **DS contract:** `ds-choice-list`, `ds-choice-card`, `ds-choice-radio`, `ds-choice-row`, `ds-choice-title`, `ds-choice-description`, `ds-choice-meta`
+- **Method contract:** cada `method` aceita `label`, `value`, `description`, `meta`, `price`, `checked`, `disabled`.
 - **Example usage:**
 
 ```django
@@ -607,6 +707,7 @@ Estas props ainda são aceitas por compatibilidade, mas filtros complexos devem 
 - **States:** `default`, `empty`
 - **Props:** `title`, `items`, `images`, `main_image_url`, `main_image_alt`, `aria_label`, `showcase_mode`
 - **Slots:** nenhum
+- **DS contract:** `ds-product-gallery`, `ds-product-gallery-main`, `ds-product-gallery-visual`, `ds-product-gallery-thumbs`, `ds-product-gallery-thumb`
 - **Example usage:**
 
 ```django
@@ -621,6 +722,7 @@ Estas props ainda são aceitas por compatibilidade, mas filtros complexos devem 
 - **States:** `default`, `selected`, `disabled`, `out_of_stock`, `error`
 - **Props:** `name`, `label`, `options`, `selected`, `placeholder`, `help_text`, `error_text`, `invalid`, `variant`, `showcase_mode`
 - **Slots:** nenhum
+- **DS contract:** `ds-variant-selector`, `ds-variant-list`, `ds-variant-option`, `ds-variant-chip`, `ds-variant-swatch`
 - **Example usage:**
 
 ```django
@@ -642,6 +744,7 @@ Cada item em `options` deve usar:
 - **States:** `default`
 - **Props:** `state`, `label`, `helper`, `size`
 - **Slots:** nenhum
+- **DS contract:** `ds-stock-indicator`, `ds-stock-helper`
 - **Example usage:**
 
 ```django
@@ -652,10 +755,4 @@ Cada item em `options` deve usar:
 
 ## Remaining Documentation Gaps
 
-Componentes existentes, mas ainda fora da priorização editorial completa desta onda:
-
-- `payment_method_selector.html` pode receber documentação mais específica do contrato de `methods`
-- `shipping_method_selector.html` pode receber documentação mais específica do contrato de `methods`
-- `product_gallery.html` pode receber documentação mais específica do contrato de `items`
-
-Eles seguem funcionais e já possuem documentação mínima em outras referências do repositório, mas ainda podem receber o mesmo nível de padronização em uma próxima onda.
+Nenhum gap conhecido para os contratos de commerce/checkout cobertos nesta onda. Próximas mudanças devem ampliar exemplos reais por tenant quando novos estados forem adicionados.

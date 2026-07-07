@@ -5,6 +5,11 @@ Este documento descreve o modelo conceitual do Hubx Market.
 ## Plataforma
 ### Tenant
 Representa uma loja no SaaS.
+- guarda configurações institucionais leves da home tenant-owned via `storefront_hero_*`
+- guarda `logo_url` como imagem pública opcional da marca da loja, usada pelos componentes de identidade
+- o hero institucional pode ter título, descrição, imagem remota, CTA e flag de exibição
+- quando a imagem do hero não estiver configurada, a storefront pode usar fallback visual derivado do catálogo da própria loja
+- esses campos não substituem catálogo, páginas institucionais nem page builder
 
 ### Plan
 Representa um plano comercial da plataforma.
@@ -44,20 +49,21 @@ Comprador da loja, isolado por tenant, com base persistida mínima para identida
 Endereço do customer.
 
 ## Catálogo
-### Brand
-Marca do produto.
+### Brand, Category e Tag
+Entidades normalizadas planejadas para evolução futura do catálogo.
 
-### Category
-Categoria hierárquica.
-
-### Tag
-Marcação flexível para produto.
+No corte atual elas ainda não existem como modelos próprios. O catálogo persistido usa campos simples em `Product`, como `brand_name` e `category_label`, e tags normalizadas ainda permanecem fora.
 
 ### Product
 Entidade principal de catálogo.
+No corte atual, também preserva dados simples de marca/categoria por campos denormalizados.
+Pode ser criado/editado no admin de catálogo; desativação operacional altera status/visibilidade e não remove o registro.
 
 ### ProductVariant
 SKU e unidade efetiva de venda.
+Preço e estoque continuam pertencendo à variante, inclusive no CRUD administrativo.
+A variante pode carregar atributos estruturados em `option_values`, rótulo operacional, código de barras, peso, ordenação, flag de ativa/inativa e indicação de padrão.
+Desativar variante é operação lógica; o produto deve manter ao menos uma variante ativa.
 
 ### ProductImage
 Imagem persistida mínima do produto, baseada em URL e ordenação simples para uso em storefront/admin.
@@ -109,6 +115,7 @@ Tentativa de pagamento do pedido.
 - pertence a um tenant
 - referencia pedido
 - preserva provider, valor, status, referência externa e trilha operacional da tentativa
+- o provider inicial de checkout hospedado é Asaas, com Pagar.me mantido como alternativa configurável
 
 ### PaymentRefund
 Ledger de refund/estorno financeiro.
@@ -194,7 +201,7 @@ Registro de envios de e-mail.
 - começa como unidade planejada antes de worker/provider real
 
 ### ApiKey
-Chave de integração para API pública futura.
+Chave de integração para API pública.
 
 Regras:
 
@@ -205,7 +212,8 @@ Regras:
 - possui `scopes` declarativos.
 - pode estar `active` ou `revoked`.
 - revogação usa `revoked_at` e não remove o histórico.
-- autenticação runtime ainda é boundary futura separada.
+- autenticação runtime já existe como boundary opt-in por view/DRF para endpoints públicos de catálogo.
+- não redefine tenant; o tenant continua vindo do request/host.
 
 ### ApiKeyQuota
 Quota comercial mínima para API pública.
@@ -235,8 +243,22 @@ Regras:
 
 - possui `code` único, nome, preço mensal, moeda e status.
 - pode definir quota operacional incluída sem acoplar cobrança real.
+- pode definir `trial_days`, `requires_payment_method` e `feature_list` para o contrato público de planos.
+- `requires_payment_method` sinaliza requisito comercial de cartão, mas não autoriza coletar ou armazenar dados de cartão no formulário público.
 - `archived` preserva histórico e não deve apagar assinaturas existentes.
 - não representa invoice, pagamento de pedido ou cobrança de loja.
+
+### SubscriptionCoupon
+Cupom comercial platform-scope para planos SaaS.
+
+Regras:
+
+- pertence ao módulo `subscriptions`, não ao módulo tenant-scoped `coupons`.
+- possui `code` único normalizado em uppercase, nome, status, tipo de desconto e valor.
+- `plan` vazio permite uso em qualquer `SubscriptionPlan` ativo; `plan` preenchido restringe o cupom àquele plano.
+- desconto percentual é limitado a 100%; desconto fixo é capado ao `SubscriptionPlan.monthly_price`.
+- validação pública retorna result codes explícitos por `subscriptions.application.subscription_coupon_queries.validate_plan_coupon(...)`.
+- não cria invoice, cobrança externa, chamada Asaas ou alteração retroativa de assinatura.
 
 ### TenantSubscription
 Estado da assinatura SaaS de um tenant.
@@ -246,8 +268,41 @@ Regras:
 - pertence a exatamente um `Tenant`.
 - referencia um `SubscriptionPlan`.
 - status pode ser `trialing`, `active`, `past_due`, `suspended` ou `canceled`.
-- pode guardar referência externa manual, mas provider de billing real fica fora da fundação.
+- quando criada como `trialing` para plano com trial, deve ter `trial_ends_at` calculado a partir de `started_at + plan.trial_days`.
+- registra provider-alvo de billing SaaS (`billing_provider_code`/`billing_provider_label`), por padrão `asaas`.
+- pode guardar referência externa e URL de checkout futuras, mas chamada real de cobrança recorrente fica fora da fundação.
+- quando nasce com cupom SaaS, guarda snapshots promocionais (`coupon_*_snapshot`, `effective_monthly_price_snapshot`, `promotion_snapshot`) sem alterar `SubscriptionPlan.monthly_price`.
 - enforcement futuro deve consultar esse estado por application service/contrato explícito.
+
+### SubscriptionAcquisitionLead
+Intenção pública de aquisição de plano SaaS.
+
+Regras:
+
+- pertence a um `SubscriptionPlan` ativo no momento da criação.
+- guarda snapshots de código, nome, preço mensal e moeda do plano solicitado.
+- pode guardar snapshots de cupom SaaS validado em `/plans/`, preservando desconto e preço mensal efetivo.
+- status pode ser `new`, `converted` ou `discarded`.
+- pode referenciar um `TenantOnboarding` após conversão platform.
+- não cria tenant, owner, assinatura, invoice, pagamento ou catálogo.
+- conversão é ação platform controlada e apenas cria/preenche a jornada de onboarding.
+
+### PublicTenantSignup
+Fluxo público controlado para criação self-service de loja.
+
+Regras:
+
+- não é uma entidade persistida própria; é um caso de uso em `tenants.application.public_tenant_signup_commands`.
+- exige plano ativo, `HUBX_PUBLIC_SIGNUP_ENABLED=1` e, quando controlado, `HUBX_PUBLIC_SIGNUP_ACCESS_TOKEN`.
+- cria `Tenant` ativo em `maintenance_mode`, `TenantOnboarding` concluído, `TenantSubscription(status=trialing)` e `OwnerUser` inicial.
+- respeita `SubscriptionPlan.trial_days` para encerrar o trial interno e exibe exigência de cartão quando `requires_payment_method=True`.
+- aceita `coupon_code` opcional validado por `subscriptions`; cupom inválido bloqueia a criação antes de tenant, owner ou assinatura.
+- copia snapshots promocionais para `TenantOnboarding` e `TenantSubscription`.
+- registra Asaas como provider-alvo padrão de billing SaaS sem chamar API externa.
+- `maintenance_mode` bloqueia storefront/checkout com 503, preservando acesso a `/accounts/` e `/ops/` para configuração.
+- não cria `Customer`, catálogo, pedido, pagamento, invoice ou domínio customizado.
+- não coleta dados de cartão; payment method real pertence a fluxo seguro hospedado de billing SaaS.
+- e-mail já associado a usuário/owner existente deve seguir aquisição assistida.
 
 ## OwnerMfaRecoveryCode
 

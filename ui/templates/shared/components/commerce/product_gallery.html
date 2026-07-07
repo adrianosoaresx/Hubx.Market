@@ -1,6 +1,6 @@
-<section class="space-y-4" aria-label="{{ aria_label|default:'Galeria do produto' }}">
-    <div class="storefront-product-gallery-main overflow-hidden rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
-        <div class="aspect-square bg-slate-100">
+<section class="ds-product-gallery" aria-label="{{ aria_label|default:'Galeria do produto' }}">
+    <div class="ds-product-gallery-main storefront-product-gallery-main">
+        <div class="ds-product-gallery-visual">
             {% if main_image_url %}
                 <img src="{{ main_image_url }}" alt="{{ main_image_alt|default:title|default:'Imagem principal do produto' }}" class="h-full w-full object-cover">
             {% elif items %}
@@ -18,7 +18,7 @@
             {% elif showcase_mode %}
                 <img src="https://placehold.co/800x800" alt="Imagem principal do produto" class="h-full w-full object-cover">
             {% else %}
-                <div class="flex h-full items-center justify-center text-sm text-[var(--color-text-secondary)]">
+                <div class="ds-product-gallery-placeholder">
                     Sem imagens disponíveis
                 </div>
             {% endif %}
@@ -26,38 +26,38 @@
     </div>
 
     {% if items %}
-        <div class="storefront-product-gallery-thumbs grid grid-cols-4 gap-3 sm:grid-cols-5">
+        <div class="ds-product-gallery-thumbs storefront-product-gallery-thumbs">
             {% for item in items %}
-                <div class="overflow-hidden rounded-xl border {% if item.active %}border-[var(--color-action-primary-bg)] ring-2 ring-[var(--focus-ring)]{% else %}border-[var(--color-border-default)]{% endif %} bg-[var(--color-surface-panel)]">
-                    <div class="aspect-square bg-slate-100">
+                <div class="ds-product-gallery-thumb {% if item.active %}is-active{% endif %}">
+                    <div class="ds-product-gallery-thumb-visual">
                         {% if item.url %}
                             <img src="{{ item.url }}" alt="{{ item.alt|default:title|default:'Miniatura do produto' }}" class="h-full w-full object-cover">
                         {% else %}
-                            <div class="flex h-full items-center justify-center text-xs text-[var(--color-text-secondary)]">Thumb</div>
+                            <div class="ds-product-gallery-thumb-placeholder">Thumb</div>
                         {% endif %}
                     </div>
                 </div>
             {% endfor %}
         </div>
     {% elif images %}
-        <div class="storefront-product-gallery-thumbs grid grid-cols-4 gap-3 sm:grid-cols-5">
+        <div class="ds-product-gallery-thumbs storefront-product-gallery-thumbs">
             {% for item in images %}
-                <div class="overflow-hidden rounded-xl border {% if item.active %}border-[var(--color-action-primary-bg)] ring-2 ring-[var(--focus-ring)]{% else %}border-[var(--color-border-default)]{% endif %} bg-[var(--color-surface-panel)]">
-                    <div class="aspect-square bg-slate-100">
+                <div class="ds-product-gallery-thumb {% if item.active %}is-active{% endif %}">
+                    <div class="ds-product-gallery-thumb-visual">
                         {% if item.url %}
                             <img src="{{ item.url }}" alt="{{ item.alt|default:title|default:'Miniatura do produto' }}" class="h-full w-full object-cover">
                         {% else %}
-                            <div class="flex h-full items-center justify-center text-xs text-[var(--color-text-secondary)]">Thumb</div>
+                            <div class="ds-product-gallery-thumb-placeholder">Thumb</div>
                         {% endif %}
                     </div>
                 </div>
             {% endfor %}
         </div>
     {% elif showcase_mode %}
-        <div class="storefront-product-gallery-thumbs grid grid-cols-4 gap-3 sm:grid-cols-5">
+        <div class="ds-product-gallery-thumbs storefront-product-gallery-thumbs">
             {% for thumb in "12345" %}
-                <div class="overflow-hidden rounded-xl border {% if forloop.first %}border-[var(--color-action-primary-bg)] ring-2 ring-[var(--focus-ring)]{% else %}border-[var(--color-border-default)]{% endif %} bg-[var(--color-surface-panel)]">
-                    <div class="aspect-square bg-slate-100">
+                <div class="ds-product-gallery-thumb {% if forloop.first %}is-active{% endif %}">
+                    <div class="ds-product-gallery-thumb-visual">
                         <img src="https://placehold.co/160x160" alt="Miniatura do produto" class="h-full w-full object-cover">
                     </div>
                 </div>

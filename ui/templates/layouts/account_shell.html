@@ -2,21 +2,20 @@
 
 {% block title %}{% block page_title %}{% firstof store_display_name request.tenant.store_display_name request.tenant.name "Área do cliente" %}{% endblock %}{% endblock %}
 {% block ui_context %}account{% endblock %}
+{% block tenant_theme %}{{ request.tenant.slug|default:"default" }}{% endblock %}
+{% block body_class %}account-customer-shell{% endblock %}
 
 {% block body %}
-<div class="min-h-screen bg-[var(--color-surface-page)]">
-    <header class="border-b border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
-        <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
+<div class="min-h-screen lg:grid lg:grid-cols-[16rem_minmax(0,1fr)]">
+    <aside class="account-customer-sidebar customer-area-sidebar border-r border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-6">
+        <div class="mb-8">
             {% include "shared/partials/brand_identity.html" with brand_scope="Área do cliente" brand_href="/" %}
-            {% include "shared/partials/navbar.html" %}
         </div>
-    </header>
-
-    <main class="mx-auto max-w-7xl px-6 py-8">
-        <div class="customer-area-layout grid gap-6 lg:grid-cols-[15rem_minmax(0,1fr)]">
-            <aside class="customer-area-sidebar ds-surface h-fit p-4">
-                {% block account_sidebar %}
-                    <nav class="customer-area-nav space-y-2 text-sm">
+        {% block account_sidebar %}
+            <nav class="customer-area-nav text-sm" aria-label="Navegação da área do cliente">
+                <section class="customer-area-nav-section" aria-labelledby="customer-nav-account">
+                    <p id="customer-nav-account" class="customer-area-nav-heading">Conta</p>
+                    <div class="customer-area-nav-group">
                         <a href="/accounts/account/" class="customer-area-nav-link {% if request.path == '/accounts/account/' %}is-active{% endif %}">
                             {% include "shared/partials/icon.html" with name="layout-dashboard" size="sm" %}
                             <span>Visão geral</span>
@@ -33,16 +32,40 @@
                             {% include "shared/partials/icon.html" with name="user" size="sm" %}
                             <span>Perfil</span>
                         </a>
-                    </nav>
-                {% endblock %}
-            </aside>
+                    </div>
+                </section>
+                <section class="customer-area-nav-section" aria-labelledby="customer-nav-store">
+                    <p id="customer-nav-store" class="customer-area-nav-heading">Loja</p>
+                    <div class="customer-area-nav-group">
+                        <a href="/" class="customer-area-nav-link">
+                            {% include "shared/partials/icon.html" with name="home" size="sm" %}
+                            <span>Início</span>
+                        </a>
+                        <a href="/catalog/" class="customer-area-nav-link">
+                            {% include "shared/partials/icon.html" with name="shopping-bag" size="sm" %}
+                            <span>Loja</span>
+                        </a>
+                    </div>
+                </section>
+            </nav>
+        {% endblock %}
+    </aside>
 
-            <section class="customer-area-content min-w-0">
-                {% block content %}{% endblock %}
-            </section>
-        </div>
-    </main>
-
-    {% include "shared/partials/footer.html" %}
+    <div class="account-customer-main min-w-0">
+        <header class="account-customer-topbar border-b border-[var(--color-border-default)] bg-[var(--color-surface-panel)] px-6 py-4">
+            <div class="mx-auto flex max-w-7xl items-center justify-between gap-4">
+                <div>
+                    <p class="text-sm font-medium text-[var(--color-text-secondary)]">Área do cliente</p>
+                    <h1 class="text-xl font-semibold text-[var(--color-text-primary)]">{% block shell_title %}{% firstof page_title "Minha conta" %}{% endblock %}</h1>
+                </div>
+                {% include "shared/partials/navbar.html" %}
+            </div>
+        </header>
+        {% include "shared/partials/demo_read_only_banner.html" %}
+        <main class="account-customer-content mx-auto max-w-7xl px-6 py-8">
+            {% block content %}{% endblock %}
+        </main>
+        {% include "shared/partials/footer.html" %}
+    </div>
 </div>
 {% endblock %}

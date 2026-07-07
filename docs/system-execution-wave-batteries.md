@@ -29,15 +29,16 @@ Já desenvolvido:
 - RBAC/admin ops com evidências de readiness/produção;
 - owner MFA/Vault/KMS/Audit com trilha extensa de readiness, evidência, rotação e closure;
 - `AuditLog` tenant-scoped, writer e admin read-only;
-- API keys tenant-scoped com hash, runtime auth, DRF adapter, permission, throttle, métricas, dashboard e alert rules.
+- API keys tenant-scoped com hash, runtime auth, DRF adapter, permission, throttle, quotas comerciais, métricas, dashboard e alert rules;
+- subscriptions foundation com `SubscriptionPlan`, `TenantSubscription`, commands e admin read-only.
 
 Ainda falta:
 
-- ativação real controlada de parceiro por API key;
-- quotas comerciais/billing para API pública;
+- uso produtivo continuado/contratual de parceiros por API key;
+- billing real e cobrança comercial para API pública;
 - UX admin mais rica de API keys se houver carga operacional;
 - instrumentação automática ampla de audit em módulos críticos;
-- subscriptions/plans ainda são skeleton frente ao restante da plataforma.
+- enforcement real de plano SaaS e provider de cobrança.
 
 ### Storefront e conversão
 

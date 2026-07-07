@@ -16,6 +16,9 @@ class AdminShipmentItem:
     shipment_status: str
     tracking_code: str
     carrier_name: str
+    label_status: str
+    label_code: str
+    label_url: str
     history_summary: tuple[str, ...]
     updated_at: str
 
@@ -60,6 +63,9 @@ class DjangoOrmAdminShipmentQueryRepository:
                     shipment_status=tracking_snapshot.normalized_status,
                     tracking_code=tracking_snapshot.tracking_code,
                     carrier_name=tracking_snapshot.carrier_name,
+                    label_status=str(getattr(shipment, "label_status", "") or "missing"),
+                    label_code=str(getattr(shipment, "label_code", "") or ""),
+                    label_url=str(getattr(shipment, "label_url", "") or ""),
                     history_summary=history_summary,
                     updated_at=order.updated_at.strftime("%d/%m/%Y %H:%M") if getattr(order, "updated_at", None) else "",
                 )

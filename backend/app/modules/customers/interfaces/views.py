@@ -7,12 +7,15 @@ from django.core.paginator import Paginator
 from django.http import HttpResponse
 from django.http import HttpResponseNotFound
 from django.http import HttpResponseRedirect
+from django.middleware.csrf import get_token
 from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views import View
 from django.views.generic import TemplateView
 
+from app.modules.accounts.application.admin_permissions import PERMISSION_CUSTOMERS_MANAGE
+from app.modules.accounts.interfaces.admin_rbac import request_admin_can, request_owner_role
 from app.modules.customers.application.admin_customer_commands import admin_customer_commands
 from app.modules.customers.application.admin_customer_queries import (
     QUICK_FILTER_OPTIONS,
@@ -46,6 +49,8 @@ def _build_action_feedback(result: str) -> str | None:
         "customer-priority-already-marked": "Nenhuma alteração aplicada: o cliente já estava com prioridade manual.",
         "customer-priority-cleared": "Prioridade manual removida do cliente.",
         "customer-priority-already-clear": "Nenhuma alteração aplicada: o cliente já estava sem prioridade manual.",
+        "customer-permission-denied": "Permissão insuficiente para alterar clientes.",
+        "customer-tenant-missing": "Tenant ausente: atualização de cliente não aplicada.",
         "customer-bulk-followup-marked": "Ação em lote concluída: clientes marcados para follow-up.",
         "customer-bulk-followup-unchanged": "Nenhuma alteração em lote aplicada: todos os clientes desta visão já estavam com follow-up.",
         "customer-bulk-followup-cleared": "Ação em lote concluída: follow-up removido dos clientes desta visão.",
@@ -177,7 +182,7 @@ def _apply_search(customers: list[dict[str, object]], search_value: str) -> list
     ]
 
 
-def _build_customer_action_forms(*, customer: dict[str, object], back_href: str, customer_slug: str) -> str:
+def _build_customer_action_forms(*, customer: dict[str, object], back_href: str, customer_slug: str, csrf_token: str) -> str:
     action_url = reverse("customers:admin-customer-update", kwargs={"customer_slug": customer_slug})
     followup_active = bool(customer.get("marked_for_followup"))
     reengagement_active = bool(customer.get("marked_for_reengagement"))
@@ -199,40 +204,46 @@ def _build_customer_action_forms(*, customer: dict[str, object], back_href: str,
     )
     return format_html(
         '<div class="flex flex-wrap items-end gap-3">'
-        '<a href="{}" class="ds-btn-secondary">Voltar</a>'
+        '<a href="{}" class="ds-btn ds-btn-secondary ds-btn-md">Voltar</a>'
         '<form method="post" action="{}" class="flex flex-col gap-1">'
+        '<input type="hidden" name="csrfmiddlewaretoken" value="{}" />'
         '<input type="hidden" name="action_type" value="{}" />'
-        '<button type="submit" class="ds-btn-primary">{}</button>'
+        '<button type="submit" class="ds-btn ds-btn-primary ds-btn-md">{}</button>'
         '<p class="text-xs text-[var(--color-text-secondary)]">{}</p>'
         "</form>"
         '<form method="post" action="{}" class="flex flex-col gap-1">'
-        '<input type="hidden" name="action_type" value="mark_for_reengagement" />'
-        '<button type="submit" class="ds-btn-primary">Marcar reengajamento</button>'
+        '<input type="hidden" name="csrfmiddlewaretoken" value="{}" />'
+        '<input type="hidden" name="action_type" value="{}" />'
+        '<button type="submit" class="ds-btn ds-btn-primary ds-btn-md">{}</button>'
         '<p class="text-xs text-[var(--color-text-secondary)]">{}</p>'
         "</form>"
         '<form method="post" action="{}" class="flex flex-col gap-1">'
+        '<input type="hidden" name="csrfmiddlewaretoken" value="{}" />'
         '<input type="hidden" name="action_type" value="{}" />'
-        '<button type="submit" class="ds-btn-primary">{}</button>'
+        '<button type="submit" class="ds-btn ds-btn-primary ds-btn-md">{}</button>'
         '<p class="text-xs text-[var(--color-text-secondary)]">{}</p>'
         "</form>"
         "</div>",
         back_href,
         action_url,
+        csrf_token,
         "clear_followup" if followup_active else "mark_for_followup",
         "Remover follow-up" if followup_active else "Marcar follow-up",
         followup_hint,
         action_url,
+        csrf_token,
         "clear_reengagement" if reengagement_active else "mark_for_reengagement",
         "Remover reengajamento" if reengagement_active else "Marcar reengajamento",
         reengagement_hint,
         action_url,
+        csrf_token,
         "clear_priority" if priority_active else "mark_priority",
         "Remover prioridade" if priority_active else "Marcar prioridade",
         priority_hint,
     )
 
 
-def _build_customer_list_quick_actions(*, customer: dict[str, object], next_url: str) -> str:
+def _build_customer_list_quick_actions(*, customer: dict[str, object], next_url: str, csrf_token: str) -> str:
     action_url = reverse("customers:admin-customer-update", kwargs={"customer_slug": customer["slug"]})
     followup_active = bool(customer.get("marked_for_followup"))
     reengagement_active = bool(customer.get("marked_for_reengagement"))
@@ -243,84 +254,102 @@ def _build_customer_list_quick_actions(*, customer: dict[str, object], next_url:
     return format_html(
         '<div class="flex flex-wrap gap-2">'
         '<form method="post" action="{}" class="inline-flex">'
+        '<input type="hidden" name="csrfmiddlewaretoken" value="{}" />'
         '<input type="hidden" name="action_type" value="{}" />'
         '<input type="hidden" name="next" value="{}" />'
-        '<button type="submit" class="ds-btn-secondary text-xs">{}</button>'
+        '<button type="submit" class="ds-btn ds-btn-secondary ds-btn-sm">{}</button>'
         "</form>"
         '<form method="post" action="{}" class="inline-flex">'
+        '<input type="hidden" name="csrfmiddlewaretoken" value="{}" />'
         '<input type="hidden" name="action_type" value="{}" />'
         '<input type="hidden" name="next" value="{}" />'
-        '<button type="submit" class="ds-btn-secondary text-xs">{}</button>'
+        '<button type="submit" class="ds-btn ds-btn-secondary ds-btn-sm">{}</button>'
         "</form>"
         '<form method="post" action="{}" class="inline-flex">'
+        '<input type="hidden" name="csrfmiddlewaretoken" value="{}" />'
         '<input type="hidden" name="action_type" value="{}" />'
         '<input type="hidden" name="next" value="{}" />'
-        '<button type="submit" class="ds-btn-secondary text-xs">{}</button>'
+        '<button type="submit" class="ds-btn ds-btn-secondary ds-btn-sm">{}</button>'
         "</form>"
         "</div>",
         action_url,
+        csrf_token,
         "clear_followup" if followup_active else "mark_for_followup",
         next_url,
         followup_label,
         action_url,
+        csrf_token,
         "clear_reengagement" if reengagement_active else "mark_for_reengagement",
         next_url,
         reengagement_label,
         action_url,
+        csrf_token,
         "clear_priority" if priority_active else "mark_priority",
         next_url,
         priority_label,
     )
 
 
-def _build_customer_bulk_actions(*, next_url: str, selection_count: int) -> str:
+def _build_customer_bulk_actions(*, next_url: str, selection_count: int, csrf_token: str) -> str:
     if selection_count <= 0:
         return ""
     action_url = reverse("customers:admin-customer-update", kwargs={"customer_slug": "_bulk"})
     return format_html(
         '<div class="flex flex-wrap gap-2">'
         '<form method="post" action="{}" class="inline-flex">'
+        '<input type="hidden" name="csrfmiddlewaretoken" value="{}" />'
         '<input type="hidden" name="action_type" value="bulk_mark_for_followup" />'
         '<input type="hidden" name="next" value="{}" />'
-        '<button type="submit" class="ds-btn-secondary text-xs">Marcar follow-up na visão</button>'
+        '<button type="submit" class="ds-btn ds-btn-secondary ds-btn-sm">Marcar follow-up na visão</button>'
         "</form>"
         '<form method="post" action="{}" class="inline-flex">'
+        '<input type="hidden" name="csrfmiddlewaretoken" value="{}" />'
         '<input type="hidden" name="action_type" value="bulk_clear_followup" />'
         '<input type="hidden" name="next" value="{}" />'
-        '<button type="submit" class="ds-btn-secondary text-xs">Remover follow-up na visão</button>'
+        '<button type="submit" class="ds-btn ds-btn-secondary ds-btn-sm">Remover follow-up na visão</button>'
         "</form>"
         '<form method="post" action="{}" class="inline-flex">'
+        '<input type="hidden" name="csrfmiddlewaretoken" value="{}" />'
         '<input type="hidden" name="action_type" value="bulk_mark_reengagement" />'
         '<input type="hidden" name="next" value="{}" />'
-        '<button type="submit" class="ds-btn-secondary text-xs">Marcar reengajamento na visão</button>'
+        '<button type="submit" class="ds-btn ds-btn-secondary ds-btn-sm">Marcar reengajamento na visão</button>'
         "</form>"
         '<form method="post" action="{}" class="inline-flex">'
+        '<input type="hidden" name="csrfmiddlewaretoken" value="{}" />'
         '<input type="hidden" name="action_type" value="bulk_clear_reengagement" />'
         '<input type="hidden" name="next" value="{}" />'
-        '<button type="submit" class="ds-btn-secondary text-xs">Remover reengajamento na visão</button>'
+        '<button type="submit" class="ds-btn ds-btn-secondary ds-btn-sm">Remover reengajamento na visão</button>'
         "</form>"
         '<form method="post" action="{}" class="inline-flex">'
+        '<input type="hidden" name="csrfmiddlewaretoken" value="{}" />'
         '<input type="hidden" name="action_type" value="bulk_mark_priority" />'
         '<input type="hidden" name="next" value="{}" />'
-        '<button type="submit" class="ds-btn-secondary text-xs">Marcar prioridade na visão</button>'
+        '<button type="submit" class="ds-btn ds-btn-secondary ds-btn-sm">Marcar prioridade na visão</button>'
         "</form>"
         '<form method="post" action="{}" class="inline-flex">'
+        '<input type="hidden" name="csrfmiddlewaretoken" value="{}" />'
         '<input type="hidden" name="action_type" value="bulk_clear_priority" />'
         '<input type="hidden" name="next" value="{}" />'
-        '<button type="submit" class="ds-btn-secondary text-xs">Remover prioridade na visão</button>'
+        '<button type="submit" class="ds-btn ds-btn-secondary ds-btn-sm">Remover prioridade na visão</button>'
         "</form>"
         "</div>",
         action_url,
+        csrf_token,
         next_url,
         action_url,
+        csrf_token,
         next_url,
         action_url,
+        csrf_token,
         next_url,
         action_url,
+        csrf_token,
         next_url,
         action_url,
+        csrf_token,
         next_url,
         action_url,
+        csrf_token,
         next_url,
     )
 
@@ -359,6 +388,7 @@ class AdminCustomersListView(TemplateView):
         active_filter_label = _quick_filter_label(quick_filter_selected)
         feedback = _build_action_feedback(self.request.GET.get("result", "").strip())
         page_number = int(self.request.GET.get("page", "1") or "1")
+        can_manage_customers = request_admin_can(self.request, PERMISSION_CUSTOMERS_MANAGE)
 
         customers = admin_customer_queries.list_customers(quick_filter=quick_filter_selected, tenant_id=tenant_id)
         customers = _apply_search(customers, search_value)
@@ -447,7 +477,15 @@ class AdminCustomersListView(TemplateView):
                                     else ""
                                 )
                             ),
-                            _build_customer_list_quick_actions(customer=customer, next_url=current_list_url),
+                            (
+                                _build_customer_list_quick_actions(
+                                    customer=customer,
+                                    next_url=current_list_url,
+                                    csrf_token=get_token(self.request),
+                                )
+                                if can_manage_customers
+                                else "Sem permissão para alterar clientes"
+                            ),
                         ]
                     }
                     for customer in page_obj.object_list
@@ -458,8 +496,9 @@ class AdminCustomersListView(TemplateView):
                     _build_customer_bulk_actions(
                         next_url=current_list_url,
                         selection_count=paginator.count,
+                        csrf_token=get_token(self.request),
                     )
-                    if bulk_scope_active
+                    if bulk_scope_active and can_manage_customers
                     else None
                 ),
                 "page": page_obj.number,
@@ -494,6 +533,7 @@ class AdminCustomerDetailView(TemplateView):
         customer = admin_customer_queries.get_customer(kwargs["customer_slug"], tenant_id=tenant_id)
         back_href = reverse("customers:admin-customers-list")
         feedback = _build_action_feedback(self.request.GET.get("result", "").strip())
+        can_manage_customers = request_admin_can(self.request, PERMISSION_CUSTOMERS_MANAGE)
         context.update(
             {
                 "page_title": customer["name"],
@@ -509,10 +549,21 @@ class AdminCustomerDetailView(TemplateView):
                 "customer_status_variant": customer["status"],
                 "account_type_label": customer["account_type_label"],
                 "back_href": back_href,
-                "page_actions": _build_customer_action_forms(
-                    customer=customer,
-                    back_href=back_href,
-                    customer_slug=kwargs["customer_slug"],
+                "page_actions": (
+                    _build_customer_action_forms(
+                        customer=customer,
+                        back_href=back_href,
+                        customer_slug=kwargs["customer_slug"],
+                        csrf_token=get_token(self.request),
+                    )
+                    if can_manage_customers
+                    else format_html(
+                        '<div class="flex flex-wrap items-center gap-3">'
+                        '<a href="{}" class="ds-btn ds-btn-secondary ds-btn-md">Voltar</a>'
+                        '<span class="text-sm text-[var(--color-text-secondary)]">Sem permissão para alterar clientes</span>'
+                        '</div>',
+                        back_href,
+                    )
                 ),
                 "customer_reference": customer["customer_reference"],
                 "customer_since": customer["customer_since"],
@@ -533,18 +584,43 @@ class AdminCustomerActionView(View):
         customer_slug = kwargs["customer_slug"]
         tenant_id = getattr(getattr(request, "tenant", None), "id", None)
         action_type = str(request.POST.get("action_type", "") or "").strip()
+        actor_role = request_owner_role(request)
         if action_type == "mark_for_followup":
-            _, result = admin_customer_commands.mark_for_followup(customer_slug=customer_slug, tenant_id=tenant_id)
+            _, result = admin_customer_commands.mark_for_followup(
+                customer_slug=customer_slug,
+                tenant_id=tenant_id,
+                actor_role=actor_role,
+            )
         elif action_type == "clear_followup":
-            _, result = admin_customer_commands.clear_followup(customer_slug=customer_slug, tenant_id=tenant_id)
+            _, result = admin_customer_commands.clear_followup(
+                customer_slug=customer_slug,
+                tenant_id=tenant_id,
+                actor_role=actor_role,
+            )
         elif action_type == "mark_for_reengagement":
-            _, result = admin_customer_commands.mark_for_reengagement(customer_slug=customer_slug, tenant_id=tenant_id)
+            _, result = admin_customer_commands.mark_for_reengagement(
+                customer_slug=customer_slug,
+                tenant_id=tenant_id,
+                actor_role=actor_role,
+            )
         elif action_type == "clear_reengagement":
-            _, result = admin_customer_commands.clear_reengagement(customer_slug=customer_slug, tenant_id=tenant_id)
+            _, result = admin_customer_commands.clear_reengagement(
+                customer_slug=customer_slug,
+                tenant_id=tenant_id,
+                actor_role=actor_role,
+            )
         elif action_type == "mark_priority":
-            _, result = admin_customer_commands.mark_priority(customer_slug=customer_slug, tenant_id=tenant_id)
+            _, result = admin_customer_commands.mark_priority(
+                customer_slug=customer_slug,
+                tenant_id=tenant_id,
+                actor_role=actor_role,
+            )
         elif action_type == "clear_priority":
-            _, result = admin_customer_commands.clear_priority(customer_slug=customer_slug, tenant_id=tenant_id)
+            _, result = admin_customer_commands.clear_priority(
+                customer_slug=customer_slug,
+                tenant_id=tenant_id,
+                actor_role=actor_role,
+            )
         elif action_type in {
             "bulk_mark_for_followup",
             "bulk_clear_followup",
@@ -559,17 +635,41 @@ class AdminCustomerActionView(View):
             customers = _apply_search(customers, search_value)
             customer_slugs = [str(customer["slug"]) for customer in customers]
             if action_type == "bulk_mark_for_followup":
-                _, result = admin_customer_commands.bulk_mark_for_followup(customer_slugs=customer_slugs, tenant_id=tenant_id)
+                _, result = admin_customer_commands.bulk_mark_for_followup(
+                    customer_slugs=customer_slugs,
+                    tenant_id=tenant_id,
+                    actor_role=actor_role,
+                )
             elif action_type == "bulk_clear_followup":
-                _, result = admin_customer_commands.bulk_clear_followup(customer_slugs=customer_slugs, tenant_id=tenant_id)
+                _, result = admin_customer_commands.bulk_clear_followup(
+                    customer_slugs=customer_slugs,
+                    tenant_id=tenant_id,
+                    actor_role=actor_role,
+                )
             elif action_type == "bulk_mark_reengagement":
-                _, result = admin_customer_commands.bulk_mark_reengagement(customer_slugs=customer_slugs, tenant_id=tenant_id)
+                _, result = admin_customer_commands.bulk_mark_reengagement(
+                    customer_slugs=customer_slugs,
+                    tenant_id=tenant_id,
+                    actor_role=actor_role,
+                )
             elif action_type == "bulk_clear_reengagement":
-                _, result = admin_customer_commands.bulk_clear_reengagement(customer_slugs=customer_slugs, tenant_id=tenant_id)
+                _, result = admin_customer_commands.bulk_clear_reengagement(
+                    customer_slugs=customer_slugs,
+                    tenant_id=tenant_id,
+                    actor_role=actor_role,
+                )
             elif action_type == "bulk_mark_priority":
-                _, result = admin_customer_commands.bulk_mark_priority(customer_slugs=customer_slugs, tenant_id=tenant_id)
+                _, result = admin_customer_commands.bulk_mark_priority(
+                    customer_slugs=customer_slugs,
+                    tenant_id=tenant_id,
+                    actor_role=actor_role,
+                )
             else:
-                _, result = admin_customer_commands.bulk_clear_priority(customer_slugs=customer_slugs, tenant_id=tenant_id)
+                _, result = admin_customer_commands.bulk_clear_priority(
+                    customer_slugs=customer_slugs,
+                    tenant_id=tenant_id,
+                    actor_role=actor_role,
+                )
             return HttpResponseRedirect(_resolve_bulk_next_target(request=request, result=result))
         else:
             result = "customer-action-invalid"

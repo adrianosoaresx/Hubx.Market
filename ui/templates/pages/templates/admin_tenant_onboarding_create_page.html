@@ -16,13 +16,13 @@
         <form method="post" action="{{ form_action }}" class="admin-ops-panel ds-surface space-y-6 p-6">
             {% csrf_token %}
             {% if form_error %}
-                <p class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{{ form_error }}</p>
+                {% include "shared/components/feedback/alert.html" with variant="danger" title="Corrija o formulário" description=form_error %}
             {% endif %}
             <div class="grid gap-4 md:grid-cols-2">
                 <label class="space-y-2">
                     <span class="text-sm font-semibold text-[var(--color-text-primary)]">Nome inicial da loja</span>
                     <input class="ds-input" name="store_name" value="{{ values.store_name }}" placeholder="Minha nova loja" required>
-                    {% if errors.store_name %}<span class="text-sm text-red-600">{{ errors.store_name }}</span>{% endif %}
+                    {% if errors.store_name %}{% include "shared/components/forms/field_error.html" with text=errors.store_name %}{% endif %}
                 </label>
                 <label class="space-y-2">
                     <span class="text-sm font-semibold text-[var(--color-text-primary)]">Nome comercial</span>
@@ -30,13 +30,13 @@
                 </label>
                 <label class="space-y-2">
                     <span class="text-sm font-semibold text-[var(--color-text-primary)]">Cor primária</span>
-                    <input class="ds-input" name="primary_color" value="{{ values.primary_color }}" placeholder="#4f46e5">
-                    {% if errors.primary_color %}<span class="text-sm text-red-600">{{ errors.primary_color }}</span>{% endif %}
+                    <input class="ds-input" name="primary_color" value="{{ values.primary_color }}" placeholder="#9a6410">
+                    {% if errors.primary_color %}{% include "shared/components/forms/field_error.html" with text=errors.primary_color %}{% endif %}
                 </label>
             </div>
             <div class="flex flex-wrap gap-3">
                 {% include "shared/components/actions/button.html" with label="Iniciar wizard" variant="primary" type="submit" %}
-                <a class="ds-btn-secondary" href="{{ cancel_href }}">Cancelar</a>
+                <a class="ds-btn ds-btn-secondary ds-btn-md" href="{{ cancel_href }}">Cancelar</a>
             </div>
         </form>
     {% else %}

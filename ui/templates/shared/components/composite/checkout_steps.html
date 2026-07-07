@@ -1,68 +1,57 @@
 {% if steps or showcase_mode %}
-<nav aria-label="{{ aria_label|default:'Etapas do checkout' }}">
-    <ol class="flex flex-col gap-4 md:flex-row md:items-center">
+<nav class="ds-checkout-steps" aria-label="{{ aria_label|default:'Etapas do checkout' }}">
+    <ol class="ds-checkout-steps-list">
         {% if steps %}
         {% for step in steps %}
-            <li class="flex min-w-0 flex-1 items-center gap-3">
+            <li class="ds-checkout-step {% if step.status == 'complete' %}is-complete{% elif step.status == 'current' %}is-current{% elif step.status == 'error' %}is-error{% endif %}" {% if step.status == 'current' %}aria-current="step"{% endif %}>
                 <div
-                    class="
-                        flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold
-                        {% if step.status == 'complete' %}
-                            bg-emerald-100 text-emerald-700
-                        {% elif step.status == 'current' %}
-                            bg-[var(--color-action-primary-bg)] text-[var(--color-action-primary-text)]
-                        {% elif step.status == 'error' %}
-                            bg-rose-100 text-rose-700
-                        {% else %}
-                            bg-slate-100 text-[var(--color-text-secondary)]
-                        {% endif %}
-                    "
+                    class="ds-checkout-step-marker"
                 >
                     {% if step.status == 'complete' %}
-                        ✓
+                        {% include "shared/partials/icon.html" with name="check" size="sm" %}
                     {% elif step.status == 'error' %}
-                        !
+                        {% include "shared/partials/icon.html" with name="alert-triangle" size="sm" %}
                     {% else %}
                         {{ forloop.counter }}
                     {% endif %}
                 </div>
 
-                <div class="min-w-0">
-                    <p class="text-sm font-medium {% if step.status == 'current' %}text-[var(--color-text-primary)]{% else %}text-[var(--color-text-secondary)]{% endif %}">
+                <div class="ds-checkout-step-copy">
+                    <p class="ds-checkout-step-label">
                         {{ step.label }}
                     </p>
                     {% if step.description %}
-                        <p class="text-xs text-[var(--color-text-secondary)]">{{ step.description }}</p>
+                        <p class="ds-checkout-step-description">{{ step.description }}</p>
                     {% endif %}
                 </div>
 
                 {% if not forloop.last %}
-                    <div class="hidden h-px flex-1 bg-[var(--color-border-default)] md:block"></div>
+                    <div class="ds-checkout-step-connector"></div>
                 {% endif %}
             </li>
         {% endfor %}
         {% else %}
-            <li class="flex min-w-0 flex-1 items-center gap-3">
-                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-semibold text-emerald-700">✓</div>
-                <div class="min-w-0">
-                    <p class="text-sm font-medium text-[var(--color-text-secondary)]">Carrinho</p>
-                    <p class="text-xs text-[var(--color-text-secondary)]">Itens revisados</p>
+            <li class="ds-checkout-step is-complete">
+                <div class="ds-checkout-step-marker">{% include "shared/partials/icon.html" with name="check" size="sm" %}</div>
+                <div class="ds-checkout-step-copy">
+                    <p class="ds-checkout-step-label">Carrinho</p>
+                    <p class="ds-checkout-step-description">Itens revisados</p>
                 </div>
-                <div class="hidden h-px flex-1 bg-[var(--color-border-default)] md:block"></div>
+                <div class="ds-checkout-step-connector"></div>
             </li>
-            <li class="flex min-w-0 flex-1 items-center gap-3">
-                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--color-action-primary-bg)] text-sm font-semibold text-[var(--color-action-primary-text)]">2</div>
-                <div class="min-w-0">
-                    <p class="text-sm font-medium text-[var(--color-text-primary)]">Entrega</p>
-                    <p class="text-xs text-[var(--color-text-secondary)]">Dados e frete</p>
+            <li class="ds-checkout-step is-current" aria-current="step">
+                <div class="ds-checkout-step-marker">2</div>
+                <div class="ds-checkout-step-copy">
+                    <p class="ds-checkout-step-label">Entrega</p>
+                    <p class="ds-checkout-step-description">Dados e frete</p>
                 </div>
-                <div class="hidden h-px flex-1 bg-[var(--color-border-default)] md:block"></div>
+                <div class="ds-checkout-step-connector"></div>
             </li>
-            <li class="flex min-w-0 flex-1 items-center gap-3">
-                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-[var(--color-text-secondary)]">3</div>
-                <div class="min-w-0">
-                    <p class="text-sm font-medium text-[var(--color-text-secondary)]">Pagamento</p>
-                    <p class="text-xs text-[var(--color-text-secondary)]">Confirmação</p>
+            <li class="ds-checkout-step">
+                <div class="ds-checkout-step-marker">3</div>
+                <div class="ds-checkout-step-copy">
+                    <p class="ds-checkout-step-label">Pagamento</p>
+                    <p class="ds-checkout-step-description">Confirmação</p>
                 </div>
             </li>
         {% endif %}

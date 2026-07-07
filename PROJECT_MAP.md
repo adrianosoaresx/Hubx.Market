@@ -41,7 +41,7 @@ Cada módulo segue a linha Django tradicional aprimorado:
 ## Convenção de UI
 - layouts em `ui/templates/layouts/`
 - componentes globais em `ui/templates/shared/components/`
-- componentes de formulário em `ui/templates/shared/forms/`
+- componentes de formulário em `ui/templates/shared/components/forms/`
 - partials globais em `ui/templates/shared/partials/`
 - padrões de página em `ui/templates/patterns/`
 - templates por domínio em `ui/templates/<modulo>/`
@@ -49,6 +49,7 @@ Cada módulo segue a linha Django tradicional aprimorado:
 ## Documentos prioritários
 - `ARCHITECTURE.md`
 - `PRODUCT_RULES.md`
+- `docs/implementation-inventory.md`
 - `docs/data/erd.md`
 - `docs/ui/design-system.md`
 - `docs/ui/component-library.md`

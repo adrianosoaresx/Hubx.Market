@@ -10,8 +10,53 @@
 
 ### Plataforma
 - Tenant
-- Plan
-- Subscription
+- TenantOnboarding
+
+`Tenant`
+
+- `id`
+- `name`
+- `slug`
+- `subdomain`
+- `custom_domain`
+- `logo_url`
+- `storefront_hero_enabled`
+- `storefront_hero_title`
+- `storefront_hero_description`
+- `storefront_hero_image_url`
+- `storefront_hero_cta_label`
+- `storefront_hero_cta_href`
+- `is_active`
+- `maintenance_mode`
+- `created_at`
+- `updated_at`
+
+`TenantOnboarding`
+
+- `id`
+- `tenant_id → tenants.Tenant` nullable
+- `status`
+- `store_name`
+- `store_slug`
+- `store_subdomain`
+- `custom_domain`
+- `plan_code`
+- `coupon_code_snapshot`
+- `coupon_discount_type_snapshot`
+- `coupon_discount_value_snapshot`
+- `coupon_discount_total_snapshot`
+- `effective_monthly_price_snapshot`
+- `promotion_snapshot`
+- `owner_email`
+- `owner_name`
+- `owner_role`
+- `store_display_name`
+- `primary_color`
+- `blockers`
+- `created_by_label`
+- `completed_at`
+- `created_at`
+- `updated_at`
 
 ### Identidade
 - PlatformUser
@@ -22,15 +67,10 @@
 - CustomerAddress
 
 ### Catálogo
-- Brand
-- Category
-- Tag
 - Product
 - ProductVariant
 - ProductImage
 - StorefrontDiscoveryEventLog
-- ProductCategory
-- ProductTag
 
 ### Carrinho / Checkout
 - Cart
@@ -63,7 +103,17 @@
 - EmailLog
 
 ### Assinatura SaaS
-- Subscription
+- SubscriptionPlan
+- SubscriptionCoupon
+- TenantSubscription
+- SubscriptionAcquisitionLead
+
+### Entidades planejadas, ainda não implementadas como modelos
+- Brand
+- Category
+- Tag
+- ProductCategory
+- ProductTag
 - Invoice
 - SubscriptionPayment
 
@@ -76,8 +126,6 @@
 - Customer 1:N AccountProfile (opcional)
 - Tenant 1:N Product
 - Product 1:N ProductVariant
-- Product N:N Category
-- Product N:N Tag
 - Product 1:N ProductImage
 - Tenant 1:N StorefrontDiscoveryEventLog
 - Customer 1:N CustomerAddress
@@ -105,11 +153,19 @@
 - Tenant 1:N AuditLog (opcional; eventos platform-scope podem ter tenant vazio)
 - Tenant 1:N ApiKey
 - OwnerUser 1:N ApiKey (opcional)
-- Tenant 1:1 Subscription
+- Tenant 1:1 TenantSubscription
+- SubscriptionPlan 1:N TenantSubscription
+- SubscriptionPlan 1:N SubscriptionCoupon
+- SubscriptionPlan 1:N SubscriptionAcquisitionLead
+- TenantOnboarding 1:0..1 SubscriptionAcquisitionLead
 
 ## 4. Observações de modelagem
 - preço pertence à ProductVariant
 - estoque pertence à ProductVariant
+- CRUD administrativo de `Product` grava preço/estoque na `ProductVariant` padrão
+- `ProductVariant` pode preservar atributos avançados (`label`, `option_values`, `barcode`, `weight_grams`, `position`, `is_active`)
+- desativação de variante é lógica e não remove histórico; o produto deve manter ao menos uma variante ativa
+- `Brand`, `Category` e `Tag` normalizados ainda não existem no corte atual; `Product` preserva `brand_name` e `category_label` como campos simples
 - checkout pode persistir snapshots transitórios antes da criação do pedido
 - `CheckoutSessionItem` pode preservar `variant_sku` como vínculo explícito com a variante escolhida
 - `Coupon` deve ser único por `(tenant, code)` e começar apenas com desconto percentual/fixo simples
@@ -130,7 +186,6 @@
 - `OwnerMfaFactor` representa enrollment MFA; desafio/verificação real fica fora do modelo inicial
 - `Customer` já possui base persistida mínima para leituras administrativas de list/detail
 - `Customer` também pode guardar flags operacionais leves para execução manual no admin (`marked_for_followup`, `marked_for_reengagement`, `marked_as_priority`)
-- `CustomerAddress` passa a existir como base persistida mínima para leituras futuras da área logada
 - `CustomerAddress` passa a existir como base persistida mínima para leituras futuras da área logada
 - `AccountProfile.customer` e `Order.customer` são vínculos opcionais e backward-compatible; quando ausentes, o sistema ainda pode operar via `tenant + email`
 - `OrderStatusHistory` pode guardar atribuição leve de origem/contexto (`source_type`, `source_label`, `actor_label`) sem virar um framework completo de auditoria
@@ -240,6 +295,9 @@ Notas:
 - `monthly_price`
 - `currency_code`
 - `included_api_quota`
+- `trial_days`
+- `requires_payment_method`
+- `feature_list`
 - `status`
 - `created_at`
 - `updated_at`
@@ -247,12 +305,44 @@ Notas:
 Relacionamentos:
 
 - `SubscriptionPlan 1:N TenantSubscription`
+- `SubscriptionPlan 1:N SubscriptionCoupon`
+- `SubscriptionPlan 1:N SubscriptionAcquisitionLead`
 
 Notas:
 
 - `code` é único.
 - `monthly_price` não pode ser negativo.
+- `trial_days` define o fim do trial interno quando a assinatura nasce `trialing`.
+- `requires_payment_method` é requisito comercial; cartão real não é coletado pela tabela nem por formulário público.
+- `feature_list` guarda linhas públicas do card de plano.
 - não representa invoice nem cobrança real.
+
+## Subscriptions — SubscriptionCoupon
+
+`SubscriptionCoupon`
+
+- `id`
+- `plan_id → subscriptions.SubscriptionPlan` nullable
+- `code`
+- `name`
+- `status`
+- `discount_type`
+- `discount_value`
+- `starts_at`
+- `ends_at`
+- `created_at`
+- `updated_at`
+
+Relacionamentos:
+
+- `SubscriptionPlan 1:N SubscriptionCoupon`
+
+Notas:
+
+- `code` é único e normalizado em uppercase.
+- `plan_id` nulo significa cupom aplicável a qualquer plano ativo.
+- é platform-scope e não usa `coupons.Coupon`, que permanece tenant-scoped para carrinho/pedido.
+- desconto fixo é capado no preço mensal do plano; percentual é capado em 100%.
 
 ## Subscriptions — TenantSubscription
 
@@ -267,6 +357,16 @@ Notas:
 - `current_period_ends_at`
 - `canceled_at`
 - `external_reference`
+- `billing_provider_code`
+- `billing_provider_label`
+- `billing_external_reference`
+- `billing_checkout_url`
+- `coupon_code_snapshot`
+- `coupon_discount_type_snapshot`
+- `coupon_discount_value_snapshot`
+- `coupon_discount_total_snapshot`
+- `effective_monthly_price_snapshot`
+- `promotion_snapshot`
 - `notes`
 - `created_at`
 - `updated_at`
@@ -279,7 +379,50 @@ Relacionamentos:
 Notas:
 
 - guarda estado SaaS do tenant.
+- registra provider-alvo de billing SaaS sem criar cobrança externa.
+- guarda snapshots promocionais quando criado a partir de cupom SaaS válido.
 - não acopla pagamentos de pedidos da loja.
+
+## Subscriptions — SubscriptionAcquisitionLead
+
+`SubscriptionAcquisitionLead`
+
+- `id`
+- `plan_id → subscriptions.SubscriptionPlan`
+- `onboarding_id → tenants.TenantOnboarding` nullable
+- `status`
+- `plan_code_snapshot`
+- `plan_name_snapshot`
+- `plan_monthly_price_snapshot`
+- `plan_currency_snapshot`
+- `coupon_code_snapshot`
+- `coupon_discount_type_snapshot`
+- `coupon_discount_value_snapshot`
+- `coupon_discount_total_snapshot`
+- `effective_monthly_price_snapshot`
+- `promotion_snapshot`
+- `store_name`
+- `desired_subdomain`
+- `contact_name`
+- `contact_email`
+- `contact_phone`
+- `message`
+- `source`
+- `converted_at`
+- `discarded_at`
+- `created_at`
+- `updated_at`
+
+Relacionamentos:
+
+- `SubscriptionPlan 1:N SubscriptionAcquisitionLead`
+- `TenantOnboarding 1:0..1 SubscriptionAcquisitionLead`
+
+Notas:
+
+- representa intenção pública de aquisição SaaS.
+- preserva snapshot comercial de cupom SaaS válido antes da conversão para onboarding.
+- não representa assinatura ativa, invoice, pagamento ou tenant provisionado.
 
 ## Accounts — OwnerMfaRecoveryCode
 

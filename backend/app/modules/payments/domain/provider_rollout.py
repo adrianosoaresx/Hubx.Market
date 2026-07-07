@@ -31,7 +31,7 @@ def decide_provider_rollout(*, provider_code: str, tenant=None) -> ProviderRollo
     rollout_mode = _string(getattr(settings, "PAYMENTS_REAL_PROVIDER_ROLLOUT_MODE", "sandbox")).lower() or "sandbox"
     live_global_enabled = bool(getattr(settings, "PAYMENTS_REAL_PROVIDER_LIVE_GLOBAL_ENABLED", False))
 
-    if normalized_provider != "pagarme":
+    if normalized_provider not in {"asaas", "pagarme"}:
         return ProviderRolloutDecision(False, fallback_mode, rollout_mode, "provider-lite-only")
 
     if rollout_mode == "sandbox":

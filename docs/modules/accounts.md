@@ -2687,6 +2687,7 @@ Fora de escopo atual:
 - role inicial aceita apenas `owner` ou `admin`.
 - se `OwnerUser` já existir, ele é reativado e normalizado para readiness quando seguro.
 - se `User` Django não existir, é criado com senha inutilizável para exigir convite/reset.
+- exceção: o caminho interno de `/plans/signup/` pode chamar o service com senha validada para criar um usuário novo e utilizável; e-mail já existente é bloqueado nesse fluxo.
 - se houver múltiplos `User` Django com o mesmo e-mail, o comando bloqueia.
 - se `User` Django existente estiver inativo, o comando bloqueia.
 
@@ -2880,14 +2881,27 @@ Fora de escopo atual:
   - coupons: `coupons.manage`;
   - pages: `pages.manage`;
   - reviews: `reviews.moderate`.
+- actions visuais e writes de operação de loja agora separam leitura de gerenciamento:
+  - customers: `customers.view` para leitura e `customers.manage` para alterar flags manuais;
+  - orders: `orders.view` para leitura e `orders.manage` para status, fulfillment, cancelamento e exceções de estoque;
+  - shipping: `shipping.view` para leitura e `shipping.manage` para envio, entrega e provider de tracking.
+- API keys separam leitura e gestão:
+  - `api_keys.view` permite navegar e auditar chaves/quotas;
+  - `api_keys.manage` permite criar e revogar chaves.
+- Newsletter separa leitura e gestão:
+  - `newsletter.view` permite visualizar inscritos e campanhas;
+  - `newsletter.manage` permite criar e enviar campanhas.
+- Payments separa leitura e gestão:
+  - `payments.view` permite visualizar financeiro e ledger de refunds;
+  - `payments.manage` permite aprovar e executar refunds no provider por ação manual tenant-scoped.
 - writes sensíveis continuam bloqueados nos command services quando a role não possui permissão.
 
 ### Roles atuais
 - `owner` e `admin`: acesso total às permissões administrativas atuais.
-- `marketing`: cupons, páginas e reviews.
+- `marketing`: cupons, newsletter, páginas e reviews.
 - `content_editor`: páginas e reviews.
-- `support`: reviews.
-- `viewer`: leitura sem actions mutáveis.
+- `support`: reviews, leitura e operação de customers/orders/shipping e leitura de subscriptions.
+- `viewer`: leitura sem actions mutáveis nas superfícies permitidas; newsletter não entra por padrão porque expõe e-mails de inscritos.
 
 ### Escopo deliberado
 - sem modelo novo de permissões no banco.
@@ -2907,6 +2921,14 @@ Fora de escopo atual:
   - `newsletter.view`;
   - `audit.view`;
   - `payments.view`.
+- permissões de escrita sensível continuam separadas quando necessário:
+  - `catalog.manage` permite criar, editar e desativar produtos no command service de catálogo.
+  - `customers.manage` permite alterar flags manuais de clientes no command service de customers.
+  - `orders.manage` permite alterar estados operacionais de pedidos e exceções de estoque no command service de orders.
+  - `shipping.manage` permite marcar envio/entrega e alterar provider de tracking no command service de shipping.
+  - `payments.manage` permite aprovar e executar refunds no provider pelo admin de payments.
+  - `api_keys.manage` permite criar e revogar API keys no command service de api_keys.
+  - `newsletter.manage` permite criar e enviar campanhas no command service de newsletter.
 - filas do cockpit também são filtradas por permissão:
   - pedidos/estoque exigem `orders.view`;
   - catálogo exige `catalog.view`;
@@ -2934,10 +2956,16 @@ Fora de escopo atual:
   - `/ops/newsletter/`: `newsletter.view`;
   - `/ops/audit/`: `audit.view`;
   - `/ops/payments/`: `payments.view`;
+  - `/ops/api-keys/`: `api_keys.view`;
+  - `/ops/subscriptions/`: `subscriptions.view`;
+  - `/ops/branding/`: `storefront.branding.manage`;
   - `/ops/coupons/`: `coupons.manage`;
   - `/ops/pages/`: `pages.manage`;
   - `/ops/reviews/`: `reviews.moderate`;
-  - `/ops/owners/`: `owners.manage`.
+  - `/ops/owners/`: `owners.manage`;
+  - `/ops/platform/acquisitions/`, `/ops/platform/onboarding/` e `/ops/platform/tenants/`: `platform.tenants.view`.
+- writes de produto sob `/ops/catalog/` ainda passam por command service e exigem `catalog.manage` quando a role está resolvida; o prefix gate permanece em `catalog.view` para leitura/navegação.
+- writes de customers, orders e shipping falham fechado sem `tenant_id` e sem role explícita com `*.manage`, mesmo quando o gate `/ops/` está desligado por compatibilidade local.
 - negação registra `AuditLog owner.ops_permission_denied`.
 - métricas owner access exportam `owner.ops_permission_denied`.
 - alerta Prometheus: `HubxAccountsOpsPermissionDenied`.

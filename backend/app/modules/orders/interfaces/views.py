@@ -7,11 +7,14 @@ from django.core.paginator import Paginator
 from django.http import HttpResponse
 from django.http import HttpResponseNotFound
 from django.http import HttpResponseRedirect
+from django.middleware.csrf import get_token
 from django.urls import reverse
 from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
 from django.views.generic import TemplateView, View
 
+from app.modules.accounts.application.admin_permissions import PERMISSION_ORDERS_MANAGE
+from app.modules.accounts.interfaces.admin_rbac import request_admin_can, request_owner_role
 from app.modules.orders.application.admin_order_commands import (
     FULFILLMENT_STATUS_OPTIONS,
     ORDER_STATUS_OPTIONS,
@@ -152,7 +155,7 @@ def _append_result_to_url(url: str, result: str) -> str:
     )
 
 
-def _build_orders_list_quick_actions_cell(order: dict[str, object], *, current_list_url: str) -> str:
+def _build_orders_list_quick_actions_cell(order: dict[str, object], *, current_list_url: str, csrf_token: str) -> str:
     action_url = reverse("orders:admin-order-update", kwargs={"order_number": order["order_number"]})
     inventory_exception_content = str(order.get("inventory_exception_content", "") or "")
     inventory_exception_under_review_marked = bool(order.get("inventory_exception_under_review_marked"))
@@ -169,34 +172,40 @@ def _build_orders_list_quick_actions_cell(order: dict[str, object], *, current_l
     if can_mark_review:
         return format_html(
             '<form method="post" action="{}" class="flex flex-col gap-1">'
+            '<input type="hidden" name="csrfmiddlewaretoken" value="{}" />'
             '<input type="hidden" name="action_type" value="mark_inventory_exception_under_review" />'
             '<input type="hidden" name="next" value="{}" />'
-            '<button type="submit" class="ds-btn-secondary">Marcar revisão</button>'
+            '<button type="submit" class="ds-btn ds-btn-secondary ds-btn-sm">Marcar revisão</button>'
             '<p class="text-xs text-[var(--color-text-secondary)]">Sinaliza que a exceção já está em tratamento.</p>'
             '</form>',
             action_url,
+            csrf_token,
             current_list_url,
         )
     if can_mark_resolved:
         return format_html(
             '<form method="post" action="{}" class="flex flex-col gap-1">'
+            '<input type="hidden" name="csrfmiddlewaretoken" value="{}" />'
             '<input type="hidden" name="action_type" value="mark_inventory_exception_resolved" />'
             '<input type="hidden" name="next" value="{}" />'
-            '<button type="submit" class="ds-btn-secondary">Marcar resolvida</button>'
+            '<button type="submit" class="ds-btn ds-btn-secondary ds-btn-sm">Marcar resolvida</button>'
             '<p class="text-xs text-[var(--color-text-secondary)]">Fecha a trilha manual depois da normalização.</p>'
             '</form>',
             action_url,
+            csrf_token,
             current_list_url,
         )
     if can_reassign_owner:
         return format_html(
             '<form method="post" action="{}" class="flex flex-col gap-1">'
+            '<input type="hidden" name="csrfmiddlewaretoken" value="{}" />'
             '<input type="hidden" name="action_type" value="reassign_inventory_exception_owner" />'
             '<input type="hidden" name="next" value="{}" />'
-            '<button type="submit" class="ds-btn-secondary">{}</button>'
+            '<button type="submit" class="ds-btn ds-btn-secondary ds-btn-sm">{}</button>'
             '<p class="text-xs text-[var(--color-text-secondary)]">{}</p>'
             '</form>',
             action_url,
+            csrf_token,
             current_list_url,
             "Reatribuir para mim" if inventory_exception_owner_label else "Assumir exceção",
             (
@@ -215,7 +224,7 @@ def _build_orders_list_quick_actions_cell(order: dict[str, object], *, current_l
     )
 
 
-def _build_orders_list_bulk_actions(*, current_list_url: str, order_numbers: list[str]) -> str:
+def _build_orders_list_bulk_actions(*, current_list_url: str, order_numbers: list[str], csrf_token: str) -> str:
     if not order_numbers:
         return ""
     action_url = reverse("orders:admin-order-update", kwargs={"order_number": order_numbers[0]})
@@ -223,22 +232,26 @@ def _build_orders_list_bulk_actions(*, current_list_url: str, order_numbers: lis
     return format_html(
         '<div class="flex flex-wrap gap-2">'
         '<form method="post" action="{}">'
+        '<input type="hidden" name="csrfmiddlewaretoken" value="{}" />'
         '<input type="hidden" name="action_type" value="bulk_mark_inventory_exception_under_review" />'
         '<input type="hidden" name="order_numbers" value="{}" />'
         '<input type="hidden" name="next" value="{}" />'
-        '<button type="submit" class="ds-btn-secondary">Marcar revisão na visão</button>'
+        '<button type="submit" class="ds-btn ds-btn-secondary ds-btn-sm">Marcar revisão na visão</button>'
         '</form>'
         '<form method="post" action="{}">'
+        '<input type="hidden" name="csrfmiddlewaretoken" value="{}" />'
         '<input type="hidden" name="action_type" value="bulk_mark_inventory_exception_resolved" />'
         '<input type="hidden" name="order_numbers" value="{}" />'
         '<input type="hidden" name="next" value="{}" />'
-        '<button type="submit" class="ds-btn-secondary">Marcar resolvida na visão</button>'
+        '<button type="submit" class="ds-btn ds-btn-secondary ds-btn-sm">Marcar resolvida na visão</button>'
         '</form>'
         '</div>',
         action_url,
+        csrf_token,
         joined_order_numbers,
         current_list_url,
         action_url,
+        csrf_token,
         joined_order_numbers,
         current_list_url,
     )
@@ -299,6 +312,8 @@ def _build_action_feedback(result: str) -> str | None:
         "bulk-inventory-exception-resolved": "Ação em lote concluída: exceções elegíveis marcadas como resolvidas na visão atual.",
         "bulk-inventory-exception-resolved-no-change": "Ação em lote sem efeito: não havia exceções elegíveis para marcar como resolvidas nesta visão.",
         "order-not-found": "Atualização ignorada: pedido não encontrado.",
+        "order-permission-denied": "Permissão insuficiente para alterar pedidos.",
+        "order-tenant-missing": "Tenant ausente: atualização de pedido não aplicada.",
     }
     return mapping.get(result)
 
@@ -328,7 +343,7 @@ class InventoryExceptionMetricsView(View):
         )
 
 
-def _build_order_action_forms(*, order: dict[str, object], back_href: str, order_number: str) -> str:
+def _build_order_action_forms(*, order: dict[str, object], back_href: str, order_number: str, csrf_token: str) -> str:
     action_url = reverse("orders:admin-order-update", kwargs={"order_number": order_number})
     status = str(order.get("status", "") or "")
     payment_status = str(order.get("payment_status", "") or "")
@@ -437,8 +452,9 @@ def _build_order_action_forms(*, order: dict[str, object], back_href: str, order
     )
     return format_html(
         '<div class="flex flex-wrap items-end gap-3">'
-        '<a href="{}" class="ds-btn-secondary">Voltar</a>'
+        '<a href="{}" class="ds-btn ds-btn-secondary ds-btn-md">Voltar</a>'
         '<form method="post" action="{}" class="flex flex-wrap items-end gap-2">'
+        '<input type="hidden" name="csrfmiddlewaretoken" value="{}" />'
         '<input type="hidden" name="action_type" value="order_status" />'
         '<label class="flex flex-col gap-1 text-sm text-[var(--color-text-secondary)]">'
         '<span>Status do pedido</span>'
@@ -446,9 +462,10 @@ def _build_order_action_forms(*, order: dict[str, object], back_href: str, order
         '{}'
         '</select>'
         '</label>'
-        '<button type="submit" class="ds-btn-primary">Salvar status</button>'
+        '<button type="submit" class="ds-btn ds-btn-primary ds-btn-md">Salvar status</button>'
         '</form>'
         '<form method="post" action="{}" class="flex flex-wrap items-end gap-2">'
+        '<input type="hidden" name="csrfmiddlewaretoken" value="{}" />'
         '<input type="hidden" name="action_type" value="fulfillment_status" />'
         '<label class="flex flex-col gap-1 text-sm text-[var(--color-text-secondary)]">'
         '<span>Status operacional</span>'
@@ -456,30 +473,34 @@ def _build_order_action_forms(*, order: dict[str, object], back_href: str, order
         '{}'
         '</select>'
         '</label>'
-        '<button type="submit" class="ds-btn-primary">Salvar operação</button>'
+        '<button type="submit" class="ds-btn ds-btn-primary ds-btn-md">Salvar operação</button>'
         '</form>'
         '<form method="post" action="{}" class="flex flex-wrap items-end gap-2">'
+        '<input type="hidden" name="csrfmiddlewaretoken" value="{}" />'
         '<input type="hidden" name="action_type" value="start_fulfillment" />'
         '<div class="flex flex-col gap-1">'
-        '<button type="submit" class="ds-btn-primary"{}>{}</button>'
+        '<button type="submit" class="ds-btn ds-btn-primary ds-btn-md"{}>{}</button>'
         '<p class="text-xs text-[var(--color-text-secondary)]">{}</p>'
         '</div>'
         '</form>'
         '<form method="post" action="{}" class="flex flex-wrap items-end gap-2">'
+        '<input type="hidden" name="csrfmiddlewaretoken" value="{}" />'
         '<input type="hidden" name="action_type" value="start_shipping" />'
         '<div class="flex flex-col gap-1">'
-        '<button type="submit" class="ds-btn-primary"{}>{}</button>'
+        '<button type="submit" class="ds-btn ds-btn-primary ds-btn-md"{}>{}</button>'
         '<p class="text-xs text-[var(--color-text-secondary)]">{}</p>'
         '</div>'
         '</form>'
         '<form method="post" action="{}" class="flex flex-wrap items-end gap-2">'
+        '<input type="hidden" name="csrfmiddlewaretoken" value="{}" />'
         '<input type="hidden" name="action_type" value="complete_delivery" />'
         '<div class="flex flex-col gap-1">'
-        '<button type="submit" class="ds-btn-primary"{}>{}</button>'
+        '<button type="submit" class="ds-btn ds-btn-primary ds-btn-md"{}>{}</button>'
         '<p class="text-xs text-[var(--color-text-secondary)]">{}</p>'
         '</div>'
         '</form>'
         '<form method="post" action="{}" class="flex flex-wrap items-end gap-2">'
+        '<input type="hidden" name="csrfmiddlewaretoken" value="{}" />'
         '<input type="hidden" name="action_type" value="cancel_order" />'
         '<div class="flex flex-col gap-1">'
         '<button type="submit" class="{}"{}>{}</button>'
@@ -487,58 +508,70 @@ def _build_order_action_forms(*, order: dict[str, object], back_href: str, order
         '</div>'
         '</form>'
         '<form method="post" action="{}" class="flex flex-wrap items-end gap-2">'
+        '<input type="hidden" name="csrfmiddlewaretoken" value="{}" />'
         '<input type="hidden" name="action_type" value="mark_inventory_exception_under_review" />'
         '<div class="flex flex-col gap-1">'
-        '<button type="submit" class="ds-btn-secondary"{}>{}</button>'
+        '<button type="submit" class="ds-btn ds-btn-secondary ds-btn-md"{}>{}</button>'
         '<p class="text-xs text-[var(--color-text-secondary)]">{}</p>'
         '</div>'
         '</form>'
         '<form method="post" action="{}" class="flex flex-wrap items-end gap-2">'
+        '<input type="hidden" name="csrfmiddlewaretoken" value="{}" />'
         '<input type="hidden" name="action_type" value="mark_inventory_exception_resolved" />'
         '<div class="flex flex-col gap-1">'
-        '<button type="submit" class="ds-btn-secondary"{}>{}</button>'
+        '<button type="submit" class="ds-btn ds-btn-secondary ds-btn-md"{}>{}</button>'
         '<p class="text-xs text-[var(--color-text-secondary)]">{}</p>'
         '</div>'
         '</form>'
         '<form method="post" action="{}" class="flex flex-wrap items-end gap-2">'
+        '<input type="hidden" name="csrfmiddlewaretoken" value="{}" />'
         '<input type="hidden" name="action_type" value="reassign_inventory_exception_owner" />'
         '<div class="flex flex-col gap-1">'
-        '<button type="submit" class="ds-btn-secondary"{}>{}</button>'
+        '<button type="submit" class="ds-btn ds-btn-secondary ds-btn-md"{}>{}</button>'
         '<p class="text-xs text-[var(--color-text-secondary)]">{}</p>'
         '</div>'
         '</form>'
         '</div>',
         back_href,
         action_url,
+        csrf_token,
         order_status_options,
         action_url,
+        csrf_token,
         fulfillment_status_options,
         action_url,
+        csrf_token,
         mark_safe("") if can_start_fulfillment else mark_safe(' disabled="disabled"'),
         "Iniciar preparo",
         start_fulfillment_hint,
         action_url,
+        csrf_token,
         mark_safe("") if can_start_shipping else mark_safe(' disabled="disabled"'),
         "Iniciar envio",
         start_shipping_hint,
         action_url,
+        csrf_token,
         mark_safe("") if can_complete_delivery else mark_safe(' disabled="disabled"'),
         "Confirmar entrega",
         complete_delivery_hint,
         action_url,
-        "ds-btn-secondary" if can_cancel else "ds-btn-secondary",
+        csrf_token,
+        "ds-btn ds-btn-secondary ds-btn-md" if can_cancel else "ds-btn ds-btn-secondary ds-btn-md",
         mark_safe("") if can_cancel else mark_safe(' disabled="disabled"'),
         cancel_label,
         cancel_hint,
         action_url,
+        csrf_token,
         mark_safe("") if can_mark_inventory_exception_under_review else mark_safe(' disabled="disabled"'),
         "Marcar exceção em revisão" if can_mark_inventory_exception_under_review else inventory_exception_marker_label or "Exceção sem revisão",
         inventory_exception_under_review_hint,
         action_url,
+        csrf_token,
         mark_safe("") if can_mark_inventory_exception_resolved else mark_safe(' disabled="disabled"'),
         "Marcar exceção resolvida" if can_mark_inventory_exception_resolved else inventory_exception_marker_label or "Sem resolução pendente",
         inventory_exception_resolved_hint,
         action_url,
+        csrf_token,
         mark_safe("") if can_reassign_inventory_exception_owner else mark_safe(' disabled="disabled"'),
         "Reatribuir exceção para mim" if inventory_exception_owner_label else "Assumir exceção",
         inventory_exception_reassign_hint,
@@ -556,6 +589,7 @@ class AdminOrdersListView(TemplateView):
         quick_filter_selected = self.request.GET.get("quick_filter", "").strip()
         result = self.request.GET.get("result", "").strip()
         page_number = int(self.request.GET.get("page", "1") or "1")
+        can_manage_orders = request_admin_can(self.request, PERMISSION_ORDERS_MANAGE)
 
         orders = admin_order_queries.list_orders(tenant_id=tenant_id)
         orders = admin_order_queries.filter_orders_by_inventory_exception_state(orders, quick_filter_selected)
@@ -659,7 +693,15 @@ class AdminOrdersListView(TemplateView):
                             _build_orders_list_status_cell(order),
                             _build_orders_list_payment_cell(order),
                             _build_orders_list_updated_cell(order),
-                            _build_orders_list_quick_actions_cell(order, current_list_url=self.request.get_full_path()),
+                            (
+                                _build_orders_list_quick_actions_cell(
+                                    order,
+                                    current_list_url=self.request.get_full_path(),
+                                    csrf_token=get_token(self.request),
+                                )
+                                if can_manage_orders
+                                else "Sem permissão para alterar pedidos"
+                            ),
                         ]
                     }
                     for order in page_obj.object_list
@@ -669,8 +711,9 @@ class AdminOrdersListView(TemplateView):
                 "bulk_actions": _build_orders_list_bulk_actions(
                     current_list_url=self.request.get_full_path(),
                     order_numbers=scoped_order_numbers,
+                    csrf_token=get_token(self.request),
                 )
-                if (quick_filter_selected or search_value or status_selected) and filtered_count
+                if (quick_filter_selected or search_value or status_selected) and filtered_count and can_manage_orders
                 else "",
                 "page": page_obj.number,
                 "total_pages": paginator.num_pages,
@@ -695,6 +738,7 @@ class AdminOrderDetailView(TemplateView):
         order = admin_order_queries.get_order(order_number, tenant_id=tenant_id)
         feedback = _build_action_feedback(self.request.GET.get("result", "").strip())
         back_href = reverse("orders:admin-orders-list")
+        can_manage_orders = request_admin_can(self.request, PERMISSION_ORDERS_MANAGE)
         page_description = (
             "Resumo operacional do pedido, dados do cliente e histórico de movimentações. "
             + admin_order_queries.get_order_operational_visibility(order_number, tenant_id=tenant_id)
@@ -723,7 +767,22 @@ class AdminOrderDetailView(TemplateView):
                 "fulfillment_status_variant": order["fulfillment_status_variant"],
                 "back_href": back_href,
                 "primary_href": "#update-order",
-                "page_actions": _build_order_action_forms(order=order, back_href=back_href, order_number=order_number),
+                "page_actions": (
+                    _build_order_action_forms(
+                        order=order,
+                        back_href=back_href,
+                        order_number=order_number,
+                        csrf_token=get_token(self.request),
+                    )
+                    if can_manage_orders
+                    else format_html(
+                        '<div class="flex flex-wrap items-center gap-3">'
+                        '<a href="{}" class="ds-btn ds-btn-secondary ds-btn-md">Voltar</a>'
+                        '<span class="text-sm text-[var(--color-text-secondary)]">Sem permissão para alterar pedidos</span>'
+                        '</div>',
+                        back_href,
+                    )
+                ),
                 "order_number": f'#{order["order_number"]}',
                 "summary_subtitle": order.get("inventory_exception_marker_label")
                 or order.get("inventory_exception_aging_label")
@@ -800,55 +859,79 @@ class AdminOrderActionView(View):
         next_url = str(request.POST.get("next", "") or "").strip()
         order_numbers = _parse_bulk_order_numbers(str(request.POST.get("order_numbers", "") or ""))
         actor_label = self._resolve_actor_label(request)
+        actor_role = request_owner_role(request)
         if action_type == "order_status":
             _, result = admin_order_commands.update_order_status(
                 order_number=order_number,
                 status=str(request.POST.get("status", "") or "").strip(),
                 tenant_id=tenant_id,
+                actor_role=actor_role,
             )
         elif action_type == "fulfillment_status":
             _, result = admin_order_commands.update_fulfillment_status(
                 order_number=order_number,
                 fulfillment_status=str(request.POST.get("fulfillment_status", "") or "").strip(),
                 tenant_id=tenant_id,
+                actor_role=actor_role,
             )
         elif action_type == "start_fulfillment":
-            _, result = admin_order_commands.start_fulfillment(order_number=order_number, tenant_id=tenant_id)
+            _, result = admin_order_commands.start_fulfillment(
+                order_number=order_number,
+                tenant_id=tenant_id,
+                actor_role=actor_role,
+            )
         elif action_type == "start_shipping":
-            _, result = admin_order_commands.start_shipping(order_number=order_number, tenant_id=tenant_id)
+            _, result = admin_order_commands.start_shipping(
+                order_number=order_number,
+                tenant_id=tenant_id,
+                actor_role=actor_role,
+            )
         elif action_type == "complete_delivery":
-            _, result = admin_order_commands.complete_delivery(order_number=order_number, tenant_id=tenant_id)
+            _, result = admin_order_commands.complete_delivery(
+                order_number=order_number,
+                tenant_id=tenant_id,
+                actor_role=actor_role,
+            )
         elif action_type == "cancel_order":
-            _, result = admin_order_commands.cancel_order(order_number=order_number, tenant_id=tenant_id)
+            _, result = admin_order_commands.cancel_order(
+                order_number=order_number,
+                tenant_id=tenant_id,
+                actor_role=actor_role,
+            )
         elif action_type == "mark_inventory_exception_under_review":
             _, result = admin_order_commands.mark_inventory_exception_under_review(
                 order_number=order_number,
                 actor_label=actor_label,
                 tenant_id=tenant_id,
+                actor_role=actor_role,
             )
         elif action_type == "mark_inventory_exception_resolved":
             _, result = admin_order_commands.mark_inventory_exception_resolved(
                 order_number=order_number,
                 actor_label=actor_label,
                 tenant_id=tenant_id,
+                actor_role=actor_role,
             )
         elif action_type == "reassign_inventory_exception_owner":
             _, result = admin_order_commands.reassign_inventory_exception_owner(
                 order_number=order_number,
                 actor_label=actor_label,
                 tenant_id=tenant_id,
+                actor_role=actor_role,
             )
         elif action_type == "bulk_mark_inventory_exception_under_review":
             _, result = admin_order_commands.bulk_mark_inventory_exception_under_review(
                 order_numbers=order_numbers,
                 actor_label=actor_label,
                 tenant_id=tenant_id,
+                actor_role=actor_role,
             )
         elif action_type == "bulk_mark_inventory_exception_resolved":
             _, result = admin_order_commands.bulk_mark_inventory_exception_resolved(
                 order_numbers=order_numbers,
                 actor_label=actor_label,
                 tenant_id=tenant_id,
+                actor_role=actor_role,
             )
         else:
             result = "order-status-invalid"

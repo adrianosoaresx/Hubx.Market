@@ -11,9 +11,9 @@
             <p class="mt-3 text-sm text-[var(--color-text-secondary)]">{{ page_meta }}</p>
         {% endif %}
         <div class="mt-5 flex flex-wrap gap-3">
-            <a class="ds-btn-secondary" href="{{ back_href }}">Voltar para jornadas</a>
+            <a class="ds-btn ds-btn-secondary ds-btn-md" href="{{ back_href }}">Voltar para jornadas</a>
             {% if onboarding.tenant_detail_href %}
-                <a class="ds-btn-primary" href="{{ onboarding.tenant_detail_href }}">Abrir loja criada</a>
+                <a class="ds-btn ds-btn-primary ds-btn-md" href="{{ onboarding.tenant_detail_href }}">Abrir loja criada</a>
             {% endif %}
         </div>
     </div>
@@ -27,19 +27,26 @@
             </div>
             <div>{{ status_badge }}</div>
         </div>
-        <div class="mt-5 h-2 rounded-full bg-slate-100">
-            <div class="h-2 rounded-full bg-[var(--color-action-primary-bg)]" style="width: {{ onboarding.progress }}%"></div>
+        <div class="ds-progress mt-5" aria-label="Progresso do onboarding">
+            <div class="ds-progress-bar" style="width: {{ onboarding.progress }}%"></div>
         </div>
     </section>
 
     {% if onboarding.blockers %}
-        <section class="admin-ops-panel rounded-2xl border border-red-200 bg-red-50 p-6">
-            <h3 class="text-sm font-semibold text-red-800">Blockers atuais</h3>
-            <ul class="mt-3 space-y-2 text-sm text-red-700">
-                {% for blocker in onboarding.blockers %}
-                    <li>• {{ blocker }}</li>
-                {% endfor %}
-            </ul>
+        <section class="ds-alert ds-alert-danger" role="alert" aria-labelledby="onboarding-blockers-title">
+            <div class="ds-alert-layout">
+                <span class="ds-alert-icon" aria-hidden="true">
+                    {% include "shared/partials/icon.html" with name="alert-triangle" size="md" %}
+                </span>
+                <div class="ds-alert-copy">
+                    <h3 id="onboarding-blockers-title" class="ds-alert-title">Blockers atuais</h3>
+                    <ul class="ds-callout-list">
+                        {% for blocker in onboarding.blockers %}
+                            <li>{{ blocker }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
         </section>
     {% endif %}
 
@@ -96,7 +103,7 @@
                 <form method="post" action="{{ step_action_base }}branding/" class="mt-4 grid gap-4 md:grid-cols-2">
                     {% csrf_token %}
                     <input class="ds-input" name="store_display_name" value="{{ onboarding.store_display_name }}" placeholder="Nome comercial" required>
-                    <input class="ds-input" name="primary_color" value="{{ onboarding.primary_color }}" placeholder="#4f46e5" required>
+                    <input class="ds-input" name="primary_color" value="{{ onboarding.primary_color }}" placeholder="#9a6410" required>
                     <div class="md:col-span-2">
                         {% include "shared/components/actions/button.html" with label="Salvar branding" variant="primary" type="submit" %}
                     </div>
@@ -124,9 +131,13 @@
                     {% for step in onboarding.steps %}
                         <li class="flex items-center justify-between gap-3">
                             <span>{{ step.label }}</span>
-                            <span class="rounded-full px-2.5 py-1 text-xs {% if step.completed %}bg-emerald-100 text-emerald-800{% elif step.current %}bg-amber-100 text-amber-800{% else %}bg-slate-100 text-slate-600{% endif %}">
-                                {% if step.completed %}feito{% elif step.current %}atual{% else %}pendente{% endif %}
-                            </span>
+                            {% if step.completed %}
+                                {% include "shared/components/data_display/badge.html" with label="feito" variant="success" size="xs" %}
+                            {% elif step.current %}
+                                {% include "shared/components/data_display/badge.html" with label="atual" variant="warning" size="xs" %}
+                            {% else %}
+                                {% include "shared/components/data_display/badge.html" with label="pendente" variant="neutral" size="xs" %}
+                            {% endif %}
                         </li>
                     {% endfor %}
                 </ul>
@@ -134,7 +145,7 @@
 
             <section class="admin-ops-panel ds-surface p-6">
                 <h3 class="text-base font-semibold text-[var(--color-text-primary)]">Preview</h3>
-                <div class="mt-4 rounded-2xl border border-[var(--color-border-subtle)] p-5" style="border-color: {{ onboarding.primary_color }}">
+                <div class="ds-subpanel mt-4 p-5" style="border-color: {{ onboarding.primary_color }};">
                     <p class="text-xs uppercase tracking-wide text-[var(--color-text-secondary)]">Storefront</p>
                     <h4 class="mt-2 text-xl font-semibold" style="color: {{ onboarding.primary_color }}">{{ onboarding.store_display_name|default:onboarding.store_name|default:"Nova loja" }}</h4>
                     <p class="mt-2 text-sm text-[var(--color-text-secondary)]">{{ onboarding.store_subdomain|default:"subdominio" }}.hubx.market</p>
@@ -145,6 +156,10 @@
                 <h3 class="text-base font-semibold text-[var(--color-text-primary)]">Revisão final</h3>
                 <dl class="mt-4 space-y-3 text-sm">
                     <div><dt class="text-[var(--color-text-secondary)]">Plano</dt><dd class="font-medium">{{ onboarding.plan_code|default:"—" }}</dd></div>
+                    {% if onboarding.has_coupon_snapshot %}
+                        <div><dt class="text-[var(--color-text-secondary)]">Cupom SaaS</dt><dd class="font-medium">{{ onboarding.coupon_code_snapshot }}</dd></div>
+                        <div><dt class="text-[var(--color-text-secondary)]">Preço efetivo</dt><dd class="font-medium">{{ onboarding.effective_monthly_price_label }}</dd></div>
+                    {% endif %}
                     <div><dt class="text-[var(--color-text-secondary)]">Owner</dt><dd class="font-medium">{{ onboarding.owner_email|default:"—" }}</dd></div>
                     <div><dt class="text-[var(--color-text-secondary)]">Domínio</dt><dd class="font-medium">{{ onboarding.custom_domain|default:"contract-only opcional" }}</dd></div>
                 </dl>
@@ -158,9 +173,9 @@
 
             <section class="admin-ops-panel ds-surface p-6">
                 <p class="text-sm font-medium text-[var(--color-text-primary)]">Guardrails</p>
-                <ul class="mt-3 space-y-2 text-sm text-[var(--color-text-secondary)]">
+                <ul class="ds-callout-list mt-3 text-sm text-[var(--color-text-secondary)]">
                     {% for note in contract_notes %}
-                        <li>• {{ note }}</li>
+                        <li>{{ note }}</li>
                     {% endfor %}
                 </ul>
             </section>

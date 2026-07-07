@@ -64,6 +64,10 @@ class PlatformTenantAdminViewTests(TestCase):
         self.assertContains(response, "loja.example.com")
         self.assertContains(response, "Manutenção")
         self.assertContains(response, "Esta tela não cria, edita ou remove tenants.")
+        self.assertContains(response, 'aria-label="Tema da interface"')
+        self.assertContains(response, "Claro")
+        self.assertContains(response, "Escuro")
+        self.assertContains(response, "Sistema")
         self.assertContains(
             response,
             reverse("tenants:platform-tenants-detail", kwargs={"tenant_slug": self.tenant.slug}),
@@ -76,6 +80,8 @@ class PlatformTenantAdminViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, reverse("tenants:platform-tenants-create"))
+        self.assertContains(response, 'href="/ops/platform/tenants/"')
+        self.assertContains(response, 'href="/ops/platform/acquisitions/"')
 
     def test_platform_tenant_create_form_requires_manage_permission(self):
         self._login_owner(email="support.create.platform@hubx.market", role="support")
@@ -406,6 +412,8 @@ class PlatformTenantAdminViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Nenhuma loja visível")
         self.assertNotContains(response, "loja-platform.hubx.market")
+        self.assertNotContains(response, 'href="/ops/platform/tenants/"')
+        self.assertNotContains(response, 'href="/ops/platform/acquisitions/"')
 
     def test_platform_tenant_detail_hides_data_for_role_without_permission(self):
         self._login_owner(email="support.detail.platform@hubx.market", role="support")

@@ -2,7 +2,9 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 from datetime import timedelta
+from django.contrib.auth import get_user_model
 
+from app.modules.accounts.models import OwnerUser
 from app.modules.customers.application.admin_customer_queries import admin_customer_queries
 from app.modules.customers.models import Customer
 from app.modules.orders.models import Order, OrderItem
@@ -98,8 +100,25 @@ class AdminCustomerViewTests(TestCase):
         self.assertFalse(admin_customer_queries.using_persisted_source())
 
 
+@override_settings(HUBX_MARKET_ROOT_DOMAIN="hubx.market", ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver"])
 class AdminCustomerPersistedReadTests(TestCase):
     fixtures = ["customers_minimal_seed.json"]
+
+    def setUp(self):
+        self.tenant = Customer.objects.get(pk=1).tenant
+        self.user = get_user_model().objects.create_user(
+            username="customer-admin@hubx.market",
+            email="customer-admin@hubx.market",
+            password="secret",
+        )
+        OwnerUser.objects.create(
+            tenant=self.tenant,
+            email=self.user.email,
+            role="owner",
+            is_active=True,
+        )
+        self.client.force_login(self.user)
+        self.client.defaults["HTTP_HOST"] = f"{self.tenant.subdomain}.hubx.market"
 
     def test_admin_customer_query_service_scopes_records_by_tenant_when_requested(self):
         primary_customer = Customer.objects.get(pk=1)
@@ -329,6 +348,18 @@ class AdminCustomerPersistedReadTests(TestCase):
         self.assertContains(detail_response, "sem receita realizada")
         self.assertContains(detail_response, "sem histórico")
 
+    def test_admin_customer_inline_actions_include_csrf_tokens(self):
+        list_response = self.client.get(reverse("customers:admin-customers-list"), {"q": "Ana"})
+        detail_response = self.client.get(
+            reverse("customers:admin-customers-detail", kwargs={"customer_slug": "ana-persistida"})
+        )
+
+        self.assertContains(list_response, 'name="csrfmiddlewaretoken"')
+        self.assertContains(list_response, "Marcar follow-up")
+        self.assertContains(list_response, "Marcar follow-up na visão")
+        self.assertContains(detail_response, 'name="csrfmiddlewaretoken"')
+        self.assertContains(detail_response, "Marcar follow-up")
+
     def test_admin_customer_mark_for_followup_updates_flag_and_feedback(self):
         response = self.client.post(
             reverse("customers:admin-customer-update", kwargs={"customer_slug": "ana-persistida"}),
@@ -367,6 +398,12 @@ class AdminCustomerPersistedReadTests(TestCase):
             phone="(21) 91111-0000",
             status="active",
             account_type="Storefront",
+        )
+        OwnerUser.objects.create(
+            tenant=secondary_tenant,
+            email=self.user.email,
+            role="owner",
+            is_active=True,
         )
 
         response = self.client.post(
@@ -532,11 +569,7 @@ class AdminCustomerPersistedReadTests(TestCase):
         self.assertFalse(Customer.objects.get(pk=1).marked_as_priority)
 
     def test_admin_customer_bulk_followup_marks_segmented_view(self):
-        tenant = Tenant.objects.create(
-            name="Hubx Customer Bulk Followup",
-            slug="hubx-customer-bulk-followup",
-            subdomain="hubx-customer-bulk-followup",
-        )
+        tenant = self.tenant
         Customer.objects.create(
             tenant=tenant,
             slug="bulk-new-one",
@@ -610,11 +643,7 @@ class AdminCustomerPersistedReadTests(TestCase):
         self.assertFalse(Customer.objects.get(slug="bulk-repeat").marked_for_followup)
 
     def test_admin_customer_bulk_clear_followup_clears_segmented_view(self):
-        tenant = Tenant.objects.create(
-            name="Hubx Customer Bulk Clear Followup",
-            slug="hubx-customer-bulk-clear-followup",
-            subdomain="hubx-customer-bulk-clear-followup",
-        )
+        tenant = self.tenant
         Customer.objects.create(
             tenant=tenant,
             slug="bulk-clear-one",
@@ -679,11 +708,7 @@ class AdminCustomerPersistedReadTests(TestCase):
         self.assertFalse(Customer.objects.get(pk=1).marked_as_priority)
 
     def test_admin_customer_bulk_reengagement_marks_segmented_view(self):
-        tenant = Tenant.objects.create(
-            name="Hubx Customer Bulk Reengagement",
-            slug="hubx-customer-bulk-reengagement",
-            subdomain="hubx-customer-bulk-reengagement",
-        )
+        tenant = self.tenant
         Customer.objects.create(
             tenant=tenant,
             slug="bulk-reengage-one",

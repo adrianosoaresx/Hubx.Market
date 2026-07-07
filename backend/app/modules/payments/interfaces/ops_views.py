@@ -1,22 +1,58 @@
 from __future__ import annotations
 
 from django.core.paginator import Paginator
+from django.http import HttpResponseRedirect
 from django.middleware.csrf import get_token
-from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils.html import format_html
 from django.views import View
 from django.views.generic import TemplateView
 
+from app.modules.accounts.application.admin_permissions import (
+    PERMISSION_PAYMENTS_MANAGE,
+    PERMISSION_PAYMENTS_VIEW,
+)
+from app.modules.accounts.interfaces.admin_rbac import request_admin_can, request_owner_role
 from app.modules.payments.application.refund_approval_commands import payment_refund_approval_commands
 from app.modules.payments.application.financial_reconciliation_queries import (
     payment_financial_reconciliation_queries,
 )
+from app.modules.payments.application.refund_execution_commands import payment_refund_execution_commands
 from app.modules.payments.application.refund_ledger_queries import payment_refund_ledger_queries
 
 
 def _request_tenant_id(request) -> int | None:
     return getattr(getattr(request, "tenant", None), "id", None)
+
+
+def _actor_label(request) -> str:
+    owner = getattr(request, "owner_user", None)
+    owner_email = str(getattr(owner, "email", "") or "").strip()
+    if owner_email:
+        return owner_email
+    user = getattr(request, "user", None)
+    return str(getattr(user, "email", "") or getattr(user, "username", "") or "ops-admin").strip()
+
+
+def _can_manage_payments(request) -> bool:
+    return bool(request_owner_role(request)) and request_admin_can(request, PERMISSION_PAYMENTS_MANAGE)
+
+
+def _refund_feedback(value: object) -> dict[str, str]:
+    status = str(value or "").strip()
+    mapping = {
+        "refund-approved": ("success", "Refund aprovado", "A intenção foi preparada para execução no provider."),
+        "refund-approval-blocked": ("warning", "Aprovação bloqueada", "O ledger registrou bloqueios para esta intenção de refund."),
+        "refund-execution-accepted": ("info", "Execução aceita", "O provider recebeu a solicitação e a referência foi registrada."),
+        "refund-execution-succeeded": ("success", "Refund concluído", "O provider confirmou o refund e o ledger foi atualizado."),
+        "refund-execution-failed": ("danger", "Refund falhou", "A resposta do provider foi registrada no ledger para investigação."),
+        "refund-execution-blocked": ("warning", "Execução bloqueada", "O refund ainda não atende aos requisitos para chamada ao provider."),
+        "refund-permission-denied": ("danger", "Permissão necessária", "Seu perfil pode visualizar refunds, mas não aprovar ou executar estornos."),
+        "refund-tenant-required": ("warning", "Tenant não resolvido", "Acesse pelo subdomínio da loja para operar refunds."),
+        "refund-unavailable": ("warning", "Refund indisponível", "O refund não existe neste tenant ou não pode ser alterado neste estado."),
+    }
+    variant, title, description = mapping.get(status, ("info", "", ""))
+    return {"variant": variant, "title": title, "description": description} if title else {}
 
 
 def _severity_cell(issue: dict[str, object]) -> str:
@@ -79,6 +115,18 @@ def _refund_attempt_cell(refund: dict[str, object]) -> str:
     )
 
 
+def _refund_provider_cell(refund: dict[str, object]) -> str:
+    provider_code = str(refund.get("provider_code") or "payment")
+    provider_refund_reference = str(refund.get("provider_refund_reference") or "").strip()
+    if not provider_refund_reference:
+        provider_refund_reference = "Sem refund externo"
+    return format_html(
+        '<div class="space-y-1"><div>{}</div><div class="text-xs text-[var(--color-text-secondary)]">{}</div></div>',
+        provider_code,
+        provider_refund_reference,
+    )
+
+
 def _refund_blockers_cell(refund: dict[str, object]) -> str:
     blockers = list(refund.get("blockers") or [])
     if not blockers:
@@ -89,16 +137,35 @@ def _refund_blockers_cell(refund: dict[str, object]) -> str:
     )
 
 
-def _refund_action_cell(refund: dict[str, object], *, csrf_token: str) -> str:
-    if str(refund.get("status") or "") != "requested":
+def _refund_action_cell(refund: dict[str, object], *, csrf_token: str, can_manage: bool) -> str:
+    if not can_manage:
+        return "Sem permissão para alterar"
+
+    status = str(refund.get("status") or "")
+    if status == "processing" and str(refund.get("provider_refund_reference") or "").strip():
+        return "Execução registrada"
+
+    if status == "processing":
+        execute_url = reverse("payments_ops:admin-refund-execute", kwargs={"refund_key": refund.get("refund_key")})
+        return format_html(
+            '<form method="post" action="{}" class="space-y-2">'
+            '<input type="hidden" name="csrfmiddlewaretoken" value="{}">'
+            '<button type="submit" class="ds-btn ds-btn-danger ds-btn-sm">Executar no provider</button>'
+            '<div class="text-xs text-[var(--color-text-secondary)]">Usa idempotência do ledger</div>'
+            "</form>",
+            execute_url,
+            csrf_token,
+        )
+
+    if status != "requested":
         return "Sem ação"
     approve_url = reverse("payments_ops:admin-refund-approve", kwargs={"refund_key": refund.get("refund_key")})
     return format_html(
         '<form method="post" action="{}" class="space-y-2">'
         '<input type="hidden" name="csrfmiddlewaretoken" value="{}">'
         '<input type="hidden" name="approval_note" value="Aprovado internamente via ops refunds.">'
-        '<button type="submit" class="ds-btn ds-btn-secondary ds-btn-sm">Aprovar internamente</button>'
-        '<div class="text-xs text-[var(--color-text-secondary)]">Não executa estorno</div>'
+        '<button type="submit" class="ds-btn ds-btn-secondary ds-btn-sm">Aprovar para execução</button>'
+        '<div class="text-xs text-[var(--color-text-secondary)]">Não chama provider ainda</div>'
         "</form>",
         approve_url,
         csrf_token,
@@ -168,9 +235,11 @@ class AdminPaymentRefundsView(TemplateView):
         context = super().get_context_data(**kwargs)
         tenant_id = _request_tenant_id(self.request)
         selected_status = str(self.request.GET.get("status") or "").strip().lower()
+        can_view_payments = request_admin_can(self.request, PERMISSION_PAYMENTS_VIEW)
+        can_manage_payments = _can_manage_payments(self.request)
         refunds = (
             payment_refund_ledger_queries.list_refunds(tenant_id=tenant_id, status=selected_status)
-            if tenant_id
+            if tenant_id and can_view_payments
             else []
         )
         paginator = Paginator(refunds, 20)
@@ -178,13 +247,15 @@ class AdminPaymentRefundsView(TemplateView):
         base_url = reverse("payments_ops:admin-refunds")
         status_query = f"status={selected_status}&" if selected_status else ""
         csrf_token = get_token(self.request)
+        feedback = _refund_feedback(self.request.GET.get("result"))
         context.update(
             {
                 "page_title": "Refunds de pagamentos",
                 "page_eyebrow": "Payments",
-                "page_description": "Triagem read-only do ledger de refunds antes de qualquer aprovação ou chamada ao provider.",
-                "page_meta": "Nenhum estorno é executado nesta tela.",
-                "page_note": "Use esta surface para revisar status, bloqueios e referências antes de aprovar uma ação futura.",
+                "page_description": "Aprovação e execução controlada de refunds tenant-scoped com registro no ledger.",
+                "page_meta": "A execução chama o provider somente para refunds em processamento e sem referência externa.",
+                "page_note": feedback.get("description")
+                or "Revise bloqueios, idempotência e referência do provider antes de operar um refund.",
                 "showcase_mode": False,
                 "filter_title": "Filtros de refund",
                 "filter_description": "Filtre o ledger por status operacional.",
@@ -206,6 +277,7 @@ class AdminPaymentRefundsView(TemplateView):
                     {"label": "Pedido"},
                     {"label": "Valor"},
                     {"label": "Tentativa"},
+                    {"label": "Provider refund"},
                     {"label": "Bloqueios"},
                     {"label": "Idempotência"},
                     {"label": "Ação"},
@@ -217,15 +289,16 @@ class AdminPaymentRefundsView(TemplateView):
                             f"#{refund.get('order_number') or '-'}",
                             f"{refund.get('currency_code') or 'BRL'} {refund.get('amount') or '0.00'}",
                             _refund_attempt_cell(refund),
+                            _refund_provider_cell(refund),
                             _refund_blockers_cell(refund),
                             refund.get("idempotency_key") or "-",
-                            _refund_action_cell(refund, csrf_token=csrf_token),
+                            _refund_action_cell(refund, csrf_token=csrf_token, can_manage=can_manage_payments),
                         ]
                     }
                     for refund in page_obj.object_list
                 ],
                 "table_title": "Ledger de refunds",
-                "table_description": "Registros derivados de PaymentRefund. A tela é somente leitura e não aprova estorno.",
+                "table_description": "Registros derivados de PaymentRefund com aprovação interna, execução idempotente e resposta do provider.",
                 "table_count": f"{len(refunds)} refund(s)",
                 "table_id": "admin-payment-refunds-table",
                 "page": page_obj.number,
@@ -246,15 +319,41 @@ class AdminPaymentRefundsView(TemplateView):
 class AdminPaymentRefundApproveView(View):
     def post(self, request, refund_key):
         tenant_id = _request_tenant_id(request)
-        user = getattr(request, "user", None)
-        actor_label = ""
-        if getattr(user, "is_authenticated", False):
-            actor_label = str(getattr(user, "email", "") or getattr(user, "username", "") or user).strip()
-        actor_label = actor_label or "Ops interno"
-        payment_refund_approval_commands.approve_refund(
+        if not tenant_id:
+            return HttpResponseRedirect(f'{reverse("payments_ops:admin-refunds")}?result=refund-tenant-required')
+        if not _can_manage_payments(request):
+            return HttpResponseRedirect(f'{reverse("payments_ops:admin-refunds")}?result=refund-permission-denied')
+        result, _refund = payment_refund_approval_commands.approve_refund(
             tenant_id=tenant_id,
             refund_key=str(refund_key),
-            actor_label=actor_label,
+            actor_label=_actor_label(request),
             approval_note=str(request.POST.get("approval_note") or "").strip(),
         )
-        return redirect("payments_ops:admin-refunds")
+        result_status = {
+            "refund-approval-ready": "refund-approved",
+            "refund-approval-blocked": "refund-approval-blocked",
+            "refund-approval-unavailable": "refund-unavailable",
+        }.get(str(result or ""), "refund-unavailable")
+        return HttpResponseRedirect(f'{reverse("payments_ops:admin-refunds")}?result={result_status}')
+
+
+class AdminPaymentRefundExecuteView(View):
+    def post(self, request, refund_key):
+        tenant_id = _request_tenant_id(request)
+        if not tenant_id:
+            return HttpResponseRedirect(f'{reverse("payments_ops:admin-refunds")}?result=refund-tenant-required')
+        if not _can_manage_payments(request):
+            return HttpResponseRedirect(f'{reverse("payments_ops:admin-refunds")}?result=refund-permission-denied')
+        result, _refund = payment_refund_execution_commands.execute_refund(
+            tenant_id=tenant_id,
+            refund_key=str(refund_key),
+            actor_label=_actor_label(request),
+        )
+        result_status = {
+            "refund-execution-accepted": "refund-execution-accepted",
+            "refund-execution-succeeded": "refund-execution-succeeded",
+            "refund-execution-failed": "refund-execution-failed",
+            "refund-execution-blocked": "refund-execution-blocked",
+            "refund-execution-unavailable": "refund-unavailable",
+        }.get(str(result or ""), "refund-unavailable")
+        return HttpResponseRedirect(f'{reverse("payments_ops:admin-refunds")}?result={result_status}')

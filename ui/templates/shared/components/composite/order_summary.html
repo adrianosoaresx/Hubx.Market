@@ -1,9 +1,9 @@
-<aside class="cart-order-summary ds-surface p-6">
-    <div class="space-y-5">
-        <header class="space-y-1">
-            <h3 class="text-lg font-semibold text-[var(--color-text-primary)]">{{ title|default:"Resumo do pedido" }}</h3>
+<aside class="ds-order-summary cart-order-summary ds-surface">
+    <div class="ds-order-summary-body">
+        <header class="ds-order-summary-header">
+            <h3 class="ds-order-summary-title">{{ title|default:"Resumo do pedido" }}</h3>
             {% if description %}
-                <p class="text-sm text-[var(--color-text-secondary)]">{{ description }}</p>
+                <p class="ds-order-summary-description">{{ description }}</p>
             {% endif %}
         </header>
 
@@ -12,7 +12,7 @@
         {% endif %}
 
         {% if items %}
-            <div class="space-y-3">
+            <div class="ds-order-summary-items">
                 {% for item in items %}
                     {% with compact=True quantity_readonly=True image_url=item.image_url image_alt=item.image_alt title=item.title subtitle=item.subtitle meta=item.meta price=item.price compare_price=item.compare_price quantity=item.quantity %}
                         {% include "shared/components/commerce/cart_item.html" %}
@@ -20,55 +20,55 @@
                 {% endfor %}
             </div>
         {% elif showcase_mode %}
-            <div class="space-y-3">
+            <div class="ds-order-summary-items">
                 {% include "shared/components/commerce/cart_item.html" with compact=True quantity_readonly=True image_url="https://placehold.co/160x160" title="Tênis Hubx Runner" subtitle="Azul / 42" meta="SKU HR-100" price="R$ 299,90" compare_price="R$ 349,90" quantity=1 %}
                 {% include "shared/components/commerce/cart_item.html" with compact=True quantity_readonly=True image_url="https://placehold.co/160x160" title="Meia Performance" subtitle="Pack com 3 pares" meta="SKU MP-030" price="R$ 59,90" quantity=1 %}
             </div>
         {% endif %}
 
-        <div class="space-y-3 border-t border-[var(--color-border-default)] pt-4 text-sm">
+        <div class="ds-order-summary-totals">
             {% if subtotal %}
-                <div class="flex items-center justify-between gap-4">
-                    <span class="text-[var(--color-text-secondary)]">Subtotal</span>
+                <div class="ds-order-summary-row">
+                    <span>Subtotal</span>
                     {% include "shared/components/commerce/price_display.html" with value=subtotal size="sm" align="right" %}
                 </div>
             {% endif %}
 
             {% if shipping %}
-                <div class="flex items-center justify-between gap-4">
-                    <span class="text-[var(--color-text-secondary)]">Frete</span>
+                <div class="ds-order-summary-row">
+                    <span>Frete</span>
                     {% include "shared/components/commerce/price_display.html" with value=shipping size="sm" align="right" %}
                 </div>
             {% endif %}
 
             {% if discount %}
-                <div class="flex items-center justify-between gap-4">
-                    <span class="text-[var(--color-text-secondary)]">Desconto</span>
-                    <span class="text-sm font-medium text-emerald-600">{{ discount }}</span>
+                <div class="ds-order-summary-row">
+                    <span>Desconto</span>
+                    <span class="ds-order-summary-discount">{{ discount }}</span>
                 </div>
             {% endif %}
 
             {% if installments %}
-                <div class="flex items-center justify-between gap-4">
-                    <span class="text-[var(--color-text-secondary)]">Parcelamento</span>
-                    <span class="text-sm font-medium text-[var(--color-text-primary)]">{{ installments }}</span>
+                <div class="ds-order-summary-row">
+                    <span>Parcelamento</span>
+                    <span class="ds-order-summary-installments">{{ installments }}</span>
                 </div>
             {% endif %}
 
             {% if total %}
-                <div class="flex items-center justify-between gap-4 border-t border-[var(--color-border-default)] pt-3">
-                    <span class="font-medium text-[var(--color-text-primary)]">Total</span>
+                <div class="ds-order-summary-row ds-order-summary-total">
+                    <span>Total</span>
                     {% include "shared/components/commerce/price_display.html" with value=total size="lg" align="right" %}
                 </div>
             {% endif %}
         </div>
 
         {% if note %}
-            <p class="text-sm text-[var(--color-text-secondary)]">{{ note }}</p>
+            <p class="ds-order-summary-note">{{ note }}</p>
         {% endif %}
 
         {% if actions %}
-            <div class="flex flex-col gap-3 border-t border-[var(--color-border-default)] pt-4">
+            <div class="ds-order-summary-actions">
                 {{ actions }}
             </div>
         {% endif %}

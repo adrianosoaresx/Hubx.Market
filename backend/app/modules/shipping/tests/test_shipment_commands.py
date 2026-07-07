@@ -37,6 +37,7 @@ class ShipmentCommandTests(TestCase):
             order_number="8001",
             tracking_code="BR123",
             carrier_name="Correios",
+            actor_role="owner",
         )
 
         shipment = Shipment.objects.get(order=self.order)
@@ -56,10 +57,10 @@ class ShipmentCommandTests(TestCase):
         )
 
     def test_mark_shipment_delivered_updates_shipment_and_notification_logs(self):
-        shipment_commands.mark_shipment_sent(tenant_id=self.tenant.id, order_number="8001")
+        shipment_commands.mark_shipment_sent(tenant_id=self.tenant.id, order_number="8001", actor_role="owner")
         EmailLog.objects.all().delete()
 
-        result = shipment_commands.mark_shipment_delivered(tenant_id=self.tenant.id, order_number="8001")
+        result = shipment_commands.mark_shipment_delivered(tenant_id=self.tenant.id, order_number="8001", actor_role="owner")
 
         shipment = Shipment.objects.get(order=self.order)
         self.assertEqual(result, "shipment-delivered")
@@ -85,18 +86,46 @@ class ShipmentCommandTests(TestCase):
         )
 
     def test_shipment_sent_is_idempotent(self):
-        first = shipment_commands.mark_shipment_sent(tenant_id=self.tenant.id, order_number="8001")
-        second = shipment_commands.mark_shipment_sent(tenant_id=self.tenant.id, order_number="8001")
+        first = shipment_commands.mark_shipment_sent(tenant_id=self.tenant.id, order_number="8001", actor_role="owner")
+        second = shipment_commands.mark_shipment_sent(tenant_id=self.tenant.id, order_number="8001", actor_role="owner")
 
         self.assertEqual(first, "shipment-sent")
         self.assertEqual(second, "shipment-sent-already-recorded")
         self.assertEqual(EmailLog.objects.filter(source_event="shipment.sent").count(), 1)
         self.assertEqual(ShipmentStatusHistory.objects.filter(event_type="shipment_sent").count(), 1)
 
+    def test_generate_shipping_label_creates_label_and_history(self):
+        result = shipment_commands.generate_shipping_label(
+            tenant_id=self.tenant.id,
+            order_number="8001",
+            actor_role="owner",
+        )
+
+        shipment = Shipment.objects.get(order=self.order)
+        self.assertEqual(result, "shipment-label-generated")
+        self.assertEqual(shipment.label_status, Shipment.LabelStatus.GENERATED)
+        self.assertTrue(shipment.label_code.startswith(f"HBX-{self.tenant.id}-8001-"))
+        self.assertEqual(shipment.label_url, "/ops/shipping/8001/label/")
+        self.assertTrue(
+            ShipmentStatusHistory.objects.filter(
+                shipment=shipment,
+                event_type="shipment_label_generated",
+            ).exists()
+        )
+
+    def test_generate_shipping_label_is_idempotent(self):
+        first = shipment_commands.generate_shipping_label(tenant_id=self.tenant.id, order_number="8001", actor_role="owner")
+        second = shipment_commands.generate_shipping_label(tenant_id=self.tenant.id, order_number="8001", actor_role="owner")
+
+        self.assertEqual(first, "shipment-label-generated")
+        self.assertEqual(second, "shipment-label-already-generated")
+        self.assertEqual(Shipment.objects.count(), 1)
+        self.assertEqual(ShipmentStatusHistory.objects.filter(event_type="shipment_label_generated").count(), 1)
+
     def test_shipment_delivered_is_idempotent(self):
-        shipment_commands.mark_shipment_sent(tenant_id=self.tenant.id, order_number="8001")
-        first = shipment_commands.mark_shipment_delivered(tenant_id=self.tenant.id, order_number="8001")
-        second = shipment_commands.mark_shipment_delivered(tenant_id=self.tenant.id, order_number="8001")
+        shipment_commands.mark_shipment_sent(tenant_id=self.tenant.id, order_number="8001", actor_role="owner")
+        first = shipment_commands.mark_shipment_delivered(tenant_id=self.tenant.id, order_number="8001", actor_role="owner")
+        second = shipment_commands.mark_shipment_delivered(tenant_id=self.tenant.id, order_number="8001", actor_role="owner")
 
         self.assertEqual(first, "shipment-delivered")
         self.assertEqual(second, "shipment-delivered-already-recorded")
@@ -106,7 +135,7 @@ class ShipmentCommandTests(TestCase):
     def test_shipment_delivered_requires_sent_shipment(self):
         Shipment.objects.create(tenant=self.tenant, order=self.order)
 
-        result = shipment_commands.mark_shipment_delivered(tenant_id=self.tenant.id, order_number="8001")
+        result = shipment_commands.mark_shipment_delivered(tenant_id=self.tenant.id, order_number="8001", actor_role="owner")
 
         self.assertEqual(result, "shipment-delivery-blocked")
         self.assertEqual(EmailLog.objects.filter(source_event="shipment.delivered").count(), 0)
@@ -115,9 +144,11 @@ class ShipmentCommandTests(TestCase):
     def test_shipment_commands_do_not_cross_tenants(self):
         other_tenant = Tenant.objects.create(name="Outra Loja", slug="outra-loja", subdomain="outra-loja")
 
-        sent_result = shipment_commands.mark_shipment_sent(tenant_id=other_tenant.id, order_number="8001")
-        delivered_result = shipment_commands.mark_shipment_delivered(tenant_id=other_tenant.id, order_number="8001")
+        sent_result = shipment_commands.mark_shipment_sent(tenant_id=other_tenant.id, order_number="8001", actor_role="owner")
+        delivered_result = shipment_commands.mark_shipment_delivered(tenant_id=other_tenant.id, order_number="8001", actor_role="owner")
+        label_result = shipment_commands.generate_shipping_label(tenant_id=other_tenant.id, order_number="8001", actor_role="owner")
 
         self.assertEqual(sent_result, "shipment-order-not-found")
         self.assertEqual(delivered_result, "shipment-order-not-found")
+        self.assertEqual(label_result, "shipment-order-not-found")
         self.assertEqual(Shipment.objects.filter(tenant=other_tenant).count(), 0)

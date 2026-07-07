@@ -7,6 +7,7 @@ from django.views.generic import TemplateView
 
 from app.modules.accounts.application.admin_permissions import PERMISSION_PAGES_MANAGE
 from app.modules.accounts.interfaces.admin_rbac import request_admin_can, request_owner_role, request_tenant_id
+from app.modules.checkout.application.checkout_page_queries import checkout_page_queries
 from app.modules.pages.application.admin_page_commands import admin_page_commands
 from app.modules.pages.application.admin_page_queries import PAGE_STATUS_OPTIONS, STATUS_OPTIONS, admin_page_queries
 from app.modules.pages.application.storefront_page_queries import storefront_page_queries
@@ -20,11 +21,20 @@ def _request_owner_role(request) -> str:
     return request_owner_role(request)
 
 
+class DesignSystemPagesView(TemplateView):
+    template_name = "pages/design_system/pages.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(checkout_page_queries.fallback_repository.get_checkout_page_data(requested_stage="delivery"))
+        return context
+
+
 def _edit_link(page: dict[str, object], *, can_manage: bool) -> str:
     if not can_manage:
         return "Sem permissão para editar"
     return format_html(
-        '<a class="ds-btn-secondary" href="{}">Editar</a>',
+        '<a class="ds-btn ds-btn-secondary ds-btn-sm" href="{}">Editar</a>',
         reverse("pages:admin-pages-edit", kwargs={"page_id": page["id"]}),
     )
 

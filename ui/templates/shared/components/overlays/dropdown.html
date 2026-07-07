@@ -1,5 +1,5 @@
-<details class="relative inline-block text-left" {% if open %}open{% endif %}>
-    <summary class="list-none">
+<details class="ds-dropdown" {% if open %}open{% endif %}>
+    <summary class="ds-dropdown-summary">
         {% if trigger %}
             {{ trigger }}
         {% else %}
@@ -7,19 +7,20 @@
         {% endif %}
     </summary>
 
-    <div class="absolute right-0 z-20 mt-2 min-w-56 rounded-xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-2 shadow-lg">
+    <div class="ds-dropdown-panel">
         {% if title %}
-            <div class="border-b border-[var(--color-border-default)] px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
+            <div class="ds-dropdown-title">
                 {{ title }}
             </div>
         {% endif %}
 
-        <div class="py-1">
+        <div class="ds-dropdown-list">
             {% for item in items %}
                 {% if item.href %}
                     <a
                         href="{{ item.href }}"
-                        class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-[var(--color-text-primary)] hover:bg-slate-50 {% if item.disabled %}pointer-events-none opacity-50{% endif %}"
+                        class="ds-dropdown-item {% if item.disabled %}is-disabled{% endif %}"
+                        {% if item.disabled %}aria-disabled="true" tabindex="-1"{% endif %}
                     >
                         {% if item.icon %}<span aria-hidden="true">{{ item.icon }}</span>{% endif %}
                         <span>{{ item.label }}</span>
@@ -27,7 +28,7 @@
                 {% else %}
                     <button
                         type="{{ item.type|default:'button' }}"
-                        class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm text-[var(--color-text-primary)] hover:bg-slate-50 {% if item.disabled %}pointer-events-none opacity-50{% endif %}"
+                        class="ds-dropdown-item {% if item.disabled %}is-disabled{% endif %}"
                         {% if item.disabled %}disabled{% endif %}
                     >
                         {% if item.icon %}<span aria-hidden="true">{{ item.icon }}</span>{% endif %}
@@ -35,7 +36,7 @@
                     </button>
                 {% endif %}
             {% empty %}
-                <div class="px-3 py-2 text-sm text-[var(--color-text-secondary)]">Nenhuma ação disponível.</div>
+                <div class="ds-dropdown-empty">Nenhuma ação disponível.</div>
             {% endfor %}
         </div>
     </div>

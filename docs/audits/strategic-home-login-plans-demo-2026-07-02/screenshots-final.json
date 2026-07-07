@@ -1,0 +1,52 @@
+[
+  {
+    "key": "final-home",
+    "path": "X:/Projeto/Hubx.market/docs/audits/strategic-home-login-plans-demo-2026-07-02/final-home.png",
+    "h1": "Crie sua loja virtual com uma operação pronta para vender.",
+    "hasHorizontalOverflow": false,
+    "href": "http://127.0.0.1:8002/",
+    "innerWidth": 548,
+    "scrollWidth": 533,
+    "title": "Hubx Market"
+  },
+  {
+    "key": "final-login",
+    "path": "X:/Projeto/Hubx.market/docs/audits/strategic-home-login-plans-demo-2026-07-02/final-login.png",
+    "h1": "Entrar",
+    "hasHorizontalOverflow": false,
+    "href": "http://127.0.0.1:8002/accounts/login/",
+    "innerWidth": 548,
+    "scrollWidth": 533,
+    "title": "Entrar"
+  },
+  {
+    "key": "final-plans",
+    "path": "X:/Projeto/Hubx.market/docs/audits/strategic-home-login-plans-demo-2026-07-02/final-plans.png",
+    "h1": "Escolha o plano para criar sua loja virtual.",
+    "hasHorizontalOverflow": false,
+    "href": "http://127.0.0.1:8002/plans/",
+    "innerWidth": 548,
+    "scrollWidth": 533,
+    "title": "Planos Hubx Market"
+  },
+  {
+    "key": "final-demo",
+    "path": "X:/Projeto/Hubx.market/docs/audits/strategic-home-login-plans-demo-2026-07-02/final-demo.png",
+    "h1": "Escolha como deseja acessar a loja demo.",
+    "hasHorizontalOverflow": false,
+    "href": "http://127.0.0.1:8002/demo/",
+    "innerWidth": 548,
+    "scrollWidth": 533,
+    "title": "Acessar demo Hubx Market"
+  },
+  {
+    "key": "final-demo-admin",
+    "path": "X:/Projeto/Hubx.market/docs/audits/strategic-home-login-plans-demo-2026-07-02/final-demo-admin.png",
+    "h1": "Operação da loja",
+    "hasHorizontalOverflow": false,
+    "href": "http://hubx-demo.localhost:8002/ops/",
+    "innerWidth": 548,
+    "scrollWidth": 533,
+    "title": "Operação da loja"
+  }
+]

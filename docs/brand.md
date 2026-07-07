@@ -28,10 +28,13 @@ Hubx Market é a infraestrutura de e-commerce da Hubx voltada para empresas que 
 - Em namespace Python, usar `hubx_market`
 
 ## Identidade visual inicial
-- Primary: `#4F46E5`
-- Secondary: `#06B6D4`
-- Accent: `#22C55E`
-- Background: `#0F172A`
+- Logo highlight: `#FFE797`
+- Logo gold: `#D6A937`
+- Primary: `#9A6410`
+- Primary hover/shadow: `#794A0C`
+- Background/Text: `#0F172A`
+
+As cores funcionais de feedback continuam semânticas e não devem ser substituídas por ouro quando comunicarem sucesso, erro, alerta ou informação operacional.
 
 ## Uso do nome em exemplos
 - `lojax.hubx.market`
@@ -43,12 +46,14 @@ Hubx Market é a infraestrutura de e-commerce da Hubx voltada para empresas que 
 - Hubx Market aparece como plataforma operadora, especialmente no footer.
 - Em admin da loja, a identidade do tenant aparece como contexto operacional.
 - Em project/platform owner, Hubx Market é a marca principal.
+- O hero institucional da storefront deve priorizar imagem real e copy da loja; Hubx Market não deve assumir a narrativa principal em host tenant-owned.
 
 ## Fallback de logo
+- Quando `Tenant.logo_url` estiver configurado, usar essa imagem como marca principal da loja em shells tenant-owned e blocos institucionais.
 - Quando não houver imagem de logo, usar monograma derivado do nome exibido.
 - O nome comercial preferencial é `store_display_name` quando existir.
 - Na ausência de nome comercial, usar `request.tenant.name`.
-- Upload/storage de logo permanece fora do primeiro corte de UI.
+- O corte atual aceita URL pública de logo; upload/storage de arquivo permanece fora desta etapa.
 
 ## Footer
 - Texto padrão permitido: "Operado com Hubx Market".

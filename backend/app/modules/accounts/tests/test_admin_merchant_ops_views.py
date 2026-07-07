@@ -41,6 +41,25 @@ class AdminMerchantOperationsViewTests(TestCase):
         self.assertContains(response, "Pedidos pendentes")
         self.assertContains(response, "/ops/orders/")
         self.assertContains(response, "Filas operacionais")
+        self.assertContains(response, 'aria-label="Tema da interface"')
+        self.assertContains(response, "Claro")
+        self.assertContains(response, "Escuro")
+        self.assertContains(response, "Sistema")
+        self.assertNotContains(response, 'href="/catalog/"')
+        self.assertNotContains(response, 'href="/cart/"')
+        self.assertNotContains(response, 'href="/accounts/account/orders/"')
+
+    def test_merchant_ops_dashboard_keeps_logout_without_customer_top_menu(self):
+        self._login_owner(email="owner.ops@hubx.market", role="owner")
+
+        response = self.client.get(reverse("merchant_ops:admin-dashboard"), HTTP_HOST=self.host)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'action="/accounts/logout/"')
+        self.assertContains(response, "Sair")
+        self.assertNotContains(response, 'href="/catalog/"')
+        self.assertNotContains(response, 'href="/cart/"')
+        self.assertNotContains(response, 'href="/accounts/account/orders/"')
 
     def test_merchant_ops_dashboard_personalizes_navigation_for_support(self):
         self._login_owner(email="support.ops@hubx.market", role="support")

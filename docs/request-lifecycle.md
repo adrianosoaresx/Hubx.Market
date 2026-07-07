@@ -57,7 +57,7 @@ Exemplos:
 
 # 3. Tenant Resolution
 
-O tenant é identificado, no contrato atual, pelo **subdomínio**.
+O tenant é identificado principalmente pelo **subdomínio**.
 
 Exemplo:
 
@@ -73,8 +73,11 @@ Regras:
 
 - nenhum dado pode ser acessado sem tenant
 - isolamento entre tenants é obrigatório
-- hosts fora de `*.hubx.market` não resolvem tenant por padrão neste estágio
-- `custom_domain` ainda não participa da resolução HTTP; quando aparecer no modelo, ele não deve ser interpretado como capability ativa sem suporte explícito no middleware
+- hosts fora de `*.hubx.market` não resolvem tenant por padrão
+- `custom_domain` só participa da resolução HTTP quando `HUBX_MARKET_CUSTOM_DOMAIN_RESOLVER_ENABLED=True`
+- resolução por `custom_domain` deve usar match exato de tenant ativo e não deve criar fallback global
+- tenant resolvido com `maintenance_mode=True` deve bloquear storefront/checkout com 503, preservando `/accounts/`, `/ops/` e rotas técnicas para configuração
+- DNS, TLS e redirects de domínio customizado continuam fora do código da aplicação
 
 ---
 
@@ -105,6 +108,12 @@ Quando `HUBX_OPS_AUTH_GATE_ENFORCED=1`, um gate posterior para `/ops/` aplica:
 - autenticado sem `request.owner_user` ativo → `403`
 - autenticado com `request.owner_user` ativo, mas sem permissão do prefixo `/ops/` → `403` e `owner.ops_permission_denied`
 - autenticado com `request.owner_user` ativo e permissão suficiente → segue para view
+
+Para writes administrativos de loja, o gate HTTP não é a última defesa:
+
+- `customers` exige `tenant_id` e `customers.manage` no command service para flags manuais;
+- `orders` exige `tenant_id` e `orders.manage` no command service para status, fulfillment, cancelamento e exceções de estoque;
+- `shipping` exige `tenant_id` e `shipping.manage` no command service para envio, entrega e provider de tracking.
 
 ---
 
@@ -308,9 +317,104 @@ Request
 
 Observações:
 
-- a tela não chama provider de cobrança.
+- a tela pode exibir provider-alvo de billing SaaS já registrado na assinatura.
+- a tela não chama API de provider de cobrança.
 - a tela não altera plano, status ou pagamentos de pedidos.
 - setup/mutação fica em application command e não em view.
+
+---
+
+# Fluxo público: aquisição de plano SaaS
+
+Requests:
+
+```text
+GET  /plans/
+POST /plans/
+```
+
+Fluxo:
+
+Request
+→ Tenant resolution pode existir, mas é ignorado para contexto de loja
+→ Subscriptions public view
+→ `subscription_queries.list_public_plans`
+→ `subscription_commands.create_public_acquisition_lead`
+→ `SubscriptionAcquisitionLead`
+→ `AuditLog` platform-scope
+→ Response
+
+Observações:
+
+- o fluxo público não cria `Tenant`, `OwnerUser`, `TenantSubscription`, invoice, pagamento ou catálogo.
+- somente planos `active` podem ser solicitados.
+- host tenant-owned não deve transformar a página de planos em storefront da loja resolvida.
+
+---
+
+# Fluxo público: signup self-service SaaS
+
+Requests:
+
+```text
+GET  /plans/signup/
+POST /plans/signup/
+```
+
+Fluxo:
+
+Request
+→ Tenant resolution pode existir, mas signup opera como contexto central
+→ Subscriptions public signup view
+→ feature flag `HUBX_PUBLIC_SIGNUP_ENABLED`
+→ controle opcional por `HUBX_PUBLIC_SIGNUP_ACCESS_TOKEN`
+→ `tenants.application.public_tenant_signup_commands`
+→ `Tenant` em `maintenance_mode`
+→ `TenantOnboarding` concluído
+→ `TenantSubscription(status=trialing, trial_ends_at=started_at + plan.trial_days, billing_provider_code=asaas por default)`
+→ `accounts.application.initial_owner_provisioning_commands`
+→ `OwnerUser` inicial com senha utilizável
+→ `AuditLog` tenant-scoped
+→ Response
+
+Observações:
+
+- não cria `Customer`, catálogo, pedido, pagamento, invoice ou recurso/cobrança externa no billing provider.
+- não coleta dados de cartão; cartão obrigatório é requisito comercial do plano e deve ser resolvido em fluxo seguro hospedado, inicialmente Asaas.
+- subdomínio reservado/duplicado e e-mail já usado bloqueiam o signup.
+- `/plans/` continua sendo aquisição assistida por lead.
+
+---
+
+# Fluxo platform: fila de aquisições SaaS
+
+Requests:
+
+```text
+GET  /ops/platform/acquisitions/
+GET  /ops/platform/acquisitions/<lead_id>/
+POST /ops/platform/acquisitions/<lead_id>/convert/
+POST /ops/platform/acquisitions/<lead_id>/discard/
+```
+
+Fluxo:
+
+Request
+→ Platform owner context
+→ RBAC platform
+→ Subscriptions acquisition view
+→ `subscription_queries` ou `subscription_commands`
+→ `SubscriptionAcquisitionLead`
+→ opcional: `tenant_onboarding_commands.create_onboarding`
+→ `AuditLog` platform-scope
+→ Redirect/render
+
+Observações:
+
+- leitura exige `platform.tenants.view`.
+- conversão/descarte exigem `platform.tenants.manage`.
+- conversão cria/preenche onboarding, mas não chama complete e não provisiona tenant/owner/assinatura.
+- descarte altera apenas o lead.
 
 ---
 
@@ -1572,6 +1676,8 @@ Observações:
   - aprovação de refund: tenant resolution/admin context → view ops → `payments.application.refund_approval_commands` → persistência → `audit_log_commands.record_event`
   - execução de refund: command/service interno → `payments.application.refund_execution_commands` → provider adapter → persistência → `audit_log_commands.record_event`
   - visibilidade de produto: admin context → `catalog.application.admin_product_commands` → persistência → `audit_log_commands.record_event`
+- CRUD administrativo de produto segue: request `/ops/catalog/products/...` → tenant resolution → owner/admin context → view fina de `catalog.interfaces` → `catalog.application.admin_product_commands` → persistência em `Product` + `ProductVariant` padrão → `AuditLog` `product.created`, `product.updated` ou `product.deactivated` → redirect/render com erro.
+- A desativação administrativa de produto substitui delete físico: `POST /ops/catalog/products/<slug>/actions/deactivate/` atualiza status/visibilidade e preserva histórico.
 - API keys continuam registrando eventos em creation/revocation/quota/quota exceeded sem expor segredo/hash.
 - a expansão não cria middleware de auditoria, não loga leituras e não altera responses públicas.
 - platform tenant admin surface futura deve seguir: request `/ops/platform/tenants/` → autenticação owner/platform → RBAC platform permission → application service de `tenants` → persistência/audit quando houver write → response.
@@ -1617,11 +1723,18 @@ Observações:
 - A conclusão segue: onboarding ready → `platform_tenant_admin_commands.create_tenant(...)` → `subscription_commands.set_tenant_subscription(...)` → `platform_tenant_admin_commands.bootstrap_owner(...)` → audit completion → redirect para a jornada/loja criada.
 - O fluxo não chama provider de billing, DNS/TLS, pagamentos de pedido, frete ou catálogo.
 - Platform Owner Context permite que `/ops/platform/...` use o portal central `hubx.market`, resolvendo `request.owner_user` por e-mail autenticado e permissão `platform.tenants.view`.
+- Home central segue: request `/` em host sem tenant → middleware não resolve `request.tenant` → `StorefrontHomeView` renderiza `portal_home_page.html` → navegação pública para login, planos e demo. Esse fluxo não lê catálogo, pedidos, clientes ou admin tenant-owned.
+- Home tenant-owned segue: request `/` em host de loja → tenant resolution → `StorefrontHomeView` → leitura tenant-scoped de produtos em destaque → `tenants.application.storefront_branding_queries` compõe o hero institucional com campos `storefront_hero_*` e fallback visual do próprio tenant → template `home_page.html`. Esse fluxo não emite evento nem altera catálogo, pedidos, clientes ou pagamentos.
+- Configuração de branding segue: request `/ops/branding/` em host de loja → tenant resolution → owner context/RBAC `/ops/` → `StorefrontBrandingSettingsView` → `tenants.application.storefront_branding_commands.update_storefront_hero(...)` → persistência de `Tenant.logo_url` e `Tenant.storefront_hero_*` → `AuditLog` tenant-scoped → redirect/render. Esse fluxo não altera catálogo, pedidos, clientes, pagamentos nem dados platform-only.
+- Demo público segue: request `/demo/` em host central → middleware sem tenant → `PublicDemoAccessView` consulta apenas `Tenant` ativo pelo subdomínio configurado em `HUBX_MARKET_DEMO_TENANT_SUBDOMAIN` → renderiza uma tela pública com dois caminhos de sessão direta para a loja demo: admin da loja e cliente da loja. Em requisição local por `localhost`, o host/porta da própria request prevalece para montar links `hubx-demo.localhost:<porta>/accounts/demo-session/?profile=...`. Ao clicar, a request já chega no host tenant-owned, o middleware resolve o tenant demo, `accounts.application.demo_session_login_commands` valida tenant/perfil/e-mail fixo e cria a sessão Django correspondente antes de redirecionar para `/ops/` ou `/`. Se o tenant ou perfil não for válido, retorna 404 seguro.
+- Demo tenant-owned read-only segue: request em `hubx-demo.<root>` → `TenantSubdomainMiddleware` resolve o tenant → `DemoTenantReadOnlyMiddleware` marca `request.is_demo_read_only=True` e bloqueia `POST`, `PUT`, `PATCH` e `DELETE` fora de endpoints de sessão/login/logout → views GET renderizam a demo com logo/paleta Hubx, imagens raster realistas e aviso de somente leitura. O mesmo contrato impede mutações de carrinho, checkout, newsletter, reviews, endereços e admin da loja.
+- Analytics de descoberta storefront também respeita o modo read-only: `StorefrontDiscoveryAnalyticsService` descarta eventos para o tenant demo oficial e não cria `StorefrontDiscoveryEventLog` durante navegação da demo.
 - Login central em `hubx.market` direciona platform owner/admin para `/ops/platform/tenants/`, owner de loja única para `https?://{loja}.hubx.market/ops/` e owners multi-loja para `/accounts/select-store/`.
+- Login central usa navegação pública de portal, planos e demo; login tenant-owned preserva navegação de loja, catálogo e pedidos.
 - Login tenant-owned em `{loja}.hubx.market` continua respeitando `request.tenant` para storefront, customers e admin da loja.
 - Platform owner/admin em runtime central exige `OwnerUser` ativo no tenant reservado `platform-system` (`HUBX_PLATFORM_TENANT_SLUG`); role `owner` em uma loja comum não concede contexto platform no portal central.
 - Requests `/ops/platform/...` feitas em host tenant-owned são bloqueadas pelo gate; platform surfaces só rodam no host central.
-- O smoke local `local_e2e_smoke` valida login/redirect por perfil, menus contextuais, links GET locais, bloqueio de platform em host de loja e imagens do storefront.
+- O smoke local `local_e2e_smoke` valida home central, planos, login central, redirect demo, login/redirect por perfil, menus contextuais, links GET locais, bloqueio de platform em host de loja, bloqueio read-only da demo e imagens raster do storefront.
 
 ---
 

@@ -10,12 +10,20 @@ class Shipment(models.Model):
         DELIVERED = "delivered", "Entregue"
         CANCELED = "canceled", "Cancelado"
 
+    class LabelStatus(models.TextChoices):
+        MISSING = "missing", "Sem etiqueta"
+        GENERATED = "generated", "Gerada"
+
     tenant = models.ForeignKey("tenants.Tenant", on_delete=models.CASCADE, related_name="shipments")
     order = models.OneToOneField("orders.Order", on_delete=models.CASCADE, related_name="shipment")
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.CREATED)
     tracking_code = models.CharField(max_length=120, blank=True)
     tracking_url = models.URLField(blank=True)
     carrier_name = models.CharField(max_length=120, blank=True)
+    label_status = models.CharField(max_length=16, choices=LabelStatus.choices, default=LabelStatus.MISSING)
+    label_code = models.CharField(max_length=120, blank=True)
+    label_url = models.CharField(max_length=255, blank=True)
+    label_created_at = models.DateTimeField(null=True, blank=True)
     sent_at = models.DateTimeField(null=True, blank=True)
     delivered_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -26,6 +34,7 @@ class Shipment(models.Model):
         indexes = [
             models.Index(fields=("tenant", "status"), name="ship_tenant_status_idx"),
             models.Index(fields=("tenant", "tracking_code"), name="ship_tenant_tracking_idx"),
+            models.Index(fields=("tenant", "label_code"), name="ship_tenant_label_idx"),
         ]
 
     def __str__(self) -> str:  # pragma: no cover

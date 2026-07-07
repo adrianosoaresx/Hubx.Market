@@ -13,7 +13,9 @@ Integrar pagamentos de pedidos.
 - processar webhook
 
 ## Regras de negócio
-- gateway inicial é Pagar.me
+- provider inicial configurado é Asaas para checkout hospedado de pedidos.
+- Pagar.me permanece como provider alternativo e base existente de refund sandbox-first.
+- detalhes de provider ficam em `payments.infrastructure`; `checkout` e `orders` recebem apenas contratos estáveis.
 
 ## Webhook readiness
 - o módulo agora expõe um endpoint mínimo em `/payments/webhook/`
@@ -21,12 +23,14 @@ Integrar pagamentos de pedidos.
   - aceita apenas `POST` com JSON
   - exige `X-Hubx-Webhook-Token` para payloads genéricos internos
   - para payloads estilo `Pagar.me`, já aceita validação por `X-Hub-Signature`
+  - para payloads Asaas, aceita token via `asaas-access-token`, `x-asaas-token` ou token compartilhado Hubx
   - aceita identificação explícita do tenant por:
     - `tenant_slug`
     - ou `tenant_subdomain`
   - exige `order_number`
   - traduz apenas `payment.paid`
 - o webhook do `Pagar.me` agora também pode validar a origem usando HMAC-SHA1 do body com a `PAGARME_SECRET_KEY`
+- o webhook do `Asaas` normaliza eventos `PAYMENT_RECEIVED`/`PAYMENT_CONFIRMED` como `payment.paid` e eventos de atraso, deleção, refund ou chargeback como `payment.failed`
 - a normalização do payload agora acontece inteiramente dentro de `payments`
 - `orders` continua recebendo apenas um contrato limpo e estável:
   - `tenant_id`
@@ -47,6 +51,15 @@ Integrar pagamentos de pedidos.
     - `data.id` e/ou `data.charges[].id`
     - `data.metadata.tenant_slug|tenant_subdomain`
     - `data.metadata.order_number`
+  - estilo Asaas:
+    - `event=PAYMENT_RECEIVED`
+    - `event=PAYMENT_CONFIRMED`
+    - `event=PAYMENT_OVERDUE`
+    - `event=PAYMENT_DELETED`
+    - `event=PAYMENT_REFUNDED`
+    - `event=PAYMENT_CHARGEBACK_REQUESTED`
+    - `payment.id`
+    - `payment.externalReference=hubx-market:<tenant_subdomain>:<order_number>`
   - estilo Stripe:
     - `type=payment_intent.succeeded`
     - `type=payment_intent.payment_failed`
@@ -127,6 +140,20 @@ Integrar pagamentos de pedidos.
 - a criação da intent externa agora também exige `tenant_id` explícito:
   - não abre checkout externo por lookup global de `attempt_key`
   - sem tenant resolvido, responde como indisponível
+
+## Asaas hosted payment adapter
+- `PAYMENTS_PROVIDER_DEFAULT=asaas` é o default para ambientes novos.
+- o adapter Asaas cria cliente e pagamento hospedado usando:
+  - `ASAAS_API_KEY`
+  - `ASAAS_SANDBOX`
+  - `ASAAS_BASE_URL`
+  - `ASAAS_WEBHOOK_TOKEN`
+- o adapter envia autenticação pelo header `access_token`.
+- `pix`, `boleto` e `credit_card` são mapeados para `PIX`, `BOLETO` e `CREDIT_CARD`; outros métodos caem em `UNDEFINED`.
+- o app redireciona para `invoiceUrl`/URL hospedada retornada pelo Asaas e não coleta cartão, CVV, validade ou token de cartão.
+- a referência externa segue `hubx-market:<tenant_subdomain>:<order_number>` para permitir normalização idempotente do webhook.
+- refund Asaas usa `POST /payments/{id}/refund` de forma conservadora; respostas assíncronas ou status desconhecido permanecem como `accepted` no ledger.
+- segredos não devem ser versionados; em sandbox, o projeto usa os mesmos nomes de variáveis já existentes em outros serviços Hubx.
 
 ## Hosted payment redirect readiness
 - o módulo `payments` agora também expõe um redirect interno mínimo em `/payments/hosted/<attempt_key>/`
@@ -2795,6 +2822,26 @@ Integrar pagamentos de pedidos.
   - **Go técnico para encerrar a trilha de preparação de refund provider com produção manual limitada apenas como caminho futuro condicionado**.
 - motivo:
   - o sistema agora está preparado para registrar e avaliar evidência, mas não deve movimentar dinheiro real enquanto essa evidência não existir fora dos testes mockados.
+
+## Refund Provider Admin Execution
+- `/ops/payments/refunds/` agora opera o ledger `PaymentRefund` em duas etapas explícitas:
+  - `requested -> processing` por aprovação interna;
+  - `processing -> provider` por `POST /ops/payments/refunds/<refund_key>/execute/`.
+- writes exigem role tenant-scoped resolvida e permissão `payments.manage`; leitura continua protegida por `payments.view` no prefix gate.
+- a execução chama `payments.application.refund_execution_commands.execute_refund(...)`, que monta `RefundProviderContract`, resolve o adapter por `payments.infrastructure.provider_adapters.get_provider_adapter(...)` e registra a resposta em `metadata.provider_refund`.
+- `PagarmeProviderAdapter.create_refund(...)` usa o endpoint conservador de cancelamento/refund de charge já validado na trilha sandbox-first.
+- `AsaasProviderAdapter.create_refund(...)` usa `POST /payments/{id}/refund`, enviando `value` quando há valor positivo e `description` com o motivo operacional.
+- status do provider é normalizado de forma defensiva:
+  - `succeeded` apenas para respostas explicitamente concluídas;
+  - `failed` para respostas explicitamente recusadas;
+  - `accepted` para respostas assíncronas, vazias ou ainda pendentes.
+- a tabela admin mostra `provider_code` e `provider_refund_reference`, mantendo rastreabilidade operacional sem expor payload sensível.
+
+### Escopo deliberado
+- não emite `payment.refunded` automaticamente.
+- não altera `Order`, `PaymentAttempt`, estoque, cupom, shipment ou notifications depois do refund.
+- não tenta refund de boleto Asaas pelo endpoint async separado de bank slip neste corte.
+- não libera automação em massa; toda execução é POST manual, tenant-scoped, idempotente pelo ledger e auditada.
 
 ### Próxima abordagem recomendada
 - **Payments Refund/Reversal Track Closure Review**

@@ -3,7 +3,7 @@
 {% block title %}{{ page_title|default:"Checkout" }}{% endblock %}
 
 {% block checkout_content %}
-<section class="cart-checkout-page checkout-page space-y-8">
+<section class="cart-checkout-page checkout-page space-y-6">
     <header class="storefront-hero checkout-page-hero space-y-3">
         <p class="text-xs font-medium uppercase tracking-wide text-[var(--color-text-secondary)]">{{ page_eyebrow|default:"Checkout" }}</p>
         <div class="space-y-2">
@@ -20,7 +20,7 @@
     </header>
 
     {% if checkout_feedback %}
-        {% include "shared/components/feedback/alert.html" with variant=checkout_feedback.variant icon=checkout_feedback.icon title=checkout_feedback.title description=checkout_feedback.description %}
+        {% include "shared/components/feedback/alert.html" with variant=checkout_feedback.variant icon=checkout_feedback.icon icon_name=checkout_feedback.icon_name title=checkout_feedback.title description=checkout_feedback.description %}
     {% endif %}
 
     {% if stage_feedback %}
@@ -28,7 +28,7 @@
     {% endif %}
 
     {% if stage_title or stage_description %}
-        {% include "shared/components/feedback/alert.html" with variant="info" icon="🧭" title=stage_title description=stage_description %}
+        {% include "shared/components/feedback/alert.html" with variant="info" title=stage_title description=stage_description %}
     {% endif %}
 
     {% if current_stage_completion_hint %}
@@ -43,9 +43,16 @@
             </div>
             <div class="space-y-3">
                 {% for item in review_readiness_items %}
-                    <div class="rounded-2xl border border-[var(--color-border-default)] p-4">
-                        <p class="text-sm font-medium text-[var(--color-text-primary)]">
-                            {% if item.ready %}✅{% else %}⏳{% endif %} {{ item.label }}
+                    <div class="ds-check-item">
+                        <p class="ds-check-item-title">
+                            <span class="ds-check-item-icon {% if item.ready %}is-ready{% endif %}" aria-hidden="true">
+                                {% if item.ready %}
+                                    {% include "shared/partials/icon.html" with name="check" size="sm" %}
+                                {% else %}
+                                    {% include "shared/partials/icon.html" with name="clock" size="sm" %}
+                                {% endif %}
+                            </span>
+                            <span>{{ item.label }}</span>
                         </p>
                         <p class="mt-1 text-sm text-[var(--color-text-secondary)]">{{ item.description }}</p>
                     </div>
@@ -82,7 +89,7 @@
                     Estes itens mudaram de disponibilidade depois que a sessão foi criada. Nenhum pedido foi gerado.
                 </p>
             </div>
-            <div class="divide-y divide-[var(--color-border-default)] rounded-2xl border border-[var(--color-border-default)]">
+            <div class="ds-subpanel divide-y divide-[var(--color-border-default)] p-0">
                 {% for conflict in inventory_conflicts %}
                     <article class="space-y-2 p-4">
                         <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
@@ -92,7 +99,7 @@
                                     <p class="text-xs text-[var(--color-text-secondary)]">SKU {{ conflict.variant_sku }}</p>
                                 {% endif %}
                             </div>
-                            <span class="rounded-full bg-[var(--color-surface-muted)] px-3 py-1 text-xs font-medium text-[var(--color-text-secondary)]">
+                            <span class="ds-pill">
                                 Solicitado: {{ conflict.requested_quantity }} · Disponível: {{ conflict.available_quantity }}
                             </span>
                         </div>
@@ -143,7 +150,7 @@
         {% endwith %}
     {% endif %}
 
-    <div class="cart-checkout-layout grid gap-8 lg:grid-cols-[minmax(0,1.5fr)_minmax(22rem,26rem)]">
+    <div class="cart-checkout-layout grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(24rem,28rem)]">
         <div class="space-y-6">
             <form method="{{ form_method|default:'post' }}" action="{{ form_action|default:request.path }}" class="space-y-6">
                 {% csrf_token %}
@@ -252,7 +259,7 @@
                             {% else %}
                                 {% include "shared/components/feedback/empty_state.html" with
                                     size="md"
-                                    icon="Carrinho"
+                                    icon_name="shopping-cart"
                                     title="Seu carrinho esta vazio"
                                     description="Adicione itens antes de concluir a compra."
                                 %}
@@ -261,7 +268,7 @@
                     </div>
 
                     {% if show_cart_surface %}
-                        <div class="rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] p-4">
+                        <div class="ds-subpanel">
                             <p class="text-sm font-medium text-[var(--color-text-primary)]">Carrinho leve desta sessão</p>
                             <p class="mt-1 text-sm text-[var(--color-text-secondary)]">Ajuste itens e totais aqui. Quando estiver tudo certo, siga para entrega sem sair do fluxo atual.</p>
                         </div>
@@ -286,7 +293,9 @@
                         </div>
                     {% endif %}
                     {% include "shared/components/actions/button.html" with label=back_label|default:"Voltar ao carrinho" variant="secondary" href=back_url|default:"#cart" %}
-                    {% if not checkout_session_readonly %}
+                    {% if demo_checkout_action_href %}
+                        {% include "shared/components/actions/button.html" with label=demo_checkout_action_label|default:"Simular conclusão" variant="primary" href=demo_checkout_action_href %}
+                    {% elif not checkout_session_readonly %}
                         {% include "shared/components/actions/button.html" with label=submit_label|default:"Confirmar pedido" variant="primary" type="submit" loading=is_submitting %}
                     {% endif %}
                 </div>
@@ -303,8 +312,13 @@
                     <h2 class="text-base font-semibold text-[var(--color-text-primary)]">{{ checkout_trust_title }}</h2>
                     <div class="space-y-3">
                         {% for item in checkout_trust_items %}
-                            <div class="rounded-2xl border border-[var(--color-border-default)] p-4">
-                                <p class="text-sm font-medium text-[var(--color-text-primary)]">✅ {{ item.label }}</p>
+                            <div class="ds-check-item">
+                                <p class="ds-check-item-title">
+                                    <span class="ds-check-item-icon is-ready" aria-hidden="true">
+                                        {% include "shared/partials/icon.html" with name="check" size="sm" %}
+                                    </span>
+                                    <span>{{ item.label }}</span>
+                                </p>
                                 <p class="mt-1 text-sm text-[var(--color-text-secondary)]">{{ item.description }}</p>
                             </div>
                         {% endfor %}

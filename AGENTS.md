@@ -15,6 +15,7 @@ Agentes devem consultar:
 Core
 
 - docs/codex-knowledge-transfer.md
+- docs/implementation-inventory.md
 - docs/ai-rules.md
 - docs/engineering-principles.md
 - docs/repository-guidelines.md

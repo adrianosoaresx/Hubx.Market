@@ -23,7 +23,7 @@ exemplo:
 
 lojax.hubx.market
 
-No contrato atual, esse acesso por subdomínio é também a única forma oficial de resolução HTTP de tenant. O campo `custom_domain` já existe no modelo de `tenants`, mas permanece como readiness de domínio até que exista suporte explícito no middleware e nas regras operacionais associadas.
+No contrato padrão, esse acesso por subdomínio continua sendo a forma principal de resolução HTTP de tenant. O campo `custom_domain` também existe no modelo de `tenants` e pode participar da resolução por match exato quando `HUBX_MARKET_CUSTOM_DOMAIN_RESOLVER_ENABLED=True`. DNS, TLS e ativação operacional do domínio continuam fora do app e dependem de runbook/evidência por ambiente.
 
 Cada tenant possui:
 
@@ -32,6 +32,9 @@ Cada tenant possui:
 - pedidos próprios
 - pagamentos próprios
 - configurações próprias
+- identidade institucional leve da storefront, incluindo hero da home quando configurado
+
+O MVP self-service público é controlado por `HUBX_PUBLIC_SIGNUP_ENABLED` e, quando configurado, por `HUBX_PUBLIC_SIGNUP_ACCESS_TOKEN`: `/plans/` continua registrando aquisição assistida como lead, enquanto `/plans/signup/` pode provisionar tenant em modo manutenção, assinatura trial interna com fim calculado pelo plano, provider-alvo de billing SaaS e owner inicial sem ativar cobrança recorrente. Planos públicos podem expor 30 dias grátis e cartão obrigatório como contrato comercial, mas a aplicação não coleta dados de cartão nessa superfície; Asaas é o provider inicial para checkout hospedado e billing SaaS futuro.
 
 ---
 
@@ -150,8 +153,10 @@ api-keys
 Responsabilidades:
 
 - gerenciamento de lojas
+- branding e configurações institucionais leves da storefront
 - autenticação de usuários administrativos
 - planos SaaS
+- aquisição pública de planos como lead seguro
 - auditoria
 
 ---
@@ -279,6 +284,7 @@ Fluxo padrão:
 HTTP Request
 → Middleware
 → Tenant Resolution
+→ Maintenance Guard para storefront/checkout
 → Owner Context Resolution em `/ops/`
 → View
 → Application Service
@@ -286,6 +292,8 @@ HTTP Request
 → Persistence
 → Events
 → Response
+
+Exemplo administrativo atual: CRUD de produtos em `/ops/catalog/products/...` passa por view fina de `catalog.interfaces`, command service em `catalog.application`, persistência em `Product` + `ProductVariant` padrão e auditoria tenant-scoped.
 
 Documentação detalhada:
 

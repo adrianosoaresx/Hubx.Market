@@ -5,40 +5,7 @@
 {% block content %}
 {% firstof hero_title store_display_name request.tenant.store_display_name request.tenant.name "Loja online" as resolved_home_title %}
 <section class="home-page space-y-6 md:space-y-8">
-    <section class="storefront-identity-banner ds-surface overflow-hidden p-4 sm:p-5 lg:p-7">
-        <div class="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_auto] lg:items-center">
-            <div class="space-y-3 sm:space-y-4">
-                {% include "shared/partials/brand_identity.html" with brand_name=resolved_home_title brand_scope="Loja online" brand_href="/" size="lg" %}
-                <div class="space-y-2">
-                    <h1 class="max-w-3xl text-2xl font-semibold tracking-tight text-[var(--color-text-primary)] md:text-4xl">
-                        {{ resolved_home_title }}
-                    </h1>
-                    <p class="max-w-2xl text-sm text-[var(--color-text-secondary)] sm:text-base">
-                        {{ hero_description|default:"Descubra produtos selecionados e finalize sua compra com segurança." }}
-                    </p>
-                </div>
-            </div>
-            <div class="storefront-identity-actions flex flex-wrap gap-2 sm:gap-3 lg:justify-end">
-                {% include "shared/components/actions/button.html" with label="Ver loja" href=catalog_href|default:"/catalog/" variant="primary" icon_name="shopping-bag" %}
-                {% include "shared/components/actions/button.html" with label="Receber novidades" href=newsletter_href|default:"/newsletter/" variant="secondary" icon_name="mail" %}
-                {% include "shared/components/actions/button.html" with label="Entrar" href="/accounts/login/" variant="secondary" icon_name="log-in" %}
-            </div>
-        </div>
-        <div class="storefront-identity-signals mt-4 grid gap-2 text-sm text-[var(--color-text-secondary)] md:mt-5 md:grid-cols-3 md:gap-3">
-            <div class="storefront-identity-signal">
-                {% include "shared/partials/icon.html" with name="shield" size="sm" %}
-                <span>Checkout seguro</span>
-            </div>
-            <div class="storefront-identity-signal">
-                {% include "shared/partials/icon.html" with name="truck" size="sm" %}
-                <span>Frete e disponibilidade claros</span>
-            </div>
-            <div class="storefront-identity-signal">
-                {% include "shared/partials/icon.html" with name="rotate-ccw" size="sm" %}
-                <span>Trocas e suporte pela loja</span>
-            </div>
-        </div>
-    </section>
+    {% include "shared/partials/storefront_institutional_hero.html" %}
 
     <section class="home-featured-section space-y-3 sm:space-y-4">
         <div class="flex flex-wrap items-end justify-between gap-3">
@@ -52,7 +19,7 @@
         {% if featured_products %}
             <div class="storefront-product-grid">
                 {% for product in featured_products %}
-                    {% include "shared/components/composite/product_card.html" with href=product.href image_url=product.image_url image_alt=product.image_alt eyebrow=product.eyebrow title=product.title subtitle=product.subtitle badge_label=product.badge_label badge_variant=product.badge_variant price=product.price compare_price=product.compare_price price_helper=product.price_helper meta=product.meta variant_summary=product.variant_summary curation_note=product.curation_note availability_note=product.availability_note review_summary=product.review_summary click_helper=product.click_helper stock_state=product.stock_state stock_helper=product.stock_helper clickable=product.clickable %}
+                    {% include "shared/components/composite/product_card.html" with href=product.href image_url=product.image_url image_alt=product.image_alt eyebrow=product.eyebrow title=product.title subtitle=product.subtitle badge_label=product.badge_label badge_variant=product.badge_variant price=product.price compare_price=product.compare_price price_helper=product.price_helper meta=product.meta availability_note=product.availability_note review_summary=product.review_summary stock_state=product.stock_state stock_helper=product.stock_helper action_label=product.action_label clickable=product.clickable %}
                 {% endfor %}
             </div>
         {% else %}

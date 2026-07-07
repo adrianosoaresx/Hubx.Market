@@ -1,21 +1,28 @@
+{% with checkbox_id=id|default:name %}
 <label class="flex items-start gap-3 {% if disabled %}cursor-not-allowed opacity-60{% else %}cursor-pointer{% endif %}">
     <input
-        id="{{ id|default:name }}"
+        id="{{ checkbox_id }}"
         name="{{ name }}"
         type="checkbox"
         value="{{ value|default:'1' }}"
         class="mt-1 h-4 w-4 rounded border-[var(--color-border-strong)] text-[var(--color-action-primary-bg)] focus:ring-[var(--focus-ring)]"
+        aria-invalid="{% if invalid %}true{% else %}false{% endif %}"
+        {% if invalid and error_text %}aria-describedby="{{ checkbox_id }}-error"{% elif description %}aria-describedby="{{ checkbox_id }}-description"{% endif %}
         {% if checked %}checked{% endif %}
         {% if required %}required{% endif %}
         {% if disabled %}disabled{% endif %}
     >
     <span class="space-y-1">
-        <span class="block text-sm font-medium text-[var(--color-text-primary)]">{{ label|default:"Checkbox" }}</span>
+        <span class="block text-sm font-medium text-[var(--color-text-primary)]">
+            {{ label|default:"Checkbox" }}
+            {% if required %}<span class="text-[var(--color-feedback-danger)]" aria-hidden="true">*</span>{% endif %}
+        </span>
         {% if description %}
-            <span class="block text-sm text-[var(--color-text-secondary)]">{{ description }}</span>
+            <span id="{{ checkbox_id }}-description" class="block text-sm text-[var(--color-text-secondary)]">{{ description }}</span>
         {% endif %}
         {% if invalid and error_text %}
-            {% include "shared/components/forms/field_error.html" with text=error_text %}
+            {% include "shared/components/forms/field_error.html" with id=checkbox_id|add:"-error" text=error_text %}
         {% endif %}
     </span>
 </label>
+{% endwith %}

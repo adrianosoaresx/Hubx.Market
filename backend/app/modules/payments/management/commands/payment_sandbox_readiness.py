@@ -58,17 +58,29 @@ class Command(BaseCommand):
         enabled_tenants = list(getattr(settings, "PAYMENTS_REAL_PROVIDER_ENABLED_TENANTS", []) or [])
         fallback_mode = _string(getattr(settings, "PAYMENTS_REAL_PROVIDER_FALLBACK_MODE", ""))
         live_global_enabled = bool(getattr(settings, "PAYMENTS_REAL_PROVIDER_LIVE_GLOBAL_ENABLED", False))
-        secret_key = _string(getattr(settings, "PAGARME_SECRET_KEY", ""))
-        api_base_url = _string(getattr(settings, "PAGARME_API_BASE_URL", ""))
+        asaas_api_key = _string(getattr(settings, "ASAAS_API_KEY", ""))
+        asaas_api_base_url = _string(getattr(settings, "ASAAS_BASE_URL", ""))
+        asaas_webhook_token = _string(getattr(settings, "ASAAS_WEBHOOK_TOKEN", ""))
+        pagarme_secret_key = _string(getattr(settings, "PAGARME_SECRET_KEY", ""))
+        pagarme_api_base_url = _string(getattr(settings, "PAGARME_API_BASE_URL", ""))
         signature_header = _string(getattr(settings, "PAGARME_WEBHOOK_SIGNATURE_HEADER", ""))
         fallback_token = _string(getattr(settings, "PAYMENTS_WEBHOOK_TOKEN", ""))
         webhook_path = reverse("payments:webhook")
+        supported_provider = provider_default in {"asaas", "pagarme"}
+        provider_secret_ready = bool(asaas_api_key) if provider_default == "asaas" else bool(pagarme_secret_key)
+        provider_base_url = asaas_api_base_url if provider_default == "asaas" else pagarme_api_base_url
+        provider_secret_label = "Asaas API key" if provider_default == "asaas" else "Pagar.me secret key"
+        provider_secret_detail = (
+            "Configurada"
+            if provider_secret_ready
+            else ("Configure ASAAS_API_KEY com a chave de sandbox" if provider_default == "asaas" else "Configure PAGARME_SECRET_KEY com a chave de teste")
+        )
 
         checks = [
             ReadinessCheck(
                 label="Provider default",
-                status="OK" if provider_default == "pagarme" else "BLOCKED",
-                detail=provider_default or "Configure PAYMENTS_PROVIDER_DEFAULT=pagarme",
+                status="OK" if supported_provider else "BLOCKED",
+                detail=provider_default or "Configure PAYMENTS_PROVIDER_DEFAULT=asaas",
             ),
             ReadinessCheck(
                 label="Provider rollout mode",
@@ -128,19 +140,25 @@ class Command(BaseCommand):
                 ),
             ),
             ReadinessCheck(
-                label="Pagar.me secret key",
-                status="OK" if bool(secret_key) else "BLOCKED",
-                detail="Configurada" if secret_key else "Configure PAGARME_SECRET_KEY com a chave de teste",
+                label=provider_secret_label,
+                status="OK" if provider_secret_ready else "BLOCKED",
+                detail=provider_secret_detail,
             ),
             ReadinessCheck(
                 label="API base URL",
-                status="OK" if api_base_url.startswith("https://") else "BLOCKED",
-                detail=api_base_url or "Configure PAGARME_API_BASE_URL",
+                status="OK" if provider_base_url.startswith("https://") else "BLOCKED",
+                detail=provider_base_url or ("Configure ASAAS_BASE_URL" if provider_default == "asaas" else "Configure PAGARME_API_BASE_URL"),
             ),
             ReadinessCheck(
-                label="Webhook signature header",
-                status="OK" if bool(signature_header) else "BLOCKED",
-                detail=signature_header or "Configure PAGARME_WEBHOOK_SIGNATURE_HEADER",
+                label="Provider webhook token/header",
+                status="OK" if (provider_default == "asaas" and bool(asaas_webhook_token)) or (provider_default != "asaas" and bool(signature_header)) else "BLOCKED",
+                detail=(
+                    "Configurado"
+                    if provider_default == "asaas" and asaas_webhook_token
+                    else signature_header
+                    if provider_default != "asaas" and signature_header
+                    else ("Configure ASAAS_WEBHOOK_TOKEN" if provider_default == "asaas" else "Configure PAGARME_WEBHOOK_SIGNATURE_HEADER")
+                ),
             ),
             ReadinessCheck(
                 label="Fallback webhook token",

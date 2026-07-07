@@ -17,6 +17,8 @@ Deve conter:
 - título curto
 - explicação
 - ação principal quando fizer sentido
+- ícone decorativo opcional
+- não depender apenas da cor para comunicar filtro vazio, erro ou primeiro uso
 
 ## Loading state
 Pode usar:
@@ -28,6 +30,7 @@ Pode usar:
 - linguagem clara
 - orientar próximo passo
 - evitar mensagens técnicas para usuário final
+- em alertas persistentes, usar `role="alert"` para erro/danger
 
 ## Success state
 - curto
@@ -48,3 +51,4 @@ Pode usar:
 - botões só com ícone devem usar `aria-label`
 - links e botões precisam permanecer navegáveis por teclado
 - feedback de checkout e filtros deve ser compreensível sem depender só de cor
+- modais e drawers devem usar `role="dialog"`, `aria-modal` e título associado

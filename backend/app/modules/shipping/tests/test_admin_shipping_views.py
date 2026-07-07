@@ -1,3 +1,4 @@
+from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
@@ -24,6 +25,13 @@ class AdminShippingViewTests(TestCase):
             email="owner.ship.admin@example.com",
             full_name="Owner Ship Admin",
         )
+        self.user = get_user_model().objects.create_user(
+            username=self.owner.email,
+            email=self.owner.email,
+            password="secret",
+        )
+        self.client.force_login(self.user)
+        self.client.defaults["HTTP_HOST"] = f"{self.tenant.subdomain}.hubx.market"
         self.order = Order.objects.create(
             tenant=self.tenant,
             customer=self.customer,
@@ -41,6 +49,17 @@ class AdminShippingViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "#9001")
         self.assertContains(response, "Sem shipment")
+        self.assertContains(response, "Gerar etiqueta")
+        self.assertContains(response, "Marcar enviado")
+
+    def test_admin_shipping_inline_actions_include_csrf_token(self):
+        response = self.client.get(
+            reverse("shipping:admin-shipping-list"),
+            HTTP_HOST=f"{self.tenant.subdomain}.hubx.market",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="csrfmiddlewaretoken"')
         self.assertContains(response, "Marcar enviado")
 
     def test_admin_shipping_list_renders_shipment_history_summary(self):
@@ -120,6 +139,7 @@ class AdminShippingViewTests(TestCase):
 
     def test_admin_shipping_action_does_not_cross_tenants(self):
         other_tenant = Tenant.objects.create(name="Outra Ship", slug="outra-ship", subdomain="outra-ship")
+        OwnerUser.objects.create(tenant=other_tenant, email=self.user.email, role="owner", is_active=True)
 
         response = self.client.post(
             reverse("shipping:admin-shipping-action", kwargs={"order_number": "9001"}),
@@ -129,3 +149,29 @@ class AdminShippingViewTests(TestCase):
 
         self.assertRedirects(response, "/ops/shipping/?result=shipment-order-not-found", fetch_redirect_response=False)
         self.assertEqual(Shipment.objects.filter(tenant=other_tenant).count(), 0)
+
+    def test_admin_shipping_generate_label_creates_printable_label(self):
+        response = self.client.post(
+            reverse("shipping:admin-shipping-action", kwargs={"order_number": "9001"}),
+            data={"action_type": "generate_label"},
+            HTTP_HOST=f"{self.tenant.subdomain}.hubx.market",
+        )
+
+        self.assertRedirects(response, "/ops/shipping/?result=shipment-label-generated", fetch_redirect_response=False)
+        shipment = Shipment.objects.get(order=self.order)
+        self.assertEqual(shipment.label_status, Shipment.LabelStatus.GENERATED)
+
+        list_response = self.client.get(
+            reverse("shipping:admin-shipping-list"),
+            HTTP_HOST=f"{self.tenant.subdomain}.hubx.market",
+        )
+        label_response = self.client.get(
+            reverse("shipping:admin-shipping-label", kwargs={"order_number": "9001"}),
+            HTTP_HOST=f"{self.tenant.subdomain}.hubx.market",
+        )
+
+        self.assertContains(list_response, shipment.label_code)
+        self.assertEqual(label_response.status_code, 200)
+        self.assertContains(label_response, "HUBX MARKET - ETIQUETA LOGISTICA")
+        self.assertContains(label_response, shipment.label_code)
+        self.assertContains(label_response, "#9001")

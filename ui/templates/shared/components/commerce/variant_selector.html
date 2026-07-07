@@ -1,35 +1,35 @@
 {% with selector_variant=variant|default:"buttons" selector_name=name|default:"variant" %}
 {% if options or showcase_mode %}
-<fieldset class="space-y-3">
+<fieldset class="ds-variant-selector ds-variant-selector-{{ selector_variant }} {% if invalid or error_text %}is-invalid{% endif %}">
     {% if label %}
-        <legend class="text-sm font-medium text-[var(--color-text-primary)]">{{ label }}</legend>
+        <legend class="ds-variant-legend">{{ label }}</legend>
     {% endif %}
 
     {% if selector_variant == 'dropdown' and options %}
         {% include "shared/components/forms/select.html" with name=selector_name label="" options=options selected=selected placeholder=placeholder|default:"Selecione uma opção" help_text=help_text error_text=error_text invalid=invalid %}
     {% elif showcase_mode and not options %}
-        <div class="flex flex-wrap gap-2">
+        <div class="ds-variant-list {% if selector_variant == 'swatches' %}ds-variant-list-swatches{% endif %}">
             {% if selector_variant == 'swatches' %}
-                <span class="flex h-10 w-10 items-center justify-center rounded-full border-2 border-[var(--color-action-primary-bg)] ring-2 ring-[var(--focus-ring)] bg-[var(--color-surface-panel)]">
-                    <span class="h-6 w-6 rounded-full border border-black/10 bg-sky-500"></span>
+                <span class="ds-variant-swatch is-selected">
+                    <span class="ds-variant-swatch-color" style="background-color: #0ea5e9;"></span>
                 </span>
-                <span class="flex h-10 w-10 items-center justify-center rounded-full border-2 border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
-                    <span class="h-6 w-6 rounded-full border border-black/10 bg-slate-900"></span>
+                <span class="ds-variant-swatch">
+                    <span class="ds-variant-swatch-color" style="background-color: #0f172a;"></span>
                 </span>
-                <span class="flex h-10 w-10 items-center justify-center rounded-full border-2 border-[var(--color-border-default)] bg-[var(--color-surface-panel)] opacity-60">
-                    <span class="h-6 w-6 rounded-full border border-black/10 bg-rose-400"></span>
+                <span class="ds-variant-swatch is-disabled">
+                    <span class="ds-variant-swatch-color" style="background-color: #fb7185;"></span>
                 </span>
             {% else %}
-                <span class="inline-flex items-center gap-2 rounded-xl border border-[var(--color-action-primary-bg)] bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-700 {% if selector_variant == 'chips' %}rounded-full{% endif %}">Padrão</span>
-                <span class="inline-flex items-center gap-2 rounded-xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] px-3 py-2 text-sm font-medium text-[var(--color-text-primary)] {% if selector_variant == 'chips' %}rounded-full{% endif %}">Alternativa</span>
-                <span class="inline-flex items-center gap-2 rounded-xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)] px-3 py-2 text-sm font-medium text-[var(--color-text-primary)] opacity-60 {% if selector_variant == 'chips' %}rounded-full{% endif %}">
+                <span class="ds-variant-option {% if selector_variant == 'chips' %}ds-variant-chip{% endif %} is-selected">Padrão</span>
+                <span class="ds-variant-option {% if selector_variant == 'chips' %}ds-variant-chip{% endif %}">Alternativa</span>
+                <span class="ds-variant-option {% if selector_variant == 'chips' %}ds-variant-chip{% endif %} is-disabled">
                     Indisponível
                     {% include "shared/components/data_display/badge.html" with label="Sem estoque" variant="inactive" size="xs" %}
                 </span>
             {% endif %}
         </div>
     {% else %}
-        <div class="flex flex-wrap gap-2">
+        <div class="ds-variant-list {% if selector_variant == 'swatches' %}ds-variant-list-swatches{% endif %}">
             {% for option in options %}
                 <label class="block">
                     <input
@@ -43,28 +43,19 @@
 
                     {% if selector_variant == 'swatches' %}
                         <span
-                            class="
-                                flex h-10 w-10 items-center justify-center rounded-full border-2 bg-[var(--color-surface-panel)] transition
-                                {% if option.selected or option.value == selected %}border-[var(--color-action-primary-bg)] ring-2 ring-[var(--focus-ring)]{% else %}border-[var(--color-border-default)]{% endif %}
-                                {% if option.disabled %}cursor-not-allowed opacity-50{% elif option.out_of_stock %}cursor-not-allowed opacity-60{% else %}cursor-pointer hover:border-[var(--color-border-strong)]{% endif %}
-                            "
+                            class="ds-variant-swatch {% if option.selected or option.value == selected %}is-selected{% endif %} {% if option.disabled or option.out_of_stock %}is-disabled{% endif %}"
                             title="{{ option.label }}"
                             aria-label="{{ option.label }}"
                         >
-                            <span class="h-6 w-6 rounded-full border border-black/10" style="background-color: {{ option.color|default:'#cbd5e1' }};"></span>
+                            <span class="ds-variant-swatch-color" style="background-color: {{ option.color|default:'#cbd5e1' }};"></span>
                         </span>
                     {% else %}
                         <span
-                            class="
-                                inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition
-                                {% if option.selected or option.value == selected %}border-[var(--color-action-primary-bg)] bg-indigo-50 text-indigo-700{% else %}border-[var(--color-border-default)] bg-[var(--color-surface-panel)] text-[var(--color-text-primary)]{% endif %}
-                                {% if selector_variant == 'chips' %}rounded-full{% endif %}
-                                {% if option.disabled %}cursor-not-allowed opacity-50{% elif option.out_of_stock %}cursor-not-allowed opacity-60{% else %}cursor-pointer hover:border-[var(--color-border-strong)]{% endif %}
-                            "
+                            class="ds-variant-option {% if selector_variant == 'chips' %}ds-variant-chip{% endif %} {% if option.selected or option.value == selected %}is-selected{% endif %} {% if option.disabled or option.out_of_stock %}is-disabled{% endif %}"
                         >
                             <span>{{ option.label }}</span>
                             {% if option.meta %}
-                                <span class="text-xs font-normal text-[var(--color-text-secondary)]">{{ option.meta }}</span>
+                                <span class="ds-variant-meta">{{ option.meta }}</span>
                             {% endif %}
                             {% if option.out_of_stock %}
                                 {% include "shared/components/data_display/badge.html" with label="Sem estoque" variant="inactive" size="xs" %}

@@ -5,38 +5,39 @@
 
     <div {% if hx_target_id %}id="{{ hx_target_id }}"{% endif %} class="space-y-4">
         {% if rows %}
-            {% include "shared/components/data_display/table.html" with table_id=table_id columns=columns rows=rows empty_message=empty_message %}
+            {% include "shared/components/data_display/table.html" with table_id=table_id columns=columns rows=rows empty_message=empty_message table_label=table_label caption=caption|default:title %}
             {% include "shared/components/navigation/pagination.html" with page=page total_pages=total_pages prev_url=prev_url next_url=next_url page_items=page_items %}
         {% elif showcase_mode %}
-            <div class="overflow-hidden rounded-xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-[var(--color-border-default)] text-sm">
-                        <thead class="bg-slate-50">
+            <div class="ds-table-shell">
+                <div class="ds-table-scroll">
+                    <table class="ds-table" {% if title %}aria-label="{{ title }}"{% endif %}>
+                        {% if title %}<caption class="sr-only">{{ title }}</caption>{% endif %}
+                        <thead class="ds-table-head">
                             <tr>
-                                <th class="px-4 py-3 text-left font-medium text-[var(--color-text-secondary)]">Registro</th>
-                                <th class="px-4 py-3 text-left font-medium text-[var(--color-text-secondary)]">Status</th>
-                                <th class="px-4 py-3 text-left font-medium text-[var(--color-text-secondary)]">Canal</th>
-                                <th class="px-4 py-3 text-left font-medium text-[var(--color-text-secondary)]">Atualização</th>
+                                <th scope="col" class="ds-table-th">Registro</th>
+                                <th scope="col" class="ds-table-th">Status</th>
+                                <th scope="col" class="ds-table-th">Canal</th>
+                                <th scope="col" class="ds-table-th">Atualização</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-[var(--color-border-default)]">
-                            <tr class="hover:bg-slate-50">
-                                <td class="px-4 py-3 text-[var(--color-text-primary)]">Pedido #1048</td>
-                                <td class="px-4 py-3">{% include "shared/components/data_display/badge.html" with label="Pago" variant="paid" size="xs" %}</td>
-                                <td class="px-4 py-3 text-[var(--color-text-primary)]">Storefront</td>
-                                <td class="px-4 py-3 text-[var(--color-text-secondary)]">há 4 min</td>
+                        <tbody class="ds-table-body">
+                            <tr class="ds-table-row">
+                                <td class="ds-table-cell">Pedido #1048</td>
+                                <td class="ds-table-cell">{% include "shared/components/data_display/badge.html" with label="Pago" variant="paid" size="xs" %}</td>
+                                <td class="ds-table-cell">Storefront</td>
+                                <td class="ds-table-cell ds-table-cell-muted">há 4 min</td>
                             </tr>
-                            <tr class="hover:bg-slate-50">
-                                <td class="px-4 py-3 text-[var(--color-text-primary)]">Cliente #8821</td>
-                                <td class="px-4 py-3">{% include "shared/components/data_display/badge.html" with label="Ativo" variant="active" size="xs" %}</td>
-                                <td class="px-4 py-3 text-[var(--color-text-primary)]">CRM</td>
-                                <td class="px-4 py-3 text-[var(--color-text-secondary)]">há 18 min</td>
+                            <tr class="ds-table-row">
+                                <td class="ds-table-cell">Cliente #8821</td>
+                                <td class="ds-table-cell">{% include "shared/components/data_display/badge.html" with label="Ativo" variant="active" size="xs" %}</td>
+                                <td class="ds-table-cell">CRM</td>
+                                <td class="ds-table-cell ds-table-cell-muted">há 18 min</td>
                             </tr>
-                            <tr class="hover:bg-slate-50">
-                                <td class="px-4 py-3 text-[var(--color-text-primary)]">Produto / Hubx Runner</td>
-                                <td class="px-4 py-3">{% include "shared/components/data_display/badge.html" with label="Pendente" variant="pending" size="xs" %}</td>
-                                <td class="px-4 py-3 text-[var(--color-text-primary)]">Marketplace</td>
-                                <td class="px-4 py-3 text-[var(--color-text-secondary)]">há 41 min</td>
+                            <tr class="ds-table-row">
+                                <td class="ds-table-cell">Produto / Hubx Runner</td>
+                                <td class="ds-table-cell">{% include "shared/components/data_display/badge.html" with label="Pendente" variant="pending" size="xs" %}</td>
+                                <td class="ds-table-cell">Marketplace</td>
+                                <td class="ds-table-cell ds-table-cell-muted">há 41 min</td>
                             </tr>
                         </tbody>
                     </table>

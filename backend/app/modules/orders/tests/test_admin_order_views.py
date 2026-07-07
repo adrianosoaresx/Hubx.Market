@@ -5,6 +5,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 
+from app.modules.accounts.models import OwnerUser
 from app.modules.catalog.models import Product, ProductVariant
 from app.modules.coupons.models import Coupon, CouponRedemption
 from app.modules.orders.application.admin_order_queries import DjangoOrmOrderRepository, admin_order_queries
@@ -13,7 +14,25 @@ from app.modules.shipping.models import Shipment
 from app.modules.tenants.models import Tenant
 
 
+@override_settings(ALLOWED_HOSTS=["testserver", ".hubx.market", "localhost"])
 class AdminOrderViewTests(TestCase):
+    def test_orders_list_view_keeps_tenant_admin_sidebar_navigation(self):
+        tenant = Tenant.objects.create(
+            name="Loja Admin Sidebar",
+            slug="loja-admin-sidebar",
+            subdomain="loja-admin-sidebar",
+        )
+
+        response = self.client.get(
+            reverse("orders:admin-orders-list"),
+            HTTP_HOST=f"{tenant.subdomain}.hubx.market",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'href="/ops/"')
+        self.assertContains(response, 'href="/ops/orders/"')
+        self.assertContains(response, 'href="/ops/catalog/products/"')
+
     def test_orders_list_view_renders_design_system_template(self):
         response = self.client.get(reverse("orders:admin-orders-list"))
 
@@ -66,8 +85,25 @@ class AdminOrderViewTests(TestCase):
         self.assertIn("fallback de apresentação", admin_order_queries.get_operational_visibility_note())
 
 
+@override_settings(HUBX_MARKET_ROOT_DOMAIN="hubx.market", ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver"])
 class AdminOrderPersistedReadTests(TestCase):
     fixtures = ["orders_minimal_seed.json"]
+
+    def setUp(self):
+        self.tenant = Order.objects.get(number="2048").tenant
+        self.user = get_user_model().objects.create_user(
+            username="order-admin@hubx.market",
+            email="order-admin@hubx.market",
+            password="secret",
+        )
+        OwnerUser.objects.create(
+            tenant=self.tenant,
+            email=self.user.email,
+            role="owner",
+            is_active=True,
+        )
+        self.client.force_login(self.user)
+        self.client.defaults["HTTP_HOST"] = f"{self.tenant.subdomain}.hubx.market"
 
     def test_admin_order_query_service_scopes_records_by_tenant_when_requested(self):
         primary_order = Order.objects.get(number="2048")
@@ -185,6 +221,48 @@ class AdminOrderPersistedReadTests(TestCase):
         self.assertContains(detail_response, "Rua Persistida, 200")
         self.assertContains(detail_response, "Order.customer")
         self.assertContains(detail_response, "Estoque impactado após pagamento")
+
+    def test_admin_order_inline_actions_include_csrf_tokens(self):
+        order = Order.objects.get(number="2048")
+        order.status = "pending"
+        order.payment_status = "Pagamento pendente"
+        order.fulfillment_status_label = "Aguardando pagamento"
+        order.fulfillment_status_variant = "warning"
+        order.shipping_status = "Aguardando confirmação"
+        order.inventory_reserved_at = None
+        order.inventory_recovered_at = None
+        order.inventory_finalized_at = None
+        order.inventory_exception_under_review_at = None
+        order.inventory_exception_resolved_at = None
+        order.inventory_exception_owner_label = ""
+        order.save(
+            update_fields=[
+                "status",
+                "payment_status",
+                "fulfillment_status_label",
+                "fulfillment_status_variant",
+                "shipping_status",
+                "inventory_reserved_at",
+                "inventory_recovered_at",
+                "inventory_finalized_at",
+                "inventory_exception_under_review_at",
+                "inventory_exception_resolved_at",
+                "inventory_exception_owner_label",
+                "updated_at",
+            ]
+        )
+        first_item = order.items.order_by("id").first()
+        first_item.variant_sku = "SKU-AUSENTE-CSRF"
+        first_item.save(update_fields=["variant_sku", "updated_at"])
+
+        list_response = self.client.get(reverse("orders:admin-orders-list"), {"quick_filter": "active"})
+        detail_response = self.client.get(reverse("orders:admin-orders-detail", kwargs={"order_number": "2048"}))
+
+        self.assertContains(list_response, 'name="csrfmiddlewaretoken"')
+        self.assertContains(list_response, "Marcar revisão")
+        self.assertContains(list_response, "Marcar revisão na visão")
+        self.assertContains(detail_response, 'name="csrfmiddlewaretoken"')
+        self.assertContains(detail_response, 'name="action_type" value="order_status"')
 
     def test_admin_order_detail_surfaces_applied_coupon_snapshot(self):
         Order.objects.filter(number="2048").update(
@@ -1365,7 +1443,7 @@ class AdminOrderPersistedReadTests(TestCase):
         )
         order.refresh_from_db()
         self.assertIsNotNone(order.inventory_exception_under_review_at)
-        self.assertEqual(order.inventory_exception_owner_label, "Operação interna")
+        self.assertEqual(order.inventory_exception_owner_label, "order-admin@hubx.market")
         self.assertTrue(
             OrderStatusHistory.objects.filter(
                 order=order,
@@ -1378,11 +1456,11 @@ class AdminOrderPersistedReadTests(TestCase):
         self.assertContains(detail_response, "Exceção em revisão")
         self.assertContains(detail_response, "Vínculo da variante já está em revisão")
         self.assertContains(detail_response, "Última marcação de revisão")
-        self.assertContains(detail_response, "Responsável atual pela exceção: Operação interna.")
+        self.assertContains(detail_response, "Responsável atual pela exceção: order-admin@hubx.market.")
 
         list_response = self.client.get(reverse("orders:admin-orders-list"))
         self.assertContains(list_response, "Em revisão")
-        self.assertContains(list_response, "Responsável: Operação interna")
+        self.assertContains(list_response, "Responsável: order-admin@hubx.market")
 
     def test_admin_order_list_quick_action_marks_inventory_exception_under_review_and_returns_to_list(self):
         order = Order.objects.get(number="2048")
@@ -1575,7 +1653,7 @@ class AdminOrderPersistedReadTests(TestCase):
         )
         order.refresh_from_db()
         self.assertIsNotNone(order.inventory_exception_resolved_at)
-        self.assertEqual(order.inventory_exception_owner_label, "Operação interna")
+        self.assertEqual(order.inventory_exception_owner_label, "order-admin@hubx.market")
         self.assertTrue(
             OrderStatusHistory.objects.filter(
                 order=order,
@@ -1588,11 +1666,11 @@ class AdminOrderPersistedReadTests(TestCase):
         self.assertContains(detail_response, "Exceção resolvida")
         self.assertContains(detail_response, "Exceção já normalizada")
         self.assertContains(detail_response, "Tratamento manual concluído")
-        self.assertContains(detail_response, "Responsável atual pela exceção: Operação interna.")
+        self.assertContains(detail_response, "Responsável atual pela exceção: order-admin@hubx.market.")
 
         list_response = self.client.get(reverse("orders:admin-orders-list"))
         self.assertContains(list_response, "Resolvida")
-        self.assertContains(list_response, "Último responsável: Operação interna.")
+        self.assertContains(list_response, "Último responsável: order-admin@hubx.market.")
 
     def test_admin_order_list_quick_action_marks_inventory_exception_resolved_and_returns_to_list(self):
         order = Order.objects.get(number="2048")
@@ -1654,7 +1732,14 @@ class AdminOrderPersistedReadTests(TestCase):
 
     def test_admin_order_reassign_inventory_exception_owner_works(self):
         user_model = get_user_model()
-        user = user_model.objects.create_user(username="maria.ops", password="secret123", first_name="Maria", last_name="Ops")
+        user = user_model.objects.create_user(
+            username="maria.ops",
+            email="maria.ops@hubx.market",
+            password="secret123",
+            first_name="Maria",
+            last_name="Ops",
+        )
+        OwnerUser.objects.create(tenant=self.tenant, email=user.email, role="owner", is_active=True)
         self.client.force_login(user)
 
         order = Order.objects.get(number="2048")
@@ -1711,7 +1796,14 @@ class AdminOrderPersistedReadTests(TestCase):
 
     def test_admin_order_list_quick_action_reassigns_inventory_exception_owner_and_returns_to_list(self):
         user_model = get_user_model()
-        user = user_model.objects.create_user(username="joao.ops", password="secret123", first_name="João", last_name="Ops")
+        user = user_model.objects.create_user(
+            username="joao.ops",
+            email="joao.ops@hubx.market",
+            password="secret123",
+            first_name="João",
+            last_name="Ops",
+        )
+        OwnerUser.objects.create(tenant=self.tenant, email=user.email, role="owner", is_active=True)
         self.client.force_login(user)
 
         order = Order.objects.get(number="2048")
@@ -1940,6 +2032,12 @@ class AdminOrderPersistedReadTests(TestCase):
             name="Hubx Ops Secondary Tenant",
             slug="hubx-ops-secondary-tenant",
             subdomain="hubx-ops-secondary-tenant",
+        )
+        OwnerUser.objects.create(
+            tenant=secondary_tenant,
+            email=self.user.email,
+            role="owner",
+            is_active=True,
         )
         secondary_order = Order.objects.create(
             tenant=secondary_tenant,

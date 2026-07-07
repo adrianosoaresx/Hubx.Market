@@ -1,17 +1,19 @@
-<div class="inline-flex items-center rounded-xl border border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
+<div class="ds-quantity-selector {% if size == 'sm' or compact %}ds-quantity-selector-sm{% endif %} {% if disabled %}is-disabled{% endif %}">
     <button
         type="{{ decrement_type|default:'button' }}"
-        class="px-3 py-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] {% if disabled %}pointer-events-none opacity-50{% endif %}"
+        class="ds-quantity-btn"
+        aria-label="{{ decrement_label|default:'Diminuir quantidade' }}"
         {% if disabled %}disabled{% endif %}
     >
         -
     </button>
-    <span class="min-w-12 border-x border-[var(--color-border-default)] px-3 py-2 text-center text-sm font-medium text-[var(--color-text-primary)]">
+    <span class="ds-quantity-value" aria-live="polite">
         {{ value|default:"1" }}
     </span>
     <button
         type="{{ increment_type|default:'button' }}"
-        class="px-3 py-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] {% if disabled %}pointer-events-none opacity-50{% endif %}"
+        class="ds-quantity-btn"
+        aria-label="{{ increment_label|default:'Aumentar quantidade' }}"
         {% if disabled %}disabled{% endif %}
     >
         +

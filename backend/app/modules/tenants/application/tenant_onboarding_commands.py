@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from decimal import Decimal
 
 from django.db import transaction
 from django.utils import timezone
@@ -12,6 +13,7 @@ from app.modules.accounts.application.admin_permissions import (
 )
 from app.modules.audit.application.audit_log_commands import audit_log_commands
 from app.modules.subscriptions.application.subscription_commands import subscription_commands
+from app.modules.subscriptions.application.subscription_coupon_queries import normalize_subscription_coupon_code
 from app.modules.subscriptions.models import SubscriptionPlan, TenantSubscription
 from app.modules.tenants.application.platform_tenant_admin_commands import (
     _custom_domain_error,
@@ -59,6 +61,98 @@ def _primary_color(value: object) -> str:
     return ""
 
 
+def _money(value: object) -> Decimal:
+    try:
+        return max(Decimal(str(value or "0.00")), Decimal("0.00"))
+    except Exception:
+        return Decimal("0.00")
+
+
+def _promotion_fields(*, plan: SubscriptionPlan, promotion_snapshot: dict[str, object]) -> dict[str, object]:
+    snapshot = dict(promotion_snapshot or {})
+    coupon_code = normalize_subscription_coupon_code(snapshot.get("coupon_code"))
+    if not coupon_code:
+        return {
+            "coupon_code_snapshot": "",
+            "coupon_discount_type_snapshot": "",
+            "coupon_discount_value_snapshot": Decimal("0.00"),
+            "coupon_discount_total_snapshot": Decimal("0.00"),
+            "effective_monthly_price_snapshot": _money(plan.monthly_price),
+            "promotion_snapshot": {},
+        }
+    monthly_price = _money(snapshot.get("monthly_price") or plan.monthly_price)
+    discount_total = min(_money(snapshot.get("discount_total")), monthly_price)
+    effective_price = _money(snapshot.get("effective_monthly_price") or monthly_price - discount_total)
+    normalized_snapshot = {
+        **snapshot,
+        "coupon_code": coupon_code,
+        "plan_code": _string(snapshot.get("plan_code") or plan.code, limit=80),
+        "monthly_price": f"{monthly_price:.2f}",
+        "discount_type": _string(snapshot.get("discount_type"), limit=16),
+        "discount_value": f"{_money(snapshot.get('discount_value')):.2f}",
+        "discount_total": f"{discount_total:.2f}",
+        "effective_monthly_price": f"{effective_price:.2f}",
+    }
+    return {
+        "coupon_code_snapshot": coupon_code,
+        "coupon_discount_type_snapshot": normalized_snapshot["discount_type"],
+        "coupon_discount_value_snapshot": _money(normalized_snapshot["discount_value"]),
+        "coupon_discount_total_snapshot": discount_total,
+        "effective_monthly_price_snapshot": effective_price,
+        "promotion_snapshot": normalized_snapshot,
+    }
+
+
+def _promotion_snapshot_from_onboarding(onboarding: TenantOnboarding) -> dict[str, object]:
+    coupon_code = normalize_subscription_coupon_code(onboarding.coupon_code_snapshot)
+    if not coupon_code:
+        return {}
+    snapshot = dict(onboarding.promotion_snapshot or {})
+    snapshot.update(
+        {
+            "coupon_code": coupon_code,
+            "plan_code": onboarding.plan_code,
+            "discount_type": onboarding.coupon_discount_type_snapshot,
+            "discount_value": f"{_money(onboarding.coupon_discount_value_snapshot):.2f}",
+            "discount_total": f"{_money(onboarding.coupon_discount_total_snapshot):.2f}",
+            "effective_monthly_price": f"{_money(onboarding.effective_monthly_price_snapshot):.2f}",
+            "source": snapshot.get("source") or "tenant-onboarding",
+        }
+    )
+    return snapshot
+
+
+def _record_coupon_application_event(
+    *,
+    entity_type: str,
+    entity_id: int | str,
+    promotion_snapshot: dict[str, object],
+    actor_label: object,
+) -> dict[str, object]:
+    snapshot = dict(promotion_snapshot or {})
+    coupon_code = normalize_subscription_coupon_code(snapshot.get("coupon_code"))
+    if not coupon_code:
+        return {"result": "audit-skipped"}
+    return audit_log_commands.record_event(
+        tenant_id=None,
+        module="subscriptions",
+        action="subscription.coupon_applied",
+        entity_type=entity_type,
+        entity_id=str(entity_id),
+        actor_label=_string(actor_label, limit=180),
+        summary="Cupom SaaS aplicado na assinatura criada por onboarding.",
+        metadata={
+            "coupon_code": coupon_code,
+            "plan_code": _string(snapshot.get("plan_code"), limit=80),
+            "discount_type": _string(snapshot.get("discount_type"), limit=16),
+            "discount_total": str(snapshot.get("discount_total") or ""),
+            "effective_monthly_price": str(snapshot.get("effective_monthly_price") or ""),
+            "source": _string(snapshot.get("source"), limit=80),
+        },
+        allow_platform_scope=True,
+    )
+
+
 @dataclass
 class TenantOnboardingCommandService:
     def create_onboarding(
@@ -76,7 +170,7 @@ class TenantOnboardingCommandService:
             status=TenantOnboarding.Status.DRAFT,
             store_name=_string(payload.get("store_name") or payload.get("name"), limit=150),
             store_display_name=_string(payload.get("store_display_name") or payload.get("store_name") or payload.get("name"), limit=150),
-            primary_color=_primary_color(payload.get("primary_color")) or "#4f46e5",
+            primary_color=_primary_color(payload.get("primary_color")) or "#9a6410",
             created_by_label=_string(actor_label, limit=180),
         )
         audit_result = self._record_platform_event(
@@ -197,12 +291,26 @@ class TenantOnboardingCommandService:
                     status=TenantSubscription.Status.TRIALING,
                     external_reference=f"tenant-onboarding-{locked.id}",
                     actor_label=actor_label,
+                    promotion_snapshot=_promotion_snapshot_from_onboarding(locked),
                 )
                 if subscription_result.get("result") not in {"tenant-subscription-created", "tenant-subscription-updated"}:
                     raise TenantOnboardingCompletionBlocked(
                         str(subscription_result.get("result") or "subscription-failed"),
                         subscription_result.get("errors") or {"__all__": "Não foi possível vincular assinatura interna."},
                     )
+                promotion_snapshot = _promotion_snapshot_from_onboarding(locked)
+                if promotion_snapshot:
+                    coupon_audit = _record_coupon_application_event(
+                        entity_type="TenantSubscription",
+                        entity_id=(subscription_result.get("subscription") or {}).get("id", ""),
+                        promotion_snapshot=promotion_snapshot,
+                        actor_label=actor_label,
+                    )
+                    if coupon_audit.get("result") != "audit-recorded":
+                        raise TenantOnboardingCompletionBlocked(
+                            "subscription-coupon-application-audit-unavailable",
+                            {"__all__": "AuditLog platform-scope obrigatório para registrar aplicação de cupom SaaS."},
+                        )
 
                 owner_result = platform_tenant_admin_commands.bootstrap_owner(
                     tenant_slug=tenant["slug"],
@@ -230,7 +338,13 @@ class TenantOnboardingCommandService:
                     onboarding=locked,
                     actor_label=actor_label,
                     summary="Onboarding self-service de loja concluído.",
-                    metadata={"tenant_id": tenant["id"], "tenant_slug": tenant["slug"], "plan_code": locked.plan_code},
+                    metadata={
+                        "tenant_id": tenant["id"],
+                        "tenant_slug": tenant["slug"],
+                        "plan_code": locked.plan_code,
+                        "coupon_code": locked.coupon_code_snapshot,
+                        "effective_monthly_price": str(locked.effective_monthly_price_snapshot),
+                    },
                 )
                 if audit_result.get("result") != "audit-recorded":
                     raise TenantOnboardingCompletionBlocked(
@@ -261,9 +375,38 @@ class TenantOnboardingCommandService:
             return errors
         if step_key == "plan":
             plan_code = _normalize_slug(payload.get("plan_code"), limit=80)
-            if not SubscriptionPlan.objects.filter(code=plan_code, status=SubscriptionPlan.Status.ACTIVE).exists():
+            plan = SubscriptionPlan.objects.filter(code=plan_code, status=SubscriptionPlan.Status.ACTIVE).first()
+            if plan is None:
                 return {"plan_code": "Selecione um plano ativo."}
+            previous_plan_code = onboarding.plan_code
             onboarding.plan_code = plan_code
+            has_promotion_payload = "promotion_snapshot" in payload or any(
+                key in payload
+                for key in (
+                    "coupon_code_snapshot",
+                    "coupon_discount_type_snapshot",
+                    "coupon_discount_value_snapshot",
+                    "coupon_discount_total_snapshot",
+                    "effective_monthly_price_snapshot",
+                )
+            )
+            if has_promotion_payload:
+                snapshot = dict(payload.get("promotion_snapshot") or {})
+                if not snapshot and payload.get("coupon_code_snapshot"):
+                    snapshot = {
+                        "coupon_code": payload.get("coupon_code_snapshot"),
+                        "plan_code": plan_code,
+                        "discount_type": payload.get("coupon_discount_type_snapshot"),
+                        "discount_value": payload.get("coupon_discount_value_snapshot"),
+                        "discount_total": payload.get("coupon_discount_total_snapshot"),
+                        "effective_monthly_price": payload.get("effective_monthly_price_snapshot"),
+                        "source": "tenant-onboarding",
+                    }
+                for field, value in _promotion_fields(plan=plan, promotion_snapshot=snapshot).items():
+                    setattr(onboarding, field, value)
+            elif previous_plan_code != plan_code:
+                for field, value in _promotion_fields(plan=plan, promotion_snapshot={}).items():
+                    setattr(onboarding, field, value)
             return {}
         if step_key == "owner":
             owner_email = _string(payload.get("owner_email"), limit=254).lower()
@@ -285,7 +428,7 @@ class TenantOnboardingCommandService:
             if not display_name:
                 errors["store_display_name"] = "Nome comercial é obrigatório."
             if not primary_color:
-                errors["primary_color"] = "Cor primária deve usar formato hexadecimal, ex.: #4f46e5."
+                errors["primary_color"] = "Cor primária deve usar formato hexadecimal, ex.: #9a6410."
             if not errors:
                 onboarding.store_display_name = display_name
                 onboarding.primary_color = primary_color
@@ -410,6 +553,12 @@ class TenantOnboardingCommandService:
             "store_slug": onboarding.store_slug,
             "store_subdomain": onboarding.store_subdomain,
             "plan_code": onboarding.plan_code,
+            "coupon_code_snapshot": onboarding.coupon_code_snapshot,
+            "coupon_discount_type_snapshot": onboarding.coupon_discount_type_snapshot,
+            "coupon_discount_value_snapshot": str(onboarding.coupon_discount_value_snapshot),
+            "coupon_discount_total_snapshot": str(onboarding.coupon_discount_total_snapshot),
+            "effective_monthly_price_snapshot": str(onboarding.effective_monthly_price_snapshot),
+            "promotion_snapshot": onboarding.promotion_snapshot,
             "owner_email": onboarding.owner_email,
         }
 

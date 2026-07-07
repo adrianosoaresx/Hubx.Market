@@ -1,7 +1,9 @@
-/* Demo tenant pack used by the internal Design System preview. */
+/* Demo tenant pack used by the internal Design System preview and hubx-demo. */
 
-[data-tenant="demo"] {
-  --tenant-brand-primary: #7c3aed;
-  --tenant-brand-primary-hover: #6d28d9;
-  --tenant-brand-secondary: #14b8a6;
+[data-tenant="demo"],
+[data-tenant="hubx-demo"] {
+  --tenant-brand-primary: #9a6410;
+  --tenant-brand-primary-hover: #794a0c;
+  --tenant-brand-secondary: #d6a937;
+  --tenant-brand-highlight: #ffe797;
 }

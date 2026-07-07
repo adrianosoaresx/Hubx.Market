@@ -15,10 +15,17 @@ Gerenciar tenant, branding, contato, manutenção e onboarding.
 
 ## Regras de negócio
 - tenant resolvido por subdomínio
+- identidade institucional de storefront pertence ao tenant e pode usar campos `storefront_hero_*`
+- `logo_url` representa a imagem pública opcional da marca do tenant
+- o hero institucional é configuração leve de home: título, descrição, imagem remota, CTA e flag de exibição
+- lojistas configuram logo e hero em `/ops/branding/`, que grava apenas `Tenant.logo_url` e campos `Tenant.storefront_hero_*`
+- fallback visual do hero deve usar somente dados já resolvidos do próprio tenant, nunca conteúdo global de outra loja
 - superfícies de commerce devem falhar fechado quando `request.tenant` não estiver resolvido
 - subdomínio inexistente sob `HUBX_MARKET_ROOT_DOMAIN` deve responder `404`
 - domínios reservados (`www`, `app`, `api`, `docs`, `cdn`) continuam fora da resolução de loja
 - `custom_domain` segue como contrato de modelo, mas ainda não participa da resolução HTTP neste estágio
+- o tenant demo oficial configurado em `HUBX_MARKET_DEMO_TENANT_SUBDOMAIN` é marcado como somente leitura em runtime por `DemoTenantReadOnlyMiddleware`
+- o modo somente leitura bloqueia métodos unsafe em superfícies tenant-owned, exceto endpoints de sessão/login/logout necessários para entrar e sair da demo
 
 ## Clarificação do contrato atual
 - a resolução HTTP oficial de tenant continua sendo apenas `subdomain + HUBX_MARKET_ROOT_DOMAIN`
@@ -27,6 +34,36 @@ Gerenciar tenant, branding, contato, manutenção e onboarding.
   - `request.tenant = None`
   - nenhuma superfície de commerce deve se comportar como se uma loja válida tivesse sido resolvida
 - isso mantém o sistema honesto: `custom_domain` hoje é readiness de modelo, não capability ativa
+- em desenvolvimento local, subdomínios `*.localhost` podem resolver tenant para suportar a demo `hubx-demo.localhost`
+
+## Public Self-Service Signup
+
+Status: **implementado atrás de feature flag**.
+
+Rota:
+
+```text
+/plans/signup/
+```
+
+Escopo entregue:
+
+- habilitado somente com `HUBX_PUBLIC_SIGNUP_ENABLED=1`;
+- exige `HUBX_PUBLIC_SIGNUP_ACCESS_TOKEN` quando `HUBX_PUBLIC_SIGNUP_REQUIRE_ACCESS_TOKEN=1`;
+- `subscriptions` expõe a view pública e `tenants.application.public_tenant_signup_commands` orquestra o provisionamento;
+- cria `Tenant` ativo em `maintenance_mode`, `TenantOnboarding` concluído, `TenantSubscription(status=trialing)` e `OwnerUser` inicial;
+- `TenantSubscription` registra Asaas como provider-alvo padrão de billing SaaS, sem criar cobrança externa;
+- owner inicial recebe senha utilizável pela fronteira de `accounts`;
+- `Customer`, catálogo, pedido, pagamento, invoice, domínio customizado e recurso externo de billing provider não são criados.
+
+Guardrails preservados:
+
+- subdomínio continua sendo o identificador público do tenant;
+- slugs reservados e duplicidade de tenant são bloqueados antes da criação;
+- corrida concorrente de slug/subdomínio deve retornar erro de formulário, não 500;
+- e-mail já vinculado a usuário/owner existente deve seguir aquisição assistida;
+- criação é transacional e auditada tenant-scoped;
+- tenant em `maintenance_mode` bloqueia storefront/checkout com 503 e mantém `/accounts/` e `/ops/` disponíveis para configuração.
 
 ## Contrato futuro mínimo para `custom_domain`
 - quando essa capacidade entrar, ela deve definir explicitamente:
@@ -34,6 +71,32 @@ Gerenciar tenant, branding, contato, manutenção e onboarding.
   - unicidade de domínio customizado entre tenants
   - precedência entre `custom_domain`, subdomínio e hosts reservados
   - comportamento explícito para domínio configurado porém tenant inativo
+
+## Storefront Branding Settings
+
+Status: **implementado**.
+
+A configuração tenant-scoped de logo e hero institucional foi adicionada em:
+
+```text
+/ops/branding/
+```
+
+Escopo entregue:
+
+- formulário admin para `logo_url`, `storefront_hero_enabled`, título, descrição, URL de imagem, texto e destino do CTA;
+- preview reaproveitando `shared/partials/storefront_institutional_hero.html`;
+- `POST` fino delegando para `tenants.application.storefront_branding_commands.update_storefront_hero(...)`;
+- permissão `storefront.branding.manage` no RBAC de `accounts`;
+- `AuditLog` tenant-scoped com `tenant.storefront_branding_updated`;
+- validação de logo/imagem como URL pública e CTA como caminho interno iniciado por `/`.
+
+Guardrails preservados:
+
+- grava somente o `Tenant` resolvido pelo host da loja;
+- não altera catálogo, produtos, páginas, pedidos, pagamentos, clientes ou dados platform-only;
+- não faz upload/storage de imagem nesta fase; recebe apenas URL pública;
+- não cria page builder nem lógica visual fora do partial compartilhado.
 
 ## Battery J — System Production Closure
 
@@ -326,7 +389,7 @@ Guardrails para a próxima execution:
 - exigir `platform.tenants.manage`;
 - registrar `AuditLog` platform-scope para toda mudança;
 - documentar que `is_active=False` afeta resolução por subdomínio;
-- manter `maintenance_mode` como flag operacional, sem side effects em commerce;
+- `maintenance_mode` é flag operacional de publicação e bloqueia storefront/checkout no resolver HTTP, sem alterar dados de commerce;
 - rollback manual é executar a ação inversa.
 
 Comando de review:
@@ -903,6 +966,13 @@ Guardrails:
 - DNS/TLS, billing real, upload de logo, catálogo demo, frete e pagamentos ficam fora do MVP;
 - conclusão não edita dados tenant-owned de commerce;
 - eventos sensíveis registram `AuditLog` platform-scope.
+
+Integração com aquisição SaaS pública:
+
+- `subscriptions` é dono de `/plans/` e de `SubscriptionAcquisitionLead`;
+- `/ops/platform/acquisitions/<lead_id>/convert/` pode criar/preencher uma jornada `TenantOnboarding`;
+- essa conversão não chama `complete_onboarding`;
+- tenant, owner inicial e `TenantSubscription` só nascem depois da conclusão explícita do wizard por platform admin.
 
 Próxima execução recomendada:
 

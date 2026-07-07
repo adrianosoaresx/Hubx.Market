@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+import shutil
 from decimal import Decimal
-from html import escape
 from pathlib import Path
 
 from django.conf import settings
@@ -9,7 +9,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils.text import slugify
 
-from app.modules.catalog.models import Product, ProductImage, ProductVariant
+from app.modules.catalog.models import Product, ProductImage, ProductVariant, StorefrontDiscoveryEventLog
 from app.modules.tenants.models import Tenant
 
 
@@ -80,16 +80,23 @@ VARIANT_OPTIONS = {
 }
 
 
+DEMO_IMAGE_FIXTURE_DIR = Path(settings.BASE_DIR) / "app" / "modules" / "catalog" / "fixtures" / "demo_product_images"
+RASTER_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp")
+
+
 class Command(BaseCommand):
     help = "Gera massa demo de catálogo tenant-scoped com produtos, variantes e imagens por URL."
 
     def add_arguments(self, parser):
         parser.add_argument("--tenant-subdomain", default="hubx-demo")
         parser.add_argument("--count", type=int, default=50)
-        parser.add_argument("--images-per-product", type=int, default=3)
+        parser.add_argument("--images-per-product", type=int, default=4)
         parser.add_argument("--reset-seed", action="store_true")
+        parser.add_argument("--reset-tenant-catalog", action="store_true")
+        parser.add_argument("--clear-discovery-events", action="store_true")
         parser.add_argument("--slug-prefix", default="demo")
         parser.add_argument("--image-host", default="")
+        parser.add_argument("--store-name", default="")
 
     def handle(self, *args, **options):
         tenant_subdomain = str(options["tenant_subdomain"]).strip()
@@ -97,6 +104,7 @@ class Command(BaseCommand):
         images_per_product = min(max(1, int(options["images_per_product"])), 5)
         slug_prefix = slugify(str(options["slug_prefix"] or "demo")) or "demo"
         image_host = str(options.get("image_host") or "").strip().rstrip("/")
+        store_name = str(options.get("store_name") or "").strip()
 
         tenant = Tenant.objects.filter(subdomain=tenant_subdomain).first()
         if tenant is None:
@@ -105,8 +113,16 @@ class Command(BaseCommand):
             image_host = f"http://{tenant.subdomain}.localhost:8002"
 
         with transaction.atomic():
+            if store_name and tenant.name != store_name:
+                tenant.name = store_name
+                tenant.save(update_fields=["name", "updated_at"])
             if options["reset_seed"]:
-                Product.objects.filter(tenant=tenant, slug__startswith=f"{slug_prefix}-").delete()
+                if options["reset_tenant_catalog"]:
+                    Product.objects.filter(tenant=tenant).delete()
+                else:
+                    Product.objects.filter(tenant=tenant, slug__startswith=f"{slug_prefix}-").delete()
+            if options["clear_discovery_events"]:
+                StorefrontDiscoveryEventLog.objects.filter(tenant=tenant).delete()
 
             created_products = 0
             created_variants = 0
@@ -205,63 +221,199 @@ class Command(BaseCommand):
         name: str,
         index: int,
     ) -> str:
-        palettes = (
-            ("#f8fafc", "#4f46e5", "#0f172a"),
-            ("#eef2ff", "#7c3aed", "#312e81"),
-            ("#ecfeff", "#0891b2", "#164e63"),
-            ("#fef3c7", "#f59e0b", "#92400e"),
-            ("#fce7f3", "#db2777", "#831843"),
-        )
-        background, accent, foreground = palettes[(index - 1) % len(palettes)]
         safe_tenant = slugify(tenant_subdomain) or "tenant"
-        filename = f"{product_slug}-{index}.svg"
+        fixture_source = _fixture_image_source(product_slug=product_slug, category=category, index=index)
+        extension = fixture_source.suffix.lower() if fixture_source else ".jpg"
+        if extension not in RASTER_EXTENSIONS:
+            extension = ".jpg"
+        filename = f"{product_slug}-{index}{extension}"
         relative_path = Path("demo-catalog") / safe_tenant / filename
         absolute_path = Path(settings.MEDIA_ROOT) / relative_path
         absolute_path.parent.mkdir(parents=True, exist_ok=True)
-        absolute_path.write_text(
-            _svg_product_placeholder(
-                background=background,
-                accent=accent,
-                foreground=foreground,
-                brand=brand,
-                category=category,
-                name=name,
-                index=index,
-            ),
-            encoding="utf-8",
-        )
+        if fixture_source:
+            shutil.copyfile(fixture_source, absolute_path)
+        else:
+            _write_raster_fallback(absolute_path=absolute_path, brand=brand, category=category, name=name, index=index)
         return f"{image_host}{settings.MEDIA_URL}{relative_path.as_posix()}"
 
 
-def _svg_product_placeholder(
+def _fixture_image_source(*, product_slug: str, category: str, index: int) -> Path | None:
+    candidates: list[Path] = []
+    for extension in RASTER_EXTENSIONS:
+        candidates.append(DEMO_IMAGE_FIXTURE_DIR / "products" / f"{product_slug}-{index}{extension}")
+        candidates.append(DEMO_IMAGE_FIXTURE_DIR / "products" / f"{product_slug}{extension}")
+    return next((candidate for candidate in candidates if candidate.exists()), None)
+
+
+def _write_raster_fallback(
     *,
-    background: str,
-    accent: str,
-    foreground: str,
+    absolute_path: Path,
     brand: str,
     category: str,
     name: str,
     index: int,
-) -> str:
-    brand_text = escape(brand.upper())
-    category_text = escape(category)
-    name_text = escape(name)
-    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="900" height="900" viewBox="0 0 900 900" role="img" aria-label="{name_text}">
-  <defs>
-    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
-      <stop offset="0%" stop-color="{background}"/>
-      <stop offset="100%" stop-color="#ffffff"/>
-    </linearGradient>
-  </defs>
-  <rect width="900" height="900" fill="url(#bg)"/>
-  <circle cx="708" cy="170" r="118" fill="{accent}" opacity="0.16"/>
-  <circle cx="170" cy="720" r="150" fill="{accent}" opacity="0.12"/>
-  <rect x="96" y="116" width="708" height="668" rx="44" fill="#ffffff" opacity="0.78"/>
-  <rect x="142" y="164" width="616" height="390" rx="36" fill="{background}" stroke="{accent}" stroke-width="8"/>
-  <path d="M236 456 C306 336 384 396 450 300 C520 196 646 276 692 456 Z" fill="{accent}" opacity="0.88"/>
-  <circle cx="314" cy="272" r="48" fill="{foreground}" opacity="0.22"/>
-  <text x="450" y="628" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="26" font-weight="700" fill="{accent}">{brand_text}</text>
-  <text x="450" y="676" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="42" font-weight="800" fill="{foreground}">{name_text}</text>
-  <text x="450" y="728" text-anchor="middle" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="24" font-weight="500" fill="#475569">{category_text} · imagem {index}</text>
-</svg>
-"""
+) -> None:
+    try:
+        from PIL import Image, ImageDraw
+    except Exception as error:  # pragma: no cover - fixtures should normally avoid this path
+        raise CommandError("Fixtures raster demo não encontradas e Pillow indisponível para fallback.") from error
+
+    profile = _product_visual_profile(name=name, category=category)
+    background, accent, secondary, foreground = _product_palette(category=category, index=index)
+    image = Image.new("RGB", (900, 900), background)
+    draw = ImageDraw.Draw(image)
+    _draw_catalog_backdrop(draw=draw, accent=accent, secondary=secondary, image_index=index)
+    _draw_product_subject(draw=draw, product_type=profile, accent=accent, secondary=secondary, foreground=foreground, image_index=index)
+    draw.rounded_rectangle((78, 696, 822, 806), radius=28, fill=(255, 255, 255), outline=(226, 232, 240), width=2)
+    draw.text((112, 724), brand.upper()[:30], fill=accent)
+    draw.text((112, 758), name[:48], fill=foreground)
+    draw.text((112, 786), f"{category} · imagem {index}", fill=(71, 85, 105))
+    image.save(absolute_path, quality=86)
+
+
+def _product_visual_profile(*, name: str, category: str) -> str:
+    normalized = f"{category} {name}".lower()
+    keyword_profiles = (
+        (("tênis", "sandália", "bota"), "shoe"),
+        (("camiseta", "polo", "jaqueta", "moletom", "calça", "shorts"), "apparel"),
+        (("mochila", "bolsa", "necessaire", "cubo", "estojo"), "bag"),
+        (("boné",), "cap"),
+        (("garrafa", "caneca"), "bottle"),
+        (("óculos",), "glasses"),
+        (("relógio",), "watch"),
+        (("fone",), "earbuds"),
+        (("speaker",), "speaker"),
+        (("carregador", "cabo"), "charger"),
+        (("mouse",), "mouse"),
+        (("teclado",), "keyboard"),
+        (("luminária",), "lamp"),
+        (("organizador",), "tray"),
+        (("toalhas",), "towels"),
+        (("almofada", "travesseiro"), "pillow"),
+        (("tapete",), "mat"),
+        (("bands",), "bands"),
+        (("rolo",), "roller"),
+        (("luvas",), "gloves"),
+        (("corda",), "rope"),
+        (("cadeado",), "lock"),
+        (("tag",), "tag"),
+        (("sérum", "hidratante", "protetor", "shampoo", "condicionador"), "beauty"),
+        (("caderno", "planner"), "notebook"),
+        (("caneta",), "pens"),
+        (("sticky", "bloco"), "notes"),
+        (("suporte",), "stand"),
+    )
+    return next((profile for keywords, profile in keyword_profiles if any(keyword in normalized for keyword in keywords)), "box")
+
+
+def _product_palette(*, category: str, index: int) -> tuple[tuple[int, int, int], ...]:
+    palettes = {
+        "Calçados": ((244, 247, 251), (31, 41, 55), (100, 116, 139), (15, 23, 42)),
+        "Vestuário": ((248, 250, 252), (37, 99, 235), (14, 165, 233), (15, 23, 42)),
+        "Acessórios": ((245, 243, 255), (109, 40, 217), (20, 184, 166), (30, 41, 59)),
+        "Eletrônicos": ((241, 245, 249), (51, 65, 85), (34, 211, 238), (15, 23, 42)),
+        "Casa": ((247, 250, 252), (13, 148, 136), (148, 163, 184), (30, 41, 59)),
+        "Fitness": ((240, 253, 250), (5, 150, 105), (249, 115, 22), (20, 83, 45)),
+        "Viagem": ((239, 246, 255), (29, 78, 216), (245, 158, 11), (30, 64, 175)),
+        "Beleza": ((253, 242, 248), (219, 39, 119), (251, 146, 60), (131, 24, 67)),
+        "Papelaria": ((255, 251, 235), (217, 119, 6), (59, 130, 246), (120, 53, 15)),
+    }
+    base = palettes.get(category, ((248, 250, 252), (79, 70, 229), (20, 184, 166), (15, 23, 42)))
+    if index % 2 == 0:
+        return base[0], base[2], base[1], base[3]
+    return base
+
+
+def _draw_catalog_backdrop(*, draw, accent: tuple[int, int, int], secondary: tuple[int, int, int], image_index: int) -> None:
+    draw.rounded_rectangle((66, 72, 834, 828), radius=48, fill=(255, 255, 255), outline=(226, 232, 240), width=2)
+    draw.ellipse((610, 104, 812, 306), fill=(*secondary,))
+    draw.ellipse((104, 532, 280, 708), fill=(*accent,))
+    draw.rounded_rectangle((152, 588, 748, 626), radius=19, fill=(226, 232, 240))
+    if image_index >= 3:
+        draw.line((150, 158, 750, 158), fill=(226, 232, 240), width=3)
+        draw.line((150, 642, 750, 642), fill=(226, 232, 240), width=3)
+
+
+def _draw_product_subject(
+    *,
+    draw,
+    product_type: str,
+    accent: tuple[int, int, int],
+    secondary: tuple[int, int, int],
+    foreground: tuple[int, int, int],
+    image_index: int,
+) -> None:
+    outline = foreground
+    if product_type == "shoe":
+        draw.polygon([(226, 484), (374, 384), (540, 438), (664, 492), (704, 562), (304, 562)], fill=accent, outline=outline)
+        draw.rounded_rectangle((296, 544, 716, 610), radius=24, fill=foreground)
+        draw.line((384, 430, 486, 462), fill=(255, 255, 255), width=8)
+    elif product_type == "apparel":
+        draw.polygon([(330, 226), (424, 186), (476, 186), (570, 226), (638, 340), (558, 384), (536, 306), (536, 586), (364, 586), (364, 306), (342, 384), (262, 340)], fill=accent, outline=outline)
+        draw.arc((404, 176, 496, 252), 0, 180, fill=(255, 255, 255), width=8)
+    elif product_type == "bag":
+        draw.rounded_rectangle((286, 260, 614, 604), radius=44, fill=accent, outline=outline, width=5)
+        draw.arc((354, 190, 546, 340), 180, 360, fill=foreground, width=18)
+        draw.line((346, 396, 554, 396), fill=(255, 255, 255), width=6)
+    elif product_type == "cap":
+        draw.pieslice((276, 286, 576, 586), 180, 360, fill=accent, outline=outline)
+        draw.polygon([(520, 430), (716, 468), (520, 510)], fill=secondary, outline=outline)
+    elif product_type == "bottle":
+        draw.rounded_rectangle((376, 220, 524, 604), radius=52, fill=accent, outline=outline, width=5)
+        draw.rounded_rectangle((404, 168, 496, 238), radius=18, fill=foreground)
+        draw.rectangle((394, 382, 506, 444), fill=(255, 255, 255))
+    elif product_type == "glasses":
+        draw.rounded_rectangle((238, 342, 422, 500), radius=54, fill=accent, outline=outline, width=8)
+        draw.rounded_rectangle((478, 342, 662, 500), radius=54, fill=accent, outline=outline, width=8)
+        draw.line((422, 416, 478, 416), fill=outline, width=8)
+    elif product_type == "watch":
+        draw.rounded_rectangle((392, 150, 508, 652), radius=44, fill=secondary)
+        draw.rounded_rectangle((320, 284, 580, 520), radius=56, fill=accent, outline=outline, width=7)
+        draw.ellipse((392, 356, 508, 472), fill=(255, 255, 255))
+    elif product_type in {"earbuds", "charger"}:
+        draw.rounded_rectangle((318, 374, 582, 564), radius=46, fill=accent, outline=outline, width=5)
+        draw.rounded_rectangle((264, 250, 360, 412), radius=42, fill=secondary, outline=outline, width=5)
+        draw.rounded_rectangle((540, 250, 636, 412), radius=42, fill=secondary, outline=outline, width=5)
+    elif product_type == "keyboard":
+        draw.rounded_rectangle((198, 338, 702, 540), radius=32, fill=accent, outline=outline, width=5)
+        for row in range(3):
+            for col in range(8):
+                draw.rounded_rectangle((234 + col * 56, 374 + row * 42, 274 + col * 56, 402 + row * 42), radius=7, fill=(255, 255, 255))
+    elif product_type == "mouse":
+        draw.rounded_rectangle((342, 230, 558, 610), radius=96, fill=accent, outline=outline, width=6)
+        draw.line((450, 244, 450, 356), fill=(255, 255, 255), width=6)
+    elif product_type == "lamp":
+        draw.polygon([(380, 236), (562, 236), (622, 392), (318, 392)], fill=accent, outline=outline)
+        draw.line((470, 392, 470, 620), fill=outline, width=16)
+        draw.rounded_rectangle((340, 608, 600, 650), radius=18, fill=secondary)
+    elif product_type in {"mat", "towels"}:
+        for offset in (0, 44, 88):
+            draw.rounded_rectangle((258 + offset, 286 + offset, 596 + offset, 454 + offset), radius=34, fill=accent if offset == 88 else secondary, outline=outline, width=4)
+    elif product_type in {"bands", "rope"}:
+        for offset in (0, 84, 168):
+            draw.ellipse((234 + offset, 276, 414 + offset, 540), outline=accent if offset != 84 else secondary, width=22)
+    elif product_type == "roller":
+        draw.rounded_rectangle((246, 338, 654, 514), radius=82, fill=accent, outline=outline, width=5)
+        for x in range(304, 620, 58):
+            draw.line((x, 350, x - 52, 502), fill=secondary, width=8)
+    elif product_type in {"beauty", "pens"}:
+        for x, h, color in ((302, 300, accent), (414, 382, secondary), (526, 330, foreground)):
+            draw.rounded_rectangle((x, 570 - h, x + 70, 606), radius=24, fill=color, outline=outline, width=4)
+            draw.rectangle((x + 16, 548 - h, x + 54, 578 - h), fill=(255, 255, 255))
+    elif product_type in {"notebook", "notes"}:
+        draw.rounded_rectangle((284, 222, 616, 608), radius=28, fill=accent, outline=outline, width=5)
+        for y in range(296, 540, 54):
+            draw.line((342, y, 558, y), fill=(255, 255, 255), width=5)
+        draw.line((330, 222, 330, 608), fill=secondary, width=14)
+    elif product_type == "lock":
+        draw.arc((344, 196, 556, 430), 180, 360, fill=outline, width=24)
+        draw.rounded_rectangle((306, 386, 594, 606), radius=34, fill=accent, outline=outline, width=5)
+    elif product_type in {"pillow", "tray", "stand", "gloves", "tag", "speaker"}:
+        draw.rounded_rectangle((282, 278, 618, 574), radius=54, fill=accent, outline=outline, width=5)
+        draw.rounded_rectangle((342, 348, 558, 494), radius=28, fill=secondary)
+    else:
+        draw.rounded_rectangle((284, 286, 616, 596), radius=34, fill=accent, outline=outline, width=5)
+    if image_index == 2:
+        draw.ellipse((646, 206, 706, 266), fill=(255, 255, 255), outline=secondary, width=8)
+    elif image_index == 4:
+        draw.rounded_rectangle((214, 184, 336, 236), radius=18, fill=(255, 255, 255), outline=secondary, width=5)

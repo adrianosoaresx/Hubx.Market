@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from decimal import Decimal
 
 from app.modules.subscriptions.models import SubscriptionPlan
 from app.modules.tenants.models import Tenant, TenantOnboarding
@@ -23,6 +24,13 @@ def _status_variant(status: str) -> str:
         TenantOnboarding.Status.READY_FOR_REVIEW: "warning",
         TenantOnboarding.Status.IN_PROGRESS: "warning",
     }.get(status, "neutral")
+
+
+def _money(value: object) -> str:
+    try:
+        return f"R$ {Decimal(str(value or '0.00')):.2f}".replace(".", ",")
+    except Exception:
+        return "R$ 0,00"
 
 
 @dataclass
@@ -68,11 +76,20 @@ class TenantOnboardingQueryService:
             "store_subdomain": onboarding.store_subdomain,
             "custom_domain": onboarding.custom_domain,
             "plan_code": onboarding.plan_code,
+            "coupon_code_snapshot": onboarding.coupon_code_snapshot,
+            "coupon_discount_type_snapshot": onboarding.coupon_discount_type_snapshot,
+            "coupon_discount_value_snapshot": str(onboarding.coupon_discount_value_snapshot),
+            "coupon_discount_total_snapshot": str(onboarding.coupon_discount_total_snapshot),
+            "coupon_discount_total_label": _money(onboarding.coupon_discount_total_snapshot),
+            "effective_monthly_price_snapshot": str(onboarding.effective_monthly_price_snapshot),
+            "effective_monthly_price_label": _money(onboarding.effective_monthly_price_snapshot),
+            "promotion_snapshot": onboarding.promotion_snapshot,
+            "has_coupon_snapshot": bool(onboarding.coupon_code_snapshot),
             "owner_email": onboarding.owner_email,
             "owner_name": onboarding.owner_name,
             "owner_role": onboarding.owner_role or "owner",
             "store_display_name": onboarding.store_display_name,
-            "primary_color": onboarding.primary_color or "#4f46e5",
+            "primary_color": onboarding.primary_color or "#9a6410",
             "created_by_label": onboarding.created_by_label,
             "created_at": onboarding.created_at.strftime("%d/%m/%Y %H:%M"),
             "updated_at": onboarding.updated_at.strftime("%d/%m/%Y %H:%M"),

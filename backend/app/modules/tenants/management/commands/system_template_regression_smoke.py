@@ -5,7 +5,10 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
 from django.test import Client, override_settings
 
-from app.modules.tenants.application.system_template_regression_smoke import system_template_regression_smoke
+from app.modules.tenants.application.system_template_regression_smoke import (
+    central_host_from_tenant_host,
+    system_template_regression_smoke,
+)
 
 
 class Command(BaseCommand):
@@ -26,9 +29,11 @@ class Command(BaseCommand):
             client.force_login(user)
 
         host = str(options["host"])
+        central_host = central_host_from_tenant_host(host)
         allowed_hosts = list(getattr(settings, "ALLOWED_HOSTS", []) or [])
-        if host not in allowed_hosts:
-            allowed_hosts.append(host)
+        for candidate_host in {host, central_host}:
+            if candidate_host and candidate_host not in allowed_hosts:
+                allowed_hosts.append(candidate_host)
         with override_settings(ALLOWED_HOSTS=allowed_hosts):
             payload = system_template_regression_smoke.run(client=client, host=host)
         self.stdout.write(
@@ -36,7 +41,7 @@ class Command(BaseCommand):
         )
         for result in payload["results"]:
             self.stdout.write(
-                f"target key={result.key} path={result.path} status={result.status_code} ready={result.ready}"
+                f"target key={result.key} host={result.host} path={result.path} status={result.status_code} ready={result.ready}"
             )
             for marker in result.missing_markers:
                 self.stdout.write(f"missing key={result.key} marker={marker}")

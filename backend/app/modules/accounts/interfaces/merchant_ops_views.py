@@ -19,6 +19,8 @@ from app.modules.accounts.application.admin_permissions import (
     PERMISSION_PLATFORM_TENANTS_VIEW,
     PERMISSION_REVIEWS_MODERATE,
     PERMISSION_SHIPPING_VIEW,
+    PERMISSION_STOREFRONT_BRANDING_MANAGE,
+    PERMISSION_SUBSCRIPTIONS_MANAGE,
     PERMISSION_SUBSCRIPTIONS_VIEW,
 )
 from app.modules.accounts.interfaces.admin_rbac import request_admin_can, request_owner_role, request_tenant_id
@@ -29,22 +31,139 @@ def _request_tenant_id(request) -> int | None:
 
 
 NAV_ITEMS = [
-    {"label": "Pedidos", "href": "/ops/orders/", "permission": PERMISSION_ORDERS_VIEW},
-    {"label": "Catálogo", "href": "/ops/catalog/products/", "permission": PERMISSION_CATALOG_VIEW},
-    {"label": "Páginas", "href": "/ops/pages/", "permission": PERMISSION_PAGES_MANAGE},
-    {"label": "Newsletter", "href": "/ops/newsletter/", "permission": PERMISSION_NEWSLETTER_VIEW},
-    {"label": "Audit log", "href": "/ops/audit/", "permission": PERMISSION_AUDIT_VIEW},
-    {"label": "API keys", "href": "/ops/api-keys/quotas/", "permission": PERMISSION_API_KEYS_VIEW},
-    {"label": "Cupons", "href": "/ops/coupons/", "permission": PERMISSION_COUPONS_MANAGE},
-    {"label": "Avaliações", "href": "/ops/reviews/", "permission": PERMISSION_REVIEWS_MODERATE},
-    {"label": "Clientes", "href": "/ops/customers/", "permission": PERMISSION_CUSTOMERS_VIEW},
-    {"label": "Financeiro", "href": "/ops/payments/finance/", "permission": PERMISSION_PAYMENTS_VIEW},
-    {"label": "Refunds", "href": "/ops/payments/refunds/", "permission": PERMISSION_PAYMENTS_VIEW},
-    {"label": "Owners", "href": "/ops/owners/", "permission": PERMISSION_OWNERS_MANAGE},
-    {"label": "MFA owners", "href": "/ops/owners/mfa/", "permission": PERMISSION_OWNERS_MANAGE},
-    {"label": "Assinatura", "href": "/ops/subscriptions/", "permission": PERMISSION_SUBSCRIPTIONS_VIEW},
-    {"label": "Onboarding de lojas", "href": "/ops/platform/onboarding/", "permission": PERMISSION_PLATFORM_TENANTS_VIEW},
-    {"label": "Lojas", "href": "/ops/platform/tenants/", "permission": PERMISSION_PLATFORM_TENANTS_VIEW},
+    {
+        "label": "Pedidos",
+        "href": "/ops/orders/",
+        "permission": PERMISSION_ORDERS_VIEW,
+        "group_label": "Operação",
+        "icon": "shopping-cart",
+    },
+    {
+        "label": "Catálogo",
+        "href": "/ops/catalog/products/",
+        "permission": PERMISSION_CATALOG_VIEW,
+        "group_label": "Operação",
+        "icon": "package",
+    },
+    {
+        "label": "Clientes",
+        "href": "/ops/customers/",
+        "permission": PERMISSION_CUSTOMERS_VIEW,
+        "group_label": "Operação",
+        "icon": "users",
+    },
+    {
+        "label": "Páginas",
+        "href": "/ops/pages/",
+        "permission": PERMISSION_PAGES_MANAGE,
+        "group_label": "Conteúdo",
+        "icon": "file-text",
+    },
+    {
+        "label": "Branding",
+        "href": "/ops/branding/",
+        "permission": PERMISSION_STOREFRONT_BRANDING_MANAGE,
+        "group_label": "Conteúdo",
+        "icon": "image",
+    },
+    {
+        "label": "Newsletter",
+        "href": "/ops/newsletter/",
+        "permission": PERMISSION_NEWSLETTER_VIEW,
+        "group_label": "Conteúdo",
+        "icon": "mail",
+    },
+    {
+        "label": "Cupons",
+        "href": "/ops/coupons/",
+        "permission": PERMISSION_COUPONS_MANAGE,
+        "group_label": "Conteúdo",
+        "icon": "tag",
+    },
+    {
+        "label": "Avaliações",
+        "href": "/ops/reviews/",
+        "permission": PERMISSION_REVIEWS_MODERATE,
+        "group_label": "Conteúdo",
+        "icon": "check-circle",
+    },
+    {
+        "label": "Financeiro",
+        "href": "/ops/payments/finance/",
+        "permission": PERMISSION_PAYMENTS_VIEW,
+        "group_label": "Financeiro",
+        "icon": "credit-card",
+    },
+    {
+        "label": "Refunds",
+        "href": "/ops/payments/refunds/",
+        "permission": PERMISSION_PAYMENTS_VIEW,
+        "group_label": "Financeiro",
+        "icon": "rotate-ccw",
+    },
+    {
+        "label": "Assinatura",
+        "href": "/ops/subscriptions/",
+        "permission": PERMISSION_SUBSCRIPTIONS_VIEW,
+        "group_label": "Financeiro",
+        "icon": "receipt-text",
+    },
+    {
+        "label": "Owners",
+        "href": "/ops/owners/",
+        "permission": PERMISSION_OWNERS_MANAGE,
+        "group_label": "Acesso",
+        "icon": "user",
+    },
+    {
+        "label": "MFA owners",
+        "href": "/ops/owners/mfa/",
+        "permission": PERMISSION_OWNERS_MANAGE,
+        "group_label": "Acesso",
+        "icon": "user",
+    },
+    {
+        "label": "Audit log",
+        "href": "/ops/audit/",
+        "permission": PERMISSION_AUDIT_VIEW,
+        "group_label": "Governança",
+        "icon": "shield",
+    },
+    {
+        "label": "API keys",
+        "href": "/ops/api-keys/",
+        "permission": PERMISSION_API_KEYS_VIEW,
+        "group_label": "Governança",
+        "icon": "key-round",
+    },
+    {
+        "label": "Aquisições SaaS",
+        "href": "/ops/platform/acquisitions/",
+        "permission": PERMISSION_PLATFORM_TENANTS_VIEW,
+        "group_label": "Platform",
+        "icon": "send",
+    },
+    {
+        "label": "Cupons SaaS",
+        "href": "/ops/platform/subscription-coupons/",
+        "permission": PERMISSION_SUBSCRIPTIONS_MANAGE,
+        "group_label": "Platform",
+        "icon": "tag",
+    },
+    {
+        "label": "Onboarding de lojas",
+        "href": "/ops/platform/onboarding/",
+        "permission": PERMISSION_PLATFORM_TENANTS_VIEW,
+        "group_label": "Platform",
+        "icon": "route",
+    },
+    {
+        "label": "Lojas",
+        "href": "/ops/platform/tenants/",
+        "permission": PERMISSION_PLATFORM_TENANTS_VIEW,
+        "group_label": "Platform",
+        "icon": "store",
+    },
 ]
 
 
@@ -73,7 +192,7 @@ def _allowed_nav_items(request) -> list[dict[str, str]]:
 def _dashboard_actions(items: list[dict[str, str]]) -> str:
     return format_html_join(
         "",
-        '<a class="ds-btn-secondary" href="{}">{}</a>',
+        '<a class="ds-btn ds-btn-secondary ds-btn-sm" href="{}">{}</a>',
         ((item["href"], item["label"]) for item in items),
     )
 
@@ -87,7 +206,7 @@ def _filter_tasks_for_request(request, tasks: list[dict[str, object]]) -> list[d
 
 
 def _task_action_cell(task: dict[str, object]) -> str:
-    return format_html('<a class="ds-btn-secondary" href="{}">{}</a>', task["href"], task["action"])
+    return format_html('<a class="ds-btn ds-btn-secondary ds-btn-sm" href="{}">{}</a>', task["href"], task["action"])
 
 
 class MerchantOperationsDashboardView(TemplateView):

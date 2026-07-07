@@ -1,6 +1,8 @@
+from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
+from app.modules.accounts.models import OwnerUser
 from app.modules.shipping.models import ShippingProviderSettings, ShippingProviderSettingsHistory
 from app.modules.tenants.models import Tenant
 
@@ -9,6 +11,14 @@ from app.modules.tenants.models import Tenant
 class AdminProviderSettingsViewTests(TestCase):
     def setUp(self):
         self.tenant = Tenant.objects.create(name="Loja Provider UI", slug="loja-provider-ui", subdomain="loja-provider-ui")
+        self.user = get_user_model().objects.create_user(
+            username="provider-admin@hubx.market",
+            email="provider-admin@hubx.market",
+            password="secret",
+        )
+        OwnerUser.objects.create(tenant=self.tenant, email=self.user.email, role="owner", is_active=True)
+        self.client.force_login(self.user)
+        self.client.defaults["HTTP_HOST"] = f"{self.tenant.subdomain}.hubx.market"
 
     def test_admin_provider_settings_view_renders_manual_fallback(self):
         response = self.client.get(
@@ -19,6 +29,16 @@ class AdminProviderSettingsViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Provider de tracking")
         self.assertContains(response, "Manual/local")
+        self.assertContains(response, "Salvar provider")
+
+    def test_admin_provider_settings_form_includes_csrf_token(self):
+        response = self.client.get(
+            reverse("shipping:admin-shipping-provider"),
+            HTTP_HOST=f"{self.tenant.subdomain}.hubx.market",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name="csrfmiddlewaretoken"')
         self.assertContains(response, "Salvar provider")
 
     def test_admin_provider_settings_action_upserts_http_settings_for_tenant(self):
@@ -129,6 +149,7 @@ class AdminProviderSettingsViewTests(TestCase):
 
     def test_admin_provider_settings_action_does_not_cross_tenants(self):
         other_tenant = Tenant.objects.create(name="Outra Provider UI", slug="outra-provider-ui", subdomain="outra-provider-ui")
+        OwnerUser.objects.create(tenant=other_tenant, email=self.user.email, role="owner", is_active=True)
 
         response = self.client.post(
             reverse("shipping:admin-shipping-provider-update"),
