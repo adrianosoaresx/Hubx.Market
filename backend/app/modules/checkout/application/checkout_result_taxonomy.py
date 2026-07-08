@@ -15,6 +15,7 @@ CHECKOUT_RESULT_TAXONOMY = {
     "checkout-completion-inventory-unavailable": ("inventory", "warning", "restart_from_product"),
     "checkout-completion-stock-conflict": ("inventory", "warning", "review_current_session"),
     "checkout-completion-snapshot-conflict": ("snapshot", "warning", "review_current_session"),
+    "checkout-completion-order-limit-reached": ("commercial_limit", "warning", "contact_store"),
     "checkout-item-updated": ("cart_mutation", "success", "continue_session"),
     "checkout-item-removed": ("cart_mutation", "success", "continue_session"),
     "checkout-inventory-reconciled": ("inventory", "success", "review_current_session"),

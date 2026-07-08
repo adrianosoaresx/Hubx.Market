@@ -106,15 +106,15 @@ Definir esqueletos padrão de página.
 - a página de planos não deve incorporar galeria, catálogo ou blocos de demo; a demo oficial deve ser acessada apenas por link/CTA para `/demo/`.
 - navegação deve seguir o mesmo partial público da home central e incluir link para `/demo/`.
 - cards de plano mostram dados de `SubscriptionPlan` ativo.
-- cards de plano devem exibir badges de trial e cartão quando `trial_days`/`requires_payment_method` estiverem configurados.
-- preço deve deixar claro o valor mensal após o trial, por exemplo `R$ 99,90 /mês após 30 dias`.
+- cards de plano devem destacar taxa por pedido pago, mínimo abatível quando houver, limites de produtos e limites de pedidos pagos.
+- preço não deve falar em trial, cartão obrigatório ou nomenclatura interna; exemplos válidos: `R$ 0/mês + 2% dos pedidos pagos` e `R$ 259,90 mínimo ou 2% dos pedidos pagos`.
 - cards de plano usam `ds-plan-card ds-surface`; recomendação usa `badge.html`, não span local.
 - formulário público deve deixar claro no fluxo que cria intenção de aquisição, não checkout/billing real.
-- formulário público não deve pedir número de cartão, CVV, validade ou qualquer dado sensível de payment method.
+- formulário público não deve pedir número de cartão, CVV, validade ou qualquer dado sensível de método de cobrança.
 - formulário público usa `ds-card`, `alert.html`/`ds-alert` e `field_error.html` para feedback.
 - sucesso confirma recebimento e mantém o provisionamento reservado ao admin platform.
 - quando `HUBX_PUBLIC_SIGNUP_ENABLED=1`, `/plans/` pode exibir CTA secundário para `/plans/signup/`.
-- `/plans/signup/` deve deixar claro que cria tenant em manutenção, trial interno de acordo com o plano, provider-alvo Asaas e owner inicial, sem billing SaaS automático.
-- `/plans/signup/` deve explicar que cartão obrigatório acontece apenas em fluxo seguro hospedado de billing, fora dos campos públicos.
+- `/plans/signup/` deve deixar claro que cria tenant em manutenção apenas para planos self-service sem mínimo mensal.
+- `/plans/signup/` não deve listar Pro/Enterprise como opções self-service; esses planos seguem onboarding assistido para configurar cobrança segura.
 - quando `HUBX_PUBLIC_SIGNUP_REQUIRE_ACCESS_TOKEN=1`, o template deve exibir campo de código de acesso e erro inline via `field_error.html`.
 - sucesso de signup deve mostrar subdomínio, estado de manutenção e CTA para login/admin da loja recém-criada.

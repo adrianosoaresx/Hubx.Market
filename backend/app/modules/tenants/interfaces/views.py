@@ -449,7 +449,7 @@ class TenantOnboardingDetailView(TemplateView):
                 "status_badge": _status_badge({"status_variant": onboarding["status_variant"], "status_label": onboarding["status_label"]}),
                 "contract_notes": [
                     "O wizard salva rascunho antes de criar o Tenant.",
-                    "A conclusão cria assinatura interna trialing, owner inicial e audit trail.",
+                    "A conclusão cria assinatura comercial, owner inicial e audit trail.",
                     "Custom domain permanece contract-only; DNS/TLS seguem evidência externa.",
                 ],
             }

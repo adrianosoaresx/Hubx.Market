@@ -675,7 +675,7 @@ Pagamentos de assinatura SaaS são um contexto diferente dos pagamentos de pedid
 Aquisição pública de plano pertence a `subscriptions` como `SubscriptionAcquisitionLead`.
 Esse lead pode chamar `tenants.application.tenant_onboarding_commands` somente na conversão platform controlada, para criar/preencher uma jornada.
 O fluxo assistido de `/plans/` não deve importar commands de `tenants` nem criar tenant, owner, assinatura, catálogo, pedido ou pagamento.
-O signup self-service de `/plans/signup/` é exceção explícita: a view pública em `subscriptions` delega para `tenants.application.public_tenant_signup_commands`, que orquestra tenant, assinatura trial e owner inicial sem criar dados de commerce.
+O signup self-service de `/plans/signup/` é exceção explícita: a view pública em `subscriptions` delega para `tenants.application.public_tenant_signup_commands`, que orquestra tenant, assinatura comercial e owner inicial sem criar dados de commerce.
 Cupons comerciais de planos SaaS pertencem a `subscriptions.models.SubscriptionCoupon` e não devem reutilizar `coupons.Coupon`.
 `subscriptions.application.subscription_coupon_queries.validate_plan_coupon(...)` é a boundary pública para validar `coupon_code` em `/plans/` e `/plans/signup/`.
 
@@ -690,9 +690,9 @@ Cupons comerciais de planos SaaS pertencem a `subscriptions.models.SubscriptionC
 - `/ops/platform/acquisitions/` pode listar/revisar leads com permissão platform.
 - converter lead cria apenas `TenantOnboarding`; conclusão continua responsabilidade do wizard de onboarding em `tenants`.
 - descartar lead altera apenas status/audit.
-- signup self-service cria `Tenant` em `maintenance_mode`, `TenantSubscription(status=trialing)` com fim de trial calculado pelo plano e `OwnerUser`; não cria `Customer`, catálogo, pedido, pagamento ou invoice.
+- signup self-service cria `Tenant` em `maintenance_mode`, `TenantSubscription` e `OwnerUser` apenas para planos sem `requires_billing_method`; não cria `Customer`, catálogo, pedido, pagamento ou invoice.
 - `subscriptions` registra provider-alvo de billing SaaS, por padrão Asaas, mas não chama API externa nem cria cobrança recorrente.
-- `subscriptions` pode expor `requires_payment_method` como requisito comercial do plano, mas `/plans/` e `/plans/signup/` não podem coletar dados de cartão.
+- `subscriptions` pode expor `requires_billing_method` como requisito comercial do plano, mas `/plans/`, `/plans/signup/` e `/ops/subscriptions/billing-method/` não podem coletar dados de cartão, token, CVV ou validade em campos livres.
 - `payments` é o único módulo que conhece adapters de provider de checkout de pedidos; Asaas e Pagar.me não devem vazar para `checkout` ou `orders` além de contratos normalizados.
 - corrida concorrente de slug/subdomínio deve ser tratada pelo command público como erro de formulário.
 - `coupons.Coupon` permanece tenant-scoped para cart/checkout/order e não deve validar plano SaaS.

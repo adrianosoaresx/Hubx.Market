@@ -76,10 +76,10 @@ api-keys
 - configurar identidade institucional básica da loja
 - gerenciar owners
 - controlar planos SaaS
-- expor contrato público de planos com trial, requisito de payment method e features
+- expor contrato público de planos com limites de produtos, pedidos pagos, take rate, mínimo mensal e elegibilidade de self-service
 - gerenciar cupons comerciais platform-scope para planos SaaS
 - capturar intenções públicas de aquisição SaaS
-- provisionar signup self-service controlado em `/plans/signup/` quando a feature flag e o controle de acesso estiverem ativos, criando trial interno com provider-alvo Asaas sem capturar cartão
+- provisionar signup self-service controlado em `/plans/signup/` quando a feature flag e o controle de acesso estiverem ativos, criando tenant em manutenção para plano elegível sem método obrigatório, com provider-alvo Asaas sem capturar cartão/token
 - auditoria do sistema
 - integração administrativa
 

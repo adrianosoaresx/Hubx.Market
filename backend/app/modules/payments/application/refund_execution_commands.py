@@ -6,6 +6,7 @@ from decimal import Decimal
 from django.utils import timezone
 
 from app.modules.audit.application.audit_log_commands import audit_log_commands
+from app.modules.payments.application.platform_fee_ledger_commands import platform_fee_ledger_commands
 from app.modules.payments.infrastructure.provider_adapters import (
     ProviderAdapterError,
     RefundProviderContract,
@@ -110,6 +111,12 @@ class PaymentRefundExecutionCommandService:
 
         self._apply_provider_response(refund=refund, response=response)
         self.repository.save_refund(refund)
+        if response.status in {"accepted", "succeeded"}:
+            platform_fee_ledger_commands.mark_refund_adjustment_required(
+                tenant_id=getattr(refund, "tenant_id", None),
+                order_id=getattr(refund, "order_id", None),
+                refund_key=str(getattr(refund, "refund_key", "")),
+            )
         self._record_execution_audit(
             refund=refund,
             result=_string(getattr(response, "status", "")) or "failed",

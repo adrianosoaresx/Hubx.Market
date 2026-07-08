@@ -1,0 +1,100 @@
+- generic [ref=e2] [box=0,0,1366,1315]:
+  - banner [ref=e3] [box=0,0,1366,71]:
+    - generic [ref=e4] [box=43,0,1280,70]:
+      - link "Hubx Market" [ref=e5] [cursor=pointer] [box=67,16,844,38]:
+        - /url: /
+        - generic [ref=e7] [box=117,17,99,35]:
+          - generic [ref=e8] [box=117,17,99,18]: Hubx Market
+          - generic [ref=e9] [box=117,39,99,14]: Signup SaaS
+      - navigation "Navegação pública" [ref=e10] [box=927,17,372,36]:
+        - link "Portal" [ref=e11] [cursor=pointer] [box=927,17,85,36]:
+          - /url: /
+          - img [ref=e12] [box=940,27,16,16]
+          - generic [ref=e16] [box=964,28,36,14]: Portal
+        - link "Planos" [ref=e17] [cursor=pointer] [box=1020,17,90,36]:
+          - /url: /plans/
+          - img [ref=e18] [box=1033,27,16,16]
+          - generic [ref=e20] [box=1057,28,40,14]: Planos
+        - link "Demo" [ref=e21] [cursor=pointer] [box=1118,17,87,36]:
+          - /url: /demo/
+          - img [ref=e22] [box=1131,27,16,16]
+          - generic [ref=e26] [box=1155,28,37,14]: Demo
+        - link "Entrar" [ref=e27] [cursor=pointer] [box=1213,17,86,36]:
+          - /url: /accounts/login/
+          - img [ref=e28] [box=1226,27,16,16]
+          - generic [ref=e31] [box=1250,28,37,14]: Entrar
+  - main [ref=e32] [box=43,71,1280,1164]:
+    - generic [ref=e33] [box=67,111,635,1084]:
+      - generic [ref=e34] [box=67,111,635,140]:
+        - paragraph [ref=e35] [box=67,111,635,20]: Self-service controlado
+        - heading "Crie sua loja em modo manutenção." [level=1] [ref=e36] [box=67,139,635,40]
+        - paragraph [ref=e37] [box=67,195,635,56]: O signup cria tenant, owner e assinatura comercial em modo manutenção. Planos com mínimo mensal seguem pelo onboarding assistido antes da ativação.
+      - generic [ref=e38] [box=67,275,635,116]:
+        - generic [ref=e39] [box=67,275,635,20]:
+          - img [ref=e40] [box=67,275,16,16]
+          - generic [ref=e42] [box=91,275,399,20]: Loja nasce isolada por subdomínio e sem dados de outro tenant.
+        - generic [ref=e43] [box=67,307,635,20]:
+          - img [ref=e44] [box=67,307,16,16]
+          - generic [ref=e46] [box=91,307,269,20]: OwnerUser é criado separado de Customer.
+        - generic [ref=e47] [box=67,339,635,20]:
+          - img [ref=e48] [box=67,339,16,16]
+          - generic [ref=e50] [box=91,339,415,20]: Primeiro acesso leva ao admin para configuração antes de publicar.
+        - generic [ref=e51] [box=67,371,635,20]:
+          - img [ref=e52] [box=67,371,16,16]
+          - generic [ref=e54] [box=91,371,523,20]: O checkout Hubx será configurado para descontar a taxa Hubx sobre pedidos pagos.
+    - generic [ref=e55] [box=734,111,565,1084]:
+      - heading "Dados iniciais" [level=2] [ref=e56] [box=759,136,515,28]
+      - paragraph [ref=e57] [box=759,172,515,40]: Use um e-mail novo para o owner inicial. O tenant será criado em modo manutenção até a publicação da loja.
+      - status [ref=e58] [box=759,232,515,102]:
+        - generic [ref=e59] [box=776,248,482,68]:
+          - img [ref=e61] [box=776,250,20,20]
+          - generic [ref=e63] [box=808,248,450,68]
+      - generic [ref=e66] [box=759,354,515,816]:
+        - generic [ref=e67] [box=759,354,515,73]:
+          - text: Plano
+          - combobox "Plano" [ref=e68] [box=759,378,515,49]
+        - generic [ref=e69] [box=759,442,515,74]:
+          - text: Cupom SaaS
+          - textbox "Cupom SaaS" [ref=e70] [box=759,466,515,50]:
+            - /placeholder: SAAS10
+        - generic [ref=e71] [box=759,532,515,74]:
+          - text: Nome da loja
+          - textbox "Nome da loja" [ref=e72] [box=759,556,515,50]:
+            - /placeholder: Minha loja
+        - generic [ref=e73] [box=759,622,515,74]:
+          - text: Subdomínio
+          - textbox "Subdomínio" [ref=e74] [box=759,646,515,50]:
+            - /placeholder: minha-loja
+        - generic [ref=e75] [box=759,711,515,74]:
+          - generic [ref=e76] [box=759,711,250,74]
+          - generic [ref=e78] [box=1025,711,250,74]
+        - generic [ref=e80] [box=759,801,515,74]:
+          - text: Telefone
+          - textbox "Telefone" [ref=e81] [box=759,825,515,50]:
+            - /placeholder: (11) 99999-0000
+        - generic [ref=e82] [box=759,890,515,74]:
+          - text: Código de acesso
+          - textbox "Código de acesso" [ref=e83] [box=759,914,515,50]
+        - generic [ref=e84] [box=759,980,515,74]:
+          - generic [ref=e85] [box=759,980,250,74]
+          - generic [ref=e87] [box=1025,980,250,74]
+        - generic [ref=e89] [box=759,1070,515,40]:
+          - checkbox "Aceito criar a loja em modo manutenção e seguir a configuração comercial do plano selecionado." [ref=e90] [box=759,1074,13,36]
+          - generic [ref=e91] [box=784,1070,490,40]: Aceito criar a loja em modo manutenção e seguir a configuração comercial do plano selecionado.
+        - button "Criar loja Criar loja" [ref=e92] [cursor=pointer] [box=759,1126,515,44]:
+          - img "Criar loja" [ref=e93] [box=974,1140,16,16]
+          - generic [ref=e97] [box=998,1139,61,18]: Criar loja
+  - contentinfo [ref=e98] [box=0,1234,1366,80]:
+    - generic [ref=e99] [box=43,1235,1280,80]:
+      - link "Hubx Market" [ref=e100] [cursor=pointer] [box=67,1259,130,32]:
+        - /url: /
+        - generic [ref=e103] [box=111,1267,86,16]: Hubx Market
+      - generic [ref=e104] [box=791,1255,508,40]:
+        - group "Tema da interface" [ref=e105] [box=791,1255,303,40]:
+          - generic [ref=e106] [box=796,1266,42,17]: Tema
+          - button "Claro" [ref=e107] [box=842,1260,73,30]
+          - button "Escuro" [ref=e115] [box=918,1260,80,30]
+          - button "Sistema" [pressed] [ref=e119] [box=1002,1260,87,30]
+        - paragraph [ref=e123] [box=1106,1265,193,20]:
+          - img [ref=e124] [box=1106,1267,16,16]
+          - generic [ref=e126] [box=1130,1265,169,20]: Operado com Hubx Market

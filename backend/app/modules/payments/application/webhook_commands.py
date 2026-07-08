@@ -8,6 +8,8 @@ from django.conf import settings
 
 from app.modules.orders.application.customer_order_payment_commands import customer_order_payment_commands
 from app.modules.payments.application.payment_attempt_commands import payment_attempt_commands
+from app.modules.payments.application.platform_billing_commands import platform_billing_commands
+from app.modules.payments.application.platform_fee_ledger_commands import platform_fee_ledger_commands
 from app.modules.payments.domain.webhook_normalization import (
     looks_like_asaas_webhook,
     looks_like_pagarme_webhook,
@@ -105,6 +107,10 @@ class PaymentWebhookCommandService:
                 logger.warning("payments.webhook.forbidden_token", extra={"provider": "generic"})
                 return "payment-webhook-forbidden", 403
 
+        platform_billing_result = platform_billing_commands.process_platform_fee_webhook(payload=payload)
+        if platform_billing_result is not None:
+            return platform_billing_result
+
         normalized = normalize_payment_webhook(payload)
         if normalized is None:
             logger.warning("payments.webhook.unsupported_event", extra={"payload_type": str(payload.get("type") or payload.get("event_type") or "")})
@@ -150,12 +156,17 @@ class PaymentWebhookCommandService:
                 payment_source_label=normalized.payment_source_label,
             )
             if result in {"payment-confirmed", "payment-already-confirmed"}:
-                payment_attempt_commands.reconcile_external_event(
+                payment_attempt = payment_attempt_commands.reconcile_external_event(
                     tenant_id=tenant_id,
                     order_number=normalized.order_number,
                     event_type=normalized.event_type,
                     external_reference=normalized.payment_reference,
                     provider_label=normalized.payment_source_label,
+                )
+                platform_fee_ledger_commands.record_paid_order_fee(
+                    tenant_id=tenant_id,
+                    order_number=normalized.order_number,
+                    payment_attempt=payment_attempt,
                 )
                 if result == "payment-confirmed":
                     notification_event_handlers.record_customer_order_event_email_logs(
@@ -170,6 +181,12 @@ class PaymentWebhookCommandService:
                 payment_reference=normalized.payment_reference,
                 payment_source_label=normalized.payment_source_label,
             )
+            if result == "payment-failure-blocked":
+                platform_fee_ledger_commands.mark_order_adjustment_required(
+                    tenant_id=tenant_id,
+                    order_number=normalized.order_number,
+                    reason_code=normalized.event_type,
+                )
             if result == "payment-failed":
                 payment_attempt_commands.reconcile_external_event(
                     tenant_id=tenant_id,

@@ -12,16 +12,16 @@
     </header>
 
     <main>
-        {% include "shared/partials/public_hero.html" with hero_eyebrow="Planos Hubx Market" hero_title="Teste grátis por 30 dias." hero_description="Escolha um plano, avance pelo onboarding e valide a loja em trial. Asaas será o primeiro provider para recebimentos e billing SaaS, com interface preparada para outros meios no futuro." primary_label="Iniciar onboarding" primary_href="#aquisicao" primary_icon="send" secondary_label="Ver planos" secondary_href="#planos" secondary_icon="receipt-text" tertiary_label="Acessar demo" tertiary_href=demo_href tertiary_icon="store" %}
+        {% include "shared/partials/public_hero.html" with hero_eyebrow="Planos Hubx Market" hero_title="Pague pelo que vender." hero_description="Comece sem mensalidade no Essencial, cresça com mínimo abatível no Pro e mantenha a taxa Hubx ligada aos pedidos pagos no checkout integrado." primary_label="Iniciar onboarding" primary_href="#aquisicao" primary_icon="send" secondary_label="Ver planos" secondary_href="#planos" secondary_icon="receipt-text" tertiary_label="Acessar demo" tertiary_href=demo_href tertiary_icon="store" %}
 
         <section id="planos" class="mx-auto max-w-7xl px-6 py-12">
             <div class="flex flex-wrap items-end justify-between gap-4">
                 <div>
                     <p class="text-sm font-semibold text-[var(--color-action-primary-bg)]">Planos ativos</p>
-                    <h2 class="mt-2 text-2xl font-semibold text-[var(--color-text-primary)]">Escolha o contrato inicial</h2>
+                    <h2 class="mt-2 text-2xl font-semibold text-[var(--color-text-primary)]">Escolha pela capacidade da sua loja</h2>
                 </div>
                 <p class="max-w-xl text-sm text-[var(--color-text-secondary)]">
-                    Todos os planos comerciais podem iniciar com 30 dias grátis. O onboarding prepara Asaas como provider inicial para pagamentos da loja e billing SaaS, sem capturar cartão em campos livres.
+                    Os limites de produtos e pedidos deixam claro quando evoluir. A taxa Hubx incide sobre pedido pago e é descontada no checkout integrado.
                 </p>
             </div>
 
@@ -35,8 +35,8 @@
                             {% endif %}
                         </div>
                         <div class="mt-3 flex flex-wrap gap-2">
-                            {% if plan.trial_badge %}
-                                {% include "shared/components/data_display/badge.html" with label=plan.trial_badge variant="success" size="xs" %}
+                            {% if plan.usage_badge %}
+                                {% include "shared/components/data_display/badge.html" with label=plan.usage_badge variant="success" size="xs" %}
                             {% endif %}
                             {% if plan.payment_badge %}
                                 {% include "shared/components/data_display/badge.html" with label=plan.payment_badge variant="neutral" size="xs" %}
@@ -57,7 +57,7 @@
                             {% include "shared/partials/icon.html" with name="arrow-down" size="sm" %}
                             <span>Iniciar {{ plan.name }}</span>
                         </a>
-                        {% if public_signup_enabled %}
+                        {% if public_signup_enabled and plan.self_service_eligible %}
                             <a class="ds-btn ds-btn-primary ds-btn-md mt-3 w-full" href="{{ signup_href }}?plan={{ plan.code }}">
                                 {% include "shared/partials/icon.html" with name="store" size="sm" %}
                                 <span>Criar loja self-service</span>
@@ -76,17 +76,17 @@
         <section class="border-y border-[var(--color-border-default)] bg-[var(--color-surface-panel)]">
             <div class="mx-auto grid max-w-7xl gap-6 px-6 py-10 lg:grid-cols-3">
                 <div>
-                    <p class="text-sm font-semibold text-[var(--color-action-primary-bg)]">Onboarding e recebimentos</p>
-                    <h2 class="mt-2 text-2xl font-semibold text-[var(--color-text-primary)]">30 dias para validar antes da cobrança.</h2>
+                    <p class="text-sm font-semibold text-[var(--color-action-primary-bg)]">Recebimento Hubx</p>
+                    <h2 class="mt-2 text-2xl font-semibold text-[var(--color-text-primary)]">A taxa acompanha o sucesso da loja.</h2>
                 </div>
                 <div class="grid gap-3 text-sm text-[var(--color-text-secondary)] lg:col-span-2">
                     <div class="flex gap-2">
                         {% include "shared/partials/icon.html" with name="check" size="sm" %}
-                        <span>O trial é registrado como assinatura interna em estado <strong>trial</strong>.</span>
+                        <span>No Essencial, não há mensalidade: a Hubx recebe 2% somente em pedido pago.</span>
                     </div>
                     <div class="flex gap-2">
-                        {% include "shared/partials/icon.html" with name="credit-card" size="sm" %}
-                        <span>Asaas será usado para checkout hospedado e billing SaaS; dados de cartão ficam no provider seguro.</span>
+                        {% include "shared/partials/icon.html" with name="receipt-text" size="sm" %}
+                        <span>No Pro, o split mensal abate o mínimo de R$ 259,90; só há complemento se as vendas do mês ficarem abaixo disso.</span>
                     </div>
                     <div class="flex gap-2">
                         {% include "shared/partials/icon.html" with name="shield" size="sm" %}
@@ -102,7 +102,7 @@
                     <p class="text-sm font-semibold text-[var(--color-action-primary-bg)]">Onboarding assistido</p>
                     <h2 class="mt-2 text-2xl font-semibold text-[var(--color-text-primary)]">Comece a criação da sua loja com contexto comercial.</h2>
                     <p class="mt-3 max-w-2xl text-sm leading-6 text-[var(--color-text-secondary)]">
-                        O envio registra o início do onboarding para revisão platform. A equipe valida plano, subdomínio, Asaas sandbox e próximos passos antes de qualquer cobrança SaaS.
+                        O envio registra o início do onboarding para revisão platform. A equipe valida plano, subdomínio, checkout Hubx e próximos passos antes de publicar a operação.
                     </p>
                     <ul class="mt-6 grid gap-3 text-sm text-[var(--color-text-secondary)]">
                         {% if public_signup_enabled %}
@@ -113,11 +113,7 @@
                         {% endif %}
                         <li class="flex gap-2">
                             {% include "shared/partials/icon.html" with name="check" size="sm" %}
-                            <span>Onboarding comercial seguro, sem checkout público dentro do Hubx Market.</span>
-                        </li>
-                        <li class="flex gap-2">
-                            {% include "shared/partials/icon.html" with name="credit-card" size="sm" %}
-                            <span>Não insira dados de cartão neste formulário; a coleta real deve ocorrer em fluxo seguro de billing.</span>
+                            <span>Onboarding comercial seguro, com checkout Hubx como base para o split da taxa.</span>
                         </li>
                         <li class="flex gap-2">
                             {% include "shared/partials/icon.html" with name="check" size="sm" %}
@@ -140,7 +136,7 @@
                                 </span>
                                 <div class="ds-alert-copy">
                                     <p class="ds-alert-title">Intenção recebida</p>
-                                    <p class="ds-alert-description">Recebemos sua intenção para {{ lead.store_name }}. A fila platform revisará o plano {{ lead.plan_code }} antes de qualquer provisionamento.</p>
+                                    <p class="ds-alert-description">Recebemos sua intenção para {{ lead.store_name }}. A fila platform revisará o plano {{ lead.plan_name|default:lead.plan_code }} antes de qualquer provisionamento.</p>
                                     {% if lead.coupon_code_snapshot %}
                                         <p class="ds-alert-description">Cupom {{ lead.coupon_code_snapshot }} aplicado: mensalidade efetiva {{ lead.effective_monthly_price_label }}.</p>
                                     {% endif %}
@@ -160,7 +156,7 @@
                             <select class="ds-input" name="plan_code" required>
                                 <option value="">Selecione</option>
                                 {% for plan in plans %}
-                                    <option value="{{ plan.code }}" {% if values.plan_code == plan.code or selected_plan == plan.code %}selected{% endif %}>{{ plan.name }} · {{ plan.monthly_price }}</option>
+                                    <option value="{{ plan.code }}" {% if values.plan_code == plan.code or selected_plan == plan.code %}selected{% endif %}>{{ plan.name }} · {{ plan.commercial_summary }}</option>
                                 {% endfor %}
                             </select>
                             {% if errors.plan_code %}{% include "shared/components/forms/field_error.html" with text=errors.plan_code %}{% endif %}

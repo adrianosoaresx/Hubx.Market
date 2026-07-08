@@ -56,6 +56,8 @@ Guardrail:
 - toda criação deve ser auditada tenant-scoped e manter isolamento por subdomínio.
 
 ### Decisão: planos públicos exibem trial de 30 dias com cartão obrigatório
+
+Status: supersedida por `2026-07-08 — Modelo Comercial Pay-As-You-Sell` e `2026-07-08 — Hardening Do Billing Method Após Auditoria`.
 Decisão:
 - `SubscriptionPlan` passa a declarar `trial_days`, `requires_payment_method` e `feature_list`.
 - os planos comerciais seedados iniciam com `trial_days=30` e `requires_payment_method=True`.
@@ -8205,3 +8207,63 @@ Consequências:
 - desativação é lógica; não há exclusão física de variante no fluxo administrativo.
 - o service bloqueia deixar o produto sem variante ativa e impede variante inativa como padrão.
 - storefront e checkout continuam consumindo a variante efetiva/padrão existente, sem alterar baixa de estoque ou criação de pedido.
+
+## 2026-07-08 — Modelo Comercial Pay-As-You-Sell
+
+Decisão:
+
+- posicionar os planos públicos em 3 opções: Essencial, Pro e Enterprise.
+- Essencial cobra R$ 0/mês + 2% dos pedidos pagos, com limite de 100 produtos e 300 pedidos pagos/mês.
+- Pro cobra o maior valor entre R$ 259,90/mês e 2% dos pedidos pagos, com limite de 500 produtos e 1.500 pedidos pagos/mês.
+- Enterprise permanece sob consulta, com limites, percentual, SLA e implantação negociados.
+- `subscriptions` passa a ser a fonte dos termos comerciais; `catalog`, `checkout` e `payments` consomem esses termos por application service.
+- Asaas split é a forma preferencial de receber a taxa Hubx quando configurado.
+
+Consequências:
+
+- o Essencial reduz barreira de entrada e não exige método de cobrança do lojista no signup.
+- o Pro exige método de cobrança ativo porque entrega recursos superiores e possui mínimo mensal garantido; enquanto não há fluxo seguro de cobrança, deve seguir onboarding assistido.
+- catálogo bloqueia criação/reativação acima do limite, mas permite edição e desativação.
+- checkout bloqueia início de novo pagamento quando o limite mensal de pedidos pagos foi atingido.
+- pagamentos registram `PlatformFeeLedger` por pedido pago e ajuste mensal do Pro sem duplicidade.
+- cobrança complementar automática do Pro fica pendente até existir fluxo seguro de método de cobrança e execução Asaas recorrente/avulsa.
+
+## 2026-07-08 — Billing Method Seguro E Cobrança Complementar Asaas
+
+Decisão:
+
+- implementar cobrança complementar do Pro via `payments`, usando cobrança hospedada/tokenizada do Asaas.
+- `TenantSubscription` passa a guardar estado e referências externas do billing method: cliente provider, URL hospedada, referência tokenizada e data de verificação.
+- a Hubx não coleta nem persiste número de cartão, CVV ou dados sensíveis de cartão em formulários próprios.
+- `close_platform_fee_minimums --collect` cria a cobrança complementar Asaas quando houver diferença até o mínimo do Pro.
+- `PAYMENTS_PLATFORM_BILLING_ASAAS_ENABLED=1` permite a tentativa automática de coleta no fechamento mensal.
+
+Consequências:
+
+- sem provider habilitado, o fechamento continua apenas criando ledger pendente.
+- sem token/referência externa segura, a cobrança usa `invoiceUrl` hospedado pelo Asaas para o lojista pagar fora da Hubx.
+- com referência tokenizada segura, a cobrança pode enviar `creditCardToken` sem reenviar dados sensíveis.
+- webhook Asaas com `externalReference=hubx-platform-fee:<ledger_key>` concilia a cobrança complementar e marca o ledger como pago.
+- a confirmação da cobrança complementar não altera pedidos nem estoque; ela afeta somente o ledger financeiro platform.
+- `/ops/subscriptions/billing-method/` passa a ser a surface tenant-scoped para acompanhar billing method e garantir o cliente Asaas; ativação tokenizada exige fluxo seguro/trusted do provider.
+- `payment_sandbox_validate_platform_billing` valida dry-run, execução Asaas sandbox e webhook simulado da cobrança complementar.
+- `enforce_platform_fee_delinquency` move Pro para `past_due`/`suspended` após janelas configuradas e reativa quando não houver complemento pendente.
+
+## 2026-07-08 — Hardening Do Billing Method Após Auditoria
+
+Decisão:
+
+- bloquear ativação manual de billing method por formulário tenant-owned.
+- `/ops/subscriptions/billing-method/` passa a ser superfície de acompanhamento e garantia de cliente Asaas, não de colar token.
+- `register_external_billing_method(...)` só aceita `status=active` e referência tokenizada quando chamado como ativação confiável/trusted por fluxo seguro do provider.
+- templates e queries não reexibem `billing_method_reference`.
+- snapshots de cobrança complementar Asaas redigem `creditCardToken` antes de persistir metadata.
+- signup self-service lista apenas planos elegíveis sem `requires_billing_method`; Pro e Enterprise seguem onboarding assistido.
+- quando webhook confirmar pedido acima do limite mensal por corrida, o pedido permanece pago e o ledger marca `commercial_overage` para tratativa comercial.
+
+Consequências:
+
+- owner/admin tenant não consegue marcar método de cobrança como ativo com IDs falsos.
+- Essencial não exibe ação de método de cobrança porque não possui mínimo mensal.
+- códigos internos como `starter` não devem aparecer em mensagens de sucesso ou tabela tenant-facing.
+- cobrança complementar do Pro depende de cliente Asaas, URL hospedada ou referência tokenizada obtida fora de campos livres.

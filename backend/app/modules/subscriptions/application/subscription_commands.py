@@ -34,6 +34,13 @@ def _money(value: object) -> Decimal:
         return Decimal("0.00")
 
 
+def _percent(value: object) -> Decimal:
+    try:
+        return max(Decimal(str(value or "0.00")), Decimal("0.00"))
+    except Exception:
+        return Decimal("0.00")
+
+
 def _money_label(value: object) -> str:
     return f"R$ {_money(value):.2f}".replace(".", ",")
 
@@ -186,6 +193,13 @@ class SubscriptionCommandService:
         included_api_quota: object = 0,
         trial_days: object = 0,
         requires_payment_method: object = False,
+        billing_model: object = SubscriptionPlan.BillingModel.TAKE_RATE_ONLY,
+        platform_fee_percent: object = "0.00",
+        minimum_monthly_fee: object = "0.00",
+        product_limit: object = 0,
+        monthly_paid_order_limit: object = 0,
+        requires_hubx_checkout: object = True,
+        requires_billing_method: object = False,
         features: object = "",
         status: object = SubscriptionPlan.Status.ACTIVE,
         actor_label: object = "",
@@ -193,10 +207,13 @@ class SubscriptionCommandService:
         normalized_code = _string(code, limit=80).lower()
         normalized_name = _string(name, limit=120)
         normalized_status = _string(status, limit=16) or SubscriptionPlan.Status.ACTIVE
+        normalized_billing_model = _string(billing_model, limit=32) or SubscriptionPlan.BillingModel.TAKE_RATE_ONLY
         if not normalized_code or not normalized_name:
             return {"result": "subscription-plan-invalid", "errors": {"code": "required", "name": "required"}}
         if normalized_status not in SubscriptionPlan.Status.values:
             return {"result": "subscription-plan-invalid", "errors": {"status": "invalid"}}
+        if normalized_billing_model not in SubscriptionPlan.BillingModel.values:
+            return {"result": "subscription-plan-invalid", "errors": {"billing_model": "invalid"}}
         plan, created = SubscriptionPlan.objects.update_or_create(
             code=normalized_code,
             defaults={
@@ -206,6 +223,13 @@ class SubscriptionCommandService:
                 "included_api_quota": _positive_int(included_api_quota),
                 "trial_days": _positive_int(trial_days),
                 "requires_payment_method": _bool(requires_payment_method),
+                "billing_model": normalized_billing_model,
+                "platform_fee_percent": _percent(platform_fee_percent),
+                "minimum_monthly_fee": _money(minimum_monthly_fee),
+                "product_limit": _positive_int(product_limit),
+                "monthly_paid_order_limit": _positive_int(monthly_paid_order_limit),
+                "requires_hubx_checkout": _bool(requires_hubx_checkout),
+                "requires_billing_method": _bool(requires_billing_method),
                 "feature_list": _features_text(features),
                 "status": normalized_status,
             },
@@ -224,6 +248,13 @@ class SubscriptionCommandService:
                 "monthly_price": str(plan.monthly_price),
                 "trial_days": plan.trial_days,
                 "requires_payment_method": plan.requires_payment_method,
+                "billing_model": plan.billing_model,
+                "platform_fee_percent": str(plan.platform_fee_percent),
+                "minimum_monthly_fee": str(plan.minimum_monthly_fee),
+                "product_limit": plan.product_limit,
+                "monthly_paid_order_limit": plan.monthly_paid_order_limit,
+                "requires_hubx_checkout": plan.requires_hubx_checkout,
+                "requires_billing_method": plan.requires_billing_method,
             },
             allow_platform_scope=True,
         )
@@ -523,6 +554,13 @@ class SubscriptionCommandService:
             "monthly_price": str(plan.monthly_price),
             "trial_days": plan.trial_days,
             "requires_payment_method": plan.requires_payment_method,
+            "billing_model": plan.billing_model,
+            "platform_fee_percent": str(plan.platform_fee_percent),
+            "minimum_monthly_fee": str(plan.minimum_monthly_fee),
+            "product_limit": plan.product_limit,
+            "monthly_paid_order_limit": plan.monthly_paid_order_limit,
+            "requires_hubx_checkout": plan.requires_hubx_checkout,
+            "requires_billing_method": plan.requires_billing_method,
             "status": plan.status,
         }
 
@@ -531,10 +569,14 @@ class SubscriptionCommandService:
             "id": subscription.id,
             "tenant_id": subscription.tenant_id,
             "plan_code": subscription.plan.code,
+            "plan_name": subscription.plan.name,
             "status": subscription.status,
             "trial_ends_at": subscription.trial_ends_at.isoformat() if subscription.trial_ends_at else "",
             "billing_provider_code": subscription.billing_provider_code,
             "billing_provider_label": subscription.billing_provider_label,
+            "billing_method_status": subscription.billing_method_status,
+            "has_billing_customer_reference": bool(subscription.billing_external_reference),
+            "has_billing_method_reference": bool(subscription.billing_method_reference),
             "coupon_code_snapshot": subscription.coupon_code_snapshot,
             "coupon_discount_type_snapshot": subscription.coupon_discount_type_snapshot,
             "coupon_discount_value_snapshot": str(subscription.coupon_discount_value_snapshot),
@@ -549,6 +591,7 @@ class SubscriptionCommandService:
             "id": lead.id,
             "status": lead.status,
             "plan_code": lead.plan_code_snapshot,
+            "plan_name": lead.plan_name_snapshot,
             "coupon_code_snapshot": lead.coupon_code_snapshot,
             "coupon_discount_type_snapshot": lead.coupon_discount_type_snapshot,
             "coupon_discount_value_snapshot": str(lead.coupon_discount_value_snapshot),

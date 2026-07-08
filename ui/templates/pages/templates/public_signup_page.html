@@ -17,7 +17,7 @@
                 <p class="text-sm font-semibold text-[var(--color-action-primary-bg)]">Self-service controlado</p>
                 <h1 class="mt-2 max-w-3xl text-4xl font-semibold text-[var(--color-text-primary)]">Crie sua loja em modo manutenção.</h1>
                 <p class="mt-4 max-w-2xl text-base leading-7 text-[var(--color-text-secondary)]">
-                    O signup cria tenant, owner e assinatura trial interna de 30 dias. Asaas será o provider inicial para recebimentos e billing SaaS, mas dados de cartão não são coletados neste formulário público.
+                    O signup cria tenant, owner e assinatura comercial em modo manutenção. Planos com mínimo mensal seguem pelo onboarding assistido antes da ativação.
                 </p>
             </div>
             <div class="grid gap-3 text-sm text-[var(--color-text-secondary)]">
@@ -35,7 +35,7 @@
                 </div>
                 <div class="flex gap-2">
                     {% include "shared/partials/icon.html" with name="credit-card" size="sm" %}
-                    <span>A coleta de cartão deve ocorrer somente no checkout hospedado do provider, fora do Django público.</span>
+                    <span>O checkout Hubx será configurado para descontar a taxa Hubx sobre pedidos pagos.</span>
                 </div>
             </div>
         </section>
@@ -49,9 +49,9 @@
                         </span>
                         <div class="ds-alert-copy">
                             <p class="ds-alert-title">Loja criada em modo manutenção</p>
-                            <p class="ds-alert-description">{{ signup.tenant.name }} já está provisionada no plano {{ signup.subscription.plan_code }}.</p>
+                            <p class="ds-alert-description">{{ signup.tenant.name }} já está provisionada no plano {{ signup.subscription.plan_name|default:signup.subscription.plan_code }}.</p>
                             {% if signup.subscription.coupon_code_snapshot %}
-                                <p class="ds-alert-description">Cupom {{ signup.subscription.coupon_code_snapshot }} aplicado à assinatura trial.</p>
+                                <p class="ds-alert-description">Cupom {{ signup.subscription.coupon_code_snapshot }} aplicado à assinatura comercial.</p>
                             {% endif %}
                         </div>
                     </div>
@@ -72,7 +72,7 @@
                 </div>
             {% else %}
                 <h2 class="text-xl font-semibold text-[var(--color-text-primary)]">Dados iniciais</h2>
-                <p class="mt-2 text-sm text-[var(--color-text-secondary)]">Use um e-mail novo para o owner inicial. O tenant será criado em trial de 30 dias e mantido em manutenção.</p>
+                <p class="mt-2 text-sm text-[var(--color-text-secondary)]">Use um e-mail novo para o owner inicial. O tenant será criado em modo manutenção até a publicação da loja.</p>
                 <div class="ds-alert ds-alert-info mt-5" role="status">
                     <div class="ds-alert-layout">
                         <span class="ds-alert-icon" aria-hidden="true">
@@ -80,10 +80,23 @@
                         </span>
                         <div class="ds-alert-copy">
                             <p class="ds-alert-title">Asaas no onboarding, sem coleta neste formulário</p>
-                            <p class="ds-alert-description">A ativação comercial usa provider seguro. Não insira dados de cartão em nenhum campo aberto.</p>
+                            <p class="ds-alert-description">Planos com mínimo mensal exigem onboarding assistido para configurar o método de cobrança.</p>
                         </div>
                     </div>
                 </div>
+                {% if assisted_plan_requested %}
+                    <div class="ds-alert ds-alert-warning mt-5" role="status">
+                        <div class="ds-alert-layout">
+                            <span class="ds-alert-icon" aria-hidden="true">
+                                {% include "shared/partials/icon.html" with name="info" size="md" %}
+                            </span>
+                            <div class="ds-alert-copy">
+                                <p class="ds-alert-title">Plano por onboarding assistido</p>
+                                <p class="ds-alert-description">Pro e Enterprise exigem configuração segura de cobrança antes da ativação. Use a página de planos para solicitar o onboarding.</p>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
                 {% if form_error %}
                     <div class="mt-5">
                         {% include "shared/components/feedback/alert.html" with variant="danger" title="Não foi possível criar a loja" description=form_error %}
@@ -97,7 +110,7 @@
                         <select class="ds-input" name="plan_code" required>
                             <option value="">Selecione</option>
                             {% for plan in plans %}
-                                <option value="{{ plan.code }}" {% if values.plan_code == plan.code or selected_plan == plan.code %}selected{% endif %}>{{ plan.name }} · {{ plan.price_label }}{% if plan.price_caption %} {{ plan.price_caption }}{% endif %}</option>
+                                <option value="{{ plan.code }}" {% if values.plan_code == plan.code or selected_plan == plan.code %}selected{% endif %}>{{ plan.name }} · {{ plan.price_label }}{% if plan.price_caption %}{{ plan.price_caption }}{% endif %}</option>
                             {% endfor %}
                         </select>
                         {% if errors.plan_code %}{% include "shared/components/forms/field_error.html" with text=errors.plan_code %}{% endif %}
@@ -154,7 +167,7 @@
                     </div>
                     <label class="flex gap-3 text-sm text-[var(--color-text-secondary)]">
                         <input class="mt-1" type="checkbox" name="accept_terms" value="1" {% if values.accept_terms %}checked{% endif %} required>
-                        <span>Aceito criar a loja em modo manutenção, iniciar o trial de 30 dias e informar cartão apenas em fluxo seguro de billing quando solicitado.</span>
+                        <span>Aceito criar a loja em modo manutenção e seguir a configuração comercial do plano selecionado.</span>
                     </label>
                     {% if errors.accept_terms %}{% include "shared/components/forms/field_error.html" with text=errors.accept_terms %}{% endif %}
                     {% include "shared/components/actions/button.html" with label="Criar loja" variant="primary" type="submit" icon_name="store" %}

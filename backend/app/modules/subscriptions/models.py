@@ -9,6 +9,11 @@ class SubscriptionPlan(models.Model):
         ACTIVE = "active", "Ativo"
         ARCHIVED = "archived", "Arquivado"
 
+    class BillingModel(models.TextChoices):
+        TAKE_RATE_ONLY = "take_rate_only", "Percentual sobre vendas"
+        MINIMUM_COMMITMENT = "minimum_commitment", "Mínimo abatível"
+        CUSTOM = "custom", "Sob consulta"
+
     code = models.SlugField(max_length=80, unique=True)
     name = models.CharField(max_length=120)
     description = models.TextField(blank=True)
@@ -17,6 +22,13 @@ class SubscriptionPlan(models.Model):
     included_api_quota = models.PositiveIntegerField(default=0)
     trial_days = models.PositiveSmallIntegerField(default=0)
     requires_payment_method = models.BooleanField(default=False)
+    billing_model = models.CharField(max_length=32, choices=BillingModel.choices, default=BillingModel.TAKE_RATE_ONLY)
+    platform_fee_percent = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    minimum_monthly_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    product_limit = models.PositiveIntegerField(default=0)
+    monthly_paid_order_limit = models.PositiveIntegerField(default=0)
+    requires_hubx_checkout = models.BooleanField(default=True)
+    requires_billing_method = models.BooleanField(default=False)
     feature_list = models.TextField(blank=True)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.ACTIVE)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -32,6 +44,18 @@ class SubscriptionPlan(models.Model):
             models.CheckConstraint(
                 check=Q(monthly_price__gte=0),
                 name="subscription_plan_price_non_negative",
+            ),
+            models.CheckConstraint(
+                check=Q(billing_model__in=("take_rate_only", "minimum_commitment", "custom")),
+                name="subscription_plan_billing_model_valid",
+            ),
+            models.CheckConstraint(
+                check=Q(platform_fee_percent__gte=0),
+                name="subscription_plan_fee_percent_non_negative",
+            ),
+            models.CheckConstraint(
+                check=Q(minimum_monthly_fee__gte=0),
+                name="subscription_plan_minimum_fee_non_negative",
             ),
         ]
         indexes = [
@@ -105,6 +129,12 @@ class TenantSubscription(models.Model):
         SUSPENDED = "suspended", "Suspensa"
         CANCELED = "canceled", "Cancelada"
 
+    class BillingMethodStatus(models.TextChoices):
+        MISSING = "missing", "Não informado"
+        PENDING = "pending", "Pendente"
+        ACTIVE = "active", "Ativo"
+        FAILED = "failed", "Falhou"
+
     tenant = models.OneToOneField("tenants.Tenant", on_delete=models.CASCADE, related_name="subscription")
     plan = models.ForeignKey(SubscriptionPlan, on_delete=models.PROTECT, related_name="tenant_subscriptions")
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.TRIALING)
@@ -117,6 +147,13 @@ class TenantSubscription(models.Model):
     billing_provider_label = models.CharField(max_length=120, blank=True)
     billing_external_reference = models.CharField(max_length=180, blank=True)
     billing_checkout_url = models.URLField(max_length=500, blank=True)
+    billing_method_status = models.CharField(
+        max_length=16,
+        choices=BillingMethodStatus.choices,
+        default=BillingMethodStatus.MISSING,
+    )
+    billing_method_reference = models.CharField(max_length=180, blank=True)
+    billing_method_verified_at = models.DateTimeField(null=True, blank=True)
     coupon_code_snapshot = models.CharField(max_length=64, blank=True)
     coupon_discount_type_snapshot = models.CharField(max_length=16, blank=True)
     coupon_discount_value_snapshot = models.DecimalField(max_digits=12, decimal_places=2, default=0)
@@ -134,9 +171,14 @@ class TenantSubscription(models.Model):
                 check=Q(status__in=("trialing", "active", "past_due", "suspended", "canceled")),
                 name="tenant_subscription_status_valid",
             ),
+            models.CheckConstraint(
+                check=Q(billing_method_status__in=("missing", "pending", "active", "failed")),
+                name="tenant_sub_billing_method_status_valid",
+            ),
         ]
         indexes = [
             models.Index(fields=("status", "current_period_ends_at"), name="tenant_sub_status_period_idx"),
+            models.Index(fields=("billing_method_status", "updated_at"), name="tenant_sub_bill_method_idx"),
         ]
 
     def __str__(self) -> str:  # pragma: no cover

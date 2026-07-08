@@ -37,18 +37,19 @@ class SubscriptionsFoundationTests(TestCase):
 
     def test_plan_and_tenant_subscription_are_created_with_audit(self):
         plan_result = subscription_commands.upsert_plan(
-            code="starter",
-            name="Starter",
-            monthly_price="99.90",
+            code="essencial",
+            name="Essencial",
+            monthly_price="0.00",
             included_api_quota=10000,
-            trial_days=30,
-            requires_payment_method=True,
-            features=("30 dias grátis", "Cartão obrigatório"),
+            platform_fee_percent="2.00",
+            product_limit=100,
+            monthly_paid_order_limit=300,
+            features=("Até 100 produtos", "2% dos pedidos pagos"),
             actor_label="ops@hubx.market",
         )
         subscription_result = subscription_commands.set_tenant_subscription(
             tenant_id=self.tenant.id,
-            plan_code="starter",
+            plan_code="essencial",
             status=TenantSubscription.Status.ACTIVE,
             external_reference="manual-contract-001",
             actor_label="ops@hubx.market",
@@ -56,13 +57,13 @@ class SubscriptionsFoundationTests(TestCase):
 
         self.assertEqual(plan_result["result"], "subscription-plan-created")
         self.assertEqual(subscription_result["result"], "tenant-subscription-created")
-        plan = SubscriptionPlan.objects.get(code="starter")
+        plan = SubscriptionPlan.objects.get(code="essencial")
         self.assertEqual(str(plan.monthly_price), plan_result["plan"]["monthly_price"])
-        self.assertEqual(plan.trial_days, 30)
-        self.assertTrue(plan.requires_payment_method)
-        self.assertIn("Cartão obrigatório", plan.feature_list)
+        self.assertEqual(plan.trial_days, 0)
+        self.assertFalse(plan.requires_payment_method)
+        self.assertIn("2% dos pedidos pagos", plan.feature_list)
         subscription = TenantSubscription.objects.get(tenant=self.tenant)
-        self.assertEqual(subscription.plan.code, "starter")
+        self.assertEqual(subscription.plan.code, "essencial")
         self.assertEqual(subscription.status, TenantSubscription.Status.ACTIVE)
         self.assertIsNone(subscription.trial_ends_at)
         self.assertEqual(subscription.billing_provider_code, "asaas")
@@ -243,12 +244,14 @@ class SubscriptionsFoundationTests(TestCase):
     def test_public_plans_view_renders_and_posts_without_tenant_context(self):
         subscription_commands.upsert_plan(
             code="starter",
-            name="Starter",
-            description="Plano inicial com trial controlado.",
-            monthly_price="99.90",
-            trial_days=30,
-            requires_payment_method=True,
-            features=("30 dias grátis para validar a loja", "Cartão obrigatório na ativação do trial"),
+            name="Essencial",
+            description="Para começar sem mensalidade.",
+            monthly_price="0.00",
+            billing_model=SubscriptionPlan.BillingModel.TAKE_RATE_ONLY,
+            platform_fee_percent="2.00",
+            product_limit=100,
+            monthly_paid_order_limit=300,
+            features=("Até 100 produtos", "Até 300 pedidos pagos por mês", "R$ 0/mês + 2% por pedido pago"),
         )
 
         tenant_host_response = self.client.get(reverse("subscription_public:plans"), HTTP_HOST=self.host)
@@ -268,12 +271,11 @@ class SubscriptionsFoundationTests(TestCase):
         self.assertContains(tenant_host_response, "Planos Hubx Market")
         self.assertContains(tenant_host_response, "Iniciar onboarding")
         self.assertContains(tenant_host_response, "Onboarding assistido")
-        self.assertContains(tenant_host_response, "Asaas")
-        self.assertContains(tenant_host_response, "Teste grátis por 30 dias")
-        self.assertContains(tenant_host_response, "30 dias grátis")
-        self.assertContains(tenant_host_response, "Cartão obrigatório")
-        self.assertContains(tenant_host_response, "/mês após 30 dias")
-        self.assertContains(tenant_host_response, "Não insira dados de cartão")
+        self.assertContains(tenant_host_response, "Pague pelo que vender")
+        self.assertContains(tenant_host_response, "2% por pedido pago")
+        self.assertContains(tenant_host_response, "Até 100 produtos")
+        self.assertNotContains(tenant_host_response, "Teste grátis por 30 dias")
+        self.assertNotContains(tenant_host_response, "Cartão obrigatório")
         self.assertContains(tenant_host_response, 'href="/demo/"')
         self.assertContains(tenant_host_response, "Acessar demo")
         self.assertContains(tenant_host_response, "Onboarding assistido")
@@ -282,7 +284,43 @@ class SubscriptionsFoundationTests(TestCase):
         self.assertNotContains(tenant_host_response, "Billing Tenant")
         self.assertEqual(post_response.status_code, 200)
         self.assertContains(post_response, "Recebemos sua intenção")
+        self.assertContains(post_response, "plano Essencial")
+        self.assertNotContains(post_response, "plano starter")
         self.assertTrue(SubscriptionAcquisitionLead.objects.filter(desired_subdomain="public-plan-store").exists())
+
+    @override_settings(HUBX_PUBLIC_SIGNUP_ENABLED=True)
+    def test_public_plans_self_service_cta_only_for_eligible_plan(self):
+        subscription_commands.upsert_plan(
+            code="starter",
+            name="Essencial",
+            monthly_price="0.00",
+            billing_model=SubscriptionPlan.BillingModel.TAKE_RATE_ONLY,
+            platform_fee_percent="2.00",
+            requires_billing_method=False,
+        )
+        subscription_commands.upsert_plan(
+            code="pro",
+            name="Pro",
+            monthly_price="259.90",
+            billing_model=SubscriptionPlan.BillingModel.MINIMUM_COMMITMENT,
+            platform_fee_percent="2.00",
+            minimum_monthly_fee="259.90",
+            requires_billing_method=True,
+        )
+        subscription_commands.upsert_plan(
+            code="enterprise",
+            name="Enterprise",
+            billing_model=SubscriptionPlan.BillingModel.CUSTOM,
+            requires_billing_method=True,
+        )
+
+        response = self.client.get(reverse("subscription_public:plans"), HTTP_HOST=self.platform_host)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Criar loja self-service", count=1)
+        self.assertContains(response, 'href="/plans/signup/?plan=starter"')
+        self.assertNotContains(response, 'href="/plans/signup/?plan=pro"')
+        self.assertNotContains(response, 'href="/plans/signup/?plan=enterprise"')
 
     def test_public_plans_view_blocks_invalid_coupon(self):
         subscription_commands.upsert_plan(code="starter", name="Starter", monthly_price="100.00")
@@ -315,13 +353,22 @@ class SubscriptionsFoundationTests(TestCase):
         HUBX_PUBLIC_SIGNUP_RATE_LIMIT_MAX_ATTEMPTS=10,
         HUBX_PUBLIC_SIGNUP_RATE_LIMIT_WINDOW_SECONDS=60,
     )
-    def test_public_signup_view_explains_trial_and_card_requirement(self):
+    def test_public_signup_view_explains_commercial_signup(self):
         subscription_commands.upsert_plan(
             code="starter",
-            name="Starter",
-            monthly_price="99.90",
-            trial_days=30,
-            requires_payment_method=True,
+            name="Essencial",
+            monthly_price="0.00",
+            billing_model=SubscriptionPlan.BillingModel.TAKE_RATE_ONLY,
+            platform_fee_percent="2.00",
+        )
+        subscription_commands.upsert_plan(
+            code="pro",
+            name="Pro",
+            monthly_price="259.90",
+            billing_model=SubscriptionPlan.BillingModel.MINIMUM_COMMITMENT,
+            platform_fee_percent="2.00",
+            minimum_monthly_fee="259.90",
+            requires_billing_method=True,
         )
 
         response = self.client.get(
@@ -331,10 +378,11 @@ class SubscriptionsFoundationTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "trial interna de 30 dias")
-        self.assertContains(response, "checkout hospedado do provider")
-        self.assertContains(response, "Não insira dados de cartão")
-        self.assertContains(response, "R$ 99,90 /mês após 30 dias")
+        self.assertContains(response, "assinatura comercial em modo manutenção")
+        self.assertContains(response, "checkout Hubx")
+        self.assertContains(response, "Planos com mínimo mensal")
+        self.assertContains(response, "R$ 0/mês + 2% dos pedidos pagos")
+        self.assertNotContains(response, 'value="pro"')
 
     @override_settings(
         HUBX_PUBLIC_SIGNUP_ENABLED=True,
@@ -342,19 +390,22 @@ class SubscriptionsFoundationTests(TestCase):
         HUBX_PUBLIC_SIGNUP_RATE_LIMIT_MAX_ATTEMPTS=10,
         HUBX_PUBLIC_SIGNUP_RATE_LIMIT_WINDOW_SECONDS=60,
     )
-    def test_public_signup_creates_tenant_trial_owner_and_onboarding_without_lead(self):
+    def test_public_signup_creates_active_essential_tenant_owner_and_onboarding_without_lead(self):
         subscription_commands.upsert_plan(
-            code="starter",
-            name="Starter",
-            monthly_price="99.90",
-            trial_days=30,
-            requires_payment_method=True,
+            code="essencial",
+            name="Essencial",
+            monthly_price="0.00",
+            billing_model=SubscriptionPlan.BillingModel.TAKE_RATE_ONLY,
+            platform_fee_percent="2.00",
+            product_limit=100,
+            monthly_paid_order_limit=300,
+            requires_billing_method=False,
         )
 
         response = self.client.post(
             reverse("subscription_public:plans-signup"),
             {
-                "plan_code": "starter",
+                "plan_code": "essencial",
                 "store_name": "Self Service Store",
                 "desired_subdomain": "self-service-store",
                 "owner_name": "Self Owner",
@@ -378,11 +429,11 @@ class SubscriptionsFoundationTests(TestCase):
         self.assertContains(response, "Loja criada em modo manutenção")
         self.assertTrue(tenant.is_active)
         self.assertTrue(tenant.maintenance_mode)
-        self.assertEqual(subscription.plan.code, "starter")
-        self.assertEqual(subscription.status, TenantSubscription.Status.TRIALING)
-        self.assertEqual(subscription.plan.trial_days, 30)
-        self.assertTrue(subscription.plan.requires_payment_method)
-        self.assertIsNotNone(subscription.trial_ends_at)
+        self.assertEqual(subscription.plan.code, "essencial")
+        self.assertEqual(subscription.status, TenantSubscription.Status.ACTIVE)
+        self.assertEqual(subscription.plan.trial_days, 0)
+        self.assertFalse(subscription.plan.requires_payment_method)
+        self.assertIsNone(subscription.trial_ends_at)
         self.assertEqual(subscription.billing_provider_code, "asaas")
         self.assertEqual(subscription.billing_provider_label, "Asaas")
         self.assertEqual(owner.role, "owner")
@@ -398,13 +449,14 @@ class SubscriptionsFoundationTests(TestCase):
         HUBX_PUBLIC_SIGNUP_RATE_LIMIT_MAX_ATTEMPTS=10,
         HUBX_PUBLIC_SIGNUP_RATE_LIMIT_WINDOW_SECONDS=60,
     )
-    def test_public_signup_applies_coupon_snapshot_to_trial_subscription(self):
+    def test_public_signup_applies_coupon_snapshot_to_self_service_subscription(self):
         subscription_commands.upsert_plan(
-            code="starter",
-            name="Starter",
+            code="essencial-plus",
+            name="Essencial Plus",
             monthly_price="100.00",
-            trial_days=30,
-            requires_payment_method=True,
+            billing_model=SubscriptionPlan.BillingModel.TAKE_RATE_ONLY,
+            platform_fee_percent="2.00",
+            requires_billing_method=False,
         )
         SubscriptionCoupon.objects.create(
             code="saas25",
@@ -416,7 +468,7 @@ class SubscriptionsFoundationTests(TestCase):
         response = self.client.post(
             reverse("subscription_public:plans-signup"),
             {
-                "plan_code": "starter",
+                "plan_code": "essencial-plus",
                 "store_name": "Coupon Signup",
                 "desired_subdomain": "coupon-signup",
                 "owner_name": "Coupon Owner",
@@ -685,9 +737,56 @@ class SubscriptionsFoundationTests(TestCase):
         self.assertTemplateUsed(response, "pages/templates/admin_subscriptions_list_page.html")
         self.assertContains(response, "Assinatura SaaS")
         self.assertContains(response, "Starter")
+        self.assertNotContains(response, "Starter (starter)")
+        self.assertNotContains(response, "/ops/subscriptions/billing-method/")
         self.assertNotContains(response, "Other Billing")
         self.assertNotContains(response, "Authorization")
         self.assertNotContains(response, "token=")
+
+    def test_admin_billing_method_surface_blocks_manual_token_activation(self):
+        subscription_commands.upsert_plan(
+            code="pro",
+            name="Pro",
+            billing_model=SubscriptionPlan.BillingModel.MINIMUM_COMMITMENT,
+            minimum_monthly_fee="259.90",
+            requires_billing_method=True,
+        )
+        subscription_commands.set_tenant_subscription(
+            tenant_id=self.tenant.id,
+            plan_code="pro",
+            status=TenantSubscription.Status.ACTIVE,
+        )
+        user = User.objects.create_user(username="billing.owner@hubx.market", email="billing.owner@hubx.market", password="secret")
+        OwnerUser.objects.create(tenant=self.tenant, email="billing.owner@hubx.market", role="owner", is_active=True)
+        self.client.force_login(user)
+
+        response = self.client.post(
+            reverse("subscriptions:admin-subscriptions-billing-method"),
+            {
+                "action": "register",
+                "status": TenantSubscription.BillingMethodStatus.ACTIVE,
+                "provider_customer_reference": "cus_pro_123",
+                "provider_method_reference": "tokenized-card-reference",
+                "checkout_url": "https://sandbox.asaas.com/i/setup",
+            },
+            HTTP_HOST=self.host,
+        )
+
+        self.assertEqual(response.status_code, 400)
+        subscription = TenantSubscription.objects.get(tenant=self.tenant)
+        self.assertEqual(subscription.billing_method_status, TenantSubscription.BillingMethodStatus.MISSING)
+        self.assertEqual(subscription.billing_external_reference, "")
+        self.assertEqual(subscription.billing_method_reference, "")
+        self.assertIsNone(subscription.billing_method_verified_at)
+
+        page = self.client.get(reverse("subscriptions:admin-subscriptions-billing-method"), HTTP_HOST=self.host)
+        self.assertEqual(page.status_code, 200)
+        self.assertContains(page, "Método de cobrança")
+        self.assertContains(page, "A ativação do método ocorre somente por fluxo seguro do provider")
+        self.assertNotContains(page, 'name="provider_method_reference"')
+        self.assertNotContains(page, "tokenized-card-reference")
+        self.assertNotContains(page, 'name="card_number"')
+        self.assertNotContains(page, "411111")
 
     def test_foundation_closure_ready_when_all_waves_are_done(self):
         review = subscriptions_foundation_queries.get_review(**self._ready_flags())

@@ -34,7 +34,7 @@ Cada tenant possui:
 - configurações próprias
 - identidade institucional leve da storefront, incluindo hero da home quando configurado
 
-O MVP self-service público é controlado por `HUBX_PUBLIC_SIGNUP_ENABLED` e, quando configurado, por `HUBX_PUBLIC_SIGNUP_ACCESS_TOKEN`: `/plans/` continua registrando aquisição assistida como lead, enquanto `/plans/signup/` pode provisionar tenant em modo manutenção, assinatura trial interna com fim calculado pelo plano, provider-alvo de billing SaaS e owner inicial sem ativar cobrança recorrente. Planos públicos podem expor 30 dias grátis e cartão obrigatório como contrato comercial, mas a aplicação não coleta dados de cartão nessa superfície; Asaas é o provider inicial para checkout hospedado e billing SaaS futuro.
+O self-service público é controlado por `HUBX_PUBLIC_SIGNUP_ENABLED` e, quando configurado, por `HUBX_PUBLIC_SIGNUP_ACCESS_TOKEN`: `/plans/` continua registrando aquisição assistida como lead, enquanto `/plans/signup/` pode provisionar tenant em modo manutenção apenas para planos sem método de cobrança obrigatório, com provider-alvo de billing SaaS e owner inicial sem ativar cobrança recorrente. Planos com mínimo mensal, como Pro, seguem onboarding assistido até existir confirmação segura do método de cobrança; formulários públicos e tenant-owned não coletam cartão, token, CVV ou validade.
 
 ---
 

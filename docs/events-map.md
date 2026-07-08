@@ -391,8 +391,153 @@ Readiness atual:
 
 - para `Asaas` e `Pagar.me`, a confirmação segura continua vindo de webhook normalizado por `payments`
 - a URL de retorno hospedada pode trazer apenas hint de status; ela não substitui `payment.paid`
+- `payments` cria `PlatformFeeLedger(kind=order_take_rate)` de forma idempotente após a confirmação do pedido
+- o ledger preserva snapshot do plano, percentual, base de cálculo e status de split/cobrança
 - notifications agora cria `EmailLog` planejado customer-facing após `payment.paid` confirmado pela primeira vez
 - replay/idempotência do webhook não deve gerar nova unidade de delivery para o mesmo recipient
+
+---
+
+## platform_fee.recorded
+
+Origem: payments
+
+Consumidores:
+- audit
+- financeiro platform
+
+Descrição:
+Taxa Hubx de um pedido pago foi registrada no ledger.
+
+Readiness atual:
+
+- implementado como efeito in-process idempotente do webhook `payment.paid`
+- não publica fila distribuída nesta fase
+- usa `PlatformFeeLedger(ledger_key=order:<id>:platform-fee)`
+- Essencial e Pro usam percentual do plano ativo, normalmente 2%
+- status inicial indica se o split foi solicitado ao provider ou se a coleta ficou pendente
+- quando uma corrida confirma pedido acima de `monthly_paid_order_limit`, o ledger mantém o pedido pago e marca `metadata.commercial_overage=true` para tratativa comercial
+
+---
+
+## platform_fee.order_limit_overage_recorded
+
+Origem: payments
+
+Consumidores:
+- audit
+- financeiro platform
+
+Descrição:
+Webhook confirmou um pedido pago acima do limite mensal do plano por corrida operacional.
+
+Readiness atual:
+
+- implementado como `AuditLog` sobre `PlatformFeeLedger`
+- não desfaz pedido pago, pagamento, estoque ou split
+- usa `PlatformFeeLedger.metadata.commercial_overage=true`, `monthly_paid_order_limit`, `monthly_paid_order_count` e `overage_count`
+- a tratativa é comercial/platform, fora do checkout do cliente final
+
+---
+
+## platform_fee.minimum_adjustment_created
+
+Origem: payments
+
+Consumidores:
+- audit
+- financeiro platform
+
+Descrição:
+Fechamento mensal criou ajuste complementar do Pro para atingir o mínimo contratado.
+
+Readiness atual:
+
+- implementado pelo comando `close_platform_fee_minimums`
+- cria `PlatformFeeLedger(kind=pro_minimum_adjustment)` apenas quando o take rate do período fica abaixo do mínimo
+- pode criar cobrança complementar Asaas quando `PAYMENTS_PLATFORM_BILLING_ASAAS_ENABLED=1` ou o comando roda com `--collect`
+- a cobrança usa `externalReference=hubx-platform-fee:<ledger_key>` para conciliação por webhook
+- quando o take rate supera o mínimo, não há evento nem cobrança adicional
+
+---
+
+## platform_fee.complementary_charge_paid
+
+Origem: payments
+
+Consumidores:
+- audit
+- financeiro platform
+
+Descrição:
+Cobrança complementar Asaas do mínimo Pro foi confirmada.
+
+Readiness atual:
+
+- implementado via webhook Asaas autenticado.
+- identifica `PlatformFeeLedger` por `externalReference=hubx-platform-fee:<ledger_key>`.
+- marca o ledger como `paid`.
+- não altera pedidos, catálogo ou assinatura do tenant.
+
+---
+
+## tenant_subscription.marked_past_due
+
+Origem: payments
+
+Consumidores:
+- subscriptions
+- audit
+- operadores/plataforma
+
+Descrição:
+Assinatura Pro entrou em atraso por complemento mensal não pago após tolerância configurada.
+
+Readiness atual:
+
+- implementado pelo comando `enforce_platform_fee_delinquency`.
+- usa ledgers `PlatformFeeLedger(kind=pro_minimum_adjustment)` pendentes.
+- janela vem de `SUBSCRIPTIONS_PRO_DELINQUENCY_GRACE_DAYS`.
+- altera apenas `TenantSubscription.status`; não altera pedidos ou catálogo diretamente.
+
+---
+
+## tenant_subscription.suspended_for_delinquency
+
+Origem: payments
+
+Consumidores:
+- subscriptions
+- audit
+- operadores/plataforma
+
+Descrição:
+Assinatura Pro foi suspensa por complemento mensal não pago após prazo de suspensão configurado.
+
+Readiness atual:
+
+- implementado pelo comando `enforce_platform_fee_delinquency`.
+- janela vem de `SUBSCRIPTIONS_PRO_DELINQUENCY_SUSPEND_DAYS`.
+- a reativação para `active` ocorre quando não há complemento Pro pendente.
+
+---
+
+## platform_fee.adjustment_required
+
+Origem: payments
+
+Consumidores:
+- audit
+- financeiro platform
+
+Descrição:
+Um ledger de taxa Hubx precisa de ajuste por refund, chargeback ou falha posterior.
+
+Readiness atual:
+
+- implementado como mudança de status/metadados no `PlatformFeeLedger`
+- não reabre pedido pago nem cria cobrança duplicada
+- tratativa financeira posterior deve reconciliar o lançamento original
 
 ---
 
@@ -628,12 +773,12 @@ Readiness atual:
 
 - evento é registrado como `AuditLog` tenant-scoped.
 - tenant nasce ativo em `maintenance_mode`.
-- metadata pode incluir `plan_code`, `trial_days` e `requires_payment_method`.
+- metadata pode incluir `plan_code`, limites comerciais e snapshots promocionais; não deve incluir token ou dado de cartão.
 - metadata pode incluir `coupon_code` e `effective_monthly_price` quando o signup aplicar cupom SaaS válido.
 - quando configurado, o signup exige token de acesso antes da criação.
 - storefront/checkout do tenant em manutenção retornam 503 até publicação operacional.
 - não cria customer, catálogo, pedido, pagamento, invoice ou domínio customizado.
-- não registra dados de cartão ou token de payment method.
+- não registra dados de cartão ou token de método de cobrança.
 
 ---
 
@@ -647,16 +792,16 @@ Consumidores:
 - subscriptions
 
 Descrição:
-Signup público concluiu a orquestração mínima: tenant, owner inicial, assinatura trial e onboarding concluído.
+Signup público concluiu a orquestração mínima: tenant, owner inicial, assinatura self-service elegível e onboarding concluído.
 
 Readiness atual:
 
 - exige `HUBX_PUBLIC_SIGNUP_ENABLED=1`.
-- assinatura SaaS fica `trialing` e herda `trial_ends_at` calculado pelo plano.
-- metadata pode incluir `plan_code`, `trial_days` e `requires_payment_method`.
+- assinatura SaaS nasce conforme o plano self-service; planos com `requires_billing_method=True` não entram neste fluxo.
+- metadata pode incluir `plan_code`, limites comerciais e snapshots promocionais; não deve incluir token ou dado de cartão.
 - metadata pode incluir snapshots promocionais sem alterar `SubscriptionPlan.monthly_price`.
 - owner inicial é `OwnerUser`, não `Customer`.
-- não registra dados de cartão ou token de payment method.
+- não registra dados de cartão ou token de método de cobrança.
 
 ---
 

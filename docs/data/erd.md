@@ -86,6 +86,7 @@
 - OrderStatusHistory
 - PaymentAttempt
 - PaymentRefund
+- PlatformFeeLedger
 
 ### Logística
 - Shipment
@@ -139,7 +140,9 @@
 - Order 1:N OrderStatusHistory
 - Order 1:N PaymentAttempt
 - Order 1:N PaymentRefund
+- Order 1:N PlatformFeeLedger
 - PaymentAttempt 1:N PaymentRefund
+- PaymentAttempt 1:N PlatformFeeLedger
 - Order 1:1 Shipment
 - Shipment 1:N ShipmentStatusHistory
 - Tenant 1:1 ShippingProviderSettings
@@ -181,6 +184,8 @@
 - `Order` pode guardar `inventory_finalized_at` para indicar quando a reserva operacional já foi consumida de forma final após a entrega
 - `PaymentRefund` é ledger tenant-scoped de refund/estorno, idempotente por `(tenant, idempotency_key)`.
 - `PaymentRefund` começa registrando intenção ou bloqueio; execução real no provider fica fora do contrato inicial.
+- `PlatformFeeLedger` é ledger tenant-scoped da taxa Hubx, idempotente por `ledger_key`, com vínculo opcional para pedido e tentativa de pagamento.
+- `PlatformFeeLedger` registra take rate por pedido pago e ajuste mensal do Pro quando o total do percentual fica abaixo do mínimo.
 - produto inativo não é deletado
 - customer é isolado por tenant
 - `OwnerMfaFactor` deve pertencer ao mesmo tenant do `OwnerUser` e é único por `(tenant, owner, factor_type, provider_key)`
@@ -285,6 +290,47 @@ Notas:
 - único por `(tenant, api_key, endpoint, window_start, window_seconds)`.
 - registra uso agregado por janela; não guarda segredo, header, hash ou API key em claro.
 
+## Payments — PlatformFeeLedger
+
+`PlatformFeeLedger`
+
+- `id`
+- `tenant_id → tenants.Tenant`
+- `order_id → orders.Order` nullable
+- `payment_attempt_id → payments.PaymentAttempt` nullable
+- `ledger_key`
+- `kind`
+- `status`
+- `plan_code_snapshot`
+- `plan_name_snapshot`
+- `billing_model_snapshot`
+- `platform_fee_percent_snapshot`
+- `minimum_monthly_fee_snapshot`
+- `billing_period_start`
+- `billing_period_end`
+- `basis_amount`
+- `fee_amount`
+- `currency_code`
+- `provider_code`
+- `provider_reference`
+- `metadata`
+- `created_at`
+- `updated_at`
+
+Relacionamentos:
+
+- `Tenant 1:N PlatformFeeLedger`
+- `Order 1:N PlatformFeeLedger`
+- `PaymentAttempt 1:N PlatformFeeLedger`
+
+Notas:
+
+- `ledger_key` é único e garante idempotência.
+- `kind=order_take_rate` representa a taxa Hubx de um pedido pago.
+- `kind=pro_minimum_adjustment` representa a diferença mensal do Pro até o mínimo contratado.
+- `status=split_requested` indica que o split foi enviado ao provider; `pending_collection` indica cobrança complementar ou tratativa pendente.
+- refund, chargeback e falhas posteriores devem marcar ajuste no ledger existente, sem criar cobrança duplicada.
+
 ## Subscriptions — SubscriptionPlan
 
 `SubscriptionPlan`
@@ -298,6 +344,13 @@ Notas:
 - `included_api_quota`
 - `trial_days`
 - `requires_payment_method`
+- `billing_model`
+- `platform_fee_percent`
+- `minimum_monthly_fee`
+- `product_limit`
+- `monthly_paid_order_limit`
+- `requires_hubx_checkout`
+- `requires_billing_method`
 - `feature_list`
 - `status`
 - `created_at`
@@ -313,8 +366,12 @@ Notas:
 
 - `code` é único.
 - `monthly_price` não pode ser negativo.
-- `trial_days` define o fim do trial interno quando a assinatura nasce `trialing`.
-- `requires_payment_method` é requisito comercial; cartão real não é coletado pela tabela nem por formulário público.
+- `trial_days` e `requires_payment_method` permanecem no modelo por compatibilidade, mas a precificação pública atual usa `billing_model`, `platform_fee_percent`, `minimum_monthly_fee`, limites e `requires_billing_method`.
+- cartão real, token, CVV e validade não são coletados por formulário público ou tenant-owned.
+- `billing_model` aceita `take_rate_only`, `minimum_commitment` ou `custom`.
+- `platform_fee_percent` e `minimum_monthly_fee` não podem ser negativos.
+- `product_limit` conta produtos ativos e rascunhos; `monthly_paid_order_limit` conta pedidos pagos por mês.
+- `requires_billing_method` bloqueia signup self-service até existir fluxo seguro de método de cobrança.
 - `feature_list` guarda linhas públicas do card de plano.
 - não representa invoice nem cobrança real.
 
@@ -362,6 +419,9 @@ Notas:
 - `billing_provider_label`
 - `billing_external_reference`
 - `billing_checkout_url`
+- `billing_method_status`
+- `billing_method_reference`
+- `billing_method_verified_at`
 - `coupon_code_snapshot`
 - `coupon_discount_type_snapshot`
 - `coupon_discount_value_snapshot`
@@ -381,6 +441,7 @@ Notas:
 
 - guarda estado SaaS do tenant.
 - registra provider-alvo de billing SaaS sem criar cobrança externa.
+- guarda apenas referências externas provider-owned do billing method; não guarda dados de cartão nem permite inserção manual de token em formulário livre.
 - guarda snapshots promocionais quando criado a partir de cupom SaaS válido.
 - não acopla pagamentos de pedidos da loja.
 

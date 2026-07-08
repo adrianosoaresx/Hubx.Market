@@ -5,11 +5,13 @@ from decimal import Decimal
 from typing import Protocol
 
 from django.db import IntegrityError, connection, transaction
+from django.utils import timezone
 
 from app.modules.checkout.application.checkout_activation_commands import _safe_decimal
 from app.modules.coupons.application.coupon_redemption_commands import coupon_redemption_commands
 from app.modules.orders.application.order_event_publisher import order_event_publisher
 from app.modules.payments.application.payment_attempt_commands import payment_attempt_commands
+from app.modules.subscriptions.application.commercial_terms import get_tenant_commercial_terms
 
 
 def _combine_customer_name(first_name: str, last_name: str) -> str:
@@ -252,6 +254,26 @@ class DjangoOrmCheckoutCompletionRepository:
             return "checkout-completion-snapshot-conflict"
         return None
 
+    def _validate_monthly_paid_order_limit(self, *, tenant_id: int) -> str | None:
+        terms = get_tenant_commercial_terms(tenant_id=tenant_id)
+        if not terms.has_monthly_paid_order_limit:
+            return None
+        now = timezone.now()
+        period_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        if period_start.month == 12:
+            period_end = period_start.replace(year=period_start.year + 1, month=1)
+        else:
+            period_end = period_start.replace(month=period_start.month + 1)
+        paid_count = self.order_model._default_manager.filter(
+            tenant_id=tenant_id,
+            status="paid",
+            payment_confirmed_at__gte=period_start,
+            payment_confirmed_at__lt=period_end,
+        ).count()
+        if paid_count >= terms.monthly_paid_order_limit:
+            return "checkout-completion-order-limit-reached"
+        return None
+
     def _create_order_from_session(self, *, session, items: list[object]):
         last_error: Exception | None = None
         promotion_snapshot = dict(getattr(session, "promotion_snapshot", {}) or {})
@@ -383,6 +405,9 @@ class DjangoOrmCheckoutCompletionRepository:
                 inventory_result = self._validate_inventory_consistency(session=session, items=items)
                 if inventory_result is not None:
                     return inventory_result, None
+                order_limit_result = self._validate_monthly_paid_order_limit(tenant_id=int(session.tenant_id))
+                if order_limit_result is not None:
+                    return order_limit_result, None
 
                 order = self._create_order_from_session(session=session, items=items)
                 session.status = "completed"

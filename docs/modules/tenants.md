@@ -52,7 +52,7 @@ Escopo entregue:
 - habilitado somente com `HUBX_PUBLIC_SIGNUP_ENABLED=1`;
 - exige `HUBX_PUBLIC_SIGNUP_ACCESS_TOKEN` quando `HUBX_PUBLIC_SIGNUP_REQUIRE_ACCESS_TOKEN=1`;
 - `subscriptions` expõe a view pública e `tenants.application.public_tenant_signup_commands` orquestra o provisionamento;
-- cria `Tenant` ativo em `maintenance_mode`, `TenantOnboarding` concluído, `TenantSubscription(status=trialing)` e `OwnerUser` inicial;
+- cria `Tenant` ativo em `maintenance_mode`, `TenantOnboarding` concluído, `TenantSubscription(status=active)` para os planos públicos atuais e `OwnerUser` inicial;
 - `TenantSubscription` registra Asaas como provider-alvo padrão de billing SaaS, sem criar cobrança externa;
 - owner inicial recebe senha utilizável pela fronteira de `accounts`;
 - `Customer`, catálogo, pedido, pagamento, invoice, domínio customizado e recurso externo de billing provider não são criados.
@@ -956,7 +956,7 @@ Escopo entregue:
 - modelo `TenantOnboarding` com estados `draft`, `in_progress`, `ready_for_review`, `completed` e `blocked`;
 - wizard com passos de loja, plano, owner inicial, branding mínimo, domínio e revisão final;
 - conclusão orquestrada por application service, reutilizando boundaries de tenants, subscriptions, accounts e audit;
-- `TenantSubscription` criada como contrato interno `trialing`, sem provider de cobrança;
+- `TenantSubscription` criada como contrato comercial interno; nos planos públicos atuais o status inicial é `active`, enquanto `trialing` fica restrito a planos legados/compatibilidade com `trial_days`;
 - owner inicial provisionado sem senha manual, login automático ou impersonação;
 - branding mínimo persistido como `store_display_name` e `primary_color`, com `primary_color` validado pela mesma regra de contraste e aplicado como `Tenant.conversion_primary_color` na conclusão, sem upload/storage;
 - smoke sistêmico inclui `/ops/platform/onboarding/`.

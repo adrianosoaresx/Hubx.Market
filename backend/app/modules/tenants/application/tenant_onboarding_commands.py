@@ -289,6 +289,7 @@ class TenantOnboardingCommandService:
                         tenant_result.get("errors") or {"__all__": "Não foi possível criar a loja."},
                     )
                 tenant = tenant_result["tenant"]
+                plan = SubscriptionPlan.objects.get(code=locked.plan_code, status=SubscriptionPlan.Status.ACTIVE)
                 Tenant.objects.filter(pk=tenant["id"]).update(
                     conversion_primary_color=locked.primary_color,
                     updated_at=timezone.now(),
@@ -297,7 +298,7 @@ class TenantOnboardingCommandService:
                 subscription_result = subscription_commands.set_tenant_subscription(
                     tenant_id=tenant["id"],
                     plan_code=locked.plan_code,
-                    status=TenantSubscription.Status.TRIALING,
+                    status=TenantSubscription.Status.TRIALING if plan.trial_days else TenantSubscription.Status.ACTIVE,
                     external_reference=f"tenant-onboarding-{locked.id}",
                     actor_label=actor_label,
                     promotion_snapshot=_promotion_snapshot_from_onboarding(locked),

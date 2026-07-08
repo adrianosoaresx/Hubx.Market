@@ -4,18 +4,74 @@
 Integrar pagamentos de pedidos.
 
 ## Entidades principais
-- Payment
-- PaymentTransaction
+- PaymentAttempt
+- PaymentRefund
+- PlatformFeeLedger
 
 ## Casos de uso
-- gerar PIX
-- processar cartão
+- criar tentativa de pagamento hospedado
 - processar webhook
+- registrar taxa Hubx por pedido pago
+- fechar diferença mensal do Pro
 
 ## Regras de negócio
 - provider inicial configurado é Asaas para checkout hospedado de pedidos.
 - Pagar.me permanece como provider alternativo e base existente de refund sandbox-first.
 - detalhes de provider ficam em `payments.infrastructure`; `checkout` e `orders` recebem apenas contratos estáveis.
+- `payments` é dono do `PlatformFeeLedger`, que registra taxa Hubx por pedido pago e ajuste de mínimo mensal.
+- os termos comerciais são lidos por `subscriptions.application.commercial_terms`; `payments` não deve duplicar regras de plano.
+- Asaas deve receber `splits` quando `PAYMENTS_HUBX_SPLIT_ENABLED=1` e `ASAAS_HUBX_WALLET_ID` estiver configurado.
+- Essencial e Pro usam `percentualValue=2` no split conforme o plano ativo.
+- no Pro, o split abate o mínimo mensal; se o total do mês ficar abaixo de R$ 259,90, o fechamento cria ledger complementar pendente.
+- quando `PAYMENTS_PLATFORM_BILLING_ASAAS_ENABLED=1`, a cobrança complementar do Pro pode ser criada no Asaas.
+- a cobrança complementar usa `POST /payments` com `billingType=CREDIT_CARD`; sem token externo, o lojista paga no `invoiceUrl` hospedado pelo Asaas.
+- se `TenantSubscription.billing_method_reference` possuir token/referência externa obtida por fluxo confiável do provider, a cobrança pode enviar `creditCardToken` e `ASAAS_PLATFORM_BILLING_REMOTE_IP`; formulários tenant-owned não aceitam token manual.
+- snapshots persistidos de cobrança complementar devem redigir `creditCardToken` e qualquer material sensível antes de gravar metadata.
+- enquanto o provider não estiver habilitado, a cobrança complementar do Pro fica registrada como `pending_collection` para tratativa/execução assistida.
+- refund, chargeback ou falha posterior devem marcar o ledger existente para ajuste ou reversão, sem duplicar lançamento.
+
+## Platform fee ledger
+
+- `PlatformFeeLedger(kind=order_take_rate)` é criado uma única vez quando `payment.paid` confirma um pedido.
+- o lançamento guarda snapshot de plano, modelo de cobrança, percentual, mínimo, base de cálculo, valor estimado e provider.
+- quando o provider payload contém split, o status inicial é `split_requested`; sem split, fica `pending_collection`.
+- `PlatformFeeLedger(kind=pro_minimum_adjustment)` é criado pelo fechamento mensal do Pro quando o take rate do período não atinge o mínimo.
+- comando operacional:
+  - `python manage.py close_platform_fee_minimums`
+  - `python manage.py close_platform_fee_minimums --collect`
+- o fechamento não deve cobrar adicional se a soma de take rate do mês for maior ou igual ao mínimo.
+- `--collect` ou `PAYMENTS_PLATFORM_BILLING_ASAAS_ENABLED=1` tenta criar a cobrança complementar Asaas para ledgers pendentes.
+- webhook Asaas com `externalReference=hubx-platform-fee:<ledger_key>` marca o ledger como pago quando receber `PAYMENT_RECEIVED` ou `PAYMENT_CONFIRMED`.
+- validação sandbox:
+  - `python manage.py payment_sandbox_validate_platform_billing --tenant-id <id>`
+  - `python manage.py payment_sandbox_validate_platform_billing --tenant-id <id> --execute --simulate-paid-webhook`
+- validação local sem credenciais Asaas:
+  - `python manage.py payment_sandbox_validate_platform_billing --tenant-id <id> --local-simulate`
+  - `python manage.py payment_sandbox_validate_platform_billing --tenant-id <id> --local-simulate --simulate-paid-webhook`
+  - exige apenas um tenant Pro e `ASAAS_WEBHOOK_TOKEN` fake quando `--simulate-paid-webhook` for usado.
+  - cria um `PlatformFeeLedger(kind=pro_minimum_adjustment)` local com `metadata.simulation=true`, mantém `provider_call=not-executed` e não chama API externa.
+- política de inadimplência:
+  - `python manage.py enforce_platform_fee_delinquency`
+- `SUBSCRIPTIONS_PRO_DELINQUENCY_GRACE_DAYS` define quando complemento não pago vira `past_due`.
+- `SUBSCRIPTIONS_PRO_DELINQUENCY_SUSPEND_DAYS` define quando complemento não pago vira `suspended`.
+- ledgers pagos/cancelados não geram inadimplência; ausência de pendência permite reativação para `active`.
+- a fonte técnica do split Asaas é a documentação oficial de Split de Pagamento: `https://docs.asaas.com/docs/split`.
+
+## Checklist sem credenciais Asaas
+
+- Rodar testes locais de billing platform, fee ledger, payload Asaas, webhook e subscriptions.
+- Usar `--local-simulate` para criar uma cobrança complementar fake e simular webhook pago sem `ASAAS_API_KEY`.
+- Confirmar que replay de fechamento mensal retorna ledger existente, replay de webhook mantém um único ledger pago e metadata nunca expõe referência sensível.
+- Revisar `/plans/` e `/plans/signup/`: Essencial pode ter self-service; Pro/Enterprise seguem onboarding assistido.
+- Revisar `/ops/subscriptions/billing-method/`: não há campo livre para token/cartão; a página apenas garante cliente Asaas quando habilitado.
+
+## Checklist quando credenciais chegarem
+
+- Configurar `ASAAS_API_KEY`, `ASAAS_BASE_URL`, `ASAAS_WEBHOOK_TOKEN`, `PAYMENTS_PLATFORM_BILLING_ASAAS_ENABLED=1` e, para split de pedidos, `PAYMENTS_HUBX_SPLIT_ENABLED=1` com `ASAAS_HUBX_WALLET_ID`.
+- Publicar URL `/payments/webhook/` e habilitar eventos Asaas `PAYMENT_RECEIVED`, `PAYMENT_CONFIRMED`, `PAYMENT_OVERDUE`, `PAYMENT_DELETED`, `PAYMENT_REFUNDED` e chargeback.
+- Rodar `payment_sandbox_validate_platform_billing --execute --simulate-paid-webhook` em tenant controlado.
+- Conferir no dashboard Asaas customer, cobrança complementar, `externalReference=hubx-platform-fee:<ledger_key>` e split de pedido.
+- Capturar evidência de ledger, webhook, conciliação e rollback antes de qualquer rollout amplo.
 
 ## Webhook readiness
 - o módulo agora expõe um endpoint mínimo em `/payments/webhook/`

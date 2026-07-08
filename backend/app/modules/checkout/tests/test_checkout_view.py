@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 from app.modules.catalog.models import Product, ProductVariant
 from app.modules.checkout.application.checkout_page_queries import checkout_page_queries
@@ -12,6 +13,8 @@ from app.modules.customers.models import Customer
 from app.modules.notifications.models import EmailLog
 from app.modules.orders.models import Order, OrderStatusHistory
 from app.modules.payments.models import PaymentAttempt
+from app.modules.subscriptions.application.subscription_commands import subscription_commands
+from app.modules.subscriptions.models import TenantSubscription
 from app.modules.tenants.models import Tenant
 
 
@@ -1306,6 +1309,78 @@ class CheckoutPersistedReadTests(TestCase):
         )
         self.assertContains(follow_response, "Revisão ainda incompleta")
         self.assertContains(follow_response, "Antes de gerar o pedido inicial")
+
+    def test_checkout_review_post_blocks_when_monthly_paid_order_limit_is_reached(self):
+        subscription_commands.upsert_plan(
+            code="starter",
+            name="Essencial",
+            monthly_paid_order_limit=1,
+            platform_fee_percent="2.00",
+        )
+        subscription_commands.set_tenant_subscription(
+            tenant_id=self.tenant.id,
+            plan_code="starter",
+            status=TenantSubscription.Status.ACTIVE,
+        )
+        Order.objects.create(
+            tenant=self.tenant,
+            number="9001",
+            status=Order.Status.PAID,
+            payment_status="Pagamento confirmado",
+            payment_confirmed_at=timezone.now(),
+            total="10.00",
+        )
+        self._create_checkout_variants()
+        session = CheckoutSession.objects.get(pk=1)
+        before_count = Order.objects.filter(tenant=self.tenant).count()
+
+        response = self.client.post(
+            reverse("checkout:checkout-page"),
+            data={
+                "session_key": str(session.session_key),
+                "current_stage": "review",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("result=checkout-completion-order-limit-reached", response["Location"])
+        self.assertEqual(Order.objects.filter(tenant=self.tenant).count(), before_count)
+
+    def test_checkout_review_post_keeps_monthly_paid_order_limit_for_suspended_subscription(self):
+        subscription_commands.upsert_plan(
+            code="starter",
+            name="Essencial",
+            monthly_paid_order_limit=1,
+            platform_fee_percent="2.00",
+        )
+        subscription_commands.set_tenant_subscription(
+            tenant_id=self.tenant.id,
+            plan_code="starter",
+            status=TenantSubscription.Status.SUSPENDED,
+        )
+        Order.objects.create(
+            tenant=self.tenant,
+            number="9002",
+            status=Order.Status.PAID,
+            payment_status="Pagamento confirmado",
+            payment_confirmed_at=timezone.now(),
+            total="10.00",
+        )
+        self._create_checkout_variants()
+        session = CheckoutSession.objects.get(pk=1)
+        before_count = Order.objects.filter(tenant=self.tenant).count()
+
+        response = self.client.post(
+            reverse("checkout:checkout-page"),
+            data={
+                "session_key": str(session.session_key),
+                "current_stage": "review",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("result=checkout-completion-order-limit-reached", response["Location"])
+        self.assertEqual(Order.objects.filter(tenant=self.tenant).count(), before_count)
 
     def test_checkout_review_post_blocks_completion_when_session_snapshot_is_inconsistent(self):
         self._create_checkout_variants()

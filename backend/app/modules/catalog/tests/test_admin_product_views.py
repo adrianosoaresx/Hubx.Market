@@ -4,9 +4,12 @@ from django.urls import reverse
 
 from app.modules.accounts.models import OwnerUser
 from app.modules.audit.models import AuditLog
+from app.modules.catalog.application.admin_product_commands import admin_product_commands
 from app.modules.catalog.application.admin_product_queries import admin_product_queries
 from app.modules.catalog.models import Product, ProductVariant, StorefrontDiscoveryEventLog
 from app.modules.orders.models import Order, OrderItem
+from app.modules.subscriptions.application.subscription_commands import subscription_commands
+from app.modules.subscriptions.models import TenantSubscription
 from app.modules.tenants.models import Tenant
 
 
@@ -140,6 +143,86 @@ class AdminProductCrudTests(TestCase):
         self.assertEqual(variant.stock, 12)
         self.assertEqual(variant.reserved_stock, 2)
         self.assertTrue(AuditLog.objects.filter(tenant=self.tenant, module="catalog", action="product.created").exists())
+
+    def test_admin_product_command_blocks_create_above_plan_product_limit(self):
+        subscription_commands.upsert_plan(
+            code="starter",
+            name="Essencial",
+            product_limit=1,
+            platform_fee_percent="2.00",
+        )
+        subscription_commands.set_tenant_subscription(
+            tenant_id=self.tenant.id,
+            plan_code="starter",
+            status=TenantSubscription.Status.ACTIVE,
+        )
+        self._create_product(slug="produto-existente", sku="LIMIT-001")
+
+        result = admin_product_commands.create_product(
+            tenant_id=self.tenant.id,
+            payload=self._payload(slug="produto-novo", sku="LIMIT-002"),
+        )
+
+        self.assertEqual(result["result"], "product-plan-limit-reached")
+        self.assertIn("Limite do plano Essencial atingido", result["errors"]["__all__"])
+        self.assertFalse(Product.objects.filter(tenant=self.tenant, slug="produto-novo").exists())
+
+    def test_admin_product_command_keeps_product_limit_for_suspended_subscription(self):
+        subscription_commands.upsert_plan(
+            code="starter",
+            name="Essencial",
+            product_limit=1,
+            platform_fee_percent="2.00",
+        )
+        subscription_commands.set_tenant_subscription(
+            tenant_id=self.tenant.id,
+            plan_code="starter",
+            status=TenantSubscription.Status.SUSPENDED,
+        )
+        self._create_product(slug="produto-existente", sku="LIMIT-SUSP-001")
+
+        result = admin_product_commands.create_product(
+            tenant_id=self.tenant.id,
+            payload=self._payload(slug="produto-novo", sku="LIMIT-SUSP-002"),
+        )
+
+        self.assertEqual(result["result"], "product-plan-limit-reached")
+        self.assertIn("Limite do plano Essencial atingido", result["errors"]["__all__"])
+        self.assertFalse(Product.objects.filter(tenant=self.tenant, slug="produto-novo").exists())
+
+    def test_admin_product_command_allows_inactive_product_outside_limit(self):
+        subscription_commands.upsert_plan(
+            code="starter",
+            name="Essencial",
+            product_limit=1,
+            platform_fee_percent="2.00",
+        )
+        subscription_commands.set_tenant_subscription(
+            tenant_id=self.tenant.id,
+            plan_code="starter",
+            status=TenantSubscription.Status.ACTIVE,
+        )
+        self._create_product(slug="produto-existente", sku="LIMIT-INACTIVE-001")
+
+        result = admin_product_commands.create_product(
+            tenant_id=self.tenant.id,
+            payload=self._payload(
+                slug="produto-inativo",
+                sku="LIMIT-INACTIVE-002",
+                status=Product.Status.INACTIVE,
+                is_active="",
+                is_featured="",
+            ),
+        )
+
+        self.assertEqual(result["result"], "product-created")
+        self.assertTrue(
+            Product.objects.filter(
+                tenant=self.tenant,
+                slug="produto-inativo",
+                status=Product.Status.INACTIVE,
+            ).exists()
+        )
 
     def test_admin_product_edit_updates_product_and_default_variant(self):
         self._create_product()

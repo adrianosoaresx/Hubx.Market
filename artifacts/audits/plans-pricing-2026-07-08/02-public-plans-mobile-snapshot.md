@@ -1,0 +1,121 @@
+- generic [ref=e2] [box=0,0,390,4511]:
+  - banner [ref=e3] [box=0,0,390,119]:
+    - generic [ref=e4] [box=0,0,390,118]:
+      - link "Hubx Market" [ref=e5] [cursor=pointer] [box=24,16,149,38]:
+        - /url: /
+        - generic [ref=e7] [box=74,17,99,35]:
+          - generic [ref=e8] [box=74,17,99,18]: Hubx Market
+          - generic [ref=e9] [box=74,39,99,14]: Planos SaaS
+      - navigation "Navegação pública" [ref=e10] [box=24,66,342,36]:
+        - link "Portal" [ref=e11] [cursor=pointer] [box=24,66,38,36]:
+          - /url: /
+          - img [ref=e12] [box=35,76,16,16]
+          - generic [ref=e16] [box=34,84,1,1]: Portal
+        - link "Planos" [ref=e17] [cursor=pointer] [box=126,66,38,36]:
+          - /url: /plans/
+          - img [ref=e18] [box=136,76,16,16]
+          - generic [ref=e20] [box=135,84,1,1]: Planos
+        - link "Demo" [ref=e21] [cursor=pointer] [box=227,66,38,36]:
+          - /url: /demo/
+          - img [ref=e22] [box=238,76,16,16]
+          - generic [ref=e26] [box=237,84,1,1]: Demo
+        - link "Entrar" [ref=e27] [cursor=pointer] [box=329,66,38,36]:
+          - /url: /accounts/login/
+          - img [ref=e28] [box=340,76,16,16]
+          - generic [ref=e31] [box=339,84,1,1]: Entrar
+  - main [ref=e32] [box=0,119,390,4232]:
+    - generic [ref=e33] [box=0,119,390,560]:
+      - img [ref=e34] [box=0,119,390,560]
+      - generic [ref=e37] [box=24,214,342,371]:
+        - paragraph [ref=e38] [box=24,214,342,16]: Planos Hubx Market
+        - heading "Pague pelo que vender." [level=1] [ref=e39] [box=24,246,342,78]
+        - paragraph [ref=e40] [box=24,343,342,109]: Comece sem mensalidade no Essencial, cresça com mínimo abatível no Pro e mantenha a taxa Hubx ligada aos pedidos pagos no checkout integrado.
+        - generic [ref=e41] [box=24,484,342,100]:
+          - link "Iniciar onboarding Iniciar onboarding" [ref=e42] [cursor=pointer] [box=24,484,183,44]:
+            - /url: "#aquisicao"
+          - link "Ver planos Ver planos" [ref=e47] [cursor=pointer] [box=219,484,129,44]:
+            - /url: "#planos"
+          - link "Acessar demo Acessar demo" [ref=e51] [cursor=pointer] [box=24,540,152,44]:
+            - /url: /demo/
+    - generic [ref=e57] [box=0,679,390,1991]:
+      - generic [ref=e58] [box=24,727,342,168]:
+        - generic [ref=e59] [box=24,727,342,92]:
+          - paragraph [ref=e60] [box=24,727,342,20]: Planos ativos
+          - heading "Escolha pela capacidade da sua loja" [level=2] [ref=e61] [box=24,755,342,64]
+        - paragraph [ref=e62] [box=24,835,342,60]: Os limites de produtos e pedidos deixam claro quando evoluir. A taxa Hubx incide sobre pedido pago e é descontada no checkout integrado.
+      - generic [ref=e63] [box=24,919,342,1703]:
+        - article [ref=e64] [box=24,919,342,542]:
+          - generic [ref=e65] [box=49,944,293,32]
+          - generic [ref=e71] [box=57,991,114,14]: 2% Por Pedido Pago
+          - paragraph [ref=e72] [box=49,1016,293,48]: "Para começar sem mensalidade: a Hubx ganha quando a loja vende."
+          - paragraph [ref=e73] [box=49,1084,293,36]: R$ 0/mês + 2% dos pedidos pagos
+          - paragraph [ref=e74] [box=49,1128,293,40]: A Hubx recebe 2% somente quando a loja vende pelo checkout integrado.
+          - list [ref=e75] [box=49,1188,293,180]
+          - link "Iniciar Essencial" [ref=e100] [cursor=pointer] [box=49,1392,293,44]:
+            - /url: /plans/?plan=starter#aquisicao
+        - article [ref=e104] [box=24,1481,342,578]:
+          - heading "Pro" [level=3] [ref=e106] [box=49,1506,31,28]
+          - generic [ref=e107] [box=49,1550,293,21]
+          - paragraph [ref=e112] [box=49,1579,293,48]: Para operação em crescimento com mais capacidade e compromisso mínimo abatível.
+          - paragraph [ref=e113] [box=49,1647,293,72]: R$ 259,90 mínimo ou 2% dos pedidos pagos
+          - paragraph [ref=e114] [box=49,1727,293,40]: Cobra o maior valor entre R$ 259,90 no mês e 2% dos pedidos pagos.
+          - list [ref=e115] [box=49,1787,293,180]
+          - link "Iniciar Pro" [ref=e140] [cursor=pointer] [box=49,1991,293,44]:
+            - /url: /plans/?plan=pro#aquisicao
+        - article [ref=e144] [box=24,2080,342,542]:
+          - heading "Enterprise" [level=3] [ref=e146] [box=49,2104,91,28]
+          - generic [ref=e149] [box=57,2152,113,14]: Contrato Consultivo
+          - paragraph [ref=e150] [box=49,2177,293,48]: Para operações maiores com limites, percentual, SLA e implantação negociados.
+          - paragraph [ref=e151] [box=49,2245,293,36]: Sob consulta
+          - paragraph [ref=e152] [box=49,2289,293,40]: Contrato, percentual, limites e implantação definidos com o time Hubx.
+          - list [ref=e153] [box=49,2349,293,180]
+          - link "Iniciar Enterprise" [ref=e178] [cursor=pointer] [box=49,2553,293,44]:
+            - /url: /plans/?plan=enterprise#aquisicao
+    - generic [ref=e183] [box=0,2671,390,360]:
+      - generic [ref=e184] [box=24,2711,342,92]:
+        - paragraph [ref=e185] [box=24,2711,342,20]: Recebimento Hubx
+        - heading "A taxa acompanha o sucesso da loja." [level=2] [ref=e186] [box=24,2739,342,64]
+      - generic [ref=e187] [box=24,2827,342,164]:
+        - generic [ref=e188] [box=24,2827,342,40]:
+          - img [ref=e189] [box=24,2827,16,16]
+          - generic [ref=e191] [box=48,2827,318,40]: "No Essencial, não há mensalidade: a Hubx recebe 2% somente em pedido pago."
+        - generic [ref=e192] [box=24,2879,342,60]:
+          - img [ref=e193] [box=24,2879,16,16]
+          - generic [ref=e195] [box=48,2879,318,60]: No Pro, o split mensal abate o mínimo de R$ 259,90; só há complemento se as vendas do mês ficarem abaixo disso.
+        - generic [ref=e196] [box=24,2951,342,40]:
+          - img [ref=e197] [box=24,2951,16,16]
+          - generic [ref=e199] [box=48,2951,318,40]: Novas lojas começam em modo manutenção até configuração, validação de owner e checklist inicial.
+    - generic [ref=e201] [box=0,3032,390,1319]:
+      - generic [ref=e202] [box=24,3080,342,304]:
+        - paragraph [ref=e203] [box=24,3080,342,20]: Onboarding assistido
+        - heading "Comece a criação da sua loja com contexto comercial." [level=2] [ref=e204] [box=24,3108,342,64]
+        - paragraph [ref=e205] [box=24,3184,342,72]: O envio registra o início do onboarding para revisão platform. A equipe valida plano, subdomínio, checkout Hubx e próximos passos antes de publicar a operação.
+        - list [ref=e206] [box=24,3280,342,104]:
+          - listitem [ref=e207] [box=24,3280,342,40]
+          - listitem [ref=e211] [box=24,3332,342,20]
+          - listitem [ref=e215] [box=24,3364,342,20]
+      - generic [ref=e219] [box=24,3416,342,887]:
+        - heading "Iniciar onboarding" [level=2] [ref=e220] [box=49,3440,293,28]
+        - generic [ref=e221] [box=49,3488,293,790]:
+          - generic [ref=e222] [box=49,3488,293,73]
+          - generic [ref=e224] [box=49,3577,293,74]
+          - generic [ref=e226] [box=49,3667,293,74]
+          - generic [ref=e228] [box=49,3756,293,74]
+          - generic [ref=e230] [box=49,3846,293,163]
+          - generic [ref=e235] [box=49,4025,293,74]
+          - generic [ref=e237] [box=49,4115,293,103]
+          - button "Enviar intenção Enviar intenção" [ref=e239] [cursor=pointer] [box=49,4234,293,44]
+  - contentinfo [ref=e244] [box=0,4351,390,160]:
+    - generic [ref=e245] [box=0,4352,390,160]:
+      - link "Hubx Market" [ref=e246] [cursor=pointer] [box=24,4372,342,32]:
+        - /url: /
+        - generic [ref=e249] [box=68,4379,86,16]: Hubx Market
+      - generic [ref=e250] [box=24,4420,342,72]:
+        - group "Tema da interface" [ref=e251] [box=24,4420,342,40]:
+          - generic [ref=e252] [box=29,4431,42,17]: Tema
+          - button "Claro" [ref=e253] [box=75,4424,73,30]
+          - button "Escuro" [ref=e261] [box=151,4424,80,30]
+          - button "Sistema" [pressed] [ref=e265] [box=235,4424,87,30]
+        - paragraph [ref=e269] [box=24,4471,342,20]:
+          - img [ref=e270] [box=24,4473,16,16]
+          - generic [ref=e272] [box=48,4471,169,20]: Operado com Hubx Market

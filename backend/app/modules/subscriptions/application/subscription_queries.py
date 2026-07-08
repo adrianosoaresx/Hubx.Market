@@ -1,12 +1,31 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from decimal import Decimal
 
 from app.modules.subscriptions.models import SubscriptionAcquisitionLead, SubscriptionPlan, TenantSubscription
 
 
 def _money(value) -> str:
     return f"R$ {value:.2f}".replace(".", ",")
+
+
+def _percent(value) -> str:
+    amount = Decimal(str(value or "0.00"))
+    if amount == amount.to_integral():
+        return f"{int(amount)}%"
+    return f"{amount:.2f}%".replace(".", ",")
+
+
+def _limit_label(value: int, noun: str) -> str:
+    if not value:
+        return f"{noun.capitalize()} sob consulta"
+    return f"Até {value:,}".replace(",", ".") + f" {noun}"
+
+
+def _plan_order(plan: SubscriptionPlan) -> tuple[int, str]:
+    preferred_order = {"starter": 0, "essencial": 0, "pro": 1, "enterprise": 2}
+    return preferred_order.get(plan.code, 50), plan.code
 
 
 def _plan_feature_lines(plan: SubscriptionPlan) -> tuple[str, ...]:
@@ -21,48 +40,81 @@ def _lead_status_variant(status: str) -> str:
     }.get(status, "neutral")
 
 
+def _billing_method_label(status: str) -> str:
+    return {
+        TenantSubscription.BillingMethodStatus.MISSING: "Não informado",
+        TenantSubscription.BillingMethodStatus.PENDING: "Pendente",
+        TenantSubscription.BillingMethodStatus.ACTIVE: "Ativo",
+        TenantSubscription.BillingMethodStatus.FAILED: "Falhou",
+    }.get(status, "Não informado")
+
+
+def _billing_method_variant(status: str) -> str:
+    return {
+        TenantSubscription.BillingMethodStatus.MISSING: "warning",
+        TenantSubscription.BillingMethodStatus.PENDING: "warning",
+        TenantSubscription.BillingMethodStatus.ACTIVE: "success",
+        TenantSubscription.BillingMethodStatus.FAILED: "danger",
+    }.get(status, "neutral")
+
+
+def _tenant_billing_method_label(subscription: TenantSubscription) -> str:
+    if not subscription.plan.requires_billing_method:
+        return "Não exigido"
+    return _billing_method_label(subscription.billing_method_status)
+
+
+def _tenant_billing_method_variant(subscription: TenantSubscription) -> str:
+    if not subscription.plan.requires_billing_method:
+        return "neutral"
+    return _billing_method_variant(subscription.billing_method_status)
+
+
 def _plan_features(plan: SubscriptionPlan) -> tuple[str, ...]:
     configured_features = _plan_feature_lines(plan)
     if configured_features:
         return configured_features
-    features = ["Loja em subdomínio Hubx", "Admin tenant-owned", "Checkout e catálogo modular"]
-    if plan.trial_days:
-        features.append(f"{plan.trial_days} dias grátis para validar a loja")
-    if plan.requires_payment_method:
-        features.append("Cartão obrigatório na ativação do trial")
+    features = [
+        _limit_label(plan.product_limit, "produtos"),
+        _limit_label(plan.monthly_paid_order_limit, "pedidos pagos/mês"),
+    ]
+    if plan.requires_hubx_checkout:
+        features.append("Checkout Hubx com taxa descontada automaticamente")
     if plan.included_api_quota:
-        features.append(f"{plan.included_api_quota:,}".replace(",", ".") + " chamadas de API incluídas")
+        features.append("API de catálogo e operação incluída")
+    else:
+        features.append("API pública disponível a partir do Pro")
     if "pro" in plan.code:
-        features.append("Domínio customizado contract-ready")
+        features.append("Domínio e customização ampliados")
+        features.append("Relatórios e suporte prioritário")
     if "enterprise" in plan.code:
-        features.append("Acompanhamento prioritário de implantação")
+        features.append("Limites, SLA e implantação negociados")
     return tuple(features)
 
 
 def _price_label(plan: SubscriptionPlan) -> str:
-    if plan.monthly_price == 0 and plan.trial_days:
-        return f"Grátis por {plan.trial_days} dias"
-    if plan.monthly_price == 0:
-        return "Grátis"
-    return _money(plan.monthly_price)
+    if plan.billing_model == SubscriptionPlan.BillingModel.CUSTOM:
+        return "Sob consulta"
+    if plan.billing_model == SubscriptionPlan.BillingModel.MINIMUM_COMMITMENT:
+        return f"{_money(plan.minimum_monthly_fee)} mínimo"
+    return "R$ 0/mês"
 
 
 def _billing_note(plan: SubscriptionPlan) -> str:
-    if plan.requires_payment_method and plan.trial_days:
-        return "Cartão obrigatório para iniciar o trial; cobrança SaaS recorrente segue fora deste MVP."
-    if plan.requires_payment_method:
-        return "Cartão obrigatório na ativação comercial assistida."
-    if plan.trial_days:
-        return f"Trial interno de {plan.trial_days} dias sem cobrança SaaS automática."
-    return "Aquisição assistida sem cobrança automática nesta etapa."
+    if plan.billing_model == SubscriptionPlan.BillingModel.CUSTOM:
+        return "Contrato, percentual, limites e implantação definidos com o time Hubx."
+    fee_label = _percent(plan.platform_fee_percent)
+    if plan.billing_model == SubscriptionPlan.BillingModel.MINIMUM_COMMITMENT:
+        return f"Cobra o maior valor entre {_money(plan.minimum_monthly_fee)} no mês e {fee_label} dos pedidos pagos."
+    return f"A Hubx recebe {fee_label} somente quando a loja vende pelo checkout integrado."
 
 
 def _price_caption(plan: SubscriptionPlan) -> str:
-    if plan.monthly_price == 0:
+    if plan.billing_model == SubscriptionPlan.BillingModel.CUSTOM:
         return ""
-    if plan.trial_days:
-        return f"/mês após {plan.trial_days} dias"
-    return "/mês"
+    if plan.billing_model == SubscriptionPlan.BillingModel.MINIMUM_COMMITMENT:
+        return f" ou {_percent(plan.platform_fee_percent)} dos pedidos pagos"
+    return f" + {_percent(plan.platform_fee_percent)} dos pedidos pagos"
 
 
 @dataclass
@@ -78,12 +130,22 @@ class SubscriptionQueryService:
                 "included_api_quota": plan.included_api_quota,
                 "trial_days": plan.trial_days,
                 "requires_payment_method": plan.requires_payment_method,
+                "billing_model": plan.billing_model,
+                "platform_fee_percent": str(plan.platform_fee_percent),
+                "minimum_monthly_fee": _money(plan.minimum_monthly_fee),
+                "product_limit": plan.product_limit,
+                "monthly_paid_order_limit": plan.monthly_paid_order_limit,
+                "requires_hubx_checkout": plan.requires_hubx_checkout,
+                "requires_billing_method": plan.requires_billing_method,
             }
             for plan in SubscriptionPlan.objects.order_by("monthly_price", "code")
         ]
 
     def list_public_plans(self) -> list[dict[str, object]]:
-        plans = list(SubscriptionPlan.objects.filter(status=SubscriptionPlan.Status.ACTIVE).order_by("monthly_price", "code"))
+        plans = sorted(
+            list(SubscriptionPlan.objects.filter(status=SubscriptionPlan.Status.ACTIVE)),
+            key=_plan_order,
+        )
         recommended_code = "starter" if any(plan.code == "starter" for plan in plans) else (plans[min(1, len(plans) - 1)].code if plans else "")
         return [
             {
@@ -98,8 +160,31 @@ class SubscriptionQueryService:
                 "included_api_quota": plan.included_api_quota,
                 "trial_days": plan.trial_days,
                 "requires_payment_method": plan.requires_payment_method,
-                "trial_badge": f"{plan.trial_days} dias grátis" if plan.trial_days else "",
-                "payment_badge": "Cartão obrigatório" if plan.requires_payment_method else "",
+                "billing_model": plan.billing_model,
+                "platform_fee_percent": str(plan.platform_fee_percent),
+                "minimum_monthly_fee": _money(plan.minimum_monthly_fee),
+                "product_limit": plan.product_limit,
+                "monthly_paid_order_limit": plan.monthly_paid_order_limit,
+                "requires_hubx_checkout": plan.requires_hubx_checkout,
+                "requires_billing_method": plan.requires_billing_method,
+                "self_service_eligible": (
+                    not plan.requires_billing_method
+                    and plan.billing_model != SubscriptionPlan.BillingModel.CUSTOM
+                ),
+                "trial_badge": "",
+                "payment_badge": "Mínimo abatível" if plan.billing_model == SubscriptionPlan.BillingModel.MINIMUM_COMMITMENT else "",
+                "usage_badge": (
+                    f"{_percent(plan.platform_fee_percent)} por pedido pago"
+                    if plan.billing_model != SubscriptionPlan.BillingModel.CUSTOM
+                    else "Contrato consultivo"
+                ),
+                "commercial_summary": (
+                    "Sob consulta"
+                    if plan.billing_model == SubscriptionPlan.BillingModel.CUSTOM
+                    else f"{_money(plan.minimum_monthly_fee)} mínimo ou {_percent(plan.platform_fee_percent)} dos pedidos pagos"
+                    if plan.billing_model == SubscriptionPlan.BillingModel.MINIMUM_COMMITMENT
+                    else f"R$ 0/mês + {_percent(plan.platform_fee_percent)} dos pedidos pagos"
+                ),
                 "features": _plan_features(plan),
                 "is_recommended": plan.code == recommended_code,
             }
@@ -116,6 +201,9 @@ class SubscriptionQueryService:
                 "tenant_name": subscription.tenant.name,
                 "plan_code": subscription.plan.code,
                 "plan_name": subscription.plan.name,
+                "plan_display": subscription.plan.name,
+                "requires_billing_method": subscription.plan.requires_billing_method,
+                "plan_billing_model": subscription.plan.billing_model,
                 "status": subscription.status,
                 "status_label": subscription.get_status_display(),
                 "monthly_price": f"R$ {subscription.plan.monthly_price:.2f}".replace(".", ","),
@@ -126,9 +214,38 @@ class SubscriptionQueryService:
                 "current_period_ends_at": subscription.current_period_ends_at.strftime("%Y-%m-%d") if subscription.current_period_ends_at else "não definido",
                 "external_reference": subscription.external_reference or "manual",
                 "billing_provider_label": subscription.billing_provider_label or subscription.billing_provider_code or "não definido",
+                "billing_method_status": subscription.billing_method_status,
+                "billing_method_label": _tenant_billing_method_label(subscription),
+                "billing_method_variant": _tenant_billing_method_variant(subscription),
+                "has_billing_customer_reference": bool(subscription.billing_external_reference),
+                "has_billing_method_reference": bool(subscription.billing_method_reference),
+                "billing_checkout_url": subscription.billing_checkout_url,
+                "billing_method_verified_at": subscription.billing_method_verified_at.strftime("%d/%m/%Y %H:%M") if subscription.billing_method_verified_at else "",
             }
             for subscription in queryset
         ]
+
+    def get_tenant_subscription(self, *, tenant_id: int | str | None) -> dict[str, object] | None:
+        if not tenant_id:
+            return None
+        subscription = (
+            TenantSubscription.objects.select_related("tenant", "plan")
+            .filter(tenant_id=tenant_id)
+            .first()
+        )
+        if subscription is None:
+            return None
+        item = self.list_tenant_subscriptions(tenant_id=tenant_id)
+        serialized = item[0] if item else {}
+        serialized.update(
+            {
+                "billing_external_reference": subscription.billing_external_reference,
+                "requires_billing_method": subscription.plan.requires_billing_method,
+                "plan_billing_model": subscription.plan.billing_model,
+                "minimum_monthly_fee": _money(subscription.plan.minimum_monthly_fee),
+            }
+        )
+        return serialized
 
     def list_acquisition_leads(self) -> list[dict[str, object]]:
         return [

@@ -177,6 +177,13 @@ class PublicTenantSignupCommandService:
             return {"result": "public-tenant-signup-invalid", "errors": errors}
 
         plan = SubscriptionPlan.objects.get(code=values["plan_code"], status=SubscriptionPlan.Status.ACTIVE)
+        if bool(getattr(plan, "requires_billing_method", False)):
+            return {
+                "result": "public-tenant-signup-invalid",
+                "errors": {
+                    "plan_code": "Este plano exige método de cobrança e deve seguir pelo onboarding assistido.",
+                },
+            }
         coupon_validation = None
         if values["coupon_code"]:
             coupon_validation = subscription_coupon_queries.validate_plan_coupon(
@@ -243,7 +250,7 @@ class PublicTenantSignupCommandService:
                 subscription_result = subscription_commands.set_tenant_subscription(
                     tenant_id=tenant.id,
                     plan_code=plan.code,
-                    status=TenantSubscription.Status.TRIALING,
+                    status=TenantSubscription.Status.TRIALING if plan.trial_days else TenantSubscription.Status.ACTIVE,
                     external_reference=f"public-signup-{onboarding.id}",
                     actor_label=values["owner_email"],
                     promotion_snapshot=promotion_snapshot,
@@ -251,7 +258,7 @@ class PublicTenantSignupCommandService:
                 if subscription_result.get("result") not in {"tenant-subscription-created", "tenant-subscription-updated"}:
                     raise PublicTenantSignupBlocked(
                         str(subscription_result.get("result") or "public-tenant-signup-subscription-failed"),
-                        subscription_result.get("errors") or {"__all__": "Nao foi possivel criar assinatura trial."},
+                        subscription_result.get("errors") or {"__all__": "Nao foi possivel criar assinatura comercial."},
                     )
                 if promotion_snapshot:
                     coupon_audit = _record_coupon_application_event(
@@ -391,6 +398,7 @@ class PublicTenantSignupCommandService:
                 "id": subscription.id,
                 "tenant_id": tenant.id,
                 "plan_code": subscription.plan.code,
+                "plan_name": subscription.plan.name,
                 "status": subscription.status,
                 "coupon_code_snapshot": subscription.coupon_code_snapshot,
                 "effective_monthly_price_snapshot": str(subscription.effective_monthly_price_snapshot),

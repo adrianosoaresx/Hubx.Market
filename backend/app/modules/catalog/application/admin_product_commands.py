@@ -9,6 +9,7 @@ from django.utils.text import slugify
 from app.modules.accounts.application.admin_permissions import PERMISSION_CATALOG_MANAGE, admin_permissions
 from app.modules.audit.application.audit_log_commands import audit_log_commands
 from app.modules.catalog.models import Product, ProductVariant
+from app.modules.subscriptions.application.commercial_terms import get_tenant_commercial_terms
 from app.modules.tenants.models import Tenant
 
 
@@ -89,6 +90,9 @@ def _default_variant(product: Product) -> ProductVariant | None:
     return product.variants.order_by("id").first()
 
 
+COUNTED_PRODUCT_STATUSES = (Product.Status.ACTIVE, Product.Status.DRAFT)
+
+
 @dataclass
 class AdminProductCommandService:
     def create_product(
@@ -109,6 +113,12 @@ class AdminProductCommandService:
         values, variant_values, errors = self._validated_values(tenant_id=tenant.id, payload=payload)
         if errors:
             return {"result": "product-invalid", "errors": errors}
+        limit_error = self._product_limit_error(
+            tenant_id=tenant.id,
+            target_status=str(values.get("status") or ""),
+        )
+        if limit_error:
+            return {"result": "product-plan-limit-reached", "errors": {"__all__": limit_error}}
 
         with transaction.atomic():
             product = Product.objects.create(tenant=tenant, **values)
@@ -150,6 +160,14 @@ class AdminProductCommandService:
         )
         if errors:
             return {"result": "product-invalid", "errors": errors}
+        limit_error = self._product_limit_error(
+            tenant_id=tenant_id,
+            target_status=str(values.get("status") or ""),
+            current_product_id=product.id,
+            current_status=product.status,
+        )
+        if limit_error:
+            return {"result": "product-plan-limit-reached", "errors": {"__all__": limit_error}}
 
         previous_slug = product.slug
         previous_status = product.status
@@ -393,6 +411,14 @@ class AdminProductCommandService:
         product = Product.objects.filter(pk=product_id, tenant_id=tenant_id).first()
         if product is None:
             return {"result": "product-visibility-not-found", "errors": {"product_id": "not-found"}}
+        limit_error = self._product_limit_error(
+            tenant_id=tenant_id,
+            target_status=normalized_status,
+            current_product_id=product.id,
+            current_status=product.status,
+        )
+        if limit_error:
+            return {"result": "product-plan-limit-reached", "errors": {"__all__": limit_error}}
 
         previous_status = product.status
         previous_is_active = product.is_active
@@ -534,6 +560,30 @@ class AdminProductCommandService:
                 "allow_backorder": _checkbox(payload, "allow_backorder"),
             },
             errors,
+        )
+
+    @staticmethod
+    def _product_limit_error(
+        *,
+        tenant_id: int | str,
+        target_status: str,
+        current_product_id: int | None = None,
+        current_status: str = "",
+    ) -> str:
+        if target_status not in COUNTED_PRODUCT_STATUSES:
+            return ""
+        if current_product_id and current_status in COUNTED_PRODUCT_STATUSES:
+            return ""
+        terms = get_tenant_commercial_terms(tenant_id=tenant_id)
+        if not terms.has_product_limit:
+            return ""
+        current_count = Product.objects.filter(tenant_id=tenant_id, status__in=COUNTED_PRODUCT_STATUSES).count()
+        if current_count < terms.product_limit:
+            return ""
+        plan_name = terms.plan_name or "atual"
+        return (
+            f"Limite do plano {plan_name} atingido: {terms.product_limit} produtos ativos ou em rascunho. "
+            "Desative produtos sem uso ou revise o plano antes de criar novos itens."
         )
 
     def _validated_variant_values(

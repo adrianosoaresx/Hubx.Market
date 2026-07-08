@@ -94,6 +94,15 @@ def _build_checkout_recovery_context(*, request, result: str, back_url: str, ses
             "secondary_label": "Voltar ao produto",
             "secondary_href": back_url,
         },
+        "checkout-completion-order-limit-reached": {
+            "title": "Como retomar",
+            "description": "Esta loja atingiu o limite mensal de pedidos pagos do plano atual.",
+            "helper": "Entre em contato com a loja para concluir a compra assim que a operação liberar mais capacidade.",
+            "primary_label": "Voltar ao produto",
+            "primary_href": back_url,
+            "secondary_label": "",
+            "secondary_href": "",
+        },
     }
     payload = recovery_map.get(result)
     if not payload:
@@ -455,6 +464,13 @@ class CheckoutPageView(TemplateView):
                 "icon": "🧾",
                 "title": "Sessão mudou antes da conclusão",
                 "description": "Itens ou totais desta sessão já não estão consistentes para gerar o pedido inicial. Reabra o checkout e revise os dados antes de concluir.",
+            }
+        elif result == "checkout-completion-order-limit-reached":
+            context["checkout_feedback"] = {
+                "variant": "warning",
+                "icon": "🧾",
+                "title": "Limite mensal da loja atingido",
+                "description": "Esta loja atingiu o limite de pedidos pagos do plano atual. Nenhum pedido novo foi criado a partir desta tentativa.",
             }
         elif result == "checkout-item-updated":
             context["checkout_feedback"] = {

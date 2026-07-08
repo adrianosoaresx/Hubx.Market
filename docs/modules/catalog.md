@@ -20,6 +20,11 @@ Categorias, marcas e tags normalizadas continuam planejadas para evolução futu
 ## Regras de negócio
 - preço e estoque pertencem à variante
 - produto inativo/desativado não é deletado fisicamente
+- limite comercial de produtos vem de `subscriptions.application.commercial_terms`
+- para limite de plano, contam produtos `active` e `draft`
+- produtos `inactive` não contam no limite
+- criação e reativação devem bloquear quando o tenant atingiu `product_limit`
+- edição e desativação continuam permitidas mesmo acima do limite
 
 ## Integração UI
 - views HTTP devem permanecer finas em `interfaces/`
@@ -63,6 +68,9 @@ Categorias, marcas e tags normalizadas continuam planejadas para evolução futu
 - o lookup e a escrita exigem `tenant_id`; não há fallback de fixture para writes.
 - `catalog.manage` é exigido quando o papel owner/admin está resolvido; ausência de role ainda preserva compatibilidade legada.
 - a ação de “delete” do CRUD é uma desativação operacional: `status=inactive`, `is_active=False`, `is_featured=False`, sem chamar `delete()` no produto.
+- criação e reativação validam `product_limit` do plano ativo; o erro volta como falha de formulário e não altera o produto.
+- edição de produto já contado no limite permanece permitida para não impedir correção operacional.
+- desativação permanece permitida porque reduz ou mantém o uso de quota.
 - auditoria registra `product.created`, `product.updated` e `product.deactivated`.
 
 ## Admin advanced variants

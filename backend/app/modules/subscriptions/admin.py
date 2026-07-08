@@ -5,8 +5,18 @@ from app.modules.subscriptions.models import SubscriptionAcquisitionLead, Subscr
 
 @admin.register(SubscriptionPlan)
 class SubscriptionPlanAdmin(admin.ModelAdmin):
-    list_display = ("code", "name", "monthly_price", "currency_code", "trial_days", "requires_payment_method", "included_api_quota", "status")
-    list_filter = ("status", "currency_code")
+    list_display = (
+        "code",
+        "name",
+        "billing_model",
+        "platform_fee_percent",
+        "minimum_monthly_fee",
+        "product_limit",
+        "monthly_paid_order_limit",
+        "requires_billing_method",
+        "status",
+    )
+    list_filter = ("status", "billing_model", "currency_code", "requires_billing_method")
     search_fields = ("code", "name")
     readonly_fields = ("created_at", "updated_at")
 
@@ -21,8 +31,17 @@ class SubscriptionCouponAdmin(admin.ModelAdmin):
 
 @admin.register(TenantSubscription)
 class TenantSubscriptionAdmin(admin.ModelAdmin):
-    list_display = ("tenant", "plan", "status", "billing_provider_code", "trial_ends_at", "current_period_ends_at", "updated_at")
-    list_filter = ("status", "plan", "billing_provider_code", "current_period_ends_at")
+    list_display = (
+        "tenant",
+        "plan",
+        "status",
+        "billing_provider_code",
+        "billing_method_status",
+        "trial_ends_at",
+        "current_period_ends_at",
+        "updated_at",
+    )
+    list_filter = ("status", "plan", "billing_provider_code", "billing_method_status", "current_period_ends_at")
     search_fields = ("tenant__name", "tenant__slug", "plan__code", "external_reference", "billing_external_reference")
     readonly_fields = ("created_at", "updated_at")
 

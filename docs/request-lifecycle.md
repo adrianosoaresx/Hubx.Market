@@ -371,7 +371,7 @@ Request
 → `tenants.application.public_tenant_signup_commands`
 → `Tenant` em `maintenance_mode`
 → `TenantOnboarding` concluído
-→ `TenantSubscription(status=trialing, trial_ends_at=started_at + plan.trial_days, billing_provider_code=asaas por default)`
+→ `TenantSubscription` para plano sem método de cobrança obrigatório, com `billing_provider_code=asaas` por default
 → `accounts.application.initial_owner_provisioning_commands`
 → `OwnerUser` inicial com senha utilizável
 → `AuditLog` tenant-scoped
@@ -380,7 +380,7 @@ Request
 Observações:
 
 - não cria `Customer`, catálogo, pedido, pagamento, invoice ou recurso/cobrança externa no billing provider.
-- não coleta dados de cartão; cartão obrigatório é requisito comercial do plano e deve ser resolvido em fluxo seguro hospedado, inicialmente Asaas.
+- não coleta dados de cartão, token, CVV ou validade; planos com mínimo mensal ficam no onboarding assistido até confirmação segura do provider.
 - subdomínio reservado/duplicado e e-mail já usado bloqueiam o signup.
 - `/plans/` continua sendo aquisição assistida por lead.
 
@@ -1735,6 +1735,28 @@ Observações:
 - Platform owner/admin em runtime central exige `OwnerUser` ativo no tenant reservado `platform-system` (`HUBX_PLATFORM_TENANT_SLUG`); role `owner` em uma loja comum não concede contexto platform no portal central.
 - Requests `/ops/platform/...` feitas em host tenant-owned são bloqueadas pelo gate; platform surfaces só rodam no host central.
 - O smoke local `local_e2e_smoke` valida home central, planos, login central, redirect demo, login/redirect por perfil, menus contextuais, links GET locais, bloqueio de platform em host de loja, bloqueio read-only da demo e imagens raster do storefront.
+
+---
+
+# Fluxo comercial: limite de pedidos pagos
+
+- Checkout completion segue: request tenant-owned → `TenantSubdomainMiddleware` → view fina de checkout → `checkout.application.checkout_completion_commands.complete_checkout(...)` → valida carrinho, estoque, snapshots e frete → consulta `subscriptions.application.commercial_terms.get_tenant_commercial_terms(...)` → conta pedidos `paid` do mês por `payment_confirmed_at` → bloqueia início de novo pagamento quando `monthly_paid_order_limit` foi atingido.
+- pedidos pendentes, cancelados e carrinhos não contam para o limite mensal.
+- se uma corrida operacional permitir que webhook confirme pagamento acima do limite, o pedido permanece pago; `PlatformFeeLedger.metadata` marca `commercial_overage` para tratativa comercial, sem rollback automático do pedido.
+
+---
+
+# Fluxo financeiro: taxa Hubx por pedido pago
+
+- Provider webhook segue: request `/payments/webhook/` → autenticação/normalização em `payments.interfaces` → `payments.application.webhook_commands` → confirmação de pedido em `orders` → reconciliação de `PaymentAttempt` → criação idempotente de `PlatformFeeLedger(kind=order_take_rate)`.
+- quando o payload de saída Asaas foi criado com split Hubx, o ledger nasce como `split_requested`; quando não há split, nasce como `pending_collection`.
+- fechamento mensal do Pro segue: comando `close_platform_fee_minimums` → assinatura ativa/trialing/past_due/suspended com plano `minimum_commitment` → soma ledgers `order_take_rate` pelo `billing_period_start` do pedido pago, mesmo quando o webhook chega atrasado → cria `PlatformFeeLedger(kind=pro_minimum_adjustment)` somente para a diferença até o mínimo mensal.
+- com `--collect` ou `PAYMENTS_PLATFORM_BILLING_ASAAS_ENABLED=1`, o fechamento segue: ledger de ajuste → `payments.application.platform_billing_commands` → garante cliente Asaas do tenant → cria cobrança complementar Asaas com `externalReference=hubx-platform-fee:<ledger_key>` → persiste `provider_payment_reference` e `billing_checkout_url`.
+- webhook Asaas de cobrança complementar segue: `/payments/webhook/` → autenticação Asaas → identificação do prefixo `hubx-platform-fee:` → atualização idempotente do `PlatformFeeLedger` para `paid` ou `pending_collection`.
+- billing method segue: `/ops/subscriptions/billing-method/` → owner context/RBAC → `payments.application.platform_billing_commands.ensure_tenant_billing_customer(...)`; formulário livre não muda `billing_method_status` para `active`, pois esse status exige confirmação segura/trusted do provider.
+- validação sandbox segue: `payment_sandbox_validate_platform_billing` → candidato `PlatformFeeLedger(kind=pro_minimum_adjustment)` → dry-run por padrão → `--execute` cria cobrança Asaas → `--simulate-paid-webhook` exercita `/payments/webhook/`.
+- inadimplência segue: `enforce_platform_fee_delinquency` → ledgers Pro mínimos não pagos → janela de tolerância → `TenantSubscription(status=past_due)` → janela de suspensão → `TenantSubscription(status=suspended)`; regularização reativa para `active`.
+- refund, chargeback ou falha posterior marcam o ledger para ajuste/reversão sem duplicar cobrança.
 
 ---
 

@@ -126,6 +126,17 @@ Ledger de refund/estorno financeiro.
 - começa registrando intenção/bloqueio sem chamada real ao provider
 - deve ser idempotente por `(tenant, idempotency_key)`
 
+### PlatformFeeLedger
+Ledger da taxa comercial Hubx.
+- pertence a um tenant
+- pode referenciar um pedido pago e a tentativa de pagamento correspondente
+- usa `ledger_key` único para idempotência por pedido ou por fechamento mensal
+- preserva snapshot do plano, modelo de cobrança, percentual, mínimo mensal, período de competência, base de cálculo e valor da taxa
+- `order_take_rate` registra a taxa de um pedido pago
+- `pro_minimum_adjustment` registra a diferença mensal quando o take rate do Pro fica abaixo do mínimo
+- status pode indicar split solicitado, pago, pendente de cobrança complementar, ajuste necessário ou cancelamento
+- refund, chargeback ou falha posterior não duplicam ledger; eles marcam o lançamento existente para ajuste/reversão
+
 ### Shipment
 Informações de envio e rastreio.
 - pertence a um tenant
@@ -243,11 +254,16 @@ Plano SaaS disponível para tenants.
 Regras:
 
 - possui `code` único, nome, preço mensal, moeda e status.
-- pode definir quota operacional incluída sem acoplar cobrança real.
-- pode definir `trial_days`, `requires_payment_method` e `feature_list` para o contrato público de planos.
-- `requires_payment_method` sinaliza requisito comercial de cartão, mas não autoriza coletar ou armazenar dados de cartão no formulário público.
+- pode definir quota operacional incluída e lista pública de features.
+- define os termos comerciais executáveis: `billing_model`, `platform_fee_percent`, `minimum_monthly_fee`, `product_limit`, `monthly_paid_order_limit`, `requires_hubx_checkout` e `requires_billing_method`.
+- `take_rate_only` representa cobrança somente por percentual de pedidos pagos.
+- `minimum_commitment` representa cobrança do maior valor entre percentual de pedidos pagos e mínimo mensal.
+- `custom` representa termos Enterprise negociados.
+- Essencial usa 2%, mínimo R$ 0, 100 produtos e 300 pedidos pagos/mês.
+- Pro usa 2%, mínimo R$ 259,90, 500 produtos e 1.500 pedidos pagos/mês.
+- `requires_billing_method` sinaliza necessidade de fluxo seguro de cobrança complementar, mas não autoriza coletar ou armazenar cartão no formulário público.
 - `archived` preserva histórico e não deve apagar assinaturas existentes.
-- não representa invoice, pagamento de pedido ou cobrança de loja.
+- não representa invoice nem ledger financeiro; payments registra taxa Hubx em `PlatformFeeLedger`.
 
 ### SubscriptionCoupon
 Cupom comercial platform-scope para planos SaaS.
@@ -269,9 +285,13 @@ Regras:
 - pertence a exatamente um `Tenant`.
 - referencia um `SubscriptionPlan`.
 - status pode ser `trialing`, `active`, `past_due`, `suspended` ou `canceled`.
-- quando criada como `trialing` para plano com trial, deve ter `trial_ends_at` calculado a partir de `started_at + plan.trial_days`.
+- nos planos públicos atuais, nasce como `active`; `trialing` e `trial_ends_at` ficam apenas para planos legados/compatibilidade com `trial_days`.
 - registra provider-alvo de billing SaaS (`billing_provider_code`/`billing_provider_label`), por padrão `asaas`.
 - pode guardar referência externa e URL de checkout futuras, mas chamada real de cobrança recorrente fica fora da fundação.
+- guarda estado do método de cobrança em `billing_method_status`.
+- `billing_external_reference` representa o cliente/referência externa do provider de billing.
+- `billing_checkout_url` representa a última URL hospedada para setup/cobrança complementar.
+- `billing_method_reference` só pode conter referência tokenizada/provider-owned; nunca número de cartão, CVV ou dados sensíveis.
 - quando nasce com cupom SaaS, guarda snapshots promocionais (`coupon_*_snapshot`, `effective_monthly_price_snapshot`, `promotion_snapshot`) sem alterar `SubscriptionPlan.monthly_price`.
 - enforcement futuro deve consultar esse estado por application service/contrato explícito.
 
@@ -295,14 +315,15 @@ Regras:
 
 - não é uma entidade persistida própria; é um caso de uso em `tenants.application.public_tenant_signup_commands`.
 - exige plano ativo, `HUBX_PUBLIC_SIGNUP_ENABLED=1` e, quando controlado, `HUBX_PUBLIC_SIGNUP_ACCESS_TOKEN`.
-- cria `Tenant` ativo em `maintenance_mode`, `TenantOnboarding` concluído, `TenantSubscription(status=trialing)` e `OwnerUser` inicial.
-- respeita `SubscriptionPlan.trial_days` para encerrar o trial interno e exibe exigência de cartão quando `requires_payment_method=True`.
+- cria `Tenant` ativo em `maintenance_mode`, `TenantOnboarding` concluído, `TenantSubscription` e `OwnerUser` inicial.
+- usa `status=active` nos planos públicos atuais; `status=trialing` só deve aparecer em planos legados/compatibilidade que ainda definam `trial_days`.
+- bloqueia planos com `requires_billing_method=True` até existir fluxo seguro de método de cobrança.
 - aceita `coupon_code` opcional validado por `subscriptions`; cupom inválido bloqueia a criação antes de tenant, owner ou assinatura.
 - copia snapshots promocionais para `TenantOnboarding` e `TenantSubscription`.
 - registra Asaas como provider-alvo padrão de billing SaaS sem chamar API externa.
 - `maintenance_mode` bloqueia storefront/checkout com 503, preservando acesso a `/accounts/` e `/ops/` para configuração.
 - não cria `Customer`, catálogo, pedido, pagamento, invoice ou domínio customizado.
-- não coleta dados de cartão; payment method real pertence a fluxo seguro hospedado de billing SaaS.
+- não coleta dados de cartão; método de cobrança real pertence a fluxo seguro hospedado de billing SaaS.
 - e-mail já associado a usuário/owner existente deve seguir aquisição assistida.
 
 ## OwnerMfaRecoveryCode

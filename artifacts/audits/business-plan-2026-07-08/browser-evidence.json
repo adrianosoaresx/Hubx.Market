@@ -1,0 +1,27 @@
+{
+  "capturedAt": "2026-07-08T19:15:25.924Z",
+  "plans": {
+    "url": "http://localhost:8000/plans/",
+    "containsCreateSelfService": true,
+    "createSelfServiceOccurrences": 3,
+    "containsPro": true,
+    "containsEnterprise": true,
+    "containsCartaoObrigatorio": false,
+    "excerpt": "Hubx Market\nPlanos SaaS\nPortal\nPlanos\nDemo\nEntrar\n\nPLANOS HUBX MARKET\n\nPague pelo que vender.\n\nComece sem mensalidade no Essencial, cresça com mínimo abatível no Pro e mantenha a taxa Hubx ligada aos pedidos pagos no checkout integrado.\n\nIniciar onboarding\nVer planos\nAcessar demo\n\nPlanos ativos\n\nEscolha pela capacidade da sua loja\n\nOs limites de produtos e pedidos deixam claro quando evoluir. A taxa Hubx incide sobre pedido pago e é descontada no checkout integrado.\n\nEssencial\nRecomendado\n2% Por Pedido Pago\n\nPara começar sem mensalidade: a Hubx ganha quando a loja vende.\n\nR$ 0/mês + 2% dos pedidos pagos\n\nA Hubx recebe 2% somente quando a loja vende pelo checkout integrado.\n\nAté 100 produtos\nAté 300 pedidos pagos por mês\nR$ 0/mês + 2% por pedido pago\nCheckout Hubx com split automático\nLoja em subdomínio Hubx\nCatálogo, carrinho e checkout\nIniciar Essencial\n \nCriar loja self-service\nPro\n2% Por Pedido Pago\nMínimo Abatível\n\nPara operação em crescimento com mais capacidade e compromisso mínimo abatível.\n\nR$ 259,90 mínimo ou 2% dos pedidos pagos\n\nCobra o maior valor entre R$ 259,90 no mês e 2% dos pedidos pagos.\n\nAté 500 produtos\nAté 1.500 pedidos pagos por mês\nR$ 259,90 mínimo ou 2% por "
+  },
+  "signupPro": {
+    "url": "http://localhost:8000/plans/signup/?plan=pro",
+    "containsAssistedWarning": true,
+    "containsProEnterpriseWarning": true,
+    "containsCartaoObrigatorio": false,
+    "excerpt": "Hubx Market\nSignup SaaS\nPortal\nPlanos\nDemo\nEntrar\n\nSelf-service controlado\n\nCrie sua loja em modo manutenção.\n\nO signup cria tenant, owner e assinatura comercial em modo manutenção. Planos com mínimo mensal seguem pelo onboarding assistido antes da ativação.\n\nLoja nasce isolada por subdomínio e sem dados de outro tenant.\nOwnerUser é criado separado de Customer.\nPrimeiro acesso leva ao admin para configuração antes de publicar.\nO checkout Hubx será configurado para descontar a taxa Hubx sobre pedidos pagos.\nDados iniciais\n\nUse um e-mail novo para o owner inicial. O tenant será criado em modo manutenção até a publicação da loja.\n\nAsaas no onboarding, sem coleta neste formulário\n\nPlanos com mínimo mensal exigem onboarding assistido para configurar o método de cobrança.\n\nPlano por onboarding assistido\n\nPro e Enterprise exigem configuração segura de cobrança antes da ativação. Use a página de planos para solicitar o onboarding.\n\nPlano \nSelecione\nEssencial · R$ 0/mês + 2% dos pedidos pagos\nCupom SaaS \nNome da loja \nSubdomínio \nNome do owner \nE-mail do owner \nTelefone \nCódigo de acesso \nSenha \nConfirmar senha \nAceito criar a loja em modo manutenção e seguir a configuração comercial do pla"
+  },
+  "billingMethod": {
+    "hasProviderCustomerInput": false,
+    "hasProviderMethodInput": false,
+    "url": "http://billing-smoke.localhost:8000/ops/subscriptions/billing-method/",
+    "containsSecureProviderCopy": true,
+    "containsCartaoObrigatorio": false,
+    "excerpt": "BI\nBilling Smoke\nAdmin da loja\n\nVISÃO GERAL\n\nDashboard\n\nOPERAÇÃO\n\nPedidos\nCatálogo\nClientes\n\nCONTEÚDO\n\nPáginas\nBranding\nNewsletter\nCupons\nAvaliações\n\nFINANCEIRO\n\nFinanceiro\nRefunds\nAssinatura\n\nACESSO\n\nOwners\nMFA owners\n\nGOVERNANÇA\n\nAudit log\nAPI keys\n\nAdmin da loja\n\nMétodo de cobrança\nSair\n\nAssinatura SaaS\n\nMétodo de cobrança\n\nAcompanhe a configuração segura de cobrança complementar do Pro.\n\nMétodo de cobrança\n\nA ativação do método ocorre somente por fluxo seguro do provider. A Hubx não aceita token, número de cartão, validade ou CVV em formulário livre.\n\nCliente no provider: pendente\n\nReferência tokenizada: não informada\n\nVoltar\nAssinatura atual\nTenant\nBilling Smoke\nPlano\nPro\nMínimo\nR$ 259,90\nMétodo\nNão informado\nVerificado\n-\nCliente Asaas\n\nCria ou reaproveita a referência de cliente Asaas da loja quando a integração de billing estiver habilitada.\n\nGarantir cliente Asaas\nBI\nBilling Smoke\nTema\nClaro\nEscuro\nSistema\n\nOperado com Hubx Market"
+  }
+}

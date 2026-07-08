@@ -7,7 +7,7 @@ from django.urls import reverse
 from app.modules.accounts.models import OwnerUser
 from app.modules.audit.models import AuditLog
 from app.modules.subscriptions.application.subscription_commands import subscription_commands
-from app.modules.subscriptions.models import SubscriptionAcquisitionLead, SubscriptionCoupon, TenantSubscription
+from app.modules.subscriptions.models import SubscriptionAcquisitionLead, SubscriptionCoupon, SubscriptionPlan, TenantSubscription
 from app.modules.tenants.models import Tenant, TenantOnboarding
 
 
@@ -40,10 +40,12 @@ class SubscriptionCouponE2ETests(TestCase):
         )
         subscription_commands.upsert_plan(
             code="starter",
-            name="Starter",
+            name="Essencial",
             monthly_price="100.00",
-            trial_days=30,
-            requires_payment_method=True,
+            billing_model=SubscriptionPlan.BillingModel.TAKE_RATE_ONLY,
+            platform_fee_percent="2.00",
+            product_limit=100,
+            monthly_paid_order_limit=300,
         )
 
     def test_public_plans_form_renders_active_plan_options_and_preserves_selection(self):
@@ -53,8 +55,8 @@ class SubscriptionCouponE2ETests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, '<option value="starter" selected>Starter · R$ 100,00</option>')
-        self.assertContains(response, "30 dias grátis")
+        self.assertContains(response, '<option value="starter" selected>Essencial · R$ 0/mês + 2% dos pedidos pagos</option>')
+        self.assertContains(response, "Pague pelo que vender")
 
     @override_settings(
         CSRF_TRUSTED_ORIGINS=["https://hubx.market", "https://*.hubx.market"],

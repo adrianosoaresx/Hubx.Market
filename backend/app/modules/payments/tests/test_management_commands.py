@@ -1,5 +1,7 @@
 from datetime import timedelta
 from io import StringIO
+import json
+from unittest.mock import MagicMock, patch
 
 from django.core.management import call_command
 from django.test import SimpleTestCase, TestCase, override_settings
@@ -9,7 +11,10 @@ from app.modules.catalog.models import Product, ProductVariant
 from app.modules.customers.models import Customer
 from app.modules.orders.models import Order, OrderItem
 from app.modules.payments.models import PaymentAttempt
+from app.modules.payments.models import PlatformFeeLedger
 from app.modules.payments.models import PaymentRefund
+from app.modules.subscriptions.application.subscription_commands import subscription_commands
+from app.modules.subscriptions.models import SubscriptionPlan, TenantSubscription
 from app.modules.tenants.models import Tenant
 
 
@@ -117,6 +122,136 @@ class PaymentSandboxReadinessCommandTests(SimpleTestCase):
         self.assertIn("[OK] Enabled rollout tenants", output)
         self.assertIn("[OK] Provider fallback mode", output)
         self.assertIn("payment_production_readiness=ready", output)
+
+
+class PaymentPlatformBillingSandboxCommandTests(TestCase):
+    def setUp(self):
+        self.tenant = Tenant.objects.create(
+            name="Platform Billing Sandbox",
+            slug="platform-billing-sandbox",
+            subdomain="platform-billing-sandbox",
+        )
+        subscription_commands.upsert_plan(
+            code="pro",
+            name="Pro",
+            billing_model=SubscriptionPlan.BillingModel.MINIMUM_COMMITMENT,
+            platform_fee_percent="2.00",
+            minimum_monthly_fee="259.90",
+            requires_billing_method=True,
+        )
+        subscription_commands.set_tenant_subscription(
+            tenant_id=self.tenant.id,
+            plan_code="pro",
+            status=TenantSubscription.Status.ACTIVE,
+        )
+        period_start = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        period_end = period_start + timedelta(days=31)
+        self.ledger = PlatformFeeLedger.objects.create(
+            tenant=self.tenant,
+            ledger_key=f"minimum:{self.tenant.id}:{period_start.date().isoformat()}",
+            kind=PlatformFeeLedger.Kind.PRO_MINIMUM_ADJUSTMENT,
+            status=PlatformFeeLedger.Status.PENDING_COLLECTION,
+            plan_code_snapshot="pro",
+            billing_model_snapshot=SubscriptionPlan.BillingModel.MINIMUM_COMMITMENT,
+            platform_fee_percent_snapshot="2.00",
+            minimum_monthly_fee_snapshot="259.90",
+            billing_period_start=period_start,
+            billing_period_end=period_end,
+            basis_amount="100.00",
+            fee_amount="159.90",
+            currency_code="BRL",
+        )
+
+    def test_platform_billing_sandbox_command_dry_run_reports_candidate(self):
+        stdout = StringIO()
+
+        call_command(
+            "payment_sandbox_validate_platform_billing",
+            tenant_id=self.tenant.id,
+            stdout=stdout,
+        )
+
+        output = stdout.getvalue()
+        self.assertIn("payment_sandbox_platform_billing_candidate", output)
+        self.assertIn("payment_sandbox_platform_billing=dry-run result=ready", output)
+
+    @override_settings(ASAAS_WEBHOOK_TOKEN="asaas-webhook-token")
+    def test_platform_billing_sandbox_command_local_simulation_creates_and_pays_without_provider_credentials(self):
+        self.ledger.delete()
+        stdout = StringIO()
+
+        call_command(
+            "payment_sandbox_validate_platform_billing",
+            tenant_id=self.tenant.id,
+            local_simulate=True,
+            simulate_paid_webhook=True,
+            stdout=stdout,
+        )
+
+        ledger = PlatformFeeLedger.objects.get(tenant=self.tenant)
+        output = stdout.getvalue()
+        self.assertIn("payment_sandbox_platform_billing_local_simulation result=ledger-created", output)
+        self.assertIn("payment_sandbox_platform_billing=dry-run result=ready", output)
+        self.assertIn("payment_sandbox_platform_billing_webhook", output)
+        self.assertEqual(ledger.status, PlatformFeeLedger.Status.PAID)
+        self.assertEqual(ledger.provider_payment_reference, f"pay_sandbox_{ledger.id}")
+        self.assertEqual(ledger.metadata["provider_call"], "not-executed")
+        self.assertTrue(ledger.metadata["simulation"])
+
+    @override_settings(
+        PAYMENTS_PLATFORM_BILLING_ASAAS_ENABLED=True,
+        ASAAS_API_KEY="asaas_platform_key",
+        ASAAS_BASE_URL="https://api-sandbox.asaas.com/v3",
+        ASAAS_WEBHOOK_TOKEN="asaas-webhook-token",
+    )
+    @patch("app.modules.payments.infrastructure.provider_adapters.urlopen")
+    def test_platform_billing_sandbox_command_executes_and_simulates_paid_webhook(self, mocked_urlopen):
+        customer_context = MagicMock()
+        customer_context.__enter__.return_value.read.return_value = json.dumps({"id": "cus_sandbox_123"}).encode("utf-8")
+        payment_context = MagicMock()
+        payment_context.__enter__.return_value.read.return_value = json.dumps(
+            {
+                "id": "pay_sandbox_123",
+                "invoiceUrl": "https://sandbox.asaas.com/i/pay_sandbox_123",
+                "status": "PENDING",
+            }
+        ).encode("utf-8")
+        mocked_urlopen.side_effect = [customer_context, payment_context]
+        stdout = StringIO()
+
+        call_command(
+            "payment_sandbox_validate_platform_billing",
+            tenant_id=self.tenant.id,
+            execute=True,
+            simulate_paid_webhook=True,
+            stdout=stdout,
+        )
+
+        self.ledger.refresh_from_db()
+        output = stdout.getvalue()
+        self.assertIn("result=platform-billing-charge-created", output)
+        self.assertIn("payment_sandbox_platform_billing_webhook", output)
+        self.assertEqual(self.ledger.provider_payment_reference, "pay_sandbox_123")
+        self.assertEqual(self.ledger.status, PlatformFeeLedger.Status.PAID)
+
+    @override_settings(
+        SUBSCRIPTIONS_PRO_DELINQUENCY_GRACE_DAYS=5,
+        SUBSCRIPTIONS_PRO_DELINQUENCY_SUSPEND_DAYS=15,
+    )
+    def test_delinquency_command_marks_overdue_pro_subscription(self):
+        self.ledger.billing_period_end = timezone.now() - timedelta(days=6)
+        self.ledger.save(update_fields=["billing_period_end", "updated_at"])
+        stdout = StringIO()
+
+        call_command(
+            "enforce_platform_fee_delinquency",
+            tenant_id=self.tenant.id,
+            stdout=stdout,
+        )
+
+        subscription = TenantSubscription.objects.get(tenant=self.tenant)
+        self.assertEqual(subscription.status, TenantSubscription.Status.PAST_DUE)
+        self.assertIn("marked_past_due=1", stdout.getvalue())
 
 
 class ListPaymentAttemptsCommandTests(TestCase):

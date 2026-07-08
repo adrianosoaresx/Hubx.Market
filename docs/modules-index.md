@@ -137,20 +137,22 @@ accounts
 audit
 
 Readiness:
-- modelo `SubscriptionPlan` com preço, quota, trial, requisito de payment method e features públicas
+- modelo `SubscriptionPlan` com preço de referência, modelo comercial, take rate, mínimo mensal, limites de produto/pedido e features públicas
 - modelo `SubscriptionCoupon` platform-scope para descontos comerciais de planos SaaS
-- modelo `TenantSubscription` com estado tenant-scoped e fim de trial
+- modelo `TenantSubscription` com estado tenant-scoped, provider-alvo de billing e snapshots promocionais
 - modelo `SubscriptionAcquisitionLead`
 - snapshots promocionais em lead, onboarding e assinatura sem alterar `SubscriptionPlan.monthly_price`
 - setup auditável por `subscription_commands`
 - admin read-only em `/ops/subscriptions/`
 - gestão platform de cupons SaaS em `/ops/platform/subscription-coupons/` com `subscriptions.manage`
-- planos públicos em `/plans/` com 30 dias grátis/cartão obrigatório quando configurado
+- planos públicos em `/plans/` com Essencial, Pro e Enterprise em linguagem de produtos/pedidos/take rate
 - `/plans/` e `/plans/signup/` aceitam `coupon_code` opcional validado por `subscriptions`
 - signup público controlado por feature flag/token em `/plans/signup/`
+- Pro exige método de cobrança e segue onboarding assistido até existir fluxo seguro
+- `TenantSubscription` preserva estado/referências externas do billing method sem dados sensíveis de cartão
+- `/ops/subscriptions/billing-method/` acompanha o billing method por tenant, garante cliente Asaas e só marca o método como ativo após confirmação trusted do provider
 - fila platform de aquisições em `/ops/platform/acquisitions/`
-- provider-alvo de billing SaaS registrado na assinatura, com Asaas como default
-- cobrança recorrente real e enforcement de plano fora da fundação
+- `commercial_terms` expõe contrato estável para catalog, checkout e payments
 
 ---
 
@@ -241,6 +243,7 @@ Readiness:
 - produtos/variantes/imagens tenant-scoped;
 - storefront e admin reais;
 - CRUD administrativo básico de produtos implementado em `/ops/catalog/products/`, com create/update em `Product` + variante padrão e desativação sem exclusão física;
+- limite comercial de produtos aplicado em criação/reativação, contando `active` e `draft` e ignorando `inactive`;
 - analytics brutos de discovery/PDP/CTA;
 - Battery I adiciona baseline de conversão, funil PDP/CTA, drop-off de busca/facet e experimento `product_card_priority_v1`;
 - o experimento altera ranking de cards com base em sinais recentes, sem redesenhar storefront inteiro.
@@ -296,6 +299,12 @@ shipping
 coupons  
 orders  
 payments
+subscriptions
+
+Readiness:
+- bloqueio de início de pagamento quando `monthly_paid_order_limit` do plano ativo foi atingido no mês;
+- contagem usa pedidos `paid` por `payment_confirmed_at`;
+- pedidos pendentes, cancelados e carrinhos não contam.
 
 ---
 
@@ -323,23 +332,34 @@ shipping
 ## payments
 
 Responsabilidade:
-Integração com gateway, tentativas de pagamento, conciliação financeira e ledger inicial de refund.
+Integração com gateway, tentativas de pagamento, conciliação financeira, refund e taxa Hubx.
 
 Entidades principais:
 PaymentAttempt
 PaymentRefund
+PlatformFeeLedger
 
 Eventos:
 payment.created  
 payment.paid  
 payment.failed  
 payment.refunded
+platform_fee.recorded
+platform_fee.minimum_adjustment_created
+platform_fee.adjustment_required
 
 Dependências:
 orders
+subscriptions
 
 Readiness:
 - provider Asaas para checkout hospedado de pedidos, com Pagar.me como alternativa configurável
+- split Asaas para taxa Hubx quando `PAYMENTS_HUBX_SPLIT_ENABLED` e `ASAAS_HUBX_WALLET_ID` estão configurados
+- ledger idempotente da taxa Hubx por pedido pago
+- fechamento mensal do Pro cria ajuste complementar quando 2% do mês não atinge R$ 259,90
+- cobrança complementar Asaas do Pro via `close_platform_fee_minimums --collect` ou flag `PAYMENTS_PLATFORM_BILLING_ASAAS_ENABLED`
+- validação sandbox via `payment_sandbox_validate_platform_billing`
+- política de inadimplência Pro via `enforce_platform_fee_delinquency`
 - provider production gate/evidence com comando `payments_production_readiness`
 - webhook production smoke revisável
 - refund production gate/evidence limitado e manual

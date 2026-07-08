@@ -13,6 +13,7 @@ from django.utils import timezone
 
 from app.modules.payments.application.gateway_bootstrap_commands import GatewayBootstrapContract
 from app.modules.payments.domain.provider_rollout import decide_provider_rollout
+from app.modules.subscriptions.application.commercial_terms import get_tenant_commercial_terms
 
 
 def _string(value: object) -> str:
@@ -106,6 +107,23 @@ def _extract_response_value(payload: dict[str, object], *keys: str) -> str:
     return ""
 
 
+def _asaas_platform_split_payload(*, attempt=None) -> list[dict[str, object]]:
+    split_enabled = bool(getattr(settings, "PAYMENTS_HUBX_SPLIT_ENABLED", False))
+    wallet_id = _string(getattr(settings, "ASAAS_HUBX_WALLET_ID", ""))
+    tenant_id = getattr(attempt, "tenant_id", None)
+    if not split_enabled or not wallet_id or not tenant_id:
+        return []
+    terms = get_tenant_commercial_terms(tenant_id=tenant_id)
+    if not terms.has_platform_fee:
+        return []
+    return [
+        {
+            "walletId": wallet_id,
+            "percentualValue": terms.platform_fee_percent,
+        }
+    ]
+
+
 @dataclass(frozen=True)
 class ProviderIntentResponse:
     provider_code: str
@@ -132,6 +150,47 @@ class RefundProviderContract:
 class RefundProviderResponse:
     provider_code: str
     provider_refund_reference: str
+    status: str
+    payload_snapshot: dict[str, object]
+
+
+@dataclass(frozen=True)
+class PlatformBillingCustomerContract:
+    tenant_id: int
+    tenant_slug: str
+    tenant_name: str
+    contact_email: str
+
+
+@dataclass(frozen=True)
+class PlatformBillingCustomerResponse:
+    provider_code: str
+    provider_label: str
+    customer_reference: str
+    payload_snapshot: dict[str, object]
+
+
+@dataclass(frozen=True)
+class PlatformBillingChargeContract:
+    tenant_id: int
+    tenant_slug: str
+    ledger_key: str
+    customer_reference: str
+    amount: str
+    currency_code: str
+    due_date: str
+    description: str
+    external_reference: str
+    billing_method_reference: str = ""
+    remote_ip: str = ""
+
+
+@dataclass(frozen=True)
+class PlatformBillingChargeResponse:
+    provider_code: str
+    provider_label: str
+    payment_reference: str
+    action_url: str
     status: str
     payload_snapshot: dict[str, object]
 
@@ -188,6 +247,46 @@ class ProviderAdapterLite:
             provider_refund_reference=provider_refund_reference,
             status="accepted",
             payload_snapshot=payload_snapshot,
+        )
+
+    def create_platform_billing_customer(
+        self,
+        *,
+        contract: PlatformBillingCustomerContract,
+    ) -> PlatformBillingCustomerResponse:
+        reference = f"lite-customer-{contract.tenant_id}"
+        return PlatformBillingCustomerResponse(
+            provider_code="lite",
+            provider_label="Gateway externo",
+            customer_reference=reference,
+            payload_snapshot={
+                "provider_call": "lite",
+                "tenant_id": contract.tenant_id,
+                "tenant_slug": contract.tenant_slug,
+                "tenant_name": contract.tenant_name,
+                "contact_email": contract.contact_email,
+            },
+        )
+
+    def create_platform_billing_charge(
+        self,
+        *,
+        contract: PlatformBillingChargeContract,
+    ) -> PlatformBillingChargeResponse:
+        reference = f"lite-charge-{contract.ledger_key}"
+        return PlatformBillingChargeResponse(
+            provider_code="lite",
+            provider_label="Gateway externo",
+            payment_reference=reference,
+            action_url=f"https://payments.hubx.local/platform-fees/{contract.ledger_key}",
+            status="pending",
+            payload_snapshot={
+                "provider_call": "lite",
+                "ledger_key": contract.ledger_key,
+                "customer_reference": contract.customer_reference,
+                "amount": contract.amount,
+                "external_reference": contract.external_reference,
+            },
         )
 
 
@@ -411,6 +510,57 @@ class AsaasProviderAdapter:
             },
         )
 
+    def create_platform_billing_customer(
+        self,
+        *,
+        contract: PlatformBillingCustomerContract,
+    ) -> PlatformBillingCustomerResponse:
+        api_key = _string(getattr(settings, "ASAAS_API_KEY", ""))
+        if not api_key:
+            raise ProviderAdapterError("asaas-api-key-missing")
+        payload = self._build_platform_billing_customer_payload(contract=contract)
+        response_payload = self._request("POST", "/customers", payload)
+        customer_reference = _extract_response_value(response_payload, "id")
+        if not customer_reference:
+            raise ProviderAdapterError("asaas-missing-customer-id")
+        return PlatformBillingCustomerResponse(
+            provider_code=self.provider_code,
+            provider_label=self.provider_label,
+            customer_reference=customer_reference,
+            payload_snapshot={
+                "request": _json_ready(payload),
+                "response": _json_ready(response_payload),
+            },
+        )
+
+    def create_platform_billing_charge(
+        self,
+        *,
+        contract: PlatformBillingChargeContract,
+    ) -> PlatformBillingChargeResponse:
+        api_key = _string(getattr(settings, "ASAAS_API_KEY", ""))
+        if not api_key:
+            raise ProviderAdapterError("asaas-api-key-missing")
+        if not _string(contract.customer_reference):
+            raise ProviderAdapterError("asaas-customer-reference-missing")
+        payload = self._build_platform_billing_charge_payload(contract=contract)
+        response_payload = self._request("POST", "/payments", payload)
+        payment_reference = _extract_response_value(response_payload, "id")
+        if not payment_reference:
+            raise ProviderAdapterError("asaas-missing-payment-id")
+        action_url = _extract_response_value(response_payload, "invoiceUrl", "bankSlipUrl", "transactionReceiptUrl")
+        return PlatformBillingChargeResponse(
+            provider_code=self.provider_code,
+            provider_label=self.provider_label,
+            payment_reference=payment_reference,
+            action_url=action_url,
+            status=_extract_response_value(response_payload, "status").lower() or "pending",
+            payload_snapshot={
+                "request": _redacted_json_ready(payload),
+                "response": _redacted_json_ready(response_payload),
+            },
+        )
+
     def _request(self, method: str, path: str, payload: dict[str, object] | None = None) -> dict[str, object]:
         body = json.dumps(_compact(_json_ready(payload or {}))).encode("utf-8")
         request = Request(
@@ -444,12 +594,23 @@ class AsaasProviderAdapter:
             "externalReference": _safe_external_reference(contract),
         }
 
+    def _build_platform_billing_customer_payload(
+        self,
+        *,
+        contract: PlatformBillingCustomerContract,
+    ) -> dict[str, object]:
+        return {
+            "name": _normalize_title(contract.tenant_name, fallback=f"Tenant {contract.tenant_id}"),
+            "email": _string(contract.contact_email),
+            "externalReference": f"hubx-platform-billing:{contract.tenant_id}:{_string(contract.tenant_slug)}"[:120],
+        }
+
     def _build_payment_payload(self, *, contract: GatewayBootstrapContract, attempt=None, customer_id: str) -> dict[str, object]:
         payment_method_code = getattr(attempt, "payment_method_code", "")
         due_date = timezone.localdate()
         if _string(payment_method_code).lower() == "boleto":
             due_date = due_date + timedelta(days=3)
-        return {
+        payload = {
             "customer": customer_id,
             "billingType": _asaas_billing_type(str(payment_method_code or "")),
             "value": Decimal(str(contract.amount or "0.00")),
@@ -457,6 +618,31 @@ class AsaasProviderAdapter:
             "description": _normalize_title(f"Pedido #{contract.order_number} - Hubx Market", fallback="Pedido Hubx Market"),
             "externalReference": _safe_external_reference(contract),
         }
+        splits = _asaas_platform_split_payload(attempt=attempt)
+        if splits:
+            payload["splits"] = splits
+        return payload
+
+    def _build_platform_billing_charge_payload(
+        self,
+        *,
+        contract: PlatformBillingChargeContract,
+    ) -> dict[str, object]:
+        payload = {
+            "customer": _string(contract.customer_reference),
+            "billingType": "CREDIT_CARD",
+            "value": Decimal(str(contract.amount or "0.00")),
+            "dueDate": _string(contract.due_date),
+            "description": _normalize_title(contract.description, fallback="Complemento mensal Hubx Market"),
+            "externalReference": _string(contract.external_reference)[:120],
+        }
+        billing_method_reference = _string(contract.billing_method_reference)
+        remote_ip = _string(contract.remote_ip)
+        if billing_method_reference:
+            payload["creditCardToken"] = billing_method_reference
+        if remote_ip:
+            payload["remoteIp"] = remote_ip
+        return payload
 
     def _build_refund_payload(self, *, contract: RefundProviderContract) -> dict[str, object]:
         payload: dict[str, object] = {
@@ -490,6 +676,36 @@ def _json_ready(value):
         return {key: _json_ready(item) for key, item in value.items()}
     if isinstance(value, list):
         return [_json_ready(item) for item in value]
+    return value
+
+
+SENSITIVE_PAYLOAD_KEYS = {
+    "accessToken",
+    "apiKey",
+    "authorization",
+    "cardNumber",
+    "ccv",
+    "creditCard",
+    "creditCardHolderInfo",
+    "creditCardToken",
+    "cvv",
+    "number",
+}
+
+
+def _redacted_json_ready(value):
+    if isinstance(value, Decimal):
+        return float(value)
+    if isinstance(value, dict):
+        redacted = {}
+        for key, item in value.items():
+            if str(key) in SENSITIVE_PAYLOAD_KEYS:
+                redacted[key] = "[REDACTED]"
+            else:
+                redacted[key] = _redacted_json_ready(item)
+        return redacted
+    if isinstance(value, list):
+        return [_redacted_json_ready(item) for item in value]
     return value
 
 

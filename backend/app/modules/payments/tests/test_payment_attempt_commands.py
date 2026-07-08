@@ -16,6 +16,8 @@ from app.modules.payments.infrastructure.alert_signal_metrics import (
 )
 from app.modules.payments.domain.webhook_normalization import normalize_payment_webhook
 from app.modules.payments.models import PaymentAttempt
+from app.modules.subscriptions.application.subscription_commands import subscription_commands
+from app.modules.subscriptions.models import TenantSubscription
 from app.modules.tenants.models import Tenant
 
 
@@ -308,9 +310,21 @@ class PaymentAttemptCommandTests(TestCase):
         PAYMENTS_PROVIDER_DEFAULT="asaas",
         ASAAS_API_KEY="asaas_test_key",
         ASAAS_BASE_URL="https://api-sandbox.asaas.com/v3",
+        PAYMENTS_HUBX_SPLIT_ENABLED=True,
+        ASAAS_HUBX_WALLET_ID="wallet_hubx",
     )
     @patch("app.modules.payments.infrastructure.provider_adapters.urlopen")
     def test_provider_adapter_creates_real_asaas_hosted_payment(self, mocked_urlopen):
+        subscription_commands.upsert_plan(
+            code="starter",
+            name="Essencial",
+            platform_fee_percent="2.00",
+        )
+        subscription_commands.set_tenant_subscription(
+            tenant_id=self.tenant.id,
+            plan_code="starter",
+            status=TenantSubscription.Status.ACTIVE,
+        )
         _result, attempt = payment_attempt_commands.bootstrap_pending_attempt(
             tenant_id=self.tenant.id,
             order_number=self.order.number,
@@ -353,6 +367,7 @@ class PaymentAttemptCommandTests(TestCase):
         self.assertEqual(payment_payload["billingType"], "PIX")
         self.assertEqual(payment_payload["value"], 219.9)
         self.assertEqual(payment_payload["externalReference"], "hubx-market:hubx-payment-attempt-tenant:8101")
+        self.assertEqual(payment_payload["splits"], [{"walletId": "wallet_hubx", "percentualValue": 2.0}])
 
     def test_asaas_webhook_normalizes_payment_received(self):
         normalized = normalize_payment_webhook(

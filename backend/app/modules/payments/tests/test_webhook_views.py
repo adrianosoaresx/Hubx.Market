@@ -16,7 +16,9 @@ from app.modules.payments.infrastructure.alert_signal_metrics import (
     get_payment_alert_signal_snapshot,
     reset_payment_alert_signal,
 )
-from app.modules.payments.models import PaymentAttempt
+from app.modules.payments.models import PaymentAttempt, PlatformFeeLedger
+from app.modules.subscriptions.application.subscription_commands import subscription_commands
+from app.modules.subscriptions.models import TenantSubscription
 from app.modules.tenants.models import Tenant
 
 
@@ -103,6 +105,30 @@ class PaymentWebhookViewTests(TestCase):
             status=PaymentAttempt.Status.PENDING,
             amount="239.90",
         )
+        subscription_commands.upsert_plan(
+            code="starter",
+            name="Essencial",
+            description="R$ 0/mês + 2% dos pedidos pagos.",
+            monthly_price="0.00",
+            included_api_quota=0,
+            trial_days=0,
+            requires_payment_method=False,
+            billing_model="take_rate_only",
+            platform_fee_percent="2.00",
+            minimum_monthly_fee="0.00",
+            product_limit=100,
+            monthly_paid_order_limit=300,
+            requires_hubx_checkout=True,
+            requires_billing_method=False,
+            features=["Até 100 produtos", "Até 300 pedidos pagos/mês"],
+            actor_label="test",
+        )
+        subscription_commands.set_tenant_subscription(
+            tenant_id=self.tenant.id,
+            plan_code="starter",
+            status=TenantSubscription.Status.ACTIVE,
+            actor_label="test",
+        )
         self.owner = OwnerUser.objects.create(
             tenant=self.tenant,
             email="owner.webhook@hubx.market",
@@ -161,6 +187,12 @@ class PaymentWebhookViewTests(TestCase):
         self.assertIsNotNone(self.payment_attempt.paid_at)
         self.assertEqual(self.variant.stock, 4)
         self.assertEqual(self.variant.reserved_stock, 1)
+        ledger = PlatformFeeLedger.objects.get(order=self.order)
+        self.assertEqual(ledger.kind, PlatformFeeLedger.Kind.ORDER_TAKE_RATE)
+        self.assertEqual(ledger.status, PlatformFeeLedger.Status.PENDING_COLLECTION)
+        self.assertEqual(ledger.platform_fee_percent_snapshot, 2)
+        self.assertEqual(ledger.basis_amount, self.order.total)
+        self.assertEqual(str(ledger.fee_amount), "4.80")
         self.assertTrue(
             OrderStatusHistory.objects.filter(
                 order=self.order,
@@ -214,6 +246,7 @@ class PaymentWebhookViewTests(TestCase):
             ).count(),
             1,
         )
+        self.assertEqual(PlatformFeeLedger.objects.filter(order=self.order).count(), 1)
 
     def test_payment_webhook_rejects_invalid_token(self):
         response = self._post(

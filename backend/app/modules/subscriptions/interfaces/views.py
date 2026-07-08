@@ -23,6 +23,7 @@ from app.modules.subscriptions.application.subscription_coupon_admin_queries imp
 from app.modules.subscriptions.application.subscription_coupon_commands import subscription_coupon_commands
 from app.modules.subscriptions.application.subscription_commands import subscription_commands
 from app.modules.subscriptions.application.subscription_queries import subscription_queries
+from app.modules.payments.application.platform_billing_commands import platform_billing_commands
 from app.modules.tenants.application.public_tenant_signup_commands import public_tenant_signup_commands
 
 
@@ -88,22 +89,31 @@ class AdminSubscriptionsListView(TemplateView):
                     {"label": "Plano"},
                     {"label": "Status"},
                     {"label": "Provider"},
+                    {"label": "Método"},
                     {"label": "Mensalidade"},
                     {"label": "Preço efetivo"},
                     {"label": "Período"},
                     {"label": "Referência"},
+                    {"label": "Ações"},
                 ],
                 "rows": [
                     {
                         "cells": [
                             item["tenant_name"],
-                            f'{item["plan_name"]} ({item["plan_code"]})',
+                            item["plan_display"],
                             item["status_label"],
                             item["billing_provider_label"],
+                            _status_badge(label=str(item["billing_method_label"]), variant=str(item["billing_method_variant"])),
                             item["monthly_price"],
                             item["effective_monthly_price"],
                             item["current_period_ends_at"],
                             item["external_reference"],
+                            format_html(
+                                '<a class="ds-btn ds-btn-secondary ds-btn-sm" href="{}">Método de cobrança</a>',
+                                reverse("subscriptions:admin-subscriptions-billing-method"),
+                            )
+                            if can_view and item["requires_billing_method"]
+                            else "",
                         ]
                     }
                     for item in subscriptions
@@ -114,6 +124,106 @@ class AdminSubscriptionsListView(TemplateView):
             }
         )
         return context
+
+
+class AdminSubscriptionBillingMethodView(TemplateView):
+    template_name = "pages/templates/admin_subscription_billing_method_page.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        tenant_id = request_tenant_id(self.request)
+        can_manage = request_admin_can(self.request, PERMISSION_SUBSCRIPTIONS_MANAGE)
+        subscription = subscription_queries.get_tenant_subscription(tenant_id=tenant_id)
+        if subscription is None:
+            raise Http404("Assinatura SaaS não encontrada")
+        context.update(
+            self._context(
+                subscription=subscription,
+                can_manage=can_manage,
+                values={
+                    "provider_customer_reference": subscription.get("billing_external_reference", ""),
+                    "checkout_url": subscription.get("billing_checkout_url", ""),
+                    "status": subscription.get("billing_method_status", "missing"),
+                },
+                errors={},
+                result=str(self.request.GET.get("result", "") or ""),
+            )
+        )
+        return context
+
+    def post(self, request, *args, **kwargs):
+        tenant_id = request_tenant_id(request)
+        can_manage = request_admin_can(request, PERMISSION_SUBSCRIPTIONS_MANAGE)
+        subscription = subscription_queries.get_tenant_subscription(tenant_id=tenant_id)
+        if subscription is None:
+            raise Http404("Assinatura SaaS não encontrada")
+        if not can_manage:
+            context = self._context(
+                subscription=subscription,
+                can_manage=False,
+                values=request.POST,
+                errors={"__all__": "Permissão insuficiente para gerenciar billing method."},
+                result="",
+            )
+            return self.render_to_response(context, status=403)
+
+        action = str(request.POST.get("action") or "register").strip()
+        if action == "ensure_customer":
+            if not subscription.get("requires_billing_method"):
+                context = self._context(
+                    subscription=subscription,
+                    can_manage=can_manage,
+                    values=request.POST,
+                    errors={"__all__": "O plano atual não exige método de cobrança."},
+                    result="platform-billing-method-not-required",
+                )
+                return self.render_to_response(context, status=400)
+            result, _subscription = platform_billing_commands.ensure_tenant_billing_customer(
+                tenant_id=tenant_id,
+                actor_label=_actor_label(request, default="subscriptions-admin"),
+            )
+            return HttpResponseRedirect(
+                f"{reverse('subscriptions:admin-subscriptions-billing-method')}?result={result}"
+            )
+
+        context = self._context(
+            subscription=subscription_queries.get_tenant_subscription(tenant_id=tenant_id) or subscription,
+            can_manage=can_manage,
+            values=request.POST,
+            errors={"__all__": "A ativação manual foi desabilitada. Use fluxo seguro do provider."},
+            result="platform-billing-method-manual-disabled",
+        )
+        return self.render_to_response(context, status=400)
+
+    def _context(
+        self,
+        *,
+        subscription: dict[str, object],
+        can_manage: bool,
+        values,
+        errors: dict[str, str],
+        result: str,
+    ) -> dict[str, object]:
+        return {
+            "page_title": "Método de cobrança",
+            "page_eyebrow": "Assinatura SaaS",
+            "page_description": "Acompanhe a configuração segura de cobrança complementar do Pro.",
+            "subscription": subscription,
+            "can_manage": can_manage,
+            "billing_method_required": bool(subscription.get("requires_billing_method")),
+            "values": values,
+            "errors": errors,
+            "form_error": errors.get("__all__", ""),
+            "result": result,
+            "back_href": reverse("subscriptions:admin-subscriptions-list"),
+            "form_action": reverse("subscriptions:admin-subscriptions-billing-method"),
+            "status_options": [
+                {"value": "missing", "label": "Não informado"},
+                {"value": "pending", "label": "Pendente"},
+                {"value": "active", "label": "Ativo"},
+                {"value": "failed", "label": "Falhou"},
+            ],
+        }
 
 
 class PublicPlansView(TemplateView):
@@ -229,12 +339,20 @@ class PublicSignupView(TemplateView):
 
     def _base_context(self) -> dict[str, object]:
         selected_plan = str(self.request.GET.get("plan", "") or "")
+        public_plans = subscription_queries.list_public_plans()
+        signup_plans = [
+            plan
+            for plan in public_plans
+            if not plan.get("requires_billing_method") and str(plan.get("billing_model") or "") != "custom"
+        ]
+        eligible_codes = {str(plan.get("code") or "") for plan in signup_plans}
         return {
             "page_title": "Criar loja Hubx Market",
-            "page_description": "Crie uma loja em modo manutencao e inicie o trial interno sem billing SaaS automatico.",
-            "plans": subscription_queries.list_public_plans(),
-            "selected_plan": selected_plan,
-            "values": {"plan_code": selected_plan},
+            "page_description": "Crie uma loja em modo manutencao no plano sem mensalidade. Planos com minimo mensal seguem pelo onboarding assistido.",
+            "plans": signup_plans,
+            "selected_plan": selected_plan if selected_plan in eligible_codes else "",
+            "assisted_plan_requested": bool(selected_plan and selected_plan not in eligible_codes),
+            "values": {"plan_code": selected_plan if selected_plan in eligible_codes else ""},
             "errors": {},
             "form_error": "",
             "success": False,
