@@ -10,7 +10,7 @@ Contrato operacional:
 
 - projeto Compose: `hubxmarket`
 - domínio principal: `hubx.market`
-- aliases roteados: `www.hubx.market`, `app.hubx.market`, `api.hubx.market`
+- hosts roteados: `hubx.market` e qualquer subdomínio de tenant em `*.hubx.market`
 - rede externa Traefik: `docker_traefik`
 - arquivo de ambiente local da VPS: `.env.vps` no mesmo diretório do compose
 
