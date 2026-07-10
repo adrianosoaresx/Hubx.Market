@@ -60,6 +60,16 @@ class PlatformOwnerLoginTests(TestCase):
         self.assertContains(response, 'href="/accounts/account/orders/"')
         self.assertNotContains(response, 'href="/plans/"')
 
+    def test_store_login_hides_customer_navigation_for_anonymous_regular_tenant(self):
+        tenant = Tenant.objects.create(name="Loja Regular", slug="loja-regular", subdomain="loja-regular")
+
+        response = self.client.get("/accounts/login/", HTTP_HOST=f"{tenant.subdomain}.hubx.market")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'href="/catalog/"')
+        self.assertNotContains(response, '<a href="/accounts/account/orders/" class="global-nav-link')
+        self.assertNotContains(response, 'href="/plans/"')
+
     def test_platform_owner_without_next_goes_to_platform_tenants(self):
         response = self.client.post(
             "/accounts/login/",

@@ -56,9 +56,9 @@ STORE_FRONT_ADMIN_SMOKE_TARGETS: tuple[SystemTemplateSmokeTarget, ...] = (
         markers=(
             'href="/"',
             'href="/catalog/"',
-            'href="/accounts/account/orders/"',
+            'href="/cart/"',
         ),
-        forbidden_markers=('href="/orders/"',),
+        forbidden_markers=('href="/orders/"', '<a href="/accounts/account/" class="storefront-side-nav-link', '<a href="/accounts/account/orders/" class="storefront-side-nav-link'),
         marker_groups=(("Entrar", "Sair"),),
     ),
     SystemTemplateSmokeTarget(

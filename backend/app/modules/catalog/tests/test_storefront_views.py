@@ -139,6 +139,8 @@ class StorefrontViewTests(TestCase):
         self.assertContains(response, 'href="/"')
         self.assertContains(response, 'href="/catalog/"')
         self.assertContains(response, 'href="/cart/"')
+        self.assertNotContains(response, '<a href="/accounts/account/" class="storefront-side-nav-link')
+        self.assertNotContains(response, '<a href="/accounts/account/orders/" class="storefront-side-nav-link')
         self.assertContains(response, "Produtos para começar")
         self.assertContains(response, "Entrar")
         self.assertNotContains(response, "/plans/")
@@ -318,6 +320,8 @@ class StorefrontViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'action="/accounts/logout/"')
         self.assertContains(response, "Sair")
+        self.assertContains(response, '<a href="/accounts/account/" class="storefront-side-nav-link')
+        self.assertContains(response, '<a href="/accounts/account/orders/" class="storefront-side-nav-link')
         self.assertNotContains(response, '<a href="/accounts/login/" class="rounded-lg')
 
     def test_catalog_list_view_renders_design_system_template(self):
