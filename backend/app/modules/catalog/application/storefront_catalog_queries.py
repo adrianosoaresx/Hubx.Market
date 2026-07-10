@@ -786,8 +786,7 @@ class StorefrontCatalogQueryService:
         if not tenant_id:
             return []
         real_products = self.orm_repository.list_products(tenant_id=tenant_id)
-        source = real_products or self.fallback_repository.list_products()
-        enriched = [_enrich_product(product) for product in source]
+        enriched = [_enrich_product(product) for product in real_products]
         ranked = sorted(enriched, key=_discovery_rank_order_key)
         return storefront_conversion_insights.apply_product_card_priority_experiment(
             tenant_id=tenant_id,
@@ -809,10 +808,6 @@ class StorefrontCatalogQueryService:
         real_product = self.orm_repository.get_product(product_slug, tenant_id=tenant_id)
         if real_product:
             return _enrich_product(_apply_variant_selection(real_product, size=size, color=color, sku=sku))
-
-        fallback_product = self.fallback_repository.get_product(product_slug, tenant_id=tenant_id)
-        if fallback_product:
-            return _enrich_product(_apply_variant_selection(fallback_product, size=size, color=color, sku=sku))
 
         return {}
 

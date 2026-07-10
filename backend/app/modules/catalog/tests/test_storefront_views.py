@@ -19,6 +19,102 @@ from app.modules.reviews.models import ProductReview
 from app.modules.tenants.models import Tenant
 
 
+def _create_storefront_product(
+    tenant: Tenant,
+    *,
+    name: str,
+    slug: str,
+    sku: str,
+    brand_name: str = "Hubx",
+    category_label: str = "Catálogo",
+    description: str = "",
+    status: str = Product.Status.ACTIVE,
+    is_active: bool = True,
+    is_featured: bool = False,
+    price: str = "99.90",
+    compare_price: str | None = None,
+    stock: int = 10,
+    reserved_stock: int = 0,
+    allow_backorder: bool = False,
+) -> Product:
+    product = Product.objects.create(
+        tenant=tenant,
+        name=name,
+        slug=slug,
+        brand_name=brand_name,
+        category_label=category_label,
+        description=description,
+        status=status,
+        is_active=is_active,
+        is_featured=is_featured,
+    )
+    ProductVariant.objects.create(
+        product=product,
+        sku=sku,
+        label="Padrão",
+        price=price,
+        compare_price=compare_price,
+        stock=stock,
+        reserved_stock=reserved_stock,
+        allow_backorder=allow_backorder,
+        is_default=True,
+        is_active=True,
+    )
+    return product
+
+
+def _seed_storefront_catalog(tenant: Tenant, *, sku_prefix: str = "") -> None:
+    _create_storefront_product(
+        tenant,
+        name="Tênis Hubx Runner",
+        slug="tenis-hubx-runner",
+        sku=f"{sku_prefix}RUNNER-001-BLK-42",
+        brand_name="Hubx",
+        category_label="Calçados esportivos",
+        description="Produto com catálogo publicado, mídia aprovada e variante principal preta 42 ativa para venda.",
+        status=Product.Status.ACTIVE,
+        is_active=True,
+        is_featured=True,
+        price="299.90",
+        compare_price="349.90",
+        stock=24,
+        reserved_stock=4,
+    )
+    _create_storefront_product(
+        tenant,
+        name="Camiseta Hubx Performance",
+        slug="camiseta-hubx-performance",
+        sku=f"{sku_prefix}TSHIRT-010-WHT-M",
+        brand_name="Hubx",
+        category_label="Vestuário",
+        description="Modelo técnico para treinos com tecido leve e respirável.",
+        status=Product.Status.DRAFT,
+        is_active=False,
+        is_featured=False,
+        price="129.90",
+        compare_price="149.90",
+        stock=58,
+        reserved_stock=6,
+    )
+    _create_storefront_product(
+        tenant,
+        name="Mochila Hubx Urban",
+        slug="mochila-hubx-urban",
+        sku=f"{sku_prefix}BAG-204-GRY-U",
+        brand_name="Hubx",
+        category_label="Acessórios",
+        description="Mochila urbana com compartimento acolchoado para notebook.",
+        status=Product.Status.INACTIVE,
+        is_active=False,
+        is_featured=False,
+        price="199.90",
+        compare_price="219.90",
+        stock=0,
+        reserved_stock=0,
+        allow_backorder=True,
+    )
+
+
 @override_settings(ALLOWED_HOSTS=[".hubx.market", "localhost", "testserver"])
 class StorefrontViewTests(TestCase):
     def setUp(self):
@@ -27,6 +123,7 @@ class StorefrontViewTests(TestCase):
             slug="hubx-storefront-demo",
             subdomain="hubx-storefront-demo",
         )
+        _seed_storefront_catalog(self.tenant)
         self.storefront_host = f"{self.tenant.subdomain}.hubx.market"
         self.client.defaults["HTTP_HOST"] = self.storefront_host
 
@@ -187,7 +284,13 @@ class StorefrontViewTests(TestCase):
 
     @override_settings(HUBX_MARKET_DEMO_TENANT_SUBDOMAIN="hubx-demo")
     def test_demo_product_detail_links_to_simulated_purchase_flow(self):
-        Tenant.objects.create(name="Hubx Market Demo", slug="hubx-demo", subdomain="hubx-demo", is_active=True)
+        demo_tenant = Tenant.objects.create(
+            name="Hubx Market Demo",
+            slug="hubx-demo",
+            subdomain="hubx-demo",
+            is_active=True,
+        )
+        _seed_storefront_catalog(demo_tenant, sku_prefix="DEMO-")
 
         response = self.client.get(
             reverse("storefront:product-detail", kwargs={"product_slug": "tenis-hubx-runner"}),
@@ -641,7 +744,7 @@ class StorefrontViewTests(TestCase):
         self.assertTrue(product["discovery_rank_reason"])
         self.assertTrue(any(item["slug"] == "tenis-hubx-runner" for item in products))
 
-    def test_storefront_catalog_query_service_orders_fallback_by_discovery_score(self):
+    def test_storefront_catalog_query_service_orders_persisted_products_by_discovery_score(self):
         products = storefront_catalog_queries.list_products(tenant_id=self.tenant.id)
 
         self.assertEqual(
@@ -652,6 +755,31 @@ class StorefrontViewTests(TestCase):
             [product["discovery_rank_score"] for product in products],
             sorted([product["discovery_rank_score"] for product in products], reverse=True),
         )
+
+    def test_empty_storefront_tenant_does_not_use_demo_fallback_products(self):
+        empty_tenant = Tenant.objects.create(
+            name="Loja Vazia",
+            slug="loja-vazia",
+            subdomain="loja-vazia",
+        )
+
+        products = storefront_catalog_queries.list_products(tenant_id=empty_tenant.id)
+        product = storefront_catalog_queries.get_product("tenis-hubx-runner", tenant_id=empty_tenant.id)
+        list_response = self.client.get(
+            reverse("storefront:catalog-list"),
+            HTTP_HOST=f"{empty_tenant.subdomain}.hubx.market",
+        )
+        detail_response = self.client.get(
+            reverse("storefront:product-detail", kwargs={"product_slug": "tenis-hubx-runner"}),
+            HTTP_HOST=f"{empty_tenant.subdomain}.hubx.market",
+        )
+
+        self.assertEqual(products, [])
+        self.assertEqual(product, {})
+        self.assertEqual(list_response.status_code, 200)
+        self.assertNotContains(list_response, "Tênis Hubx Runner")
+        self.assertNotContains(list_response, "Mochila Hubx Urban")
+        self.assertEqual(detail_response.status_code, 404)
 
     def test_storefront_views_require_resolved_tenant(self):
         response = self.client.get(reverse("storefront:catalog-list"), HTTP_HOST="ghost.hubx.market")
