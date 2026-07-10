@@ -13,6 +13,7 @@ from django.test import Client, override_settings
 
 from app.modules.accounts.models import AccountProfile, OwnerUser
 from app.modules.customers.models import Customer
+from app.modules.tenants.models import Tenant
 
 
 @dataclass(frozen=True)
@@ -27,6 +28,7 @@ class LinkImageParser(HTMLParser):
         super().__init__()
         self.links: list[str] = []
         self.images: list[str] = []
+        self.meta: dict[str, str] = {}
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         values = {key: value for key, value in attrs}
@@ -34,6 +36,10 @@ class LinkImageParser(HTMLParser):
             self.links.append(str(values["href"]))
         if tag == "img" and values.get("src"):
             self.images.append(str(values["src"]))
+        if tag == "meta" and values.get("content"):
+            meta_key = values.get("property") or values.get("name")
+            if meta_key:
+                self.meta[str(meta_key)] = str(values["content"])
 
 
 class Command(BaseCommand):
@@ -274,6 +280,7 @@ class Command(BaseCommand):
             response = client.get(path, HTTP_HOST=host)
             html = response.content.decode("utf-8", errors="replace")
             results.append(self._markers_result(key=f"storefront-template:{path}", response=response, html=html, markers=markers, forbidden=forbidden))
+            results.extend(self._check_storefront_branding_metadata(host=host, path=path, html=html))
             results.extend(self._check_page_links(client=client, host=host, path=path, html=html, scope="storefront"))
             results.extend(self._check_page_images(client=client, host=host, path=path, html=html))
         return results
@@ -325,6 +332,38 @@ class Command(BaseCommand):
             results.append(E2EResult(f"image:{path}:{target}", response.status_code == 200 and size > 0, f"status={response.status_code} bytes={size}"))
         return results
 
+    def _check_storefront_branding_metadata(self, *, host: str, path: str, html: str) -> list[E2EResult]:
+        tenant = self._tenant_from_host(host=host)
+        if tenant is None:
+            return [E2EResult(f"storefront-branding:{path}:tenant", False, f"tenant not found for host={host}")]
+
+        parser = LinkImageParser()
+        parser.feed(html)
+        results: list[E2EResult] = []
+        logo_url = str(getattr(tenant, "logo_url", "") or "").strip()
+        if logo_url:
+            logo_rendered = logo_url in parser.images or logo_url in html
+            results.append(
+                E2EResult(
+                    f"storefront-branding:{path}:logo",
+                    logo_rendered and "brand-identity-logo" in html,
+                    f"logo_url={logo_url} rendered={logo_rendered}",
+                )
+            )
+
+        expected_social_image = str(getattr(tenant, "storefront_hero_image_url", "") or "").strip() or logo_url
+        if expected_social_image:
+            og_image = parser.meta.get("og:image", "")
+            twitter_image = parser.meta.get("twitter:image", "")
+            results.append(
+                E2EResult(
+                    f"storefront-branding:{path}:social-image",
+                    og_image == expected_social_image and twitter_image == expected_social_image,
+                    f"expected={expected_social_image} og={og_image} twitter={twitter_image}",
+                )
+            )
+        return results
+
     def _static_image_result(self, *, path: str, target: str) -> E2EResult | None:
         static_url = str(getattr(settings, "STATIC_URL", "/static/") or "/static/")
         if not target.startswith(static_url):
@@ -347,6 +386,13 @@ class Command(BaseCommand):
         if parsed.query:
             path = f"{path}?{parsed.query}"
         return path
+
+    def _tenant_from_host(self, *, host: str) -> Tenant | None:
+        hostname = str(host or "").strip().lower().split(":", 1)[0]
+        subdomain = hostname.split(".", 1)[0] if "." in hostname else ""
+        if not subdomain:
+            return None
+        return Tenant.objects.filter(subdomain=subdomain, is_active=True).first()
 
     def _response_size(self, response) -> int:
         if getattr(response, "streaming", False):

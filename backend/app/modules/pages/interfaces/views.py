@@ -214,7 +214,8 @@ class StorefrontPageDetailView(TemplateView):
                 "meta_title": page["seo_title"] or page["title"],
                 "meta_image_url": _absolute_public_url(
                     self.request,
-                    getattr(getattr(self.request, "tenant", None), "storefront_hero_image_url", ""),
+                    getattr(getattr(self.request, "tenant", None), "storefront_hero_image_url", "")
+                    or getattr(getattr(self.request, "tenant", None), "logo_url", ""),
                 ),
                 "meta_image_alt": str(getattr(getattr(self.request, "tenant", None), "name", "") or page["title"]),
                 "canonical_url": self.request.build_absolute_uri(

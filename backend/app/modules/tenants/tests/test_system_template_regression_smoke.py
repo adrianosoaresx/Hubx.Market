@@ -6,10 +6,12 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import TestCase, override_settings
 
+from app.modules.catalog.models import Product, ProductVariant
 from app.modules.tenants.application.system_template_regression_smoke import (
     SystemTemplateSmokeTarget,
     system_template_regression_smoke,
 )
+from app.modules.tenants.management.commands.local_e2e_smoke import Command as LocalE2ESmokeCommand
 from app.modules.tenants.models import Tenant
 
 
@@ -131,3 +133,40 @@ class SystemTemplateRegressionSmokeTests(TestCase):
                 owner_email="missing-owner@hubx.market",
                 stdout=StringIO(),
             )
+
+    def test_local_e2e_storefront_checks_customer_store_logo_and_social_image(self):
+        tenant = Tenant.objects.create(
+            name="Arnaldo Móveis Rústicos",
+            slug="arnaldo-moveis-rusticos",
+            subdomain="arnaldomoveisrusticos",
+            logo_url="https://cdn.example.com/arnaldo/logo.png",
+            is_active=True,
+        )
+        product = Product.objects.create(
+            tenant=tenant,
+            name="Mesa rústica Arnaldo",
+            slug="mesa-rustica-arnaldo",
+            brand_name="Arnaldo",
+            category_label="Móveis rústicos",
+            description="Mesa em madeira para validar vitrine tenant-owned.",
+            status=Product.Status.ACTIVE,
+            is_active=True,
+        )
+        ProductVariant.objects.create(
+            product=product,
+            sku="ARNALDO-MESA-001",
+            price="1499.90",
+            stock=3,
+            is_default=True,
+            is_active=True,
+        )
+
+        results = LocalE2ESmokeCommand()._visitor_storefront(host="arnaldomoveisrusticos.hubx.market")
+        blockers = [result for result in results if result.key.startswith("storefront-branding:") and not result.ready]
+
+        self.assertFalse(blockers, [blocker.summary for blocker in blockers])
+        result_by_key = {result.key: result for result in results}
+        self.assertTrue(result_by_key["storefront-branding:/:logo"].ready)
+        self.assertTrue(result_by_key["storefront-branding:/:social-image"].ready)
+        self.assertTrue(result_by_key["storefront-branding:/catalog/:logo"].ready)
+        self.assertTrue(result_by_key["storefront-branding:/catalog/:social-image"].ready)

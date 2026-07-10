@@ -1453,7 +1453,7 @@ class StorefrontPersistedReadTests(TestCase):
         self.assertTrue(item["product_gallery_items"])
 
     def test_product_detail_uses_product_main_image_for_social_preview(self):
-        product = Product.objects.get(tenant=self.tenant, slug="tenis-hubx-runner")
+        product = Product.objects.get(tenant=self.tenant, slug="tenis-hubx-runner-persistido")
         product.images.create(
             image_url="https://cdn.example.com/catalog/runner-pdp.jpg",
             alt_text="Tênis Hubx Runner na vitrine",
@@ -1462,16 +1462,16 @@ class StorefrontPersistedReadTests(TestCase):
         )
 
         response = self.client.get(
-            reverse("storefront:product-detail", kwargs={"product_slug": "tenis-hubx-runner"}),
+            reverse("storefront:product-detail", kwargs={"product_slug": "tenis-hubx-runner-persistido"}),
             HTTP_HOST=self.storefront_host,
         )
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, '<meta property="og:image" content="https://cdn.example.com/catalog/runner-pdp.jpg">')
-        self.assertContains(response, '<meta property="og:title" content="Tênis Hubx Runner">')
+        self.assertContains(response, '<meta property="og:title" content="Tênis Hubx Runner Persistido">')
         self.assertContains(
             response,
-            '<meta property="og:url" content="http://hubx-storefront-demo.hubx.market/catalog/tenis-hubx-runner/">',
+            '<meta property="og:url" content="http://hubx-demo.hubx.market/catalog/tenis-hubx-runner-persistido/">',
         )
 
     def test_storefront_main_image_prefers_media_coherent_with_default_variant_when_possible(self):

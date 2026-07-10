@@ -10,7 +10,7 @@ Representa uma loja no SaaS.
 - guarda `conversion_primary_color` como cor opcional de CTA primário da loja, validada para contraste AA com texto branco antes de persistir
 - o hero institucional pode ter título, descrição, imagem remota, CTA e flag de exibição
 - quando a imagem do hero não estiver configurada, a storefront pode usar fallback visual derivado do catálogo da própria loja
-- links tenant-owned podem reutilizar a imagem pública do hero como imagem destacada de compartilhamento social, com fallback apenas para mídia já resolvida dentro do mesmo tenant
+- links tenant-owned podem reutilizar a imagem pública do hero como imagem destacada de compartilhamento social, com fallback apenas para mídia já resolvida dentro do mesmo tenant; se não houver mídia real, `logo_url` é o fallback permitido antes de qualquer placeholder
 - esses campos não substituem catálogo, páginas institucionais nem page builder
 
 ### Plan

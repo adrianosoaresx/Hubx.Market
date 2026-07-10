@@ -92,9 +92,14 @@ def _storefront_hero_fallback_image(products: list[dict[str, object]]) -> str:
     for product in products:
         for key in ("main_image_url", "image_url"):
             image_url = str(product.get(key) or "").strip()
-            if image_url:
+            if image_url and _is_shareable_storefront_image(image_url):
                 return image_url
     return ""
+
+
+def _is_shareable_storefront_image(image_url: str) -> bool:
+    lowered = image_url.lower()
+    return "placehold.co" not in lowered
 
 
 def _absolute_public_url(request, value: object) -> str:
@@ -1496,7 +1501,7 @@ class CatalogListView(TemplateView):
                     self.request,
                     title=f"Loja - {getattr(tenant, 'name', '') or 'Hubx Market'}",
                     description=page_description,
-                    image_url=storefront_hero.get("image_url"),
+                    image_url=storefront_hero.get("image_url") or getattr(tenant, "logo_url", ""),
                     image_alt=str(storefront_hero.get("title") or getattr(tenant, "name", "") or "Loja"),
                     canonical_path=base_url,
                 ),
@@ -1603,7 +1608,7 @@ class StorefrontHomeView(TemplateView):
                     self.request,
                     title=str(storefront_hero.get("title") or getattr(tenant, "name", "") or "Loja online"),
                     description=str(storefront_hero.get("description") or ""),
-                    image_url=storefront_hero.get("image_url"),
+                    image_url=storefront_hero.get("image_url") or getattr(tenant, "logo_url", ""),
                     image_alt=str(storefront_hero.get("title") or getattr(tenant, "name", "") or "Loja online"),
                     canonical_path=reverse("storefront-home"),
                 ),
@@ -1851,7 +1856,7 @@ class ProductDetailView(TemplateView):
                     self.request,
                     title=str(product["name"]),
                     description=str(product.get("product_subtitle") or product.get("short_description") or product["description"] or ""),
-                    image_url=product.get("main_image_url", gallery_items[0]["url"]),
+                    image_url=product.get("main_image_url", gallery_items[0]["url"]) or getattr(tenant, "logo_url", ""),
                     image_alt=str(product.get("main_image_alt") or gallery_items[0]["alt"] or product["name"]),
                     canonical_path=product_detail_url,
                 ),

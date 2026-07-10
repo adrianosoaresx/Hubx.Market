@@ -1,4 +1,5 @@
-﻿from .base import *  # noqa: F401,F403
+from .base import *  # noqa: F401,F403
+import os
 
 DATABASES = {
     "default": {
@@ -7,4 +8,4 @@ DATABASES = {
     }
 }
 
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
