@@ -345,10 +345,10 @@ CATALOG_SORT_OPTIONS = [
     {
         "value": "recommended",
         "label": "Recomendados",
-        "helper": "Disponibilidade, oferta e curadoria da loja.",
+        "helper": "Produtos com melhor disponibilidade e ofertas primeiro.",
     },
-    {"value": "price_asc", "label": "Menor preço", "helper": "Preço efetivo da variante em destaque."},
-    {"value": "price_desc", "label": "Maior preço", "helper": "Preço efetivo da variante em destaque."},
+    {"value": "price_asc", "label": "Menor preço", "helper": "Preço do produto exibido."},
+    {"value": "price_desc", "label": "Maior preço", "helper": "Preço do produto exibido."},
     {"value": "name_asc", "label": "Nome A-Z", "helper": "Ordem alfabética dos produtos."},
 ]
 
@@ -476,12 +476,12 @@ def _catalog_quick_filter_empty_state(*, quick_filter: str) -> tuple[str, str] |
     if quick_filter == "quick_buy":
         return (
             "Nenhum produto pronto para compra rápida",
-            "Não há combinações ativas e disponíveis para compra rápida neste recorte. Use Limpar para explorar outras disponibilidades.",
+            "Não há produtos disponíveis para compra rápida neste recorte. Use Limpar para explorar outras opções.",
         )
     if quick_filter == "in_stock":
         return (
             "Nenhum produto em pronta entrega",
-            "Não há produtos com disponibilidade imediata nesta visão. Use Limpar para explorar outras combinações.",
+            "Não há produtos com disponibilidade imediata nesta visão. Use Limpar para explorar outras opções.",
         )
     if quick_filter == "low_stock":
         return (
@@ -505,16 +505,16 @@ def _quick_buy_card_curation_note(product: dict[str, object]) -> str:
     variant = str(product.get("effective_variant_label") or "a combinação atual")
     state = str(product.get("stock_state") or "")
     if state == "low_stock":
-        return f"Compra rápida disponível para {variant}, com poucas unidades e base comercial já pronta para decisão."
-    return f"Compra rápida disponível para {variant}, com combinação ativa pronta para seguir do card ao detalhe."
+        return f"Compra rápida disponível para {variant}, com poucas unidades em estoque."
+    return f"Compra rápida disponível para {variant}. Abra o produto para conferir as opções."
 
 
 def _quick_buy_card_click_helper(product: dict[str, object]) -> str:
     variant = str(product.get("effective_variant_label") or "a combinação atual")
     state = str(product.get("stock_state") or "")
     if state == "low_stock":
-        return f"Abra o produto para confirmar {variant} e seguir para checkout com a mesma leitura de estoque baixo mostrada aqui."
-    return f"Abra o produto para confirmar {variant} e seguir para checkout com a mesma base comercial mostrada neste card."
+        return f"Abra o produto para confirmar {variant} antes que as últimas unidades acabem."
+    return f"Abra o produto para confirmar {variant} e seguir com a compra."
 
 
 def _featured_card_curation_note(product: dict[str, object]) -> str:
@@ -523,22 +523,22 @@ def _featured_card_curation_note(product: dict[str, object]) -> str:
     if state == "low_stock":
         return f"Destaque editorial atual para {variant}, ainda com poucas unidades disponíveis nesta vitrine."
     if state == "out_of_stock":
-        return f"Destaque editorial atual para {variant}, com contexto de reposição já sinalizado no card."
+        return f"Destaque da loja para {variant}, no momento sem estoque disponível."
     if state == "backorder":
-        return f"Destaque editorial atual para {variant}, com reserva disponível e prazo revisado no detalhe."
-    return f"Destaque editorial atual para {variant}, com a mesma base comercial preservada até o detalhe."
+        return f"Destaque da loja para {variant}, disponível sob encomenda."
+    return f"Destaque da loja para {variant}. Abra para ver fotos, preço e disponibilidade."
 
 
 def _featured_card_click_helper(product: dict[str, object]) -> str:
     variant = str(product.get("effective_variant_label") or "a combinação atual")
     state = str(product.get("stock_state") or "")
     if state == "low_stock":
-        return f"Abra o produto para revisar {variant} com a mesma leitura de destaque e poucas unidades mostrada neste card."
+        return f"Abra o produto para ver {variant} e conferir as últimas unidades."
     if state == "backorder":
-        return f"Abra o produto para revisar {variant} com o mesmo contexto de destaque e reserva visto aqui."
+        return f"Abra o produto para ver {variant} e conferir como funciona a encomenda."
     if state == "out_of_stock":
-        return f"Abra o produto para revisar {variant} com o mesmo contexto de destaque e reposição mostrado aqui."
-    return f"Abra o produto para revisar {variant} com a mesma leitura de destaque editorial mostrada neste card."
+        return f"Abra o produto para ver {variant} e conferir a disponibilidade."
+    return f"Abra o produto para ver mais detalhes de {variant}."
 
 
 def _offer_card_curation_note(product: dict[str, object]) -> str:
@@ -547,22 +547,22 @@ def _offer_card_curation_note(product: dict[str, object]) -> str:
     if state == "low_stock":
         return f"Oferta ativa para {variant}, com economia já visível e poucas unidades disponíveis nesta vitrine."
     if state == "backorder":
-        return f"Oferta ativa para {variant}, com reserva disponível e valor comparativo mantido no detalhe."
+        return f"Oferta ativa para {variant}, disponível sob encomenda."
     if state == "out_of_stock":
-        return f"Oferta ativa para {variant}, com contexto de reposição preservado enquanto o valor comparativo segue visível."
-    return f"Oferta ativa para {variant}, com economia já visível e mesma base comercial preservada até o detalhe."
+        return f"Oferta ativa para {variant}, no momento sem estoque disponível."
+    return f"Oferta ativa para {variant}, com economia já visível."
 
 
 def _offer_card_click_helper(product: dict[str, object]) -> str:
     variant = str(product.get("effective_variant_label") or "a combinação atual")
     state = str(product.get("stock_state") or "")
     if state == "low_stock":
-        return f"Abra o produto para revisar {variant} com a mesma leitura de oferta e estoque baixo mostrada neste card."
+        return f"Abra o produto para conferir {variant} e aproveitar enquanto há poucas unidades."
     if state == "backorder":
-        return f"Abra o produto para revisar {variant} com o mesmo contexto de oferta e reserva visto aqui."
+        return f"Abra o produto para conferir {variant} e ver as condições de encomenda."
     if state == "out_of_stock":
-        return f"Abra o produto para revisar {variant} com o mesmo contexto de oferta e reposição mostrado aqui."
-    return f"Abra o produto para revisar {variant} com a mesma leitura de oferta ativa mostrada neste card."
+        return f"Abra o produto para conferir {variant} e acompanhar a disponibilidade."
+    return f"Abra o produto para conferir {variant} e ver os detalhes da oferta."
 
 
 def _apply_quick_filter_context(
@@ -576,27 +576,27 @@ def _apply_quick_filter_context(
 ) -> tuple[str, str, str, str, str]:
     if quick_filter == "offer":
         return (
-            "Explore ofertas ativas da vitrine, com valor comparativo real, combinação efetiva e continuidade segura até o detalhe do produto.",
-            "Em oferta reúne produtos com preço comparativo ativo já visível no card, sem mudar a base comercial nem a combinação efetiva ao abrir o detalhe.",
-            f"{results_meta} · recorte offer: ofertas ativas com continuidade segura até o PDP",
+            "Veja as ofertas disponíveis agora e abra o produto para conferir detalhes, tamanhos, cores e condições de compra.",
+            "Em oferta reúne produtos com preço promocional visível na vitrine. Abra o item para confirmar as opções disponíveis antes de comprar.",
+            f"{results_meta} · ofertas disponíveis",
             "Nenhuma oferta ativa agora",
             "Não há produtos com oferta ativa neste recorte no momento. Use Limpar para voltar à vitrine completa.",
         )
     if quick_filter == "featured":
         return (
-            "Explore os destaques atuais da vitrine, com combinação efetiva, contexto comercial real e continuidade segura até o detalhe do produto.",
-            "Em destaque reúne produtos priorizados pela vitrine usando sinais reais já visíveis no card, sem mudar a base comercial ao abrir o detalhe.",
-            f"{results_meta} · recorte featured: destaques atuais com continuidade segura até o PDP",
+            "Conheça os produtos em destaque da loja e encontre opções que merecem um pouco mais da sua atenção.",
+            "Em destaque reúne produtos selecionados para aparecer primeiro na vitrine. Abra o item para ver fotos, preço e disponibilidade.",
+            f"{results_meta} · destaques da loja",
             "Nenhum destaque disponível agora",
             "Não há produtos em destaque neste recorte no momento. Use Limpar para voltar à vitrine completa.",
         )
     if quick_filter == "quick_buy":
         return (
-            "Explore produtos prontos para compra rápida, com combinação efetiva, disponibilidade real e continuidade segura até o detalhe do produto.",
-            "Compra rápida reúne combinações ativas, em estoque ou com poucas unidades, já prontas para decisão sem mudar a base comercial no detalhe.",
-            f"{results_meta} · recorte quick buy: combinações prontas para compra rápida e continuidade segura até o PDP",
+            "Veja produtos disponíveis para comprar com menos passos e confirme os detalhes antes de finalizar o pedido.",
+            "Compra rápida reúne itens disponíveis agora ou com poucas unidades. Abra o produto para escolher as opções e seguir com segurança.",
+            f"{results_meta} · prontos para compra",
             "Nenhum produto pronto para compra rápida",
-            "Não há combinações ativas e disponíveis para compra rápida neste recorte. Use Limpar para voltar à vitrine completa.",
+            "Não há produtos disponíveis para compra rápida neste recorte. Use Limpar para voltar à vitrine completa.",
         )
     return page_description, filter_description, results_meta, empty_title, empty_description
 
@@ -604,20 +604,20 @@ def _apply_quick_filter_context(
 def _catalog_reentry_meta(*, category_label: str, search_value: str, quick_filter: str) -> str:
     quick_filter_label = _catalog_quick_filter_label(quick_filter)
     if quick_filter == "quick_buy":
-        return "Compra rápida pronta para retomar sua navegação, com a mesma base comercial do card até o detalhe."
+        return "Produtos disponíveis para você conferir os detalhes e seguir para a compra com mais agilidade."
     if quick_filter == "featured":
-        return "Os destaques da vitrine continuam prontos para receber sua próxima compra com leitura consistente até o detalhe."
+        return "Destaques selecionados para facilitar sua escolha, com preço e disponibilidade visíveis antes do detalhe."
     if quick_filter == "offer":
-        return "As ofertas da vitrine continuam alinhadas ao detalhe para facilitar uma nova decisão de compra sem surpresa."
+        return "Ofertas atuais da loja, prontas para você comparar e abrir o produto que fizer mais sentido."
     if quick_filter_label:
-        return f"Este recorte rápido mantém a vitrine pronta para sua próxima compra enquanto você revisa {quick_filter_label.lower()}."
+        return f"Veja {quick_filter_label.lower()} e encontre mais rápido os produtos que combinam com o que você procura."
     if category_label and search_value:
-        return "A vitrine continua pronta para sua próxima compra enquanto você refina a busca e aprofunda no detalhe as combinações mais promissoras mostradas aqui."
+        return "Confira os resultados desta categoria e abra os produtos que mais combinam com sua busca."
     if category_label:
-        return f"A vitrine de {category_label.lower()} continua pronta para sua próxima compra, com continuidade clara entre card, curadoria leve e detalhe."
+        return f"Veja as opções de {category_label.lower()} disponíveis nesta loja e escolha o produto que mais combina com você."
     if search_value:
-        return "Use esta busca para retomar a navegação com mais foco; o detalhe continua aprofundando a mesma base comercial e editorial mostrada na vitrine."
-    return "A vitrine continua pronta para receber sua próxima compra, com cards e detalhe alinhados pela mesma base comercial e por uma curadoria leve."
+        return "Use esta busca para encontrar opções mais próximas do que você quer comprar agora."
+    return "Confira os produtos da loja, compare preços e disponibilidade, e abra o item que chamou sua atenção."
 
 
 def _build_catalog_quick_filter_select(*, selected: str) -> str:
@@ -732,29 +732,29 @@ def _build_catalog_storefront_extra_filters(
 def _catalog_page_description(*, category_label: str, search_value: str) -> str:
     if search_value and category_label:
         return (
-            f'Explore {category_label.lower()} com busca ativa para “{search_value}”, combinando disponibilidade real, combinação em destaque e uma curadoria leve para ajudar a escolher o próximo produto que vale abrir.'
+            f'Veja produtos de {category_label.lower()} relacionados a “{search_value}” e abra os itens que parecem combinar com o que você procura.'
         )
     if category_label:
         return (
-            f"Explore {category_label.lower()} com combinações em destaque, disponibilidade atual e uma curadoria leve para descobrir os produtos mais interessantes desta vitrine com mais confiança."
+            f"Explore produtos de {category_label.lower()}, confira preços e disponibilidade, e escolha com mais tranquilidade."
         )
     if search_value:
         return (
-            f'Explore resultados para “{search_value}” com disponibilidade atual, combinações em destaque e uma curadoria leve para encontrar mais rápido o produto que vale abrir agora.'
+            f'Confira os resultados para “{search_value}” e abra os produtos que mais combinam com sua busca.'
         )
-    return "Explore produtos com combinações em destaque, disponibilidade atual e uma curadoria leve para encontrar com mais confiança o próximo item que vale sua atenção nesta vitrine."
+    return "Explore a loja, compare opções disponíveis e encontre o produto certo para a sua próxima compra."
 
 
 def _catalog_filter_description(*, category_label: str, search_value: str) -> str:
     if search_value and category_label:
         return (
-            f'Resultados para “{search_value}” dentro de {category_label.lower()}, combinando nome, marca, SKU, categoria, descrição e sinais públicos já visíveis nos cards.'
+            f'Resultados para “{search_value}” dentro de {category_label.lower()}, considerando nome, marca, categoria e descrição dos produtos.'
         )
     if search_value:
-        return f'Resultados para “{search_value}”, combinando nome, marca, SKU, categoria, descrição e sinais públicos já visíveis nos cards.'
+        return f'Resultados para “{search_value}”, considerando nome, marca, categoria e descrição dos produtos.'
     if category_label:
-        return f"Use a categoria atual para refinar a vitrine sem perder combinação em destaque, disponibilidade e curadoria comercial leve."
-    return "Use busca e categoria para encontrar mais rápido produtos com combinação em destaque, disponibilidade e curadoria comercial leve."
+        return f"Use a categoria atual para ver produtos de {category_label.lower()} e encontrar opções disponíveis com mais facilidade."
+    return "Procure pelo que você precisa ou escolha uma categoria para ver as opções disponíveis na loja."
 
 
 def _catalog_results_meta(*, total_count: int, category_label: str, search_value: str) -> str:
@@ -763,7 +763,7 @@ def _catalog_results_meta(*, total_count: int, category_label: str, search_value
         meta = f'{meta} · busca atual: “{search_value}”'
     if category_label:
         meta = f"{meta} · categoria atual: {category_label}"
-    return f"{meta} · cards já refletem variante efetiva, disponibilidade atual e sinais leves de curadoria da vitrine"
+    return f"{meta} · preços e disponibilidade atualizados"
 
 
 def _catalog_empty_state(*, category_label: str, search_value: str) -> tuple[str, str]:
@@ -775,7 +775,7 @@ def _catalog_empty_state(*, category_label: str, search_value: str) -> tuple[str
     if search_value:
         return (
             "Nenhum produto encontrado para esta busca",
-            f'Não encontramos resultados para “{search_value}” em nome, marca, SKU, categoria ou descrição. Tente outro termo ou limpe a busca para voltar à vitrine completa.',
+            f'Não encontramos resultados para “{search_value}” em nome, marca, categoria ou descrição. Tente outro termo ou limpe a busca para voltar à vitrine completa.',
         )
     if category_label:
         return (
@@ -784,7 +784,7 @@ def _catalog_empty_state(*, category_label: str, search_value: str) -> tuple[str
         )
     return (
         "Nenhum produto encontrado",
-        "Tente ajustar a busca ou explorar outra categoria para encontrar produtos com preço, disponibilidade e combinação em destaque.",
+        "Tente ajustar a busca ou explorar outra categoria para encontrar produtos disponíveis.",
     )
 
 

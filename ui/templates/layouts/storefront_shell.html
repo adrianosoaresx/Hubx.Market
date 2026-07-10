@@ -23,11 +23,11 @@
                         {% include "shared/partials/icon.html" with name="shopping-bag" size="sm" %}
                         <span>Loja</span>
                     </a>
-                    <a href="/cart/{% if request.is_demo_read_only %}?demo_flow=cart{% endif %}" class="storefront-side-nav-link {% if request.path == '/cart/' %}is-active{% endif %}">
-                        {% include "shared/partials/icon.html" with name="shopping-cart" size="sm" %}
-                        <span>Carrinho</span>
-                    </a>
                     {% if request.is_demo_read_only or request.user.is_authenticated %}
+                        <a href="/cart/{% if request.is_demo_read_only %}?demo_flow=cart{% endif %}" class="storefront-side-nav-link {% if request.path == '/cart/' %}is-active{% endif %}">
+                            {% include "shared/partials/icon.html" with name="shopping-cart" size="sm" %}
+                            <span>Carrinho</span>
+                        </a>
                         <a href="/accounts/account/orders/" class="storefront-side-nav-link {% if request.path == '/accounts/account/orders/' %}is-active{% endif %}">
                             {% include "shared/partials/icon.html" with name="receipt-text" size="sm" %}
                             <span>Pedidos</span>

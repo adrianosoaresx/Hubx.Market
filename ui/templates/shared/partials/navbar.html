@@ -19,11 +19,11 @@
             {% include "shared/partials/icon.html" with name="shopping-bag" size="sm" %}
             <span>Loja</span>
         </a>
-        <a href="/cart/{% if request.is_demo_read_only %}?demo_flow=cart{% endif %}" class="global-nav-link">
-            {% include "shared/partials/icon.html" with name="shopping-cart" size="sm" %}
-            <span>Carrinho</span>
-        </a>
         {% if request.is_demo_read_only or request.user.is_authenticated %}
+            <a href="/cart/{% if request.is_demo_read_only %}?demo_flow=cart{% endif %}" class="global-nav-link">
+                {% include "shared/partials/icon.html" with name="shopping-cart" size="sm" %}
+                <span>Carrinho</span>
+            </a>
             <a href="/accounts/account/orders/" class="global-nav-link">
                 {% include "shared/partials/icon.html" with name="receipt-text" size="sm" %}
                 <span>Pedidos</span>
