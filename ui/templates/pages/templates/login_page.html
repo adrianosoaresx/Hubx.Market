@@ -4,17 +4,14 @@
 
 {% block content %}
 <section class="space-y-6">
-    <section class="ds-surface p-8">
+    <form method="{{ form_method|default:'post' }}" action="{{ form_action|default:request.path }}" class="ds-surface space-y-6 p-6 sm:p-8">
+        {% csrf_token %}
         <div class="space-y-2">
             <h1 class="text-base font-semibold text-[var(--color-text-primary)]">{{ page_title|default:"Entrar" }}</h1>
             <p class="text-sm text-[var(--color-text-secondary)]">
                 {{ page_description|default:"Acesse sua conta para acompanhar pedidos, perfil e preferências." }}
             </p>
         </div>
-    </section>
-
-    <form method="{{ form_method|default:'post' }}" action="{{ form_action|default:request.path }}" class="ds-surface space-y-6 p-6">
-        {% csrf_token %}
         {% if next_url %}
             <input type="hidden" name="next" value="{{ next_url }}">
         {% endif %}
@@ -29,9 +26,11 @@
             {% include "shared/components/feedback/alert.html" with variant="danger" title="Não foi possível entrar" description=form_error %}
         {% endif %}
 
-        <div class="flex items-center justify-between gap-3 text-sm">
-            <span class="text-[var(--color-text-secondary)]">{{ helper_text|default:"Use suas credenciais para entrar na área do cliente." }}</span>
-            <a href="{{ forgot_password_href|default:'#' }}" class="font-medium text-[var(--color-action-primary-bg)] hover:underline">Esqueci minha senha</a>
+        <div class="space-y-1">
+            <a href="{{ forgot_password_href|default:'#' }}" class="text-sm font-medium text-[var(--color-action-primary-bg)] hover:underline">Esqueci minha senha</a>
+            <p class="max-w-prose text-xs leading-5 text-[var(--color-text-secondary)]">
+                {{ helper_text|default:"Use suas credenciais para entrar na área do cliente." }}
+            </p>
         </div>
 
         <div class="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end">

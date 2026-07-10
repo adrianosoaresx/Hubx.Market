@@ -136,6 +136,33 @@ class OwnerLoginViewTests(TestCase):
             ).exists()
         )
 
+    def test_login_view_uses_tenant_auth_visual_when_configured(self):
+        self.tenant.logo_url = "https://cdn.example.com/owner-login/logo.png"
+        self.tenant.storefront_hero_image_url = "https://cdn.example.com/owner-login/hero.png"
+        self.tenant.storefront_hero_title = "Móveis rústicos com história"
+        self.tenant.storefront_hero_description = "Entre para acompanhar pedidos desta loja."
+        self.tenant.save(
+            update_fields=[
+                "logo_url",
+                "storefront_hero_image_url",
+                "storefront_hero_title",
+                "storefront_hero_description",
+                "updated_at",
+            ]
+        )
+
+        response = self.client.get(
+            reverse("accounts:login"),
+            HTTP_HOST=f"{self.tenant.subdomain}.hubx.market",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "https://cdn.example.com/owner-login/logo.png")
+        self.assertContains(response, "https://cdn.example.com/owner-login/hero.png")
+        self.assertContains(response, "Sua próxima compra começa aqui.")
+        self.assertContains(response, "Entre para acompanhar seus pedidos e encontrar novidades da loja.")
+        self.assertNotContains(response, "/static/img/brand/hubx-public-hero.jpg")
+
     def test_customer_login_post_authenticates_profile_and_redirects_to_account(self):
         customer = Customer.objects.create(
             tenant=self.tenant,
