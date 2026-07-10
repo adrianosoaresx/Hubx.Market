@@ -5,6 +5,28 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Hubx Market{% endblock %}</title>
+    {% firstof meta_title page_title store_display_name request.tenant.store_display_name request.tenant.name "Hubx Market" as resolved_meta_title %}
+    {% firstof meta_description page_description "" as resolved_meta_description %}
+    {% firstof canonical_url request.build_absolute_uri "" as resolved_canonical_url %}
+    <meta property="og:type" content="{{ meta_type|default:'website' }}">
+    <meta property="og:title" content="{{ resolved_meta_title }}">
+    <meta name="twitter:card" content="{% if meta_image_url %}summary_large_image{% else %}summary{% endif %}">
+    <meta name="twitter:title" content="{{ resolved_meta_title }}">
+    {% if resolved_meta_description %}
+        <meta name="description" content="{{ resolved_meta_description }}">
+        <meta property="og:description" content="{{ resolved_meta_description }}">
+        <meta name="twitter:description" content="{{ resolved_meta_description }}">
+    {% endif %}
+    {% if resolved_canonical_url %}
+        <link rel="canonical" href="{{ resolved_canonical_url }}">
+        <meta property="og:url" content="{{ resolved_canonical_url }}">
+    {% endif %}
+    {% if meta_image_url %}
+        <meta property="og:image" content="{{ meta_image_url }}">
+        <meta property="og:image:alt" content="{{ meta_image_alt|default:resolved_meta_title }}">
+        <meta name="twitter:image" content="{{ meta_image_url }}">
+        <meta name="twitter:image:alt" content="{{ meta_image_alt|default:resolved_meta_title }}">
+    {% endif %}
     <link rel="stylesheet" href="{% static 'css/app.css' %}?v=ds-public-flows-20260702-4">
     <link rel="icon" href="{% static 'img/brand/favicon.ico' %}" sizes="any">
     <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/brand/hubx-favicon-32.png' %}">

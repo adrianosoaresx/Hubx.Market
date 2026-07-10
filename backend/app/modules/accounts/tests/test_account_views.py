@@ -6,7 +6,9 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
+from urllib.parse import parse_qs, urlparse
 
+from app.modules.accounts.application.google_oauth_login_commands import google_oauth_login_commands
 from app.modules.accounts.application.account_page_queries import account_page_queries
 from app.modules.accounts.application.demo_session_login_commands import (
     DEMO_SESSION_RETURN_URL_KEY,
@@ -38,6 +40,32 @@ class AccountViewTests(TestCase):
         self.assertContains(response, "Entrar")
         self.assertContains(response, "Quando sua conta estiver vinculada a um perfil persistido")
         self.assertContains(response, "Acessar conta")
+        self.assertContains(response, "Continuar com Google")
+        self.assertNotContains(response, "Continuar com Apple")
+        self.assertContains(response, "ou entre com e-mail")
+
+    @override_settings(GOOGLE_OAUTH_ENABLED=False, GOOGLE_OAUTH_CLIENT_ID="", GOOGLE_OAUTH_CLIENT_SECRET="")
+    def test_social_login_start_without_provider_configuration_returns_to_login(self):
+        response = self.client.get(reverse("accounts:social-login-start", kwargs={"provider": "google"}))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], f"{reverse('accounts:login')}?social=social-unavailable")
+
+        login_response = self.client.get(response["Location"])
+        self.assertContains(login_response, "Login social em preparação")
+        self.assertContains(login_response, "Google ainda não está configurado")
+
+    def test_social_login_start_rejects_unknown_provider(self):
+        response = self.client.get(reverse("accounts:social-login-start", kwargs={"provider": "linkedin"}))
+
+        self.assertEqual(response.status_code, 404)
+
+    @override_settings(GOOGLE_OAUTH_ENABLED=False, GOOGLE_OAUTH_CLIENT_ID="", GOOGLE_OAUTH_CLIENT_SECRET="")
+    def test_social_login_callback_without_provider_configuration_returns_to_login(self):
+        response = self.client.get(reverse("accounts:social-login-callback", kwargs={"provider": "google"}))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], f"{reverse('accounts:login')}?social=social-unavailable")
 
     def test_register_view_renders_design_system_template(self):
         response = self.client.get(reverse("accounts:register"))
@@ -110,6 +138,113 @@ class OwnerLoginViewTests(TestCase):
             role="owner",
             is_active=True,
         )
+
+    @override_settings(
+        GOOGLE_OAUTH_ENABLED=True,
+        GOOGLE_OAUTH_CLIENT_ID="google-client-id",
+        GOOGLE_OAUTH_CLIENT_SECRET="google-client-secret",
+        GOOGLE_OAUTH_REDIRECT_URI="http://localhost:8002/accounts/social/google/callback/",
+    )
+    def test_google_social_login_creates_customer_profile_inside_current_tenant(self):
+        class FakeGoogleOAuthHttpClient:
+            def post_form(self, *, url, data):
+                return {"access_token": "google-access-token"}
+
+            def get_json(self, *, url, bearer_token):
+                return {
+                    "email": "cliente.google@example.com",
+                    "email_verified": True,
+                    "name": "Cliente Google",
+                    "given_name": "Cliente",
+                    "family_name": "Google",
+                }
+
+        original_http_client = google_oauth_login_commands.http_client
+        google_oauth_login_commands.http_client = FakeGoogleOAuthHttpClient()
+        try:
+            start_response = self.client.get(
+                reverse("accounts:social-login-start", kwargs={"provider": "google"}),
+                HTTP_HOST=f"{self.tenant.subdomain}.hubx.market",
+            )
+            self.assertEqual(start_response.status_code, 302)
+            authorization_url = start_response["Location"]
+            query_params = parse_qs(urlparse(authorization_url).query)
+            self.assertEqual(query_params["client_id"][0], "google-client-id")
+            self.assertEqual(query_params["redirect_uri"][0], "http://localhost:8002/accounts/social/google/callback/")
+
+            callback_response = self.client.get(
+                reverse("accounts:social-login-callback", kwargs={"provider": "google"}),
+                {"code": "oauth-code", "state": query_params["state"][0]},
+                HTTP_HOST="localhost:8002",
+            )
+        finally:
+            google_oauth_login_commands.http_client = original_http_client
+
+        self.assertEqual(callback_response.status_code, 302)
+        self.assertEqual(callback_response["Location"], reverse("accounts:account-overview"))
+        customer = Customer.objects.get(tenant=self.tenant, email="cliente.google@example.com")
+        profile = AccountProfile.objects.get(tenant=self.tenant, email="cliente.google@example.com")
+        self.assertEqual(customer.full_name, "Cliente Google")
+        self.assertEqual(customer.account_type, "Google")
+        self.assertEqual(profile.customer, customer)
+        self.assertEqual(profile.first_name, "Cliente")
+        self.assertEqual(profile.last_name, "Google")
+        self.assertEqual(str(self.client.session[SESSION_KEY]), str(User.objects.get(email="cliente.google@example.com").id))
+        self.assertEqual(self.client.session["hubx_account_profile_id"], profile.id)
+        self.assertEqual(self.client.session["hubx_account_session_kind"], "customer")
+
+    @override_settings(
+        GOOGLE_OAUTH_ENABLED=True,
+        GOOGLE_OAUTH_CLIENT_ID="google-client-id",
+        GOOGLE_OAUTH_CLIENT_SECRET="google-client-secret",
+        GOOGLE_OAUTH_REDIRECT_URI="http://localhost:8002/accounts/social/google/callback/",
+    )
+    def test_google_social_login_reuses_existing_customer_profile_for_same_tenant(self):
+        customer = Customer.objects.create(
+            tenant=self.tenant,
+            slug="cliente-google",
+            full_name="Cliente Existente",
+            email="cliente.google@example.com",
+        )
+        profile = AccountProfile.objects.create(
+            tenant=self.tenant,
+            customer=customer,
+            email="cliente.google@example.com",
+            first_name="Cliente",
+            last_name="Existente",
+        )
+
+        class FakeGoogleOAuthHttpClient:
+            def post_form(self, *, url, data):
+                return {"access_token": "google-access-token"}
+
+            def get_json(self, *, url, bearer_token):
+                return {
+                    "email": "cliente.google@example.com",
+                    "email_verified": True,
+                    "name": "Cliente Google",
+                }
+
+        original_http_client = google_oauth_login_commands.http_client
+        google_oauth_login_commands.http_client = FakeGoogleOAuthHttpClient()
+        try:
+            start_response = self.client.get(
+                reverse("accounts:social-login-start", kwargs={"provider": "google"}),
+                HTTP_HOST=f"{self.tenant.subdomain}.hubx.market",
+            )
+            state = parse_qs(urlparse(start_response["Location"]).query)["state"][0]
+            callback_response = self.client.get(
+                reverse("accounts:social-login-callback", kwargs={"provider": "google"}),
+                {"code": "oauth-code", "state": state},
+                HTTP_HOST="localhost:8002",
+            )
+        finally:
+            google_oauth_login_commands.http_client = original_http_client
+
+        self.assertEqual(callback_response.status_code, 302)
+        self.assertEqual(Customer.objects.filter(tenant=self.tenant, email="cliente.google@example.com").count(), 1)
+        self.assertEqual(AccountProfile.objects.filter(tenant=self.tenant, email="cliente.google@example.com").count(), 1)
+        self.assertEqual(self.client.session["hubx_account_profile_id"], profile.id)
 
     def test_owner_login_post_authenticates_active_owner_and_redirects_to_next(self):
         response = self.client.post(

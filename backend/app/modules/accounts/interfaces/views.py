@@ -24,6 +24,10 @@ from app.modules.accounts.application.demo_session_login_commands import (
     DEMO_SESSION_SOURCE_KEY,
     demo_session_login_commands,
 )
+from app.modules.accounts.application.google_oauth_login_commands import (
+    GoogleOAuthProviderError,
+    google_oauth_login_commands,
+)
 from app.modules.accounts.application.post_login_redirects import post_login_redirects
 from app.modules.accounts.application.owner_access_recovery_commands import owner_access_recovery_commands
 from app.modules.accounts.application.owner_access_metrics_queries import owner_access_metrics_queries
@@ -57,6 +61,69 @@ def _quick_links() -> list[dict[str, str]]:
 
 def _request_tenant_id(request) -> int | None:
     return getattr(getattr(request, "tenant", None), "id", None)
+
+
+SOCIAL_LOGIN_PROVIDERS = {
+    "google": {"key": "google", "label": "Continuar com Google", "icon": "G"},
+}
+
+
+def _social_login_options(*, next_url: str = "") -> list[dict[str, str]]:
+    options = []
+    for provider in SOCIAL_LOGIN_PROVIDERS.values():
+        href = reverse("accounts:social-login-start", kwargs={"provider": provider["key"]})
+        if next_url:
+            href = f"{href}?{urlencode({'next': next_url})}"
+        options.append({**provider, "href": href})
+    return options
+
+
+def _social_feedback(result: object) -> dict[str, str] | None:
+    normalized_result = str(result or "").strip()
+    if not normalized_result:
+        return None
+    if normalized_result in {"social-unavailable", "google-oauth-unavailable"}:
+        return {
+            "variant": "warning",
+            "title": "Login social em preparação",
+            "description": "Google ainda não está configurado para esta loja. Use e-mail e senha por enquanto.",
+        }
+    if normalized_result in {"google-oauth-tenant-required", "google-oauth-tenant-invalid"}:
+        return {
+            "variant": "warning",
+            "title": "Acesse pela loja",
+            "description": "Entre pelo endereço da loja para conectar sua conta com segurança.",
+        }
+    if normalized_result == "google-oauth-email-unverified":
+        return {
+            "variant": "warning",
+            "title": "E-mail Google não verificado",
+            "description": "Confirme o e-mail na sua Conta Google antes de usar o login social.",
+        }
+    if normalized_result in {"google-oauth-profile-inactive", "google-oauth-customer-inactive", "google-oauth-user-inactive"}:
+        return {
+            "variant": "warning",
+            "title": "Conta indisponível",
+            "description": "Esta conta precisa ser reativada pela loja antes de acessar.",
+        }
+    if normalized_result in {
+        "google-oauth-missing-code",
+        "google-oauth-invalid-state",
+        "google-oauth-email-missing",
+        "google-oauth-ambiguous-user",
+        "google-oauth-provider-error",
+    }:
+        return {
+            "variant": "warning",
+            "title": "Não foi possível entrar com Google",
+            "description": "Tente novamente ou use e-mail e senha por enquanto.",
+        }
+    return {
+        "variant": "warning",
+        "title": "Login social indisponível",
+        "description": "Tente novamente em alguns instantes ou use e-mail e senha.",
+    }
+
 
 def _build_page_items(page_number: int, total_pages: int, base_url: str, query_params: list[str]) -> list[dict[str, object]]:
     suffix = "&".join(query_params)
@@ -614,6 +681,8 @@ class LoginView(TemplateView):
         context["register_href"] = reverse("accounts:register")
         context["forgot_password_href"] = reverse("accounts:forgot-password")
         context["next_url"] = self._safe_next_url()
+        context["social_login_options"] = _social_login_options(next_url=context["next_url"])
+        context["social_feedback"] = _social_feedback(self.request.GET.get("social"))
         if tenant_id is None:
             context["portal_href"] = "/"
             context["plans_href"] = "/plans/"
@@ -709,6 +778,76 @@ class LoginView(TemplateView):
         return ""
 
 
+class SocialLoginStartView(View):
+    def get(self, request, *args, **kwargs):
+        provider = str(kwargs.get("provider") or "").strip().lower()
+        if provider not in SOCIAL_LOGIN_PROVIDERS:
+            raise Http404("Provedor social indisponível.")
+        if provider != "google":
+            return self._redirect_to_login(request=request, result="social-unavailable")
+
+        next_url = str(request.GET.get("next") or "").strip()
+        if next_url and url_has_allowed_host_and_scheme(
+            next_url,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        ):
+            safe_next_url = next_url
+        else:
+            safe_next_url = ""
+        result = google_oauth_login_commands.build_authorization_url(
+            request=request,
+            tenant=getattr(request, "tenant", None),
+            next_url=safe_next_url,
+        )
+        if result.get("result") == "google-oauth-ready":
+            return HttpResponseRedirect(str(result["authorization_url"]))
+        result_key = str(result.get("result") or "google-oauth-unavailable")
+        if result_key == "google-oauth-unavailable":
+            result_key = "social-unavailable"
+        return self._redirect_to_login(request=request, result=result_key, next_url=safe_next_url)
+
+    def _redirect_to_login(self, *, request, result: str, next_url: str = ""):
+        login_url = reverse("accounts:login")
+        params = {"social": result}
+        if next_url:
+            params["next"] = next_url
+        return HttpResponseRedirect(f"{login_url}?{urlencode(params)}")
+
+
+class SocialLoginCallbackView(View):
+    def get(self, request, *args, **kwargs):
+        provider = str(kwargs.get("provider") or "").strip().lower()
+        if provider not in SOCIAL_LOGIN_PROVIDERS:
+            raise Http404("Provedor social indisponível.")
+        if provider != "google":
+            return self._redirect_to_login(result="social-unavailable")
+        try:
+            result = google_oauth_login_commands.authenticate_callback(
+                request=request,
+                code=request.GET.get("code"),
+                state=request.GET.get("state"),
+            )
+        except GoogleOAuthProviderError:
+            result = {"result": "google-oauth-provider-error"}
+        if result.get("result") == "google-oauth-authenticated":
+            next_url = str(result.get("next_url") or "").strip()
+            if next_url and url_has_allowed_host_and_scheme(
+                next_url,
+                allowed_hosts={request.get_host()},
+                require_https=request.is_secure(),
+            ):
+                return HttpResponseRedirect(next_url)
+            return HttpResponseRedirect(reverse("accounts:account-overview"))
+        result_key = str(result.get("result") or "google-oauth-provider-error")
+        if result_key == "google-oauth-unavailable":
+            result_key = "social-unavailable"
+        return self._redirect_to_login(result=result_key)
+
+    def _redirect_to_login(self, *, result: str):
+        return HttpResponseRedirect(f"{reverse('accounts:login')}?{urlencode({'social': result})}")
+
+
 class DemoSessionLoginView(View):
     def get(self, request, *args, **kwargs):
         result = demo_session_login_commands.authenticate_demo_profile(
@@ -739,6 +878,7 @@ class OwnerMfaChallengeView(TemplateView):
                 "secondary_href": reverse("accounts:login"),
                 "helper_text": f"Challenge pendente para {pending.get('owner_email', 'owner/admin')}.",
                 "forgot_password_href": reverse("accounts:forgot-password"),
+                "social_login_options": [],
                 "next_url": pending.get("next_url", ""),
                 "mfa_ready": pending.get("ready", False),
             }

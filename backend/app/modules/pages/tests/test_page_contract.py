@@ -110,6 +110,8 @@ class PageContractTests(TestCase):
         self.assertEqual(links[1]["icon"], "mail")
 
     def test_storefront_view_renders_published_page(self):
+        self.tenant.storefront_hero_image_url = "https://cdn.example.com/pages/share.jpg"
+        self.tenant.save(update_fields=["storefront_hero_image_url"])
         Page.objects.create(
             tenant=self.tenant,
             slug="sobre",
@@ -126,6 +128,9 @@ class PageContractTests(TestCase):
         self.assertContains(response, "Sobre a loja")
         self.assertContains(response, "Conteúdo institucional")
         self.assertContains(response, "Conheça nossa curadoria")
+        self.assertContains(response, '<meta property="og:image" content="https://cdn.example.com/pages/share.jpg">')
+        self.assertContains(response, '<meta property="og:title" content="Sobre a loja">')
+        self.assertContains(response, '<meta property="og:url" content="http://loja-pages.hubx.market/pages/sobre/">')
 
     def test_storefront_footer_renders_published_pages_from_context(self):
         Page.objects.create(tenant=self.tenant, slug="contato", title="Contato", status=Page.Status.PUBLISHED)

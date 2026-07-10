@@ -21,6 +21,19 @@ def _request_owner_role(request) -> str:
     return request_owner_role(request)
 
 
+def _absolute_public_url(request, value: object) -> str:
+    url = str(value or "").strip()
+    if not url:
+        return ""
+    if url.startswith(("http://", "https://")):
+        return url
+    if url.startswith("//"):
+        return f"{request.scheme}:{url}"
+    if url.startswith("/"):
+        return request.build_absolute_uri(url)
+    return ""
+
+
 class DesignSystemPagesView(TemplateView):
     template_name = "pages/design_system/pages.html"
 
@@ -198,6 +211,15 @@ class StorefrontPageDetailView(TemplateView):
                 "page": page,
                 "page_title": page["seo_title"] or page["title"],
                 "meta_description": page["seo_description"],
+                "meta_title": page["seo_title"] or page["title"],
+                "meta_image_url": _absolute_public_url(
+                    self.request,
+                    getattr(getattr(self.request, "tenant", None), "storefront_hero_image_url", ""),
+                ),
+                "meta_image_alt": str(getattr(getattr(self.request, "tenant", None), "name", "") or page["title"]),
+                "canonical_url": self.request.build_absolute_uri(
+                    reverse("storefront_pages:page-detail", kwargs={"page_slug": kwargs.get("page_slug", "")})
+                ),
             }
         )
         return context

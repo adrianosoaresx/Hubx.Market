@@ -45,6 +45,7 @@ Definir esqueletos padrão de página.
 - shell com sidebar em desktop contendo identidade da loja, navegação, conta e pedidos; em mobile a navegação pode ficar horizontal/rolável
 - hero institucional tenant-owned via `shared/partials/storefront_institutional_hero.html`
 - imagem real do hero quando configurada; fallback pode vir de produto do próprio tenant
+- metadados de compartilhamento (`og:image`/`twitter:image`) devem priorizar a imagem do hero configurada no tenant; quando a view já possui fallback tenant-scoped de produto, pode usar essa imagem sem consultar catálogo fora do tenant
 - sinais curtos de confiança dentro do hero
 - produtos visíveis logo abaixo do hero
 - footer padrão com links úteis e seletor de tema; o header do storefront não deve duplicar esse controle

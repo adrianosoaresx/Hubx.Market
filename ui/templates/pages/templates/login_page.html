@@ -3,10 +3,10 @@
 {% block title %}{{ page_title|default:"Entrar" }}{% endblock %}
 
 {% block content %}
-<section class="space-y-6">
-    <form method="{{ form_method|default:'post' }}" action="{{ form_action|default:request.path }}" class="ds-surface space-y-6 p-6 sm:p-8">
+<section class="auth-login-content">
+    <form method="{{ form_method|default:'post' }}" action="{{ form_action|default:request.path }}" class="auth-login-form">
         {% csrf_token %}
-        <div class="space-y-2">
+        <div class="auth-login-heading">
             <h1 class="text-base font-semibold text-[var(--color-text-primary)]">{{ page_title|default:"Entrar" }}</h1>
             <p class="text-sm text-[var(--color-text-secondary)]">
                 {{ page_description|default:"Acesse sua conta para acompanhar pedidos, perfil e preferências." }}
@@ -14,6 +14,27 @@
         </div>
         {% if next_url %}
             <input type="hidden" name="next" value="{{ next_url }}">
+        {% endif %}
+
+        {% if social_feedback %}
+            {% include "shared/components/feedback/alert.html" with variant=social_feedback.variant title=social_feedback.title description=social_feedback.description %}
+        {% endif %}
+
+        {% if social_login_options %}
+            <div class="auth-social-actions" aria-label="Entrar com uma conta social">
+                {% for provider in social_login_options %}
+                    <a href="{{ provider.href }}" class="auth-social-button auth-social-button-{{ provider.key }}">
+                        <span class="auth-social-icon" aria-hidden="true">{{ provider.icon }}</span>
+                        <span>{{ provider.label }}</span>
+                    </a>
+                {% endfor %}
+            </div>
+
+            <div class="auth-login-divider">
+                <span></span>
+                <p>ou entre com e-mail</p>
+                <span></span>
+            </div>
         {% endif %}
 
         {% block login_fields %}

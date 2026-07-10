@@ -19,6 +19,8 @@ from .views import (
     OwnerMfaProviderHealthMetricsView,
     RegisterView,
     ResetPasswordView,
+    SocialLoginCallbackView,
+    SocialLoginStartView,
     StoreSelectionView,
 )
 
@@ -29,6 +31,8 @@ app_name = "accounts"
 urlpatterns = [
     path("demo-session/", DemoSessionLoginView.as_view(), name="demo-session-login"),
     path("login/", LoginView.as_view(), name="login"),
+    path("social/<str:provider>/", SocialLoginStartView.as_view(), name="social-login-start"),
+    path("social/<str:provider>/callback/", SocialLoginCallbackView.as_view(), name="social-login-callback"),
     path("login/mfa/", OwnerMfaChallengeView.as_view(), name="owner-mfa-challenge"),
     path("logout/", LogoutView.as_view(), name="logout"),
     path("select-store/", StoreSelectionView.as_view(), name="select-store"),

@@ -112,6 +112,18 @@ Fora de escopo atual:
 - queries de leitura para auth/account devem viver em `application/`; fallback temporário de páginas de entrada e visão geral deve ficar nessa camada, não nas views
 - queries de leitura para a área logada do cliente também devem viver em `application/`; paginação, querystring e hrefs podem permanecer nas views como adaptação HTTP
 
+## Login social Google para clientes
+
+- o botão Google inicia em `accounts.interfaces.views.SocialLoginStartView`;
+- a regra de troca de `code`, leitura de userinfo e vínculo de conta vive em `accounts.application.google_oauth_login_commands`;
+- o fluxo exige tenant ativo e preserva `tenant_id` em `state` assinado com expiração curta;
+- o callback cria ou reutiliza `Customer` e `AccountProfile` apenas dentro do tenant do `state`;
+- `Customer` inativo, `AccountProfile` inativo, usuário Django inativo ou múltiplos usuários Django com o mesmo e-mail bloqueiam o login social;
+- e-mail Google precisa vir verificado (`email_verified`);
+- a sessão final é de cliente (`hubx_account_session_kind = customer`) e limpa metadados de sessão owner/MFA;
+- credenciais são configuradas por `GOOGLE_OAUTH_ENABLED`, `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` e `GOOGLE_OAUTH_REDIRECT_URI`;
+- segredo OAuth não deve ser versionado; em desenvolvimento local fica em `backend/.env`.
+
 ## Escopo por tenant nas leituras de conta
 - as query layers de login, cadastro, recuperação e visão geral agora também aceitam `tenant_id` explícito
 - quando o request já possui tenant resolvido, a camada `interfaces/` repassa esse contexto para preferir o `AccountProfile` correto da loja

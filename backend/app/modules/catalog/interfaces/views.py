@@ -97,6 +97,37 @@ def _storefront_hero_fallback_image(products: list[dict[str, object]]) -> str:
     return ""
 
 
+def _absolute_public_url(request, value: object) -> str:
+    url = str(value or "").strip()
+    if not url:
+        return ""
+    if url.startswith(("http://", "https://")):
+        return url
+    if url.startswith("//"):
+        return f"{request.scheme}:{url}"
+    if url.startswith("/"):
+        return request.build_absolute_uri(url)
+    return ""
+
+
+def _storefront_social_meta(
+    request,
+    *,
+    title: str,
+    description: str = "",
+    image_url: object = "",
+    image_alt: str = "",
+    canonical_path: str = "",
+) -> dict[str, str]:
+    return {
+        "meta_title": title,
+        "meta_description": description,
+        "meta_image_url": _absolute_public_url(request, image_url),
+        "meta_image_alt": image_alt or title,
+        "canonical_url": request.build_absolute_uri(canonical_path or request.path),
+    }
+
+
 def _require_storefront_tenant(request):
     tenant = getattr(request, "tenant", None)
     tenant_id = getattr(tenant, "id", None)
@@ -1448,24 +1479,34 @@ class CatalogListView(TemplateView):
             or sort_value != "recommended"
         )
 
+        storefront_hero = storefront_branding_queries.get_home_hero(
+            tenant=tenant,
+            defaults=StorefrontHeroDefaults(
+                catalog_href=base_url,
+                newsletter_href=reverse("storefront_newsletter:newsletter-subscribe"),
+                fallback_image_url=_storefront_hero_fallback_image(products),
+            ),
+        )
+
         context.update(
             {
                 "page_title": "Loja",
                 "page_description": page_description,
+                **_storefront_social_meta(
+                    self.request,
+                    title=f"Loja - {getattr(tenant, 'name', '') or 'Hubx Market'}",
+                    description=page_description,
+                    image_url=storefront_hero.get("image_url"),
+                    image_alt=str(storefront_hero.get("title") or getattr(tenant, "name", "") or "Loja"),
+                    canonical_path=base_url,
+                ),
                 "page_meta": _catalog_reentry_meta(
                     category_label=category_label,
                     search_value=search_value,
                     quick_filter=quick_filter,
                 ),
                 "results_meta": results_meta,
-                "storefront_hero": storefront_branding_queries.get_home_hero(
-                    tenant=tenant,
-                    defaults=StorefrontHeroDefaults(
-                        catalog_href=base_url,
-                        newsletter_href=reverse("storefront_newsletter:newsletter-subscribe"),
-                        fallback_image_url=_storefront_hero_fallback_image(products),
-                    ),
-                ),
+                "storefront_hero": storefront_hero,
                 "filter_action": base_url,
                 "filter_description": filter_description,
                 "filters_open": filters_open,
@@ -1544,19 +1585,29 @@ class StorefrontHomeView(TemplateView):
             product_ids=product_ids,
         )
 
+        storefront_hero = storefront_branding_queries.get_home_hero(
+            tenant=tenant,
+            defaults=StorefrontHeroDefaults(
+                catalog_href=reverse("storefront:catalog-list"),
+                newsletter_href=reverse("storefront_newsletter:newsletter-subscribe"),
+                fallback_image_url=_storefront_hero_fallback_image(featured_products),
+            ),
+        )
+
         context.update(
             {
                 "page_title": "Início",
                 "hero_title": f"{getattr(tenant, 'name', '') or 'Hubx Market'}",
                 "hero_description": "Descubra produtos em destaque, acompanhe novidades e siga para uma compra segura.",
-                "storefront_hero": storefront_branding_queries.get_home_hero(
-                    tenant=tenant,
-                    defaults=StorefrontHeroDefaults(
-                        catalog_href=reverse("storefront:catalog-list"),
-                        newsletter_href=reverse("storefront_newsletter:newsletter-subscribe"),
-                        fallback_image_url=_storefront_hero_fallback_image(featured_products),
-                    ),
+                **_storefront_social_meta(
+                    self.request,
+                    title=str(storefront_hero.get("title") or getattr(tenant, "name", "") or "Loja online"),
+                    description=str(storefront_hero.get("description") or ""),
+                    image_url=storefront_hero.get("image_url"),
+                    image_alt=str(storefront_hero.get("title") or getattr(tenant, "name", "") or "Loja online"),
+                    canonical_path=reverse("storefront-home"),
                 ),
+                "storefront_hero": storefront_hero,
                 "featured_products": [
                     _build_storefront_product_card(
                         product,
@@ -1796,6 +1847,14 @@ class ProductDetailView(TemplateView):
                 "product_gallery_items": gallery_items,
                 "main_image_url": product.get("main_image_url", gallery_items[0]["url"]),
                 "main_image_alt": product.get("main_image_alt", gallery_items[0]["alt"]),
+                **_storefront_social_meta(
+                    self.request,
+                    title=str(product["name"]),
+                    description=str(product.get("product_subtitle") or product.get("short_description") or product["description"] or ""),
+                    image_url=product.get("main_image_url", gallery_items[0]["url"]),
+                    image_alt=str(product.get("main_image_alt") or gallery_items[0]["alt"] or product["name"]),
+                    canonical_path=product_detail_url,
+                ),
                 "variant_groups": product.get("variant_groups") or _build_variant_groups(product),
                 "quantity": product.get("quantity", 1),
                 "form_action": product_detail_url,

@@ -164,6 +164,44 @@ class StorefrontViewTests(TestCase):
         self.assertContains(response, "Explorar vitrine")
         self.assertContains(response, 'href="/catalog/?quick_filter=featured"')
 
+    def test_storefront_home_uses_tenant_hero_image_for_social_preview(self):
+        self.tenant.storefront_hero_title = "Móveis rústicos com história"
+        self.tenant.storefront_hero_description = "Peças selecionadas para ambientes com presença."
+        self.tenant.storefront_hero_image_url = "https://cdn.example.com/arnaldo/share.jpg"
+        self.tenant.save(
+            update_fields=[
+                "storefront_hero_title",
+                "storefront_hero_description",
+                "storefront_hero_image_url",
+            ]
+        )
+
+        response = self.client.get(reverse("storefront-home"), HTTP_HOST=self.storefront_host)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '<meta property="og:image" content="https://cdn.example.com/arnaldo/share.jpg">')
+        self.assertContains(response, '<meta name="twitter:image" content="https://cdn.example.com/arnaldo/share.jpg">')
+        self.assertContains(response, '<meta property="og:title" content="Móveis rústicos com história">')
+        self.assertContains(response, '<meta property="og:url" content="http://hubx-storefront-demo.hubx.market/">')
+
+    def test_catalog_list_social_preview_falls_back_to_tenant_scoped_product_image(self):
+        product = Product.objects.get(tenant=self.tenant, slug="tenis-hubx-runner")
+        product.images.create(
+            image_url="/media/catalog/runner-share.jpg",
+            alt_text="Tênis Hubx Runner em destaque",
+            position=1,
+            is_primary=True,
+        )
+
+        response = self.client.get(reverse("storefront:catalog-list"), HTTP_HOST=self.storefront_host)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            '<meta property="og:image" content="http://hubx-storefront-demo.hubx.market/media/catalog/runner-share.jpg">',
+        )
+        self.assertContains(response, '<link rel="canonical" href="http://hubx-storefront-demo.hubx.market/catalog/">')
+
     def test_storefront_shell_renders_configured_tenant_logo(self):
         self.tenant.logo_url = "https://cdn.example.com/store/logo.png"
         self.tenant.save(update_fields=["logo_url"])
@@ -1413,6 +1451,28 @@ class StorefrontPersistedReadTests(TestCase):
 
         self.assertIn("placehold.co", item["main_image_url"])
         self.assertTrue(item["product_gallery_items"])
+
+    def test_product_detail_uses_product_main_image_for_social_preview(self):
+        product = Product.objects.get(tenant=self.tenant, slug="tenis-hubx-runner")
+        product.images.create(
+            image_url="https://cdn.example.com/catalog/runner-pdp.jpg",
+            alt_text="Tênis Hubx Runner na vitrine",
+            position=1,
+            is_primary=True,
+        )
+
+        response = self.client.get(
+            reverse("storefront:product-detail", kwargs={"product_slug": "tenis-hubx-runner"}),
+            HTTP_HOST=self.storefront_host,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, '<meta property="og:image" content="https://cdn.example.com/catalog/runner-pdp.jpg">')
+        self.assertContains(response, '<meta property="og:title" content="Tênis Hubx Runner">')
+        self.assertContains(
+            response,
+            '<meta property="og:url" content="http://hubx-storefront-demo.hubx.market/catalog/tenis-hubx-runner/">',
+        )
 
     def test_storefront_main_image_prefers_media_coherent_with_default_variant_when_possible(self):
         tenant = Tenant.objects.create(name="Coerência PDP", slug="coerencia-pdp", subdomain="coerencia-pdp")

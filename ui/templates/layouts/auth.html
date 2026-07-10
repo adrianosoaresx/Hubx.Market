@@ -21,13 +21,17 @@
     </header>
     {% include "shared/partials/demo_read_only_banner.html" %}
 
-    <main class="mx-auto grid min-h-[calc(100vh-9rem)] max-w-7xl items-center gap-8 px-6 py-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(360px,0.75fr)]">
-        <aside class="auth-visual relative hidden overflow-hidden lg:block" aria-hidden="true">
+    <main class="auth-page-shell mx-auto flex min-h-[calc(100vh-9rem)] max-w-7xl items-center px-6 py-10">
+        <section class="auth-integrated-panel">
+            <aside class="auth-visual relative overflow-hidden" aria-hidden="true">
             {% firstof request.tenant.storefront_hero_image_url "/static/img/brand/hubx-public-hero.jpg" as auth_visual_image_url %}
             <img class="auth-visual-image" src="{{ auth_visual_image_url }}" alt="">
             <div class="auth-visual-shade"></div>
             <div class="auth-visual-copy">
                 {% if request.tenant %}
+                    <div class="auth-visual-brand">
+                        {% include "shared/partials/brand_identity.html" with brand_scope="Loja online" brand_href="/" size="lg" %}
+                    </div>
                     <p class="auth-visual-eyebrow">{{ request.tenant.name }}</p>
                     <p class="auth-visual-title">Sua próxima compra começa aqui.</p>
                     <p class="auth-visual-description">Entre para acompanhar seus pedidos e encontrar novidades da loja.</p>
@@ -37,10 +41,11 @@
                     <p class="auth-visual-description">Conta, pedidos e administração vivem no mesmo ecossistema tenant-owned, preservando a identidade da loja.</p>
                 {% endif %}
             </div>
-        </aside>
-        <div class="w-full max-w-lg justify-self-center lg:justify-self-end">
+            </aside>
+        <div class="auth-form-shell">
             {% block content %}{% endblock %}
         </div>
+        </section>
     </main>
 
     {% if request.tenant %}
