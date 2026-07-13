@@ -112,7 +112,7 @@ class AdminMerchantOperationsViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Pedidos")
-        self.assertNotContains(response, "Owners inativos ou com notificações administrativas pausadas")
+        self.assertNotContains(response, "Administradores inativos ou com notificações administrativas pausadas")
 
     def test_merchant_ops_dashboard_scopes_signals_to_resolved_tenant(self):
         OwnerUser.objects.create(
@@ -146,4 +146,4 @@ class AdminMerchantOperationsViewTests(TestCase):
 
         task_counts = {task["area"]: task["count"] for task in dashboard["tasks"]}
         self.assertEqual(task_counts["Pedidos"], 1)
-        self.assertEqual(task_counts["Owners"], 1)
+        self.assertEqual(task_counts["Administradores"], 1)

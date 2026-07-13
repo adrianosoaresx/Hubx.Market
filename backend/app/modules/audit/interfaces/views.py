@@ -39,7 +39,7 @@ class AdminAuditLogListView(TemplateView):
 
         context.update(
             {
-                "page_title": "Audit log",
+                "page_title": "Auditoria",
                 "page_eyebrow": "Governança",
                 "page_description": "Leitura tenant-scoped de eventos auditáveis administrativos.",
                 "filter_action": reverse("audit:admin-audit-log-list"),

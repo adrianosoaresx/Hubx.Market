@@ -68,6 +68,7 @@ subscriptions
 platform-admin
 audit
 api-keys
+assistant
 ```
 
 ## Responsabilidades
@@ -82,6 +83,7 @@ api-keys
 - provisionar signup self-service controlado em `/plans/signup/` quando a feature flag e o controle de acesso estiverem ativos, criando tenant em manutenção para plano elegível sem método obrigatório, com provider-alvo Asaas sem capturar cartão/token
 - auditoria do sistema
 - integração administrativa
+- assistente operacional para owners/admins baseado na documentação interna
 
 ---
 

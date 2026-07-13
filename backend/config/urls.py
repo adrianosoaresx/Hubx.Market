@@ -26,6 +26,7 @@ urlpatterns = [
     path("ops/", include(("app.modules.accounts.interfaces.merchant_ops_urls", "merchant_ops"), namespace="merchant_ops")),
     path("ops/audit/", include(("app.modules.audit.interfaces.urls", "audit"), namespace="audit")),
     path("ops/api-keys/", include(("app.modules.api_keys.interfaces.ops_urls", "api_keys_ops"), namespace="api_keys_ops")),
+    path("ops/assistant/", include(("app.modules.assistant.interfaces.urls", "assistant"), namespace="assistant")),
     path("ops/catalog/", include(("app.modules.catalog.interfaces.urls", "catalog"), namespace="catalog")),
     path("ops/checkout/", include(("app.modules.checkout.interfaces.ops_urls", "checkout_ops"), namespace="checkout_ops")),
     path("ops/coupons/", include(("app.modules.coupons.interfaces.urls", "coupons"), namespace="coupons")),

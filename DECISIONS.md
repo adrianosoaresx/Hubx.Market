@@ -8267,3 +8267,19 @@ Consequências:
 - Essencial não exibe ação de método de cobrança porque não possui mínimo mensal.
 - códigos internos como `starter` não devem aparecer em mensagens de sucesso ou tabela tenant-facing.
 - cobrança complementar do Pro depende de cliente Asaas, URL hospedada ou referência tokenizada obtida fora de campos livres.
+
+## 2026-07-10 — Assistente Operacional IA MVP
+
+Decisão:
+
+- criar o módulo `assistant` como guia interno para owners/admins em `/ops/assistant/`.
+- o primeiro corte responde com base na documentação versionada do Hubx Market.
+- LLM é opcional por settings; quando indisponível, a resposta usa fallback textual local.
+- histórico e feedback são persistidos por tenant com sanitização.
+- o assistente não consulta dados reais da loja e não executa ações operacionais no MVP.
+
+Consequências:
+
+- a fronteira do assistente permanece separada de `catalog`, `orders`, `payments`, `customers` e `checkout`.
+- uso do assistente registra `AuditLog` tenant-scoped sem pergunta/resposta em metadata.
+- fases futuras de contexto real da loja ou ações guiadas exigem nova revisão de permissões e module boundaries.

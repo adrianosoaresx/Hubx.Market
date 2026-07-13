@@ -250,9 +250,9 @@ class AdminPaymentRefundsView(TemplateView):
         feedback = _refund_feedback(self.request.GET.get("result"))
         context.update(
             {
-                "page_title": "Refunds de pagamentos",
-                "page_eyebrow": "Payments",
-                "page_description": "Aprovação e execução controlada de refunds tenant-scoped com registro no ledger.",
+                "page_title": "Reembolsos de pagamentos",
+                "page_eyebrow": "Pagamentos",
+                "page_description": "Aprovação e execução controlada de reembolsos tenant-scoped com registro no ledger.",
                 "page_meta": "A execução chama o provider somente para refunds em processamento e sem referência externa.",
                 "page_note": feedback.get("description")
                 or "Revise bloqueios, idempotência e referência do provider antes de operar um refund.",

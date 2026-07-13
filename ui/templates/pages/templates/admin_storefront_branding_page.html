@@ -1,11 +1,11 @@
 {% extends layout_template|default:"layouts/admin_shell.html" %}
 
-{% block page_title %}{{ page_title|default:"Branding da loja" }}{% endblock %}
-{% block shell_title %}{% if shell_title %}{{ shell_title }}{% elif page_title %}{{ page_title }}{% else %}Branding da loja{% endif %}{% endblock %}
+{% block page_title %}{{ page_title|default:"Marca da loja" }}{% endblock %}
+{% block shell_title %}{% if shell_title %}{{ shell_title }}{% elif page_title %}{{ page_title }}{% else %}Marca da loja{% endif %}{% endblock %}
 
 {% block content %}
 <section class="space-y-6">
-    {% with eyebrow=page_eyebrow|default:"Conteúdo" title=page_title|default:"Branding da loja" description=page_description meta=page_meta %}
+    {% with eyebrow=page_eyebrow|default:"Conteúdo" title=page_title|default:"Marca da loja" description=page_description meta=page_meta %}
         {% include "shared/components/layout/admin_page_header.html" %}
     {% endwith %}
 

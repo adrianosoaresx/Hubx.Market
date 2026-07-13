@@ -13,7 +13,7 @@ class ApiKeyPublicEndpointMetricsView(View):
     def get(self, request, *args, **kwargs):
         configured_token = str(getattr(settings, "API_KEYS_OBSERVABILITY_TOKEN", "") or "").strip()
         if not configured_token:
-            return HttpResponseNotFound("Métricas de API keys indisponíveis.")
+            return HttpResponseNotFound("Métricas de chaves de API indisponíveis.")
 
         provided_token = str(request.headers.get("X-Hubx-Observability-Token", "") or "").strip()
         if not provided_token:

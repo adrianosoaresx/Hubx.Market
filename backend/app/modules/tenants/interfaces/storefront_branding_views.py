@@ -45,7 +45,7 @@ class StorefrontBrandingSettingsView(TemplateView):
         can_save = can_manage and not is_demo_read_only
         result = str(self.request.GET.get("result") or "")
         return {
-            "page_title": "Branding da loja",
+            "page_title": "Marca da loja",
             "page_eyebrow": "Conteúdo",
             "page_description": "Configure logo, cor de conversão e hero institucional exibidos no storefront tenant-owned.",
             "page_meta": f"Escopo tenant · role: {_request_owner_role(self.request) or 'compatibilidade legada'}",
@@ -60,7 +60,7 @@ class StorefrontBrandingSettingsView(TemplateView):
             ),
             "errors": errors or {},
             "form_error": (errors or {}).get("__all__", ""),
-            "success_message": "Branding salvo." if result == "storefront-branding-updated" else "",
+            "success_message": "Marca da loja salva." if result == "storefront-branding-updated" else "",
             "storefront_hero": storefront_branding_queries.get_home_hero(tenant=tenant) if tenant else {"enabled": False},
             **initial,
         }

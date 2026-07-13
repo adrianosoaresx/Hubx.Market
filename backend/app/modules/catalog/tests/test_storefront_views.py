@@ -374,7 +374,8 @@ class StorefrontViewTests(TestCase):
         self.assertContains(response, "storefront-topbar")
         self.assertContains(response, 'aria-label="Navegação da loja"')
         self.assertContains(response, "Tênis Hubx Runner")
-        self.assertContains(response, "Explore a loja, compare opções disponíveis")
+        self.assertNotContains(response, "storefront-catalog-meta")
+        self.assertNotContains(response, "Explore a loja, compare opções disponíveis")
         self.assertNotContains(response, "curadoria leve")
 
     def test_catalog_list_view_exposes_infinite_scroll_product_fragment(self):
@@ -425,9 +426,8 @@ class StorefrontViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Mochila Hubx Urban")
         self.assertNotContains(response, "Tênis Hubx Runner")
-        self.assertContains(response, "busca atual: “mochila”")
-        self.assertContains(response, "Resultados para “mochila”")
-        self.assertContains(response, "produtos que mais combinam com sua busca")
+        self.assertContains(response, 'value="mochila"')
+        self.assertContains(response, "Filtrar produtos")
 
     def test_catalog_list_view_search_matches_category_without_accents(self):
         response = self.client.get(reverse("storefront:catalog-list"), {"q": "acessorios"}, HTTP_HOST=self.storefront_host)
@@ -435,7 +435,7 @@ class StorefrontViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Mochila Hubx Urban")
         self.assertNotContains(response, "Tênis Hubx Runner")
-        self.assertContains(response, "nome, marca, categoria e descrição dos produtos")
+        self.assertContains(response, 'value="acessorios"')
 
     def test_catalog_list_view_search_matches_description_terms(self):
         response = self.client.get(reverse("storefront:catalog-list"), {"q": "tecido respiravel"}, HTTP_HOST=self.storefront_host)
@@ -455,9 +455,9 @@ class StorefrontViewTests(TestCase):
         response = self.client.get(reverse("storefront:catalog-list"), {"category": "calcados"}, HTTP_HOST=self.storefront_host)
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "categoria atual: Calçados")
-        self.assertContains(response, "Explore produtos de calçados")
-        self.assertContains(response, "Use a categoria atual para ver produtos de calçados")
+        self.assertContains(response, "Calçados</option>")
+        self.assertContains(response, "Tênis Hubx Runner")
+        self.assertNotContains(response, "Mochila Hubx Urban")
 
     def test_catalog_list_view_shows_search_empty_state_guidance(self):
         response = self.client.get(reverse("storefront:catalog-list"), {"q": "nada-aqui"}, HTTP_HOST=self.storefront_host)
@@ -478,18 +478,17 @@ class StorefrontViewTests(TestCase):
         response = self.client.get(reverse("storefront:catalog-list"), {"quick_filter": "in_stock"}, HTTP_HOST=self.storefront_host)
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Filtro rápido ativo: Pronta entrega")
-        self.assertContains(response, "filtro rápido: Pronta entrega")
-        self.assertContains(response, "use Limpar para remover este recorte")
-        self.assertContains(response, "Use Limpar para voltar à vitrine completa")
+        self.assertContains(response, "Filtro rápido")
+        self.assertContains(response, "Pronta entrega")
+        self.assertContains(response, "Limpar")
+        self.assertContains(response, "Tênis Hubx Runner")
 
     def test_catalog_list_view_applies_quick_filter_featured(self):
         response = self.client.get(reverse("storefront:catalog-list"), {"quick_filter": "featured"}, HTTP_HOST=self.storefront_host)
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Filtro rápido ativo: Em destaque")
-        self.assertContains(response, "produtos em destaque da loja")
-        self.assertContains(response, "produtos selecionados para aparecer primeiro na vitrine")
+        self.assertContains(response, "Filtro rápido")
+        self.assertContains(response, "Em destaque")
         self.assertContains(response, "Tênis Hubx Runner")
         self.assertContains(response, "Oferta")
         self.assertContains(response, "Comprar")
@@ -498,33 +497,29 @@ class StorefrontViewTests(TestCase):
         response = self.client.get(reverse("storefront:catalog-list"), {"quick_filter": "quick_buy"}, HTTP_HOST=self.storefront_host)
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Filtro rápido ativo: Compra rápida")
-        self.assertContains(response, "produtos disponíveis para comprar com menos passos")
-        self.assertContains(response, "itens disponíveis agora ou com poucas unidades")
-        self.assertContains(response, "Use Limpar para voltar à vitrine completa")
+        self.assertContains(response, "Filtro rápido")
+        self.assertContains(response, "Compra rápida")
+        self.assertContains(response, "Limpar")
         self.assertContains(response, "Tênis Hubx Runner")
         self.assertContains(response, "Pronta entrega")
         self.assertContains(response, "Comprar")
-        self.assertContains(response, "Produtos disponíveis para você conferir os detalhes")
 
     def test_catalog_list_view_applies_quick_filter_offer(self):
         response = self.client.get(reverse("storefront:catalog-list"), {"quick_filter": "offer"}, HTTP_HOST=self.storefront_host)
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Filtro rápido ativo: Em oferta")
-        self.assertContains(response, "ofertas disponíveis agora")
-        self.assertContains(response, "preço promocional visível na vitrine")
+        self.assertContains(response, "Filtro rápido")
+        self.assertContains(response, "Em oferta")
         self.assertContains(response, "Tênis Hubx Runner")
         self.assertContains(response, "Oferta ativa")
         self.assertContains(response, "Comprar")
-        self.assertContains(response, "Use Limpar para voltar à vitrine completa")
+        self.assertContains(response, "Limpar")
 
     def test_catalog_list_view_applies_availability_facet(self):
         response = self.client.get(reverse("storefront:catalog-list"), {"availability": "backorder"}, HTTP_HOST=self.storefront_host)
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Disponibilidade")
-        self.assertContains(response, "facets: disponibilidade: Sob encomenda")
         self.assertContains(response, "Mochila Hubx Urban")
         self.assertNotContains(response, "Tênis Hubx Runner")
 
@@ -538,8 +533,6 @@ class StorefrontViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Preço mín.")
         self.assertContains(response, "Preço máx.")
-        self.assertContains(response, "preço mínimo: R$ 150,00")
-        self.assertContains(response, "preço máximo: R$ 250,00")
         self.assertContains(response, "Mochila Hubx Urban")
         self.assertNotContains(response, "Tênis Hubx Runner")
 
@@ -548,7 +541,6 @@ class StorefrontViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Somente ofertas")
-        self.assertContains(response, "facets: somente ofertas")
         self.assertIsNone(response.context["next_url"])
 
     def test_catalog_list_view_ignores_invalid_facet_values(self):
@@ -701,7 +693,6 @@ class StorefrontViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Ordenar por")
-        self.assertContains(response, "ordenação: Menor preço")
         self.assertEqual(
             [product["title"] for product in response.context["products"]],
             ["Camiseta Hubx Performance", "Mochila Hubx Urban", "Tênis Hubx Runner"],
@@ -711,7 +702,7 @@ class StorefrontViewTests(TestCase):
         response = self.client.get(reverse("storefront:catalog-list"), {"sort": "price_desc"}, HTTP_HOST=self.storefront_host)
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "ordenação: Maior preço")
+        self.assertContains(response, "Ordenar por")
         self.assertEqual(
             [product["title"] for product in response.context["products"]],
             ["Tênis Hubx Runner", "Mochila Hubx Urban", "Camiseta Hubx Performance"],
@@ -721,7 +712,7 @@ class StorefrontViewTests(TestCase):
         response = self.client.get(reverse("storefront:catalog-list"), {"sort": "name_asc"}, HTTP_HOST=self.storefront_host)
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "ordenação: Nome A-Z")
+        self.assertContains(response, "Ordenar por")
         self.assertEqual(
             [product["title"] for product in response.context["products"]],
             ["Camiseta Hubx Performance", "Mochila Hubx Urban", "Tênis Hubx Runner"],
@@ -981,9 +972,10 @@ class StorefrontPersistedReadTests(TestCase):
         self.assertContains(list_response, "Comprar")
         self.assertNotContains(list_response, "SKU RUNNER-PERSIST-BLK-42")
         self.assertNotContains(list_response, "Combinação em destaque")
-        self.assertContains(list_response, "Explore a loja, compare opções disponíveis")
-        self.assertContains(list_response, "preços e disponibilidade atualizados")
-        self.assertContains(list_response, "Confira os produtos da loja")
+        self.assertNotContains(list_response, "storefront-catalog-meta")
+        self.assertNotContains(list_response, "Explore a loja, compare opções disponíveis")
+        self.assertNotContains(list_response, "preços e disponibilidade atualizados")
+        self.assertNotContains(list_response, "Confira os produtos da loja")
         self.assertNotContains(list_response, "curadoria leve")
         self.assertNotContains(list_response, "variante efetiva")
         self.assertNotContains(list_response, "sinais leves")

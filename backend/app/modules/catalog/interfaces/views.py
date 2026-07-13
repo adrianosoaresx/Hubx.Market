@@ -1496,24 +1496,20 @@ class CatalogListView(TemplateView):
         context.update(
             {
                 "page_title": "Loja",
-                "page_description": page_description,
+                "page_description": "",
                 **_storefront_social_meta(
                     self.request,
                     title=f"Loja - {getattr(tenant, 'name', '') or 'Hubx Market'}",
-                    description=page_description,
+                    description="",
                     image_url=storefront_hero.get("image_url") or getattr(tenant, "logo_url", ""),
                     image_alt=str(storefront_hero.get("title") or getattr(tenant, "name", "") or "Loja"),
                     canonical_path=base_url,
                 ),
-                "page_meta": _catalog_reentry_meta(
-                    category_label=category_label,
-                    search_value=search_value,
-                    quick_filter=quick_filter,
-                ),
-                "results_meta": results_meta,
+                "page_meta": "",
+                "results_meta": "",
                 "storefront_hero": storefront_hero,
                 "filter_action": base_url,
-                "filter_description": filter_description,
+                "filter_description": "",
                 "filters_open": filters_open,
                 "active_quick_filter_label": quick_filter_label,
                 "extra_filters": _build_catalog_storefront_extra_filters(

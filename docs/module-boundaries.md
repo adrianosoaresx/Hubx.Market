@@ -1343,3 +1343,13 @@ Este documento existe para manter o Hubx Market:
 - essa execution pode gerar JSONL/CSV tenant-scoped a partir de `AuditLog`, mas não deve incluir metadata, habilitar platform-scope, assinar/armazenar artefato, registrar novo `AuditLog` ou consultar tabelas internas de `accounts`.
 - closure de export de evidência MFA owner/admin pertence a `audit.application.owner_mfa_audit_evidence_export_closure_queries`.
 - esse closure pode validar entrega, retenção, storage decision e riscos residuais, mas não deve reimprimir o export, assinar/armazenar artefato, alterar `AuditLog`, habilitar platform-scope ou consultar tabelas internas de `accounts`.
+
+## Boundary do assistente operacional
+
+- assistente IA de owners/admins pertence ao módulo `assistant`.
+- `/ops/assistant/` deve exigir tenant resolvido e owner/admin autenticado pelo fluxo `/ops/`.
+- o MVP usa somente documentação versionada como fonte de conhecimento e não deve consultar modelos internos de `catalog`, `orders`, `payments`, `customers`, `checkout` ou outros módulos tenant-owned.
+- histórico e feedback pertencem a `assistant.models` e devem ser tenant-scoped.
+- auditoria do uso deve passar por `audit.application.audit_log_commands` com metadata sanitizada e sem pergunta/resposta.
+- LLM é integração de infraestrutura opcional; indisponibilidade deve cair para fallback local sem bloquear a página.
+- ações guiadas, contexto real da loja e consulta a application services de outros módulos exigem nova revisão de fronteira.

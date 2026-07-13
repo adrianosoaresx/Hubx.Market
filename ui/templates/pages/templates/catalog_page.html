@@ -10,18 +10,6 @@
 
     {% include "shared/partials/storefront_institutional_hero.html" %}
 
-    <header class="storefront-catalog-meta space-y-2">
-        {% if page_description %}
-            <p class="text-sm text-[var(--color-text-secondary)]">{{ page_description }}</p>
-        {% endif %}
-        {% if page_meta %}
-            <p class="text-sm text-[var(--color-text-secondary)]">{{ page_meta }}</p>
-        {% endif %}
-        {% if results_meta %}
-            <p class="text-sm text-[var(--color-text-secondary)]">{{ results_meta }}</p>
-        {% endif %}
-    </header>
-
     {% with method=filter_method|default:"get" action=filter_action hx_get=hx_get hx_post=hx_post hx_target=hx_target hx_swap=hx_swap|default:"innerHTML" title=filter_title|default:"Filtrar produtos" description=filter_description search_name=search_name|default:"q" search_value=search_value search_label=search_label|default:"Buscar" search_placeholder=search_placeholder|default:"Busque por nome, marca ou categoria" status_name=status_name status_selected=status_selected status_label=status_label status_placeholder=status_placeholder status_options=status_options extra_filters=extra_filters submit_label=submit_label|default:"Aplicar" reset_url=reset_url reset_label=reset_label|default:"Limpar" show_actions=show_filter_actions accordion=True accordion_open=filters_open %}
         {% include "shared/components/composite/filter_bar.html" %}
     {% endwith %}

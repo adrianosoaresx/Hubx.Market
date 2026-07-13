@@ -1059,6 +1059,23 @@ Readiness atual:
 - ele ainda é in-process e serve como contrato de boundary, não como fila distribuída
 - Celery futuro deve substituir/consumir essa boundary sem acoplar módulos diretamente
 
+## assistant.question_answered
+
+Origem: assistant
+
+Consumidores:
+- audit
+
+Descrição:
+Pergunta operacional de owner/admin foi respondida pelo assistente em `/ops/assistant/`.
+
+Readiness atual:
+
+- registrado como `AuditLog` tenant-scoped;
+- metadata inclui apenas resultado, fonte (`llm` ou `fallback`), quantidade de fontes e motivo técnico sanitizado;
+- pergunta e resposta não são copiadas para metadata;
+- não representa ação operacional nem consulta a dados reais da loja.
+
 ---
 
 # Objetivo

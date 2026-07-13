@@ -32,10 +32,10 @@ Validação executada:
 
 O repositório não é mais apenas blueprint documental. Existe uma aplicação Django modular funcional com:
 
-- 17 módulos de produto registrados em `INSTALLED_APPS`;
-- 40 modelos de domínio próprios;
-- 54 migrations de módulos do projeto;
-- 136 management commands;
+- 18 módulos de produto registrados em `INSTALLED_APPS`;
+- 43 modelos de domínio próprios;
+- 55 migrations de módulos do projeto;
+- 137 management commands;
 - 207 arquivos de teste backend;
 - 127 templates úteis em `ui/templates`;
 - 41 componentes compartilhados de UI;
@@ -64,6 +64,7 @@ O corte atual cobre storefront, catálogo, carrinho, checkout, pedidos, pagament
 | `subscriptions` | `SubscriptionPlan`, `TenantSubscription`, `SubscriptionAcquisitionLead` | `/plans/`, `/plans/signup/`, fila platform de aquisições, admin read-only e commands foundation | aquisição pública segura com Essencial self-service e Pro/Enterprise assistidos; billing method não coleta cartão/token em campos livres |
 | `audit` | `AuditLog` | writer, admin read-only, export, closures/evidências | implementado para ações explícitas; sem middleware global |
 | `api_keys` | `ApiKey`, `ApiKeyQuota`, `ApiKeyQuotaUsage` | criação/revogação via services, auth DRF opt-in, throttle, quotas, métricas, admin quotas | API pública de catálogo implementada; billing/UX rica fora |
+| `assistant` | `AssistantConversation`, `AssistantMessage`, `AssistantFeedback` | `/ops/assistant/`, fontes consultadas na UI, fallback textual em `docs/assistant/*` e docs técnicas, LLM opcional por settings, feedback, auditoria e `assistant_knowledge_smoke` | guia interno para owners/admins; não consulta dados reais da loja nem executa ações no MVP |
 | `catalog` | `Product`, `ProductVariant`, `ProductImage`, `StorefrontDiscoveryEventLog` | storefront, PDP, admin products CRUD, analytics, public API list/detail | CRUD básico de produto implementado com desativação sem delete; `Brand`, `Category` e `Tag` normalizados ainda não existem |
 | `customers` | `Customer`, `CustomerAddress` | admin list/detail/actions, métricas/data issues | base operacional implementada |
 | `cart` | `Cart`, `CartItem`, `CartMutation` | página de carrinho, commands, handoff para checkout | carrinho persistente implementado |
@@ -95,6 +96,7 @@ Principais grupos de rota registrados:
 - `/api-keys/metrics/public-endpoints/` métricas protegidas por token;
 - `/notifications/metrics/email-logs/` métricas protegidas por token;
 - `/ops/...` cockpit/admin por módulo;
+- `/ops/assistant/` assistente operacional tenant-scoped para owners/admins, baseado na documentação interna, com LLM opcional e fallback local;
 - `/ops/branding/` configuração tenant-scoped de logo, cor primária de conversão e hero institucional da loja;
 - `/ops/catalog/products/`, `/ops/catalog/products/new/`, `/ops/catalog/products/<slug>/edit/` e `/ops/catalog/products/<slug>/actions/deactivate/` para CRUD administrativo básico de produtos;
 - `/ops/platform/tenants/` gestão platform de tenants;
@@ -167,6 +169,7 @@ Os demais domínios principais existem com tabelas/migrations, mas estavam sem d
 - Notifications têm pipeline, tasks e logs, mas campanhas recorrentes/scoring/segmentação avançada seguem fora.
 - Pages não têm page builder, editor rico, menus dinâmicos ou localização.
 - Audit não é middleware global nem diff genérico de model; registra ações explícitas.
+- Assistente IA ainda é guia interno documental; contexto real da loja, ações guiadas e consulta a dados operacionais ficam fora do MVP.
 
 ## Próximo uso recomendado
 

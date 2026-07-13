@@ -149,6 +149,7 @@ accounts
 subscriptions  
 audit  
 api-keys
+assistant
 
 Responsabilidades:
 
@@ -158,6 +159,7 @@ Responsabilidades:
 - planos SaaS
 - aquisição pública de planos como lead seguro
 - auditoria
+- assistente operacional para owners/admins baseado em documentação interna
 
 ---
 

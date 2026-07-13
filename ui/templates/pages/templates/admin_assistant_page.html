@@ -1,0 +1,103 @@
+{% extends layout_template|default:"layouts/admin_shell.html" %}
+
+{% block page_title %}{{ page_title|default:"Assistente" }}{% endblock %}
+{% block shell_title %}{{ shell_title|default:page_title|default:"Assistente" }}{% endblock %}
+
+{% block content %}
+<section class="admin-ops-page admin-assistant-page space-y-6">
+    {% include "shared/components/layout/admin_page_header.html" with eyebrow=page_eyebrow title=page_title description=page_description %}
+
+    {% if form_error %}
+        {% include "shared/components/feedback/alert.html" with variant="danger" title="Pergunta não enviada" description=form_error %}
+    {% endif %}
+
+    <div class="grid gap-6 xl:grid-cols-[minmax(0,1fr)_18rem]">
+        <div class="space-y-6">
+            <form method="post" action="{{ form_action }}" class="ds-surface space-y-4 p-4">
+                {% csrf_token %}
+                {% if current_conversation %}
+                    <input type="hidden" name="conversation_id" value="{{ current_conversation.id }}">
+                {% endif %}
+                {% include "shared/components/forms/textarea.html" with name="question" label="Pergunte ao assistente" value=question_value placeholder="Ex.: Como cadastro um produto corretamente?" rows="4" required=True %}
+                <div class="flex flex-wrap items-center gap-3">
+                    {% include "shared/components/actions/button.html" with label="Enviar pergunta" type="submit" variant="primary" icon_name="send" %}
+                    {% include "shared/components/actions/button.html" with label="Nova conversa" href=form_action variant="secondary" icon_name="plus" %}
+                </div>
+            </form>
+
+            <div class="ds-subpanel space-y-3 text-sm text-[var(--color-text-secondary)]">
+                <p class="font-medium text-[var(--color-text-primary)]">Sugestões rápidas</p>
+                <div class="flex flex-wrap gap-2">
+                    {% for suggestion in suggestions %}
+                        <form method="post" action="{{ form_action }}">
+                            {% csrf_token %}
+                            {% if current_conversation %}
+                                <input type="hidden" name="conversation_id" value="{{ current_conversation.id }}">
+                            {% endif %}
+                            <input type="hidden" name="question" value="{{ suggestion }}">
+                            {% include "shared/components/actions/button.html" with label=suggestion type="submit" variant="secondary" size="sm" %}
+                        </form>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <section class="space-y-4">
+                {% if messages %}
+                    {% for message in messages %}
+                        <article class="ds-surface p-4 {% if message.role == 'assistant' %}border-l-4 border-[var(--color-brand-primary)]{% endif %}">
+                            <div class="mb-2 flex items-center justify-between gap-3 text-xs uppercase tracking-wide text-[var(--color-text-muted)]">
+                                <span>{% if message.role == "assistant" %}Assistente{% elif message.role == "user" %}Você{% else %}Sistema{% endif %}</span>
+                                <span>{{ message.source }}</span>
+                            </div>
+                            <div class="prose max-w-none whitespace-pre-line text-sm text-[var(--color-text-primary)]">{{ message.content }}</div>
+                            {% if message.role == "assistant" %}
+                                {% if message.sources %}
+                                    <div class="mt-4 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-muted)] p-3">
+                                        <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">Fontes consultadas</p>
+                                        <ul class="space-y-2 text-sm text-[var(--color-text-secondary)]">
+                                            {% for source in message.sources %}
+                                                <li>
+                                                    <span class="font-medium text-[var(--color-text-primary)]">{{ source.title|default:source.path }}</span>
+                                                    <span class="block text-xs text-[var(--color-text-muted)]">{{ source.path }}</span>
+                                                </li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                {% endif %}
+                                <form method="post" action="{{ feedback_action }}" class="mt-4 flex flex-wrap items-center gap-2">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="conversation_id" value="{{ current_conversation.id }}">
+                                    <input type="hidden" name="message_id" value="{{ message.id }}">
+                                    {% include "shared/components/actions/button.html" with label="Útil" name="value" value="useful" type="submit" variant="secondary" size="sm" icon_name="thumbs-up" %}
+                                    {% include "shared/components/actions/button.html" with label="Não útil" name="value" value="not_useful" type="submit" variant="secondary" size="sm" icon_name="thumbs-down" %}
+                                </form>
+                            {% endif %}
+                        </article>
+                    {% endfor %}
+                {% else %}
+                    {% include "shared/components/feedback/empty_state.html" with title="Nenhuma conversa ainda" description="Faça uma pergunta sobre catálogo, pedidos, checkout, branding, páginas ou operação da loja." %}
+                {% endif %}
+            </section>
+        </div>
+
+        <aside class="space-y-4">
+            <div class="ds-surface p-4">
+                <h2 class="text-sm font-semibold text-[var(--color-text-primary)]">Histórico</h2>
+                <div class="mt-3 space-y-2">
+                    {% for conversation in conversations %}
+                        <a class="block rounded-md px-3 py-2 text-sm hover:bg-[var(--color-surface-muted)] {% if current_conversation and conversation.id == current_conversation.id %}bg-[var(--color-surface-muted)] text-[var(--color-text-primary)]{% else %}text-[var(--color-text-secondary)]{% endif %}" href="{{ form_action }}?conversation_id={{ conversation.id }}">
+                            {{ conversation.title }}
+                        </a>
+                    {% empty %}
+                        <p class="text-sm text-[var(--color-text-secondary)]">As conversas deste tenant aparecem aqui.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="ds-subpanel text-sm text-[var(--color-text-secondary)]">
+                O MVP usa apenas documentação interna. Ele não consulta pedidos, clientes, pagamentos ou catálogo real da loja e não executa ações.
+            </div>
+        </aside>
+    </div>
+</section>
+{% endblock %}

@@ -207,6 +207,31 @@ Readiness:
 
 ---
 
+## assistant
+
+Responsabilidade:
+Responder perguntas de owners/admins sobre como usar o Hubx Market com eficiência.
+
+Entidades principais:
+AssistantConversation
+AssistantMessage
+AssistantFeedback
+
+Dependências:
+tenants
+accounts
+audit
+
+Readiness:
+- `/ops/assistant/` expõe página tenant-scoped para perguntas operacionais;
+- usa documentação versionada como fonte de conhecimento;
+- LLM é opcional por settings e possui fallback textual local;
+- histórico e feedback são salvos por tenant com sanitização;
+- não consulta dados reais de catálogo, pedidos, clientes, pagamentos ou checkout no MVP;
+- registra `AuditLog` `assistant.question_answered` sem pergunta/resposta em metadata.
+
+---
+
 # Commerce Domain
 
 Motor principal de e-commerce.

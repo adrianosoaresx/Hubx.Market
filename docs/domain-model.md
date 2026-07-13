@@ -249,6 +249,27 @@ Regras:
 - incrementa contador agregado; não armazena API key, header, segredo ou hash.
 - pode referenciar a quota aplicada para rastreabilidade operacional.
 
+### AssistantConversation
+Conversa tenant-scoped do assistente operacional para owners/admins.
+- pertence a um `Tenant`.
+- pode referenciar um `OwnerUser` do tenant quando resolvido.
+- preserva `owner_email` e título curto para histórico administrativo.
+- não representa atendimento ao comprador final.
+
+### AssistantMessage
+Mensagem sanitizada de uma conversa do assistente.
+- pertence a uma `AssistantConversation`.
+- `role` pode ser `user`, `assistant` ou `system`.
+- `source` indica origem operacional (`user`, `llm`, `fallback` ou `system`).
+- conteúdo salvo deve passar por redaction/truncamento de segredos detectáveis.
+
+### AssistantFeedback
+Feedback simples sobre uma resposta do assistente.
+- pertence a uma `AssistantMessage`.
+- aceita `useful` ou `not_useful`.
+- comentário opcional também deve ser sanitizado.
+- não executa correção, retreinamento ou ação operacional.
+
 ### SubscriptionPlan
 Plano SaaS disponível para tenants.
 

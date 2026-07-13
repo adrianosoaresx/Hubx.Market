@@ -221,9 +221,9 @@ class AdminOwnersListView(TemplateView):
 
         context.update(
             {
-                "page_title": "Owners",
+                "page_title": "Administradores",
                 "page_eyebrow": "Administração",
-                "page_description": "Gerencie owners administrativos habilitados para notificações operacionais.",
+                "page_description": "Gerencie administradores habilitados para notificações operacionais.",
                 "page_meta": _action_feedback(result),
                 "page_actions": format_html(
                     '<a class="ds-btn ds-btn-primary ds-btn-md" href="{}">Novo owner</a>',
@@ -263,9 +263,9 @@ class AdminOwnersListView(TemplateView):
                     }
                     for owner in page_obj.object_list
                 ],
-                "table_title": "Owners administrativos",
-                "table_description": "Owners por tenant usados como destinatários administrativos futuros.",
-                "table_count": f"{paginator.count} owner(s)",
+                "table_title": "Administradores da loja",
+                "table_description": "Administradores por tenant usados como destinatários administrativos futuros.",
+                "table_count": f"{paginator.count} administrador(es)",
                 "page": page_obj.number,
                 "total_pages": paginator.num_pages,
                 "prev_url": None,

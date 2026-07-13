@@ -91,7 +91,7 @@ class AdminNewsletterListView(TemplateView):
             empty_description = "Seu perfil não possui permissão para visualizar newsletter."
 
         return {
-            "page_title": "Newsletter",
+            "page_title": "Lista de e-mails",
             "page_eyebrow": "Retenção",
             "page_description": "Campanhas e opt-ins tenant-scoped para relacionamento com clientes.",
             "filter_action": reverse("newsletter:admin-newsletter-list"),

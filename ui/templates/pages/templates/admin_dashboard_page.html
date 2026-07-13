@@ -1,12 +1,12 @@
 {% extends layout_template|default:"layouts/admin_shell.html" %}
 
-{% block page_title %}{{ page_title|default:"Dashboard" }}{% endblock %}
-{% block shell_title %}{{ shell_title|default:page_title|default:"Dashboard" }}{% endblock %}
+{% block page_title %}{{ page_title|default:"Painel" }}{% endblock %}
+{% block shell_title %}{{ shell_title|default:page_title|default:"Painel" }}{% endblock %}
 
 {% block content %}
 <section class="admin-ops-page admin-dashboard-page space-y-8">
     <div class="admin-ops-hero">
-        {% include "shared/components/layout/page_header.html" with eyebrow=page_eyebrow|default:"Admin" title=page_title|default:"Dashboard" description=page_description|default:"Visão geral de performance, atividade recente e operação." actions=page_actions %}
+        {% include "shared/components/layout/page_header.html" with eyebrow=page_eyebrow|default:"Admin" title=page_title|default:"Painel" description=page_description|default:"Visão geral de performance, atividade recente e operação." actions=page_actions %}
     </div>
 
     <section class="admin-ops-kpi-grid grid gap-6 md:grid-cols-2 xl:grid-cols-4">

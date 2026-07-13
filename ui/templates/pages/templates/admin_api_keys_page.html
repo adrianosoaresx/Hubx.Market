@@ -1,11 +1,11 @@
 {% extends layout_template|default:"layouts/admin_shell.html" %}
 
-{% block page_title %}{{ page_title|default:"API keys" }}{% endblock %}
-{% block shell_title %}{% if shell_title %}{{ shell_title }}{% elif page_title %}{{ page_title }}{% else %}API keys{% endif %}{% endblock %}
+{% block page_title %}{{ page_title|default:"Chaves de API" }}{% endblock %}
+{% block shell_title %}{% if shell_title %}{{ shell_title }}{% elif page_title %}{{ page_title }}{% else %}Chaves de API{% endif %}{% endblock %}
 
 {% block content %}
 <section class="space-y-6">
-    {% with eyebrow=page_eyebrow|default:"Governança" title=page_title|default:"API keys" description=page_description|default:"Gerencie chaves tenant-scoped da API pública." %}
+    {% with eyebrow=page_eyebrow|default:"Governança" title=page_title|default:"Chaves de API" description=page_description|default:"Gerencie chaves tenant-scoped da API pública." %}
         {% include "shared/components/layout/admin_page_header.html" %}
     {% endwith %}
 
@@ -73,8 +73,8 @@
         {% if api_keys %}
             <div class="ds-table-shell">
                 <div class="ds-table-scroll">
-                    <table class="ds-table" aria-label="API keys">
-                        <caption class="sr-only">API keys tenant-scoped</caption>
+                    <table class="ds-table" aria-label="Chaves de API">
+                        <caption class="sr-only">Chaves de API tenant-scoped</caption>
                         <thead class="ds-table-head">
                             <tr>
                                 <th scope="col" class="ds-table-th">Nome</th>

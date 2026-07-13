@@ -11,6 +11,9 @@
 ### Plataforma
 - Tenant
 - TenantOnboarding
+- AssistantConversation
+- AssistantMessage
+- AssistantFeedback
 
 `Tenant`
 
@@ -155,6 +158,10 @@
 - Tenant 1:N Page
 - Tenant 1:N NewsletterSubscriber
 - Tenant 1:N AuditLog (opcional; eventos platform-scope podem ter tenant vazio)
+- Tenant 1:N AssistantConversation
+- OwnerUser 1:N AssistantConversation (opcional)
+- AssistantConversation 1:N AssistantMessage
+- AssistantMessage 1:N AssistantFeedback
 - Tenant 1:N ApiKey
 - OwnerUser 1:N ApiKey (opcional)
 - Tenant 1:1 TenantSubscription
@@ -204,6 +211,69 @@
 - `NewsletterSubscriber` é tenant-scoped, único por `(tenant, email)` e preserva opt-in/opt-out por status
 - `AuditLog` registra eventos tenant-scoped por padrão; tenant vazio só é válido para eventos platform-scope explícitos
 - `ApiKey` é tenant-scoped, guarda apenas hash do segredo, usa prefixo único e deve ser revogada por status/timestamp, não deletada.
+- `AssistantConversation`, `AssistantMessage` e `AssistantFeedback` registram histórico sanitizado do assistente operacional por tenant; não consultam dados reais da loja nem executam ações no MVP.
+
+## Assistant — AssistantConversation
+
+`AssistantConversation`
+
+- `id`
+- `tenant_id → tenants.Tenant`
+- `owner_id → accounts.OwnerUser` opcional
+- `owner_email`
+- `title`
+- `created_at`
+- `updated_at`
+
+Relacionamentos:
+
+- `Tenant 1:N AssistantConversation`
+- `OwnerUser 1:N AssistantConversation`
+
+Notas:
+
+- histórico é tenant-scoped.
+- `owner_email` é snapshot operacional leve.
+
+## Assistant — AssistantMessage
+
+`AssistantMessage`
+
+- `id`
+- `conversation_id → assistant.AssistantConversation`
+- `role`
+- `source`
+- `content`
+- `created_at`
+
+Relacionamentos:
+
+- `AssistantConversation 1:N AssistantMessage`
+
+Notas:
+
+- `role` aceita `user`, `assistant` e `system`.
+- `source` aceita `user`, `llm`, `fallback` e `system`.
+- conteúdo deve ser sanitizado antes de persistir.
+
+## Assistant — AssistantFeedback
+
+`AssistantFeedback`
+
+- `id`
+- `message_id → assistant.AssistantMessage`
+- `value`
+- `comment`
+- `created_at`
+
+Relacionamentos:
+
+- `AssistantMessage 1:N AssistantFeedback`
+
+Notas:
+
+- `value` aceita `useful` e `not_useful`.
+- comentário é opcional e sanitizado.
 
 ## API Keys — ApiKey
 

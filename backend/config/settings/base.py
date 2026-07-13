@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     "modules.newsletter",
     "modules.audit",
     "modules.api_keys",
+    "modules.assistant",
 ]
 
 MIDDLEWARE = [
@@ -224,6 +225,12 @@ API_KEYS_PUBLIC_CATALOG_PRODUCT_DETAIL_RATE_LIMIT_WINDOW_SECONDS = int(
         str(API_KEYS_RATE_LIMIT_DEFAULT_WINDOW_SECONDS),
     )
 )
+ASSISTANT_LLM_ENABLED = os.getenv("ASSISTANT_LLM_ENABLED", "0") == "1"
+ASSISTANT_LLM_PROVIDER = os.getenv("ASSISTANT_LLM_PROVIDER", "openai-compatible")
+ASSISTANT_LLM_MODEL = os.getenv("ASSISTANT_LLM_MODEL", "gpt-4o-mini")
+ASSISTANT_LLM_API_KEY = os.getenv("ASSISTANT_LLM_API_KEY", "").strip()
+ASSISTANT_LLM_TIMEOUT_SECONDS = float(os.getenv("ASSISTANT_LLM_TIMEOUT_SECONDS", "8") or "8")
+ASSISTANT_LLM_BASE_URL = os.getenv("ASSISTANT_LLM_BASE_URL", "https://api.openai.com/v1").rstrip("/")
 PAYMENTS_PROVIDER_DEFAULT = os.getenv("PAYMENTS_PROVIDER_DEFAULT", "asaas")
 PAYMENTS_REAL_PROVIDER_ROLLOUT_MODE = os.getenv("PAYMENTS_REAL_PROVIDER_ROLLOUT_MODE", "sandbox")
 PAYMENTS_REAL_PROVIDER_ENABLED_TENANTS = [

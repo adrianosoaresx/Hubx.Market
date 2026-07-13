@@ -138,17 +138,17 @@ class Command(BaseCommand):
             (
                 "/ops/platform/tenants/",
                 ("Platform admin", "Lojas", "Onboarding", "Portal central"),
-                ("Dashboard", "Pedidos", "Catálogo", "Admin da loja"),
+                ("Painel", "Pedidos", "Catálogo", "Admin da loja"),
             ),
             (
                 "/ops/platform/onboarding/",
                 ("Platform admin", "Onboarding de lojas", "Lojas", "Portal central"),
-                ("Dashboard", "Pedidos", "Catálogo", "Admin da loja"),
+                ("Painel", "Pedidos", "Catálogo", "Admin da loja"),
             ),
             (
                 "/ops/platform/acquisitions/",
                 ("Platform admin", "Aquisições", "Lojas", "Portal central"),
-                ("Dashboard", "Pedidos", "Catálogo", "Admin da loja"),
+                ("Painel", "Pedidos", "Catálogo", "Admin da loja"),
             ),
         ):
             response = client.get(path, HTTP_HOST=host)
@@ -176,7 +176,7 @@ class Command(BaseCommand):
                 key="store-dashboard-template",
                 response=dashboard,
                 html=html,
-                markers=("Admin da loja", "Dashboard", "Operação da loja", "Pedidos", "Catálogo"),
+                markers=("Admin da loja", "Painel", "Operação da loja", "Pedidos", "Catálogo"),
                 forbidden=("Platform admin", "Portal central", "/ops/platform/tenants/", "/ops/platform/onboarding/"),
             )
         )

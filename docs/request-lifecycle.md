@@ -324,6 +324,37 @@ Observações:
 
 ---
 
+# Fluxo operacional: assistente IA do admin
+
+Request:
+
+```text
+GET/POST /ops/assistant/
+```
+
+Fluxo:
+
+Request
+→ Tenant resolution
+→ Owner Context Resolution
+→ Ops gate
+→ Assistant view fina
+→ `assistant.application.assistant_query_service`
+→ busca textual em documentação permitida
+→ LLM opcional ou fallback local
+→ `AssistantConversation` / `AssistantMessage`
+→ `AuditLog` `assistant.question_answered`
+→ Response
+
+Observações:
+
+- o MVP não consulta dados reais de catálogo, pedidos, clientes, pagamentos ou checkout;
+- o assistente não executa ações operacionais;
+- pergunta e resposta não entram em metadata de auditoria;
+- histórico salvo é tenant-scoped e sanitizado.
+
+---
+
 # Fluxo público: aquisição de plano SaaS
 
 Requests:

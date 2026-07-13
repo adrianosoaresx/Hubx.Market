@@ -1,11 +1,11 @@
 {% extends layout_template|default:"layouts/admin_shell.html" %}
 
-{% block page_title %}{{ page_title|default:"Audit log" }}{% endblock %}
-{% block shell_title %}{% if shell_title %}{{ shell_title }}{% elif page_title %}{{ page_title }}{% else %}Audit log{% endif %}{% endblock %}
+{% block page_title %}{{ page_title|default:"Auditoria" }}{% endblock %}
+{% block shell_title %}{% if shell_title %}{{ shell_title }}{% elif page_title %}{{ page_title }}{% else %}Auditoria{% endif %}{% endblock %}
 
 {% block content %}
 <section class="admin-ops-page admin-audit-log-page space-y-6">
-    {% with eyebrow=page_eyebrow|default:"Governança" title=page_title|default:"Audit log" description=page_description|default:"Eventos auditáveis por tenant." %}
+    {% with eyebrow=page_eyebrow|default:"Governança" title=page_title|default:"Auditoria" description=page_description|default:"Eventos auditáveis por tenant." %}
         {% include "shared/components/layout/admin_page_header.html" %}
     {% endwith %}
 

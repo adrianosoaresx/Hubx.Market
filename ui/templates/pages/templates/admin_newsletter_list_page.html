@@ -1,11 +1,11 @@
 {% extends layout_template|default:"layouts/admin_shell.html" %}
 
-{% block page_title %}{{ page_title|default:"Newsletter" }}{% endblock %}
-{% block shell_title %}{% if shell_title %}{{ shell_title }}{% elif page_title %}{{ page_title }}{% else %}Newsletter{% endif %}{% endblock %}
+{% block page_title %}{{ page_title|default:"Lista de e-mails" }}{% endblock %}
+{% block shell_title %}{% if shell_title %}{{ shell_title }}{% elif page_title %}{{ page_title }}{% else %}Lista de e-mails{% endif %}{% endblock %}
 
 {% block content %}
 <section class="space-y-6">
-    {% with eyebrow=page_eyebrow|default:"Retenção" title=page_title|default:"Newsletter" description=page_description|default:"Leia opt-ins tenant-scoped." %}
+    {% with eyebrow=page_eyebrow|default:"Retenção" title=page_title|default:"Lista de e-mails" description=page_description|default:"Leia opt-ins tenant-scoped." %}
         {% include "shared/components/layout/admin_page_header.html" %}
     {% endwith %}
 

@@ -50,23 +50,23 @@ def _feedback(value: object) -> dict[str, str]:
         "permission-denied": (
             "danger",
             "Permissão necessária",
-            "Seu perfil pode visualizar API keys, mas não gerenciá-las.",
+            "Seu perfil pode visualizar chaves de API, mas não gerenciá-las.",
         ),
         "tenant-required": (
             "warning",
             "Tenant não resolvido",
-            "Acesse esta tela pelo subdomínio da loja para gerenciar API keys.",
+            "Acesse esta tela pelo subdomínio da loja para gerenciar chaves de API.",
         ),
         "not-found": (
             "warning",
             "Chave não encontrada",
             "A API key não existe neste tenant ou já foi removida da visão atual.",
         ),
-        "already-revoked": ("info", "API key já revogada", "Nenhuma alteração adicional foi necessária."),
+        "already-revoked": ("info", "Chave de API já revogada", "Nenhuma alteração adicional foi necessária."),
         "unavailable": (
             "warning",
-            "API keys indisponíveis",
-            "A estrutura de API keys ainda não está pronta neste ambiente.",
+            "Chaves de API indisponíveis",
+            "A estrutura de chaves de API ainda não está pronta neste ambiente.",
         ),
     }
     variant, title, description = mapping.get(status, ("info", "", ""))
@@ -92,13 +92,13 @@ class AdminApiKeyQuotaListView(TemplateView):
             empty_description = "Acesse esta tela por um subdomínio de loja para listar quotas tenant-scoped."
         elif not can_view_api_keys:
             empty_title = "Permissão necessária"
-            empty_description = "Seu perfil não possui permissão para visualizar quotas de API keys."
+            empty_description = "Seu perfil não possui permissão para visualizar quotas de chaves de API."
 
         context.update(
             {
-                "page_title": "Quotas de API keys",
+                "page_title": "Quotas de chaves de API",
                 "page_eyebrow": "API pública",
-                "page_description": "Visibilidade read-only de quotas comerciais por tenant, API key, endpoint e janela.",
+                "page_description": "Visibilidade somente leitura de quotas comerciais por tenant, chave de API, endpoint e janela.",
                 "columns": [
                     {"label": "API key"},
                     {"label": "Prefixo"},
@@ -156,15 +156,15 @@ class AdminApiKeyListView(TemplateView):
         empty_description = "Crie a primeira chave para integrações aprovadas deste tenant."
         if not tenant_id:
             empty_title = "Tenant não resolvido"
-            empty_description = "Acesse esta tela por um subdomínio de loja para listar API keys tenant-scoped."
+            empty_description = "Acesse esta tela por um subdomínio de loja para listar chaves de API tenant-scoped."
         elif not can_view_api_keys:
             empty_title = "Permissão necessária"
-            empty_description = "Seu perfil não possui permissão para visualizar API keys."
+            empty_description = "Seu perfil não possui permissão para visualizar chaves de API."
         elif not can_manage_api_keys:
-            empty_description = "Seu perfil pode auditar chaves, mas não criar ou revogar API keys."
+            empty_description = "Seu perfil pode auditar chaves, mas não criar ou revogar chaves de API."
 
         return {
-            "page_title": "API keys",
+            "page_title": "Chaves de API",
             "page_eyebrow": "Governança",
             "page_description": "Criação, revogação e auditoria tenant-scoped de chaves da API pública.",
             "page_actions": [

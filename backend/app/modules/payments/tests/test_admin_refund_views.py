@@ -79,7 +79,7 @@ class AdminPaymentRefundsViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "pages/templates/admin_orders_list_page.html")
-        self.assertContains(response, "Refunds de pagamentos")
+        self.assertContains(response, "Reembolsos de pagamentos")
         self.assertContains(response, "#9801")
         self.assertContains(response, "BRL 120.00")
         self.assertContains(response, "Solicitado")

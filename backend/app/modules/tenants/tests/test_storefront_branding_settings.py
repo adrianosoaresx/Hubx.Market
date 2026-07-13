@@ -104,7 +104,7 @@ class StorefrontBrandingSettingsTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "pages/templates/admin_storefront_branding_page.html")
-        self.assertContains(response, "Branding da loja")
+        self.assertContains(response, "Marca da loja")
         self.assertContains(response, "logo_url")
         self.assertContains(response, "conversion_primary_color")
         self.assertContains(response, "storefront_hero_image_url")

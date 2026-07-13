@@ -39,6 +39,13 @@ NAV_ITEMS = [
         "icon": "shopping-cart",
     },
     {
+        "label": "Assistente",
+        "href": "/ops/assistant/",
+        "permission": "",
+        "group_label": "Operação",
+        "icon": "message-circle",
+    },
+    {
         "label": "Catálogo",
         "href": "/ops/catalog/products/",
         "permission": PERMISSION_CATALOG_VIEW,
@@ -60,14 +67,14 @@ NAV_ITEMS = [
         "icon": "file-text",
     },
     {
-        "label": "Branding",
+        "label": "Marca da loja",
         "href": "/ops/branding/",
         "permission": PERMISSION_STOREFRONT_BRANDING_MANAGE,
         "group_label": "Conteúdo",
         "icon": "image",
     },
     {
-        "label": "Newsletter",
+        "label": "Lista de e-mails",
         "href": "/ops/newsletter/",
         "permission": PERMISSION_NEWSLETTER_VIEW,
         "group_label": "Conteúdo",
@@ -95,7 +102,7 @@ NAV_ITEMS = [
         "icon": "credit-card",
     },
     {
-        "label": "Refunds",
+        "label": "Reembolsos",
         "href": "/ops/payments/refunds/",
         "permission": PERMISSION_PAYMENTS_VIEW,
         "group_label": "Financeiro",
@@ -109,28 +116,28 @@ NAV_ITEMS = [
         "icon": "receipt-text",
     },
     {
-        "label": "Owners",
+        "label": "Administradores",
         "href": "/ops/owners/",
         "permission": PERMISSION_OWNERS_MANAGE,
         "group_label": "Acesso",
         "icon": "user",
     },
     {
-        "label": "MFA owners",
+        "label": "MFA dos admins",
         "href": "/ops/owners/mfa/",
         "permission": PERMISSION_OWNERS_MANAGE,
         "group_label": "Acesso",
         "icon": "user",
     },
     {
-        "label": "Audit log",
+        "label": "Auditoria",
         "href": "/ops/audit/",
         "permission": PERMISSION_AUDIT_VIEW,
         "group_label": "Governança",
         "icon": "shield",
     },
     {
-        "label": "API keys",
+        "label": "Chaves de API",
         "href": "/ops/api-keys/",
         "permission": PERMISSION_API_KEYS_VIEW,
         "group_label": "Governança",
@@ -173,7 +180,7 @@ TASK_PERMISSIONS = {
     "Catálogo": PERMISSION_CATALOG_VIEW,
     "Clientes": PERMISSION_CUSTOMERS_VIEW,
     "Entregas": PERMISSION_SHIPPING_VIEW,
-    "Owners": PERMISSION_OWNERS_MANAGE,
+    "Administradores": PERMISSION_OWNERS_MANAGE,
 }
 
 
@@ -181,7 +188,7 @@ def _allowed_nav_items(request) -> list[dict[str, str]]:
     return [
         item
         for item in NAV_ITEMS
-        if request_admin_can(request, str(item["permission"]))
+        if (not str(item["permission"]) or request_admin_can(request, str(item["permission"])))
         and (
             not str(item["href"]).startswith("/ops/platform/")
             or getattr(request, "tenant", None) is None
@@ -230,7 +237,7 @@ class MerchantOperationsDashboardView(TemplateView):
         context.update(
             {
                 "page_title": "Operação da loja",
-                "page_eyebrow": "Merchant operations",
+                "page_eyebrow": "Operação",
                 "page_description": "Cockpit operacional personalizado pelas permissões do owner/admin ativo.",
                 "page_actions": _dashboard_actions(nav_items),
                 "admin_nav_items": nav_items,

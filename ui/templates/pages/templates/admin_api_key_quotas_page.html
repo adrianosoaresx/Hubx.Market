@@ -1,11 +1,11 @@
 {% extends layout_template|default:"layouts/admin_shell.html" %}
 
-{% block page_title %}{{ page_title|default:"Quotas de API keys" }}{% endblock %}
-{% block shell_title %}{% if shell_title %}{{ shell_title }}{% elif page_title %}{{ page_title }}{% else %}Quotas de API keys{% endif %}{% endblock %}
+{% block page_title %}{{ page_title|default:"Quotas de chaves de API" }}{% endblock %}
+{% block shell_title %}{% if shell_title %}{{ shell_title }}{% elif page_title %}{{ page_title }}{% else %}Quotas de chaves de API{% endif %}{% endblock %}
 
 {% block content %}
 <section class="space-y-6">
-    {% with eyebrow=page_eyebrow|default:"API pública" title=page_title|default:"Quotas de API keys" description=page_description|default:"Visibilidade read-only de quotas comerciais por tenant." %}
+    {% with eyebrow=page_eyebrow|default:"API pública" title=page_title|default:"Quotas de chaves de API" description=page_description|default:"Visibilidade somente leitura de quotas comerciais por tenant." %}
         {% include "shared/components/layout/admin_page_header.html" %}
     {% endwith %}
 

@@ -130,10 +130,10 @@ class AdminMerchantOperationsQueryService:
                 severity="warning" if shipping_gaps else "success",
             ),
             _task(
-                area="Owners",
-                signal="Owners inativos ou com notificações administrativas pausadas",
+                area="Administradores",
+                signal="Administradores inativos ou com notificações administrativas pausadas",
                 count=owners_without_notifications,
-                action="Revisar owners",
+                action="Revisar administradores",
                 href="/ops/owners/",
                 severity="warning" if owners_without_notifications else "success",
             ),
@@ -209,7 +209,7 @@ class AdminMerchantOperationsQueryService:
                     "timestamp": "agora",
                     "badge_label": "OK",
                     "badge_variant": "success",
-                    "meta": "Dashboard da loja",
+                    "meta": "Painel da loja",
                 }
             ]
         return [

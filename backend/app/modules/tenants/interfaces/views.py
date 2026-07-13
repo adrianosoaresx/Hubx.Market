@@ -239,7 +239,7 @@ class PlatformTenantAdminDetailView(TemplateView):
                     {"label": "Ativo", "value": "Sim" if tenant["is_active"] else "Não"},
                     {"label": "Modo manutenção", "value": "Ligado" if tenant["maintenance_mode"] else "Desligado"},
                     {"label": "Status operacional", "value": tenant["status_label"]},
-                    {"label": "Owners ativos", "value": tenant["active_owner_count"]},
+                    {"label": "Administradores ativos", "value": tenant["active_owner_count"]},
                 ]
                 if tenant
                 else [],
